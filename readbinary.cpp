@@ -1119,9 +1119,10 @@ void MDL::DetermineSmoothing(){
                 double fS = (fA + fB + fC) / 2.0;
                 face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
                 fTotalArea +=  face.fArea;
+                if(patch.nVertex == face.nIndexVertex[0]){
 
-                /*if(face.fArea != 0.0)*/ vNormalBase += face.vNormal * face.fArea;
-                //else vNormalBase += face.vNormal;
+                }
+                vNormalBase += face.vNormal * face.fArea;
             }
             //Now we've got a base, now we've got to construct a matching vertex normal
             //Create a boolean to track this

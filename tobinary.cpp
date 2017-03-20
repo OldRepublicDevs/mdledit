@@ -196,7 +196,7 @@ void MDL::FillBinaryFields(Node & NODE, int & nMeshCounter){
             Vector Edge3 = v3 - v2;
 
             //This is for face normal
-            face.vNormal = Edge1 * Edge2; //Cross product, unnormalized
+            face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
             face.vNormal.Normalize();
 
             //This is for the distance.

@@ -17,8 +17,16 @@ Vector operator/(Vector v, const double & f){
     return v;
 }
 
-Vector operator*(Vector v, const Vector & v2){
-    v *= v2;
+double operator*(const Vector & v, const Vector & v2){ //dot product
+    return (v.fX * v2.fX + v.fY * v2.fY + v.fZ * v2.fZ);
+}
+
+double Angle(const Vector & v, const Vector & v2){
+    return acos((v*v2)/(v.GetLength() * v2.GetLength()));
+}
+
+Vector operator/(Vector v, const Vector & v2){ //cross product
+    v /= v2;
     return v;
 }
 

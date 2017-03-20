@@ -294,7 +294,7 @@ struct Vector{
         fZ -= v.fZ;
         return *this;
     }
-    Vector & operator*=(const Vector & v){
+    Vector & operator/=(const Vector & v){ //cross product
         double fcrossx = fY * v.fZ - fZ * v.fY;
         double fcrossy = fZ * v.fX - fX * v.fZ;
         double fcrossz = fX * v.fY - fY * v.fX;
@@ -348,9 +348,11 @@ struct Vector{
 Vector operator*(Vector v, const Matrix22 & m);
 Vector operator*(Vector v, const double & f);
 Vector operator/(Vector v, const double & f);
-Vector operator*(Vector v, const Vector & v2);
+double operator*(const Vector & v, const Vector & v2); //dot product
+Vector operator/(Vector v, const Vector & v2); //cross product
 Vector operator+(Vector v, const Vector & v2);
 Vector operator-(Vector v, const Vector & v2);
+double Angle(const Vector & v, const Vector & v2);
 Orientation operator*(Orientation o1, const Orientation & o2);
 
 struct Location{
