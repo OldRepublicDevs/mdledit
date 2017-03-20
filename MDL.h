@@ -1143,6 +1143,8 @@ class MDL: public BinaryFile{
     }
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
+    bool bSmoothAreaWeighting = true;
+    bool bSmoothAngleWeighting = false;
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
     bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
 

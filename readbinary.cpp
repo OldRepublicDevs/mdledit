@@ -1,5 +1,6 @@
 #include "MDL.h"
 #include <fstream>
+#include <iomanip>
 #include <Shlwapi.h>
 
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
@@ -983,19 +984,21 @@ void MDL::DetermineSmoothing(){
             PathRemoveFileSpec(&sDir[0]);
             sDir.resize(strlen(sDir.c_str()));
             sDir += "\\debug.txt";
-            std::cout<<"Will write debug to: "<<sDir.c_str()<<"\n";
+            std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
             std::ofstream file(sDir.c_str());
 
             if(!file.is_open()){
-                std::cout<<"Debug.txt file creation failed. Aborting.\n";
-                return;
+                std::cout<<"debug.txt does not exist. No debug will be written.\n";
             }
+    int nNumOfVerts = 0;
+    int nNumOfFoundNormals = 0;
 
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
             Node & node = Data.MH.ArrayOfNodes.at(n);
+            nNumOfVerts += node.Mesh.Vertices.size();
             for(int v = 0; v < node.Mesh.Vertices.size(); v++){
                 //For every vertex of every mesh
 
@@ -1119,15 +1122,18 @@ void MDL::DetermineSmoothing(){
                 double fS = (fA + fB + fC) / 2.0;
                 face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
                 fTotalArea +=  face.fArea;
-                Vector vAdd = face.vNormal * face.fArea;
-                if(patch.nVertex == face.nIndexVertex[0]){
-                    vAdd *= Angle(Edge1, Edge2);
-                }
-                else if(patch.nVertex == face.nIndexVertex[1]){
-                    vAdd *= Angle(Edge1, Edge3);
-                }
-                else if(patch.nVertex == face.nIndexVertex[2]){
-                    vAdd *= Angle(Edge2, Edge3);
+                Vector vAdd = face.vNormal;
+                if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                if(bSmoothAngleWeighting){
+                    if(patch.nVertex == face.nIndexVertex[0]){
+                        vAdd *= Angle(Edge1, Edge2);
+                    }
+                    else if(patch.nVertex == face.nIndexVertex[1]){
+                        vAdd *= Angle(Edge1, Edge3);
+                    }
+                    else if(patch.nVertex == face.nIndexVertex[2]){
+                        vAdd *= Angle(Edge2, Edge3);
+                    }
                 }
                 vNormalBase += vAdd;
             }
@@ -1150,14 +1156,17 @@ void MDL::DetermineSmoothing(){
             if(bFound){
                 //yay
                 //But there's nothing to do right now, we need to wait until all the patches in the group are checked
+                nNumOfFoundNormals++;
                 //file<<"Found a match for patch "<<p<<"'s vertex normal! :) \n";
                 file<<">Found a match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :) \n";
             }
             else if(fTotalArea == 0.0){
                 file<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                std::cout<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
             }
             else{
                 file<<"Found no match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                std::cout<<"Found no match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
             }
         }
         //std::cout<<"Done comparing normals for patch group "<<pg<<"!\n";
@@ -1236,7 +1245,8 @@ void MDL::DetermineSmoothing(){
         }
         //std::cout<<"Done updating face smoothing groups!\n";
     }
-    std::cout<<"Done calculating smoothing groups!\n";
+    double fPercentage = ((double)nNumOfFoundNormals / (double)nNumOfVerts) * 100.0;
+    std::cout<<"Done calculating smoothing groups! Found normals: "<<nNumOfFoundNormals<<"/"<<nNumOfVerts<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
 
             //Close file
             file.close();
@@ -1296,15 +1306,18 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
                 double fC = Edge3.GetLength();
                 double fS = (fA + fB + fC) / 2.0;
                 face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
-                Vector vAdd = face.vNormal * face.fArea;
-                if(ourpatch.nVertex == face.nIndexVertex[0]){
-                    vAdd *= Angle(Edge1, Edge2);
-                }
-                else if(ourpatch.nVertex == face.nIndexVertex[1]){
-                    vAdd *= Angle(Edge1, Edge3);
-                }
-                else if(ourpatch.nVertex == face.nIndexVertex[2]){
-                    vAdd *= Angle(Edge2, Edge3);
+                Vector vAdd = face.vNormal;
+                if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                if(bSmoothAngleWeighting){
+                    if(ourpatch.nVertex == face.nIndexVertex[0]){
+                        vAdd *= Angle(Edge1, Edge2);
+                    }
+                    else if(ourpatch.nVertex == face.nIndexVertex[1]){
+                        vAdd *= Angle(Edge1, Edge3);
+                    }
+                    else if(ourpatch.nVertex == face.nIndexVertex[2]){
+                        vAdd *= Angle(Edge2, Edge3);
+                    }
                 }
                 vWorking += vAdd;
             }
