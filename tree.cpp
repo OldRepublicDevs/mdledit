@@ -1,10 +1,10 @@
 #include "MDL.h"
 
-void MDL::AddMenuLines(StringWrapper * cItem, LPARAM lParam, MenuLineAdder * pmla){
-    if(BVstrcmp(cItem[0].cString, "")) return;
+void MDL::AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla){
+    if((cItem[0] == "")) return;
 
     /// Node ///
-    else if(BVstrcmp(cItem[1].cString, "Geometry") || (BVstrcmp(cItem[3].cString, "Geometry") && (BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[3].cString, "Parent")))){
+    else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node* node = (Node*) lParam;
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
@@ -13,15 +13,15 @@ void MDL::AddMenuLines(StringWrapper * cItem, LPARAM lParam, MenuLineAdder * pml
             pmla->nIndex++;
         }
     }
-    else if(BVstrcmp(cItem[1].cString, "Animations")){
+    else if((cItem[1] == "Animations")){
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
     }
-    else if(BVstrcmp(cItem[1].cString, "Animated Nodes") || (BVstrcmp(cItem[3].cString, "Animated Nodes") && (BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[3].cString, "Parent")))){
+    else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
     }
-    else if(BVstrcmp(cItem[1].cString, "Controllers")){
+    else if((cItem[1] == "Controllers")){
         //Controller * ctrl = (Controller*) lParam;
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
@@ -365,7 +365,7 @@ void MDL::BuildTree(){
     }
     FileHeader & Data = FH[0];
 
-    HTREEITEM Root = Append(cFile, NULL, TVI_ROOT);
+    HTREEITEM Root = Append(sFile, NULL, TVI_ROOT);
     HTREEITEM Header = Append("Header", (LPARAM) &(Data.MH), Root);
     Append("Bounding Box Min", (LPARAM) (&Data.MH.vBBmin), Header);
     Append("Bounding Box Max", (LPARAM) (&Data.MH.vBBmax));
@@ -467,18 +467,18 @@ void MDL::BuildTree(){
 extern char cReturn[4][255];
 char * PrepareFloat(double fFloat, unsigned int n);
 
-void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint, LPARAM lParam){
+void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam){
     bool bMdl = false;
     bool bWok = false;
     for(int j = 0; !bMdl && !bWok; j++){
-        if(BVstrcmp(cItem[j].cString, Model.GetFilename())) bMdl = true;
-        else if(BVstrcmp(cItem[j].cString, Walkmesh.GetFilename())) bWok = true;
+        if((cItem[j] == Model.GetFilename())) bMdl = true;
+        else if((cItem[j] == Walkmesh.GetFilename())) bWok = true;
     }
 
-    if(BVstrcmp(cItem[0].cString, "")) sPrint.flush();
+    if((cItem[0] == "")) sPrint.flush();
 
     /// Header ///
-    else if(BVstrcmp(cItem[0].cString, "Header")){
+    else if((cItem[0] == "Header")){
             sPrint << string_format("Header\r\nModel Name: %s\r\nModel Type: %i\r\nClassification: %s\r\nSupermodel: %s",
                     FH[0].MH.GH.cName.c_str(), FH[0].MH.GH.nModelType, ReturnClassificationName(FH[0].MH.nClassification).c_str(),
                     FH[0].MH.cSupermodelName.c_str()/*, FH[0].MH.nChildModelCount*/);
@@ -488,17 +488,17 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << string_format("\r\n\r\nMDL Length: %i\r\nMDX Length: %i\r\nFunction Pointer 0: %i\r\nFunction Pointer 1: %i",
                     FH[0].nMdlLength, FH[0].nMdxLength, FH[0].MH.GH.nFunctionPointer0, FH[0].MH.GH.nFunctionPointer1);
     }
-    else if(BVstrcmp(cItem[0].cString, "Bounding Box Min")) sPrint << string_format("Bounding Box Min: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Bounding Box Max")) sPrint << string_format("Bounding Box Max: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Radius")) sPrint << string_format("Radius:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Scale")) sPrint << string_format("Scale:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Bounding Box Min")) sPrint << string_format("Bounding Box Min: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Bounding Box Max")) sPrint << string_format("Bounding Box Max: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Radius")) sPrint << string_format("Radius:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Scale")) sPrint << string_format("Scale:\r\n%f", *((double*) lParam));
 
     /// Animations ///
-    else if(BVstrcmp(cItem[0].cString, "Animations")){
+    else if((cItem[0] == "Animations")){
             sPrint << string_format("Animations\r\nOffset to Animation Array: %i\r\nAnimation Count: %i",
                     FH[0].MH.AnimationArray.nOffset, FH[0].MH.AnimationArray.nCount);
     }
-    else if(BVstrcmp(cItem[1].cString, "Animations")){
+    else if((cItem[1] == "Animations")){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Animation %s\r\nOffset: %u\r\nOffset to Root: %u\r\nOwner: %s\r\nNumber of Objects: %u",
                 anim->cName.c_str(), anim->nOffset, anim->nOffsetToRootAnimationNode, anim->cName2.c_str(), anim->nNumberOfObjects);
@@ -507,27 +507,27 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
         sPrint << string_format("\r\n\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u\r\n",
                 anim->nFunctionPointer0, anim->nFunctionPointer1);
     }
-    else if(BVstrcmp(cItem[0].cString, "Length")) sPrint << string_format("Length:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Transition")) sPrint << string_format("Transition:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Sounds")){
+    else if((cItem[0] == "Length")) sPrint << string_format("Length:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Transition")) sPrint << string_format("Transition:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Sounds")){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Sounds\r\nOffset: %u\r\nCount: %u", anim->SoundArray.nOffset, anim->SoundArray.nCount);
     }
-    else if(BVstrcmp(cItem[1].cString, "Sounds")){
+    else if((cItem[1] == "Sounds")){
         Sound * snd = (Sound*) lParam;
         sPrint << string_format("Sound:\r\n%s\r\n\r\nTime:\r\n%f", snd->cName.c_str(), snd->fTime);
     }
 
     /// Geometry ///
-    else if(BVstrcmp(cItem[0].cString, "Geometry")){
+    else if((cItem[0] == "Geometry")){
             sPrint << string_format("Geometry\r\nOffset to Name Array: %i\r\nOffset to Root Node: %i\r\nOffset to Head Root Node: %i\r\nNode Count: %i\r\nTotal Node Count (with Supermodel): %i",
                     FH[0].MH.NameArray.nOffset, FH[0].MH.GH.nOffsetToRootNode, FH[0].MH.nOffsetToHeadRootNode, FH[0].MH.NameArray.nCount, FH[0].MH.GH.nTotalNumberOfNodes);
     }
 
     /// Node ///
-    else if((BVstrcmp(cItem[1].cString, "Geometry") || BVstrcmp(cItem[1].cString, "Animated Nodes") || BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[1].cString, "Parent")) && !bWok){
+    else if(((cItem[1] == "Geometry") || (cItem[1] == "Animated Nodes") || (cItem[1] == "Children") || (cItem[1] == "Parent")) && !bWok){
             Node * node = (Node * ) lParam;
-            //std::cout<<"Current name in problematic position: "<<cItem[0].cString<<"\n";
+            //std::cout<<"Current name in problematic position: "<<cItem[0].c_str()<<"\n";
             sPrint<<node->Head.nType<<" (";
             if(node->Head.nType & NODE_HAS_DANGLY) sPrint << "danglymesh";
             else if(node->Head.nType & NODE_HAS_SKIN) sPrint << "skin";
@@ -541,21 +541,21 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].cName.c_str();
             sPrint << string_format("\r\nOffset: %i\r\nOffset to Root: %i\r\nOffset to Parent: %i\r\nID: %i", node->nOffset, node->Head.nOffsetToRoot, node->Head.nOffsetToParent, node->Head.nID1);
     }
-    else if(BVstrcmp(cItem[0].cString, "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Orientation")){
+    else if((cItem[0] == "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Orientation")){
         Orientation * orient = (Orientation*) lParam;
         sPrint << "Orientation: \r\nx: "<<orient->qX<<" (aa "<<orient->fX<<")\r\ny: "<<orient->qY<<" (aa "<<orient->fY<<")\r\nz: "<<orient->qZ<<" (aa "<<orient->fZ<<")\r\nw: "<<orient->qW<<" (aa "<<orient->fAngle<<")";
     }
-    else if(BVstrcmp(cItem[0].cString, "Controllers")){
+    else if((cItem[0] == "Controllers")){
         Header * head = (Header * ) lParam;
         sPrint << string_format("Controllers\r\nOffset: %u\r\nCount: %u", head->ControllerArray.nOffset, head->ControllerArray.nCount);
     }
-    else if(BVstrcmp(cItem[1].cString, "Controllers")){
+    else if((cItem[1] == "Controllers")){
         Controller * ctrl = (Controller*) lParam;
         sPrint << string_format("%s\r\n\r\nController type:  %i\r\nUnknown int16:   %hi\r\nValue Count:      %hi\r\nTimekey Start:    %hi\r\nData Start:       %hi\r\nColumn Count:     %hhi\r\nPadding?:         %hhi, %hhi, %hhi",
-                cItem[0].cString, ctrl->nControllerType, ctrl->nUnknown2, ctrl->nValueCount, ctrl->nTimekeyStart, ctrl->nDataStart, ctrl->nColumnCount, ctrl->nPadding[0], ctrl->nPadding[1], ctrl->nPadding[2]);
+                cItem[0].c_str(), ctrl->nControllerType, ctrl->nUnknown2, ctrl->nValueCount, ctrl->nTimekeyStart, ctrl->nDataStart, ctrl->nColumnCount, ctrl->nPadding[0], ctrl->nPadding[1], ctrl->nPadding[2]);
     }
-    else if(BVstrcmp(cItem[0].cString, "Controller Data")){
+    else if((cItem[0] == "Controller Data")){
         Header * head = (Header * ) lParam;
         std::vector<double> & fFloats = head->ControllerData;
         sPrint << string_format("Controller Data\r\nOffset: %u\r\nCount: %u", head->ControllerDataArray.nOffset, head->ControllerDataArray.nCount);
@@ -571,18 +571,18 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             i++;
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Children")){
+    else if((cItem[0] == "Children")){
         Header * head = (Header * ) lParam;
         sPrint << string_format("Children\r\nOffset: %u\r\nCount: %u", head->ChildrenArray.nOffset, head->ChildrenArray.nCount);
     }
 
     /// Light ///
-    else if(BVstrcmp(cItem[0].cString, "Flare Radius")) sPrint << string_format("Flare Radius:\r\n%f", *((float*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Array")){
+    else if((cItem[0] == "Flare Radius")) sPrint << string_format("Flare Radius:\r\n%f", *((float*) lParam));
+    else if((cItem[0] == "Unknown Array")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Unknown Array\r\nOffset: %u\r\nCount: %u", light->UnknownArray.nOffset, light->UnknownArray.nCount);
     }
-    else if(BVstrcmp(cItem[0].cString, "Flare Sizes")){
+    else if((cItem[0] == "Flare Sizes")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Sizes\r\nOffset: %u\r\nCount: %u", light->FlareSizeArray.nOffset, light->FlareSizeArray.nCount);
         if(light->FlareSizes.size() > 0){
@@ -592,7 +592,7 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             }
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Flare Positions")){
+    else if((cItem[0] == "Flare Positions")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Positions\r\nOffset: %u\r\nCount: %u", light->FlarePositionArray.nOffset, light->FlareSizeArray.nCount);
         if(light->FlarePositions.size() > 0){
@@ -602,7 +602,7 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             }
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Flare Color Shifts")){
+    else if((cItem[0] == "Flare Color Shifts")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Color Shifts\r\nOffset: %u\r\nCount: %u", light->FlareColorShiftArray.nOffset, light->FlareColorShiftArray.nCount);
         if(light->FlareColorShifts.size() > 0){
@@ -612,7 +612,7 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             }
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Flare Textures")){
+    else if((cItem[0] == "Flare Textures")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Textures\r\nOffset: %u\r\nCount: %u", light->FlareTextureNameArray.nOffset, light->FlareTextureNameArray.nCount);
         if(light->FlareTextureNames.size() > 0){
@@ -622,49 +622,49 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             }
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Light Priority")) sPrint << string_format("Light Priority:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Ambient Only")) sPrint << string_format("Ambient Only:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Dynamic Type")) sPrint << string_format("Dynamic Type:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Affect Dynamic")) sPrint << string_format("Affect Dynamic:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Shadow")) sPrint << string_format("Shadow:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Flare")) sPrint << string_format("Flare:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Fading Light")) sPrint << string_format("Fading Light:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Light Priority")) sPrint << string_format("Light Priority:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Ambient Only")) sPrint << string_format("Ambient Only:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Dynamic Type")) sPrint << string_format("Dynamic Type:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Affect Dynamic")) sPrint << string_format("Affect Dynamic:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Shadow")) sPrint << string_format("Shadow:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Flare")) sPrint << string_format("Flare:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Fading Light")) sPrint << string_format("Fading Light:\r\n%u", *((int*) lParam));
 
     /// Emitter ///
-    else if(BVstrcmp(cItem[0].cString, "Emitter")){
+    else if((cItem[0] == "Emitter")){
         EmitterHeader * emitter = (EmitterHeader * ) lParam;
         sPrint << string_format("Emitter\r\nZero 1: %u\r\nZero 2: %u\r\n",
                 emitter->nZero1, emitter->nZero2);
     }
-    else if(BVstrcmp(cItem[0].cString, "Dead Space")) sPrint << string_format("Dead Space:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Blast Radius")) sPrint << string_format("Blast Radius:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Blast Length")) sPrint << string_format("Blast Length:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "X Grid")) sPrint << string_format("X Grid:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Y Grid")) sPrint << string_format("Y Grid:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Spawn Type")) sPrint << string_format("Spawn Type:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Update")) sPrint << string_format("Update:\r\n%s", ((char*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Render")) sPrint << string_format("Render:\r\n%s", ((char*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Blend")) sPrint << string_format("Blend:\r\n%s", ((char*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Texture")) sPrint << string_format("Texture:\r\n%s", ((char*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Chunk Name")) sPrint << string_format("Chunk Name:\r\n%s", ((char*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Twosided Texture")) sPrint << string_format("Twosided Texture:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Loop")) sPrint << string_format("Loop:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int16 1")) sPrint << string_format("Unknown Int16 1:\r\n%u", *((short*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Emitter Flags"))
+    else if((cItem[0] == "Dead Space")) sPrint << string_format("Dead Space:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Blast Radius")) sPrint << string_format("Blast Radius:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Blast Length")) sPrint << string_format("Blast Length:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "X Grid")) sPrint << string_format("X Grid:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Y Grid")) sPrint << string_format("Y Grid:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Spawn Type")) sPrint << string_format("Spawn Type:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Update")) sPrint << string_format("Update:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Render")) sPrint << string_format("Render:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Blend")) sPrint << string_format("Blend:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Texture")) sPrint << string_format("Texture:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Chunk Name")) sPrint << string_format("Chunk Name:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Twosided Texture")) sPrint << string_format("Twosided Texture:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Loop")) sPrint << string_format("Loop:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
+    else if((cItem[0] == "Unknown Int16 1")) sPrint << string_format("Unknown Int16 1:\r\n%u", *((short*) lParam));
+    else if((cItem[0] == "Emitter Flags"))
         sPrint << string_format("Emitter Flags\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
                 *((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_BOUNCE ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_RANDOM ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_VEL ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
 
     /// Mesh ///
-    else if(BVstrcmp(cItem[0].cString, "Mesh")){
+    else if((cItem[0] == "Mesh")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Mesh\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u",
                 mesh->nFunctionPointer0, mesh->nFunctionPointer1);
         sPrint << "\r\n\r\nInverted Counter: "<<mesh->nMeshInvertedCounter<<"\r\n(Offset: "<<mesh->MeshInvertedCounterArray.nOffset<<", Count: "<<mesh->MeshInvertedCounterArray.GetCount()<<")";
     }
-    else if(BVstrcmp(cItem[0].cString, "Mesh Inverted Counters Array")){
+    else if((cItem[0] == "Mesh Inverted Counters Array")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Mesh Inverted Counters Array\r\nOffset: %u\r\nCount: %u",
                 mesh->MeshInvertedCounterArray.nOffset, mesh->MeshInvertedCounterArray.nCount, mesh->nMeshInvertedCounter);
@@ -672,7 +672,7 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << string_format("\r\nValues: %i", mesh->nMeshInvertedCounter);
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "MDX Data Pointers") && BVstrcmp(cItem[2].cString, "Mesh")){
+    else if((cItem[0] == "MDX Data Pointers") && (cItem[2] == "Mesh")){
         MeshHeader * mesh = (MeshHeader *) lParam;
         sPrint << string_format("MDX Data Pointers\r\nOffset: %i\r\nSize: %i\r\nBitmap:\r\n  Vertex: %i (Offset %i)\r\n  Normal: %i (Offset %i)\r\n  UV1:    %i (Offset %i)\r\n  UV2:    %i (Offset %i)\r\n  UV3:    %i (Offset %i)\r\n  UV4:    %i (Offset %i)\r\n  Unknown: %i (Offset %i)\r\n  Tangent1: %i (Offset %i)\r\n  Tangent2?: %i (Offset %i)\r\n  Tangent3?: %i (Offset %i)\r\n  Tangent4?: %i (Offset %i)",
                 mesh->nOffsetIntoMdx, mesh->nMdxDataSize,
@@ -688,17 +688,17 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
                 mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3 ? 1 : 0, mesh->nOffsetToUnusedMDXStructure2,
                 mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4 ? 1 : 0, mesh->nOffsetToUnusedMDXStructure3);
     }
-    else if(BVstrcmp(cItem[0].cString, "Vertices") && !bWok){
+    else if((cItem[0] == "Vertices") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Vertices\r\nOffset: %u\r\nCount: %u", mesh->nOffsetToVertArray, mesh->nNumberOfVerts);
     }
-    else if(BVstrcmp(cItem[0].cString, "MDX Data") || BVstrcmp(cItem[0].cString, "Extra MDX Data")){
+    else if((cItem[0] == "MDX Data") || (cItem[0] == "Extra MDX Data")){
         MDXDataStruct * mdx = (MDXDataStruct * ) lParam;
-        if(BVstrcmp(cItem[0].cString, "Extra MDX Data")){
-            sPrint << cItem[0].cString;
+        if((cItem[0] == "Extra MDX Data")){
+            sPrint << cItem[0].c_str();
         }
         else{
-            sPrint << cItem[1].cString<<" MDX Data";
+            sPrint << cItem[1].c_str()<<" MDX Data";
         }
         Node & node = GetNodeByNameIndex(mdx->nNameIndex);
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
@@ -748,12 +748,12 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin2[0], mdx->fSkin2[1], mdx->fSkin2[2], mdx->fSkin2[3]);
         }
     }
-    else if(BVstrcmp(cItem[1].cString, "Vertices")){
+    else if((cItem[1] == "Vertices")){
         Vertex * vert = (Vertex * ) lParam;
         sPrint << string_format("%s\r\nx: %f\r\ny: %f\r\nz: %f",
-                cItem[0].cString, vert->fX, vert->fY, vert->fZ);
+                cItem[0].c_str(), vert->fX, vert->fY, vert->fZ);
     }
-    else if(BVstrcmp(cItem[0].cString, "Number of Vertex Indices 2 Array")){
+    else if((cItem[0] == "Number of Vertex Indices 2 Array")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Number of Vertex Indices 2 Array\r\nOffset: %u\r\nCount: %u",
                 mesh->IndexCounterArray.nOffset, mesh->IndexCounterArray.nCount, mesh->nVertIndicesCount);
@@ -761,7 +761,7 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << string_format("\r\nValues: %i", mesh->nVertIndicesCount);
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Location of Vertex Indices 2 Array")){
+    else if((cItem[0] == "Location of Vertex Indices 2 Array")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Location of Vertex Indices 2 Array\r\nOffset: %u\r\nCount: %u",
                 mesh->IndexLocationArray.nOffset, mesh->IndexLocationArray.nCount, mesh->nVertIndicesLocation);
@@ -770,16 +770,16 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             sPrint << string_format("\r\nValues: %i", mesh->nVertIndicesLocation);
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Faces") && !bWok){
+    else if((cItem[0] == "Faces") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Faces\r\nOffset: %u\r\nCount: %u", mesh->FaceArray.nOffset, mesh->FaceArray.nCount);
         sPrint << "\r\n\r\nIndexes Count: "<<mesh->nVertIndicesCount<<"\r\n(Offset: "<<mesh->IndexCounterArray.nOffset<<", Count: "<<mesh->IndexCounterArray.GetCount()<<")";
         sPrint << "\r\nIndexes Offset: "<<mesh->nVertIndicesLocation<<"\r\n(Offset: "<<mesh->IndexLocationArray.nOffset<<", Count: "<<mesh->IndexLocationArray.GetCount()<<")";
     }
-    else if(BVstrcmp(cItem[1].cString, "Faces")){
+    else if((cItem[1] == "Faces")){
         Face * face = (Face * ) lParam;
         sPrint << string_format("%s\r\nNormal: %f\r\n        %f\r\n        %f\r\nDistance: %f\r\nMaterial ID: %i\r\nAdjacent Faces: %i, %i, %i\r\nVertex Indices: %i, %i, %i",
-                cItem[0].cString, face->vNormal.fX, face->vNormal.fY, face->vNormal.fZ, face->fDistance, face->nMaterialID,
+                cItem[0].c_str(), face->vNormal.fX, face->vNormal.fY, face->vNormal.fZ, face->fDistance, face->nMaterialID,
                 face->nAdjacentFaces[0], face->nAdjacentFaces[1], face->nAdjacentFaces[2], face->nIndexVertex[0], face->nIndexVertex[1], face->nIndexVertex[2]);
         sPrint << "\r\n\r\nArea: "<<face->fArea;
         sPrint << "\r\nSmoothing groups: ";
@@ -787,46 +787,46 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             if(pown(2, n) & face->nSmoothingGroup) sPrint << n+1 <<" ";
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Vertex Indices 2")){
+    else if((cItem[0] == "Vertex Indices 2")){
         VertIndicesStruct * vert = (VertIndicesStruct * ) lParam;
         sPrint << string_format("Vertex Indices 2\r\nValues: %u, %u, %u", vert->nValues[0], vert->nValues[1], vert->nValues[2]);
     }
-    else if(BVstrcmp(cItem[0].cString, "Average")) sPrint << string_format("Average: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Ambient Color")) sPrint << string_format("Ambient Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Diffuse Color")) sPrint << string_format("Diffuse Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Shininess")) sPrint << string_format("Shininess:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Textures")){
+    else if((cItem[0] == "Average")) sPrint << string_format("Average: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Ambient Color")) sPrint << string_format("Ambient Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Diffuse Color")) sPrint << string_format("Diffuse Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Shininess")) sPrint << string_format("Shininess:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Textures")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Textures\r\nTexture Count: %u\r\nTexture 1: %s\r\nTexture 2: %s\r\nTexture 3: %s\r\nTexture 4: %s",
                 mesh->nTextureNumber, mesh->GetTexture(1), mesh->GetTexture(2), mesh->GetTexture(3), mesh->GetTexture(4));
     }
-    else if(BVstrcmp(cItem[0].cString, "Trimesh Flags"))
+    else if((cItem[0] == "Trimesh Flags"))
         sPrint << string_format("Trimesh Flags\r\nHasLightmap: %i\r\nRotateTexture: %i\r\nBackgroundGeometry: %i\r\nShadow: %i\r\nBeaming: %i\r\nRender: %i\r\nUnknown: %i\r\nUnknown: %i",
                 ((MeshHeader*) lParam)->nHasLightmap, ((MeshHeader*) lParam)->nRotateTexture, ((MeshHeader*) lParam)->nBackgroundGeometry, ((MeshHeader*) lParam)->nShadow,
                 ((MeshHeader*) lParam)->nBeaming, ((MeshHeader*) lParam)->nRender, ((MeshHeader*) lParam)->nUnknown30, ((MeshHeader*) lParam)->nUnknown31);
-    else if(BVstrcmp(cItem[0].cString, "Animated UV"))
+    else if((cItem[0] == "Animated UV"))
         sPrint << string_format("Animated UV\r\nAnimate UV:      %i\r\nUV Direction X:  %f\r\nUV Direction Y:  %f\r\nUV Jitter:       %f\r\nUV Jitter Speed: %f",
                 ((MeshHeader*) lParam)->nAnimateUV, ((MeshHeader*) lParam)->fUVDirectionX, ((MeshHeader*) lParam)->fUVDirectionY, ((MeshHeader*) lParam)->fUVJitter, ((MeshHeader*) lParam)->fUVJitterSpeed);
-    else if(BVstrcmp(cItem[0].cString, "Unknown Lightsaber Bytes"))
+    else if((cItem[0] == "Unknown Lightsaber Bytes"))
         sPrint << string_format("Unknown Lightsaber Bytes\r\nUnknown 1: %i\r\nUnknown 2: %i\r\nUnknown 3: %i\r\nUnknown 4: %i\r\nUnknown 5: %i\r\nUnknown 6: %i\r\nUnknown 7: %i\r\nUnknown 8: %i",
                 ((MeshHeader*) lParam)->nSaberUnknown1, ((MeshHeader*) lParam)->nSaberUnknown2, ((MeshHeader*) lParam)->nSaberUnknown3, ((MeshHeader*) lParam)->nSaberUnknown4,
                 ((MeshHeader*) lParam)->nSaberUnknown5, ((MeshHeader*) lParam)->nSaberUnknown6, ((MeshHeader*) lParam)->nSaberUnknown7, ((MeshHeader*) lParam)->nSaberUnknown8);
-    else if(BVstrcmp(cItem[0].cString, "Unknown Array of 3 Integers")) sPrint << string_format("Unknown Array of 3 Integers: \r\n%i\r\n%i\r\n%i", ((int*) lParam)[0], ((int*) lParam)[1], ((int*) lParam)[2]);
-    else if(BVstrcmp(cItem[0].cString, "Unknown Float")) sPrint << string_format("Unknown Float:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Total Area")) sPrint << string_format("Total Area:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "K2 Unknown 2")) sPrint << string_format("K2 Unknown 2:\r\n%i or %f", *((int*) lParam), *((double*) lParam));
+    else if((cItem[0] == "Unknown Array of 3 Integers")) sPrint << string_format("Unknown Array of 3 Integers: \r\n%i\r\n%i\r\n%i", ((int*) lParam)[0], ((int*) lParam)[1], ((int*) lParam)[2]);
+    else if((cItem[0] == "Unknown Float")) sPrint << string_format("Unknown Float:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Total Area")) sPrint << string_format("Total Area:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "K2 Unknown 2")) sPrint << string_format("K2 Unknown 2:\r\n%i or %f", *((int*) lParam), *((double*) lParam));
 
     /// Skin ///
-    else if(BVstrcmp(cItem[0].cString, "Bones")){
+    else if((cItem[0] == "Bones")){
         SkinHeader * skin = (SkinHeader * ) lParam;
         sPrint << string_format("Bonemap\r\nOffset: %u\r\nCount: %u", skin->nOffsetToBonemap, skin->nNumberOfBonemap);
         sPrint << string_format("\r\n\r\nQ Bones\r\nOffset: %u\r\nCount: %u", skin->QBoneArray.nOffset, skin->QBoneArray.nCount);
         sPrint << string_format("\r\n\r\nT Bones\r\nOffset: %u\r\nCount: %u", skin->TBoneArray.nOffset, skin->TBoneArray.nCount);
         sPrint << string_format("\r\n\r\nArray8\r\nOffset: %u\r\nCount: %u", skin->Array8Array.nOffset, skin->Array8Array.nCount);
     }
-    else if(BVstrcmp(cItem[1].cString, "Bones")){
+    else if((cItem[1] == "Bones")){
         Bone * bone = (Bone * ) lParam;
-        sPrint << cItem[0].cString;
+        sPrint << cItem[0].c_str();
         sPrint << "\r\n\r\nBonemap: "<<PrepareFloat(bone->fBonemap, 0);
         sPrint << "\r\n\r\nTBone: "<<PrepareFloat(bone->TBone.fX, 0);
         sPrint << "\r\n       "<<PrepareFloat(bone->TBone.fY, 0);
@@ -837,19 +837,19 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
         sPrint << "\r\n       "<<PrepareFloat(bone->QBone.qW, 0);
         sPrint << "\r\n\r\nArray8: "<<PrepareFloat(bone->fArray8, 0);
     }
-    else if(BVstrcmp(cItem[0].cString, "MDX Data Pointers") && BVstrcmp(cItem[1].cString, "Skin")){
+    else if((cItem[0] == "MDX Data Pointers") && (cItem[1] == "Skin")){
         SkinHeader * skin = (SkinHeader *) lParam;
         sPrint << string_format("MDX Data Pointers\r\nTo Weight Value: %i\r\nTo Weight Index: %i",
             skin->nPointerToStruct1InMDX, skin->nPointerToStruct2InMDX);
     }
-    else if(BVstrcmp(cItem[0].cString, "Bone Indexes")){
+    else if((cItem[0] == "Bone Indexes")){
         short * sarray = (short * ) lParam;
         sPrint<<"Bone Indexes";
         for(int n = 0; n < 18; n++) sPrint<<"\r\nIndex "<<n+1<<": "<<sarray[n];
     }
 
     /// Danglymesh ///
-    else if(BVstrcmp(cItem[0].cString, "Constraints")){
+    else if((cItem[0] == "Constraints")){
         DanglymeshHeader * dangly = (DanglymeshHeader * ) lParam;
         sPrint << string_format("Constraints\r\nOffset: %u\r\nCount: %u", dangly->ConstraintArray.nOffset, dangly->ConstraintArray.nCount);
         if(dangly->Constraints.size() > 0){
@@ -865,64 +865,64 @@ void MDL::DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint
             }
         }
     }
-    else if(BVstrcmp(cItem[0].cString, "Displacement")) sPrint << string_format("Displacement:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Tightness")) sPrint << string_format("Tightness:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Period")) sPrint << string_format("Period:\r\n%f", *((double*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Data2")){
+    else if((cItem[0] == "Displacement")) sPrint << string_format("Displacement:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Tightness")) sPrint << string_format("Tightness:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Period")) sPrint << string_format("Period:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Data2")){
         DanglymeshHeader * dangly = (DanglymeshHeader * ) lParam;
         sPrint << string_format("Data2\r\nOffset: %u\r\nCount: %u", dangly->nOffsetToData2, dangly->ConstraintArray.nCount);
     }
-    else if(BVstrcmp(cItem[1].cString, "Data2")){
+    else if((cItem[1] == "Data2")){
         DanglyData2Struct * data = (DanglyData2Struct * ) lParam;
         sPrint << string_format("%s\r\n%f\r\n%f\r\n%f",
-                cItem[0].cString, data->fValues[0], data->fValues[1], data->fValues[2]);
+                cItem[0].c_str(), data->fValues[0], data->fValues[1], data->fValues[2]);
     }
 
     /// Walkmesh ///
-    else if(BVstrcmp(cItem[0].cString, "Walkmesh")){
+    else if((cItem[0] == "Walkmesh")){
         WalkmeshHeader * walk = (WalkmeshHeader * ) lParam;
         sPrint << string_format("Walkmesh\r\nOffset to aabb tree: %u\r\nCount: ?", walk->nOffsetToAabb);
     }
-    else if(BVstrcmp(cItem[1].cString, "Walkmesh")){
+    else if((cItem[1] == "Walkmesh")){
         Aabb * aabb = (Aabb * ) lParam;
         sPrint << string_format("%s\r\nOffset: %u\r\nValues: %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\nID: %i\r\nChild Flag: %i\r\nOffset to Child 1: %i\r\nOffset to Child 2: %i",
-                cItem[0].cString, aabb->nOffset, aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2);
+                cItem[0].c_str(), aabb->nOffset, aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2);
     }
 
     /// Saber ///
-    else if(BVstrcmp(cItem[0].cString, "Saber Data")){
+    else if((cItem[0] == "Saber Data")){
         SaberHeader * saber = (SaberHeader * ) lParam;
         sPrint << string_format("Saber Data\r\nOffset 1: %u\r\nOffset 2: %u\r\nOffset 3: %u\r\nCount: %u", saber->nOffsetToSaberData1, saber->nOffsetToSaberData2, saber->nOffsetToSaberData3, saber->nNumberOfSaberData);
     }
-    else if(BVstrcmp(cItem[1].cString, "Saber Data")){
+    else if((cItem[1] == "Saber Data")){
         SaberDataStruct * saber = (SaberDataStruct *) lParam;
-        sPrint << string_format("%s", cItem[0].cString);
+        sPrint << string_format("%s", cItem[0].c_str());
         sPrint << string_format("\r\n1. Vertex Coordinates:\r\n   %f\r\n   %f\r\n   %f", saber->vVertex.fX, saber->vVertex.fY, saber->vVertex.fZ);
         sPrint << string_format("\r\n\r\n2. UV:\r\n   %f\r\n   %f", saber->fUV[0], saber->fUV[1]);
         sPrint << string_format("\r\n\r\n3. Normal?:\r\n   %f\r\n   %f\r\n   %f", saber->vNormal.fX, saber->vNormal.fY, saber->vNormal.fZ);
     }
-    else if(BVstrcmp(cItem[0].cString, "Mesh Inverted Counter 1")) sPrint << string_format("Mesh Inverted Counter 1:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Mesh Inverted Counter 2")) sPrint << string_format("Mesh Inverted Counter 2:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Mesh Inverted Counter 1")) sPrint << string_format("Mesh Inverted Counter 1:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Mesh Inverted Counter 2")) sPrint << string_format("Mesh Inverted Counter 2:\r\n%u", *((int*) lParam));
 
     /// WOK ///
-    else if(BVstrcmp(cItem[1].cString, "Aabb")){
+    else if((cItem[1] == "Aabb")){
         Aabb * aabb = (Aabb * ) lParam;
         sPrint << string_format("%s\r\nValues: %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\nID: %i\r\nChild Flag: %i\r\nOffset to Child 1: %i\r\nOffset to Child 2: %i\r\nExtra: %i",
-                cItem[0].cString,aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2, aabb->nExtra);
+                cItem[0].c_str(),aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2, aabb->nExtra);
     }
-    else if(BVstrcmp(cItem[1].cString, "Array 1")){
+    else if((cItem[1] == "Array 1")){
         sPrint << string_format("Values:\r\n%i\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2, ((Triples*) lParam)->n3);
     }
-    else if(BVstrcmp(cItem[1].cString, "Array 2")){
+    else if((cItem[1] == "Array 2")){
         sPrint << string_format("Values:\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2);
     }
-    else if(BVstrcmp(cItem[1].cString, "Array 3")) sPrint << string_format("Value:\r\n%i", *((int*) lParam));
+    else if((cItem[1] == "Array 3")) sPrint << string_format("Value:\r\n%i", *((int*) lParam));
 
     /// Unknowns ///
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int32 1")) sPrint << string_format("Unknown Int32 1:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int32 2")) sPrint << string_format("Unknown Int32 2:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int32 3")) sPrint << string_format("Unknown Int32 3:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int32 4")) sPrint << string_format("Unknown Int32 4:\r\n%u", *((int*) lParam));
-    else if(BVstrcmp(cItem[0].cString, "Unknown Int32 5")) sPrint << string_format("Unknown Int32 5:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 1")) sPrint << string_format("Unknown Int32 1:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 2")) sPrint << string_format("Unknown Int32 2:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 3")) sPrint << string_format("Unknown Int32 3:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 4")) sPrint << string_format("Unknown Int32 4:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 5")) sPrint << string_format("Unknown Int32 5:\r\n%u", *((int*) lParam));
     else sPrint.flush();
 }

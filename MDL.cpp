@@ -1,6 +1,16 @@
 #include "MDL.h"
+#include <Shlwapi.h>
 
-bool bK2 = true;
+void File::SetFilePath(std::string & sPath){
+    sFullPath = sPath;
+    sFile = sPath;    PathStripPath(&sFile.front());
+    sFile.resize(strlen(sFile.c_str()));
+}
+
+/// This file should be a general initializer/implementator of MDL.h
+const std::string MDL::sName = "MDL";
+const std::string MDX::sName = "MDX";
+const std::string WOK::sName = "WOK";
 
 Vector operator*(Vector v, const Matrix22 & m){
     v *= m;
@@ -45,9 +55,81 @@ Orientation operator*(Orientation o1, const Orientation & o2){
     return o1;
 }
 
-bool VerticesEqual(const Vertex & v1, const Vertex & v2){
-    if(fabs((v1 - v2).GetLength()) < 0.001) return true;
-    else return false;
+//This function together with the next one, checks the currently loaded data in MDL for any special properties
+void MDL::CheckPeculiarities(){
+    FileHeader * Data = &FH[0];
+    std::stringstream ssReturn;
+    bool bUpdate = false;
+    ssReturn<<"Lucky you! Your model has some rare peculiarities:";
+    for(int n = 0; n < 6; n++){
+        if(Data->MH.GH.nUnknownEmpty[n] != 0){
+            ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the GH has a value!";
+            bUpdate = true;
+        }
+    }
+    if(Data->MH.GH.nRefCount != 0){
+        ssReturn<<"\r\n - RefCount has a value!";
+        bUpdate = true;
+    }
+    if(Data->MH.GH.nModelType != 2){
+        ssReturn<<"\r\n - Header ModelType different than 2!";
+        bUpdate = true;
+    }
+    if(Data->MH.nChildModelCount != 0){
+        ssReturn<<"\r\n - ChildModelCount has a value!";
+        bUpdate = true;
+    }
+    if(Data->MH.AnimationArray.GetDoCountsDiffer()){
+        ssReturn<<"\r\n - AnimationArray counts differ!";
+        bUpdate = true;
+    }
+    if(Data->MH.nUnknownEmpty3 != 0){
+        ssReturn<<"\r\n - Unknown int32 after the Root Node Offset 2 in the MH has a value!";
+        bUpdate = true;
+    }
+    if(Data->MH.nMdxLength2 != Data->nMdxLength){
+        ssReturn<<"\r\n - MdxLength in FH and MdxLength2 in MH don't have the same value!";
+        bUpdate = true;
+    }
+    if(Data->MH.nOffsetIntoMdx != 0){
+        ssReturn<<"\r\n - OffsetIntoMdx after the MdxLength2 in the MH has a value!";
+        bUpdate = true;
+    }
+    if(Data->MH.NameArray.GetDoCountsDiffer()){
+        ssReturn<<"\r\n - NameArray counts differ!";
+        bUpdate = true;
+    }
+    for(int a = 0; a < Data->MH.AnimationArray.nCount; a++){
+        for(int n = 0; n < 6; n++){
+            if(Data->MH.Animations[a].nUnknownEmpty3[n] != 0){
+                ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the Animation GH has a value!";
+                bUpdate = true;
+            }
+        }
+        if(Data->MH.Animations[a].nUnknownEmpty4 != 0){
+            ssReturn<<"\r\n - Animation counterpart to RefCount has a value!";
+            bUpdate = true;
+        }
+        if(Data->MH.Animations[a].SoundArray.GetDoCountsDiffer()){
+            ssReturn<<"\r\n - SoundArray counts differ!";
+            bUpdate = true;
+        }
+        if(Data->MH.Animations[a].nUnknownEmpty6 != 0){
+            ssReturn<<"\r\n - Unknown int32 after SoundArrayHead has a value!";
+            bUpdate = true;
+        }
+        if(Data->MH.Animations[a].nModelType != 5){
+            ssReturn<<"\r\n - Animation ModelType is not 5!";
+            bUpdate = true;
+        }
+        if(CheckNodes(Data->MH.Animations[a].ArrayOfNodes, ssReturn, a)) bUpdate = true;
+    }
+    if(CheckNodes(Data->MH.ArrayOfNodes, ssReturn, -1)) bUpdate = true;
+    if(!bUpdate){
+        std::cout<<"Checked for peculiarities, nothing to report.\n";
+        return;
+    }
+    MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
 }
 
 bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, int nAnimation){
@@ -357,80 +439,4 @@ for(int b = 0; b < NodeArray.size(); b++){
     }
 }
     return bMasterUpdate;
-}
-
-void MDL::CheckPeculiarities(){
-    FileHeader * Data = &FH[0];
-    std::stringstream ssReturn;
-    bool bUpdate = false;
-    ssReturn<<"Lucky you! Your model has some rare peculiarities:";
-    for(int n = 0; n < 6; n++){
-        if(Data->MH.GH.nUnknownEmpty[n] != 0){
-            ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the GH has a value!";
-            bUpdate = true;
-        }
-    }
-    if(Data->MH.GH.nRefCount != 0){
-        ssReturn<<"\r\n - RefCount has a value!";
-        bUpdate = true;
-    }
-    if(Data->MH.GH.nModelType != 2){
-        ssReturn<<"\r\n - Header ModelType different than 2!";
-        bUpdate = true;
-    }
-    if(Data->MH.nChildModelCount != 0){
-        ssReturn<<"\r\n - ChildModelCount has a value!";
-        bUpdate = true;
-    }
-    if(Data->MH.AnimationArray.GetDoCountsDiffer()){
-        ssReturn<<"\r\n - AnimationArray counts differ!";
-        bUpdate = true;
-    }
-    if(Data->MH.nUnknownEmpty3 != 0){
-        ssReturn<<"\r\n - Unknown int32 after the Root Node Offset 2 in the MH has a value!";
-        bUpdate = true;
-    }
-    if(Data->MH.nMdxLength2 != Data->nMdxLength){
-        ssReturn<<"\r\n - MdxLength in FH and MdxLength2 in MH don't have the same value!";
-        bUpdate = true;
-    }
-    if(Data->MH.nOffsetIntoMdx != 0){
-        ssReturn<<"\r\n - OffsetIntoMdx after the MdxLength2 in the MH has a value!";
-        bUpdate = true;
-    }
-    if(Data->MH.NameArray.GetDoCountsDiffer()){
-        ssReturn<<"\r\n - NameArray counts differ!";
-        bUpdate = true;
-    }
-    for(int a = 0; a < Data->MH.AnimationArray.nCount; a++){
-        for(int n = 0; n < 6; n++){
-            if(Data->MH.Animations[a].nUnknownEmpty3[n] != 0){
-                ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the Animation GH has a value!";
-                bUpdate = true;
-            }
-        }
-        if(Data->MH.Animations[a].nUnknownEmpty4 != 0){
-            ssReturn<<"\r\n - Animation counterpart to RefCount has a value!";
-            bUpdate = true;
-        }
-        if(Data->MH.Animations[a].SoundArray.GetDoCountsDiffer()){
-            ssReturn<<"\r\n - SoundArray counts differ!";
-            bUpdate = true;
-        }
-        if(Data->MH.Animations[a].nUnknownEmpty6 != 0){
-            ssReturn<<"\r\n - Unknown int32 after SoundArrayHead has a value!";
-            bUpdate = true;
-        }
-        if(Data->MH.Animations[a].nModelType != 5){
-            ssReturn<<"\r\n - Animation ModelType is not 5!";
-            bUpdate = true;
-        }
-        if(CheckNodes(Data->MH.Animations[a].ArrayOfNodes, ssReturn, a)) bUpdate = true;
-    }
-    if(CheckNodes(Data->MH.ArrayOfNodes, ssReturn, -1)) bUpdate = true;
-    if(!bUpdate){
-        std::cout<<"Checked for peculiarities, nothing to report.\n";
-        return;
-    }
-    MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
 }

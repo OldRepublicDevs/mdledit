@@ -260,7 +260,7 @@ void MDL::DecompileModel(){
     }
     std::cout<<"Geometry read.\n";
     std::cout<<"Done decompiling!\n";
-    if(bDetermineSmoothing) DetermineSmoothing();
+    if(bDetermineSmoothing && !Mdx.empty()) DetermineSmoothing();
 }
 
 void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
@@ -758,7 +758,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter){
                 NODE->Mesh.Vertices[n].fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
 
-                if(NODE->Mesh.nMdxDataSize > 0 && !Mdx.sBuffer.empty()){
+                if(NODE->Mesh.nMdxDataSize > 0 && !Mdx.empty()){
                     NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToVerticesInMDX;

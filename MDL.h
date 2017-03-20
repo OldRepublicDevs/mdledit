@@ -976,29 +976,39 @@ std::string ReturnClassificationName(int nClassification);
 std::string ReturnControllerName(int, int nType);
 
 class File{
-protected:
-    char cFile[MAX_PATH];
-    std::vector<char> sBuffer;
-    int nBufferSize;
-    unsigned int nPosition;
-public:
+  protected:
+    bool bLoaded = false;
+    std::string sFile;
     std::string sFullPath;
+    std::vector<char> sBuffer;
+    unsigned int nBufferSize;
+    unsigned int nPosition;
+  public:
     //Getters
     std::vector<char> & GetBuffer(){
         return sBuffer;
     }
-    int GetBufferLength(){
+    unsigned int GetBufferLength(){
         return nBufferSize;
     }
-    char * GetFilename(){
-        return cFile;
+    const std::string & GetFilename(){
+        return sFile;
     }
-    virtual char * GetName(){
+    const std::string & GetFullPath(){
+        return sFile;
+    }
+    virtual const std::string GetName(){
         return "";
     }
     bool empty(){
-        return sBuffer.empty();
+        return bLoaded;
     }
+    void Export(std::string &sExport){
+        sExport = std::string(sBuffer.begin(), sBuffer.end());
+    }
+
+    //Setters
+    void SetFilePath(std::string & sPath);
 
     //Loaders/Unloaders
     virtual std::vector<char> & CreateBuffer(int nSize){
@@ -1017,29 +1027,33 @@ public:
 
 class BinaryFile: public File{
 
-protected:
+  protected:
+    //For coloring bytes
     std::vector<int> bKnown;
     void MarkBytes(unsigned int nOffset, int nLength, int nClass);
+
+    //Reading functions
     int ReadInt(unsigned int * nPosition, int nMarking, int nBytes = 4);
     float ReadFloat(unsigned int * nPosition, int nMarking, int nBytes = 4);
-    void CopyChars(char * nArray1, unsigned int *nPosition, int nMarking, int nNumber);
     void ReadString(std::string & sArray1, unsigned int *nPosition, int nMarking, int nNumber);
+
+    //Writing functions
     void WriteInt(int nInt, int nKnown, int nBytes = 4);
     void WriteFloat(float fFloat, int nKnown, int nBytes = 4);
     void WriteString(std::string sString, int nKnown);
     void WriteByte(char cByte, int nKnown);
-    void WriteIntToPH(int nInt, int nPH, unsigned int & nContainer);
-public:
+    void WriteIntToPH(int nInt, int nPH, unsigned int & nContainer); //PH is placeholder
+
+  public:
     //Getters
-    int * GetKnownData(){
-        if(!bKnown.empty()) return &bKnown[0];
-        else return NULL;
+    std::vector<int> & GetKnownData(){
+        return bKnown;
     }
 
     //Loaders/Unloaders
     std::vector<char> & CreateBuffer(int nSize){
         nBufferSize = nSize;
-
+        bLoaded = true;
         sBuffer.resize(nSize, '\0');
         bKnown.resize(nSize, 0);
         return sBuffer;
@@ -1047,6 +1061,7 @@ public:
     void FlushAll(){
         sBuffer.clear();
         bKnown.clear();
+        bLoaded = false;
         nBufferSize = 0;
     }
 };
@@ -1054,16 +1069,21 @@ public:
 class MDL;
 
 class MDX: public BinaryFile{
-public:
-    char cName [4] = "MDX";
-     char * GetName(){
-        return cName;
+    static const std::string sName;
+  public:
+     //Getters
+     const std::string GetName(){
+        return sName;
      }
+
+    //Friends
     friend class MDL;
 };
 
 class WOK: public BinaryFile{
-    char cName [4] = "WOK";
+    static const std::string sName;
+
+    //Data
     unsigned int nNumberOfVerts;
     unsigned int nOffsetToVerts;
     unsigned int nNumberOfFaces;
@@ -1085,49 +1105,46 @@ class WOK: public BinaryFile{
     std::vector<Triples> triples;
     std::vector<Triples> doubles;
     std::vector<int> singles;
-public:
-     char * GetName(){
-        return cName;
-     }
-     void ProcessWalkmesh();
-     void BuildTree();
+
+  public:
+    //Getters
+    const std::string GetName(){
+        return sName;
+    }
+
+    //Loaders
+    void ProcessWalkmesh();
+    void BuildTree();
 };
 
 extern MDX Mdx;
 extern WOK Walkmesh;
 
 class Ascii: public File{
-    bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
-    int GetNameIndex(std::string sName, std::vector<Name> Names);
+    //Reading
     bool ReadFloat(double & fNew, bool bPrint = false);
     bool ReadInt(int & nNew, bool bPrint = false);
+    bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
     void SkipLine();
     bool EmptyRow();
     void BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter);
+
+    //Getters
+    int GetNameIndex(std::string sName, std::vector<Name> Names);
     Node & GetNodeByNameIndex(FileHeader & Data, int nNameIndex, int nAnimation = -1);
-public:
+
+  public:
     bool Read(FileHeader * FH);
 };
 
 class MDL: public BinaryFile{
-    char cName [4] = "MDL";
+    static const std::string sName;
+    std::vector<FileHeader> FH;
+    Ascii AsciiReader;
+
+    //Reading
     void ParseNode(Node * NODE, int * nNodeCounter);
     void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
-    std::vector<FileHeader> FH;
-    char * GetName(){
-        return cName;
-    }
-    void DetermineDisplayText(StringWrapper * cItem, std::stringstream & sPrint, LPARAM lParam);
-    void AddMenuLines(StringWrapper * cItem, LPARAM lParam, MenuLineAdder * pmla);
-    void OpenViewer(StringWrapper * cItem, LPARAM lParam);
-    void OpenGeoViewer(StringWrapper * cItem, LPARAM lParam);
-    void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
-    bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
-    void WriteNodes(Node & node);
-    void WriteAabb(Aabb & aabb);
-    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes);
-    void FillBinaryFields(Node & NODE, int & nMeshCounter);
-    Ascii AsciiReader;
     void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
         for(int n = 0; n < NODE.Head.Children.size(); n++){
             LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
@@ -1141,6 +1158,27 @@ class MDL: public BinaryFile{
             LinearizeAnimations(node.Head.Children[n], ArrayOfNodes);
         }
     }
+
+    //Display
+    void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
+
+    //Context menu
+    void AddMenuLines(std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla);
+
+    //Viewers
+    void OpenViewer(std::vector<std::string> cItem, LPARAM lParam);
+    void OpenGeoViewer(std::vector<std::string> cItem, LPARAM lParam);
+
+    void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
+    bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
+
+    //Writing
+    void WriteNodes(Node & node);
+    void WriteAabb(Aabb & aabb);
+    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes);
+    void FillBinaryFields(Node & NODE, int & nMeshCounter);
+
+    //Smoothing
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
@@ -1148,10 +1186,18 @@ class MDL: public BinaryFile{
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
     bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
 
-public:
+    //Getters
+    const std::string GetName(){
+        return sName;
+    }
+
+  public:
     //Friends
     friend Ascii;
     friend void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer);
+
+    //Version
+    bool bK2 = true;
 
     //Getters
     FileHeader * GetFileData(){
@@ -1176,15 +1222,19 @@ public:
 
 
     //Loaders
+    bool Compile();
     void DecompileModel();
+    void PrepareForBinary();
+    void CleanupAfterCompilation(){}
     void CheckPeculiarities();
     void BuildTree();
     void UpdateDisplay(HTREEITEM hItem);
-    void ExportAscii(std::string &sExport);
-    void ExportBinary(std::string &sExport);
     void FlushData(){
         FH.clear();
     }
+
+    //ascii
+    void ExportAscii(std::string &sExport);
     void FlushAscii(){
         AsciiReader.FlushAll();
     }
@@ -1201,14 +1251,9 @@ public:
         else std::cout<<"Ascii read succesfully!\n";
         return bReturn;
     }
-    void PrepareForBinary();
-    bool Compile();
-    void CleanupAfterCompilation(){}
 };
 
 extern MDL Model;
-
-extern bool bK2;
 
 
 #endif // MDL_H_INCLUDED

@@ -1,9 +1,5 @@
 #include "MDL.h"
 
-void MDL::ExportBinary(std::string &sExport){
-    sExport = std::string(sBuffer.begin(), sBuffer.end());
-}
-
 void BinaryFile::WriteIntToPH(int nInt, int nPH, unsigned int & nContainer){
     ByteBlock4.i = nInt;
     int n = 0;
@@ -450,7 +446,7 @@ void MDL::PrepareForBinary(){
                             //We are now checking the three vertices
                             for(int i = 0; i < 3; i++){
                                 //Check if vertices are equal (enough)
-                                if(VerticesEqual(vert, node2.Mesh.Vertices.at(face.nIndexVertex[i]))){
+                                if(vert.Compare(node2.Mesh.Vertices.at(face.nIndexVertex[i]))){
 
                                     //If they are equal, regardless of weldedness, add the face to the linked faces array
                                     LinkedFaceArray.push_back(LinkedFace(n2, f, face.nIndexVertex[i]));

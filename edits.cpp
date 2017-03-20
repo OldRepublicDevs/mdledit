@@ -367,7 +367,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                     sprintf(cIntPrint, "%i", n*16);
                     AddSignificantZeroes(cIntPrint, 8);
                     ExtTextOut(hdc, ME_EDIT_PADDING_LEFT, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cIntPrint, strlen(cIntPrint), NULL);
-                    nDataKnown = *(Edit->nKnownArray + n*16 + i / 3);
+                    nDataKnown = Edit->nKnownArray.at(n*16 + i / 3);
                     if(bHilite && (
                        ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
                        || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16 * 3) <= i && (Edit->nSelectEnd % 16 * 3) >= i - 1)
@@ -385,7 +385,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
                     //Do a completely separate draw for the charset.
                     if(i <= nStrlen / 3){
-                        nDataKnown = *(Edit->nKnownArray + n*16 + i);
+                        nDataKnown = Edit->nKnownArray.at(n*16 + i);
                         if(bHilite && (
                         ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
                         || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16) <= i && (Edit->nSelectEnd % 16) >= i)

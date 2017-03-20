@@ -25,49 +25,9 @@ class Edits{
     int nSelectStart;
     int nSelectEnd;
     bool bSelection;
-    int * nKnownArray;
+    std::vector<int> nKnownArray;
     std::vector<char> sBuffer;
     int nBufferSize;
-/*
-    bool NodeRecursion(Node * NODE, Node * & ReturnNode, int nPos){
-        int n = NODE->Head.Children.size() - 1;
-        bool bEnd = false;
-        if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount || (nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0) || (nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0 && NODE->Head.ControllerArray.nOffset == 0)){
-            //std::cout<<string_format("NodeRecursion(): Found one!\n");
-            ReturnNode = NODE;
-            return true;
-        }
-        while(n >= 0 && !bEnd){
-            if(nPos >= NODE->Head.Children.at(n).nOffset + 12){
-                bEnd = NodeRecursion(&NODE->Head.Children[n], ReturnNode, nPos);
-            }
-            else{
-                n--;
-            }
-        }
-        return bEnd;
-    }
-
-    bool NodeRecursionMdx(Node * NODE, Node * & ReturnNode, int nPos){
-        bool bEnd = false;
-        int n = NODE->Head.Children.size() - 1;
-        if(NODE->Head.nType & NODE_HAS_MESH && NODE->Mesh.nMdxDataSize > 0 && (nPos >= NODE->Mesh.nOffsetIntoMdx &&  nPos < (NODE->Mesh.nOffsetIntoMdx + NODE->Mesh.nNumberOfVerts * NODE->Mesh.nMdxDataSize))){
-            //std::cout<<string_format("NodeRecursionMdx(): Found a node!\n");
-            //std::cout<<string_format("NodeRecursionMdx(): %i >= %i && %i < (%i + %i * %i)\n", nPos, NODE->Mesh.nOffsetIntoMdx, nPos, NODE->Mesh.nOffsetIntoMdx, NODE->Mesh.nNumberOfVerts, NODE->Mesh.nMdxDataSize);
-            ReturnNode = NODE;
-            return true;
-        }
-        while(n >= 0 && !bEnd){
-            //std::cout<<string_format("NodeRecursionMdx(): About to check a child, bEnd = %i\n", bEnd);
-            bEnd = NodeRecursionMdx(&NODE->Head.Children[n], ReturnNode, nPos);
-            //std::cout<<string_format("NodeRecursionMdx(): I just finished checking a child, bEnd = %i\n", bEnd);
-            if(!bEnd){
-                n--;
-            }
-        }
-        //if(bEnd) std::cout<<string_format("NodeRecursionMdx(): Will return true!!\n");
-        return bEnd;
-    }*/
 
     public:
     static HWND hIntEdit;
@@ -112,7 +72,7 @@ class Edits{
         nSelectStart = -1;
         nSelectEnd = -1;
         bSelection = false;
-        yMaxScroll = ((nBufferSize - 1)/16 + 2) * ME_EDIT_NEXT_ROW /*+ ME_EDIT_PADDING_BOTTOM*/;
+        yMaxScroll = ((nBufferSize - 1)/16 + 2) * ME_EDIT_NEXT_ROW;
         yCurrentScroll = 0;
         UpdateEdit();
         UpdateStatusBar();

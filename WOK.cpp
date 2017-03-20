@@ -103,7 +103,7 @@ void WOK::ProcessWalkmesh(){
 HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hParentNew = NULL, HTREEITEM hAfterNew = NULL, UINT Flags = NULL);
 
 void WOK::BuildTree(){
-    HTREEITEM Root = Append(cFile, NULL, TVI_ROOT);
+    HTREEITEM Root = Append(sFile, NULL, TVI_ROOT);
     HTREEITEM Verts = Append("Vertices", (LPARAM) NULL, Root);
     for(int n = 0; n < nNumberOfVerts; n++){
         std::stringstream ss;

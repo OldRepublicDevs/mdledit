@@ -4,10 +4,10 @@
 
 std::vector<GeoView> GeoViews;
 
-void MDL::OpenGeoViewer(StringWrapper * cItem, LPARAM lParam){
+void MDL::OpenGeoViewer(std::vector<std::string>cItem, LPARAM lParam){
     //Probably only nodes will ever be able to fire this function.
     //Still I should make sure I'm only running stuff on appropriate nodes
-    if(BVstrcmp(cItem[1].cString, "Geometry") || (BVstrcmp(cItem[3].cString, "Geometry") && (BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[3].cString, "Parent")))){
+    if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node* node = (Node*) lParam;
         if(node->Head.nType & NODE_HAS_MESH){
             //Now we're ready to create the GeoView
@@ -20,14 +20,14 @@ void MDL::OpenGeoViewer(StringWrapper * cItem, LPARAM lParam){
     }
 }
 
-void MDL::OpenViewer(StringWrapper * cItem, LPARAM lParam){
+void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
     std::stringstream sName;
     std::stringstream sPrint;
 
-    if(BVstrcmp(cItem[0].cString, "")) return;
+    if((cItem[0] == "")) return;
 
     /// Animation ///
-    else if(BVstrcmp(cItem[1].cString, "Animations")){
+    else if((cItem[1] == "Animations")){
         Animation * anim = (Animation*) lParam;
 
         sName<<"animation "<<anim->cName;
@@ -41,7 +41,7 @@ void MDL::OpenViewer(StringWrapper * cItem, LPARAM lParam){
         SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     /// Anim Node ///
-    else if(BVstrcmp(cItem[1].cString, "Animated Nodes") || (BVstrcmp(cItem[3].cString, "Animated Nodes") && (BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[3].cString, "Parent")))){
+    else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
         sName<<"animated node "<<FH[0].MH.Names[node->Head.nNameIndex].cName;
@@ -56,7 +56,7 @@ void MDL::OpenViewer(StringWrapper * cItem, LPARAM lParam){
         SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     /// Geo Node ///
-    else if(BVstrcmp(cItem[1].cString, "Geometry") || (BVstrcmp(cItem[3].cString, "Geometry") && (BVstrcmp(cItem[1].cString, "Children") || BVstrcmp(cItem[3].cString, "Parent")))){
+    else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
         sName<<"node "<<FH[0].MH.Names[node->Head.nNameIndex].cName;
@@ -99,7 +99,7 @@ void MDL::OpenViewer(StringWrapper * cItem, LPARAM lParam){
         }
     }
     /// Controller ///
-    else if(BVstrcmp(cItem[1].cString, "Controllers")){
+    else if((cItem[1] == "Controllers")){
         Controller * ctrl = (Controller*) lParam;
 
         std::string sLocation;
@@ -113,7 +113,7 @@ void MDL::OpenViewer(StringWrapper * cItem, LPARAM lParam){
         if(ctrl->nColumnCount == 19) sController+="bezierkey";
         else sController+="key";
         sName<<"controller '"<<sController<<"' in node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' in "<<sLocation;
-        if(!BVstrcmp(cItem[3].cString, "Geometry")){
+        if(!(cItem[3] == "Geometry")){
             ConvertToAscii(CONVERT_CONTROLLER_KEYED, sPrint, (void*) lParam);
         }
         else{

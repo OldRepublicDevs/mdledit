@@ -116,9 +116,6 @@ union ByteBlock8{
     unsigned long int ui;
     char bytes [8];
 };
-struct StringWrapper{
-    char cString [255];
-};
 struct MenuLineAdder{
     HMENU hMenu;
     int nIndex;
