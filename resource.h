@@ -1,0 +1,64 @@
+#ifndef RESOURCE_H_INCLUDED
+#define RESOURCE_H_INCLUDED
+
+//The icon
+#define IDI_ICON            1
+#define ID_CUR_DRAG         2
+
+//The menu
+#define IDM_MAIN            100
+#define IDM_FILE_NEW        101
+#define IDM_FILE_SAVE       102
+#define IDM_FILE_SAVEAS     103
+#define IDM_FILE_EXIT       104
+#define IDM_ZOOM_IN         105
+#define IDM_ZOOM_OUT        106
+#define IDM_HELP_ABOUT      107
+#define IDM_POINT_NEW       108
+#define IDM_POINT_DEL_LAST  109
+#define IDM_NORTH           110
+#define IDM_SOUTH           111
+#define IDM_WEST            112
+#define IDM_EAST            113
+#define IDM_FILE_EXPORT     114
+#define IDM_FILE_OPEN       115
+#define IDM_DRAW_H          116
+#define IDM_MDL_OPEN        117
+#define IDM_ASCII_OPEN      118
+#define IDM_MDL_SAVE        119
+#define IDM_MDX_SAVE        120
+#define IDM_WOK_SAVE        121
+#define IDM_ASCII_SAVE      122
+
+//GUI controls
+#define IDC_STATUSBAR    200
+#define IDC_MAIN_EDIT    201
+#define IDC_TABS         202
+
+#define IDC_LBL_CHAR     203
+#define IDC_LBL_INT      204
+#define IDC_LBL_UINT     205
+#define IDC_LBL_FLOAT    206
+#define IDC_EDIT_CHAR    207
+#define IDC_EDIT_INT     208
+#define IDC_EDIT_UINT    209
+#define IDC_EDIT_FLOAT   210
+#define IDC_EDIT_DISPLAY 211
+#define IDC_TREEVIEW     212
+
+#define IDC_SBS_SBH      230
+#define IDC_SBS_SBV      231
+#define IDC_SBS_SBC      232
+
+#define IDPM_TV_FOLD                301
+#define IDPM_TV_EXPAND              302
+#define IDPM_TV_FOLD_CHILDREN       303
+#define IDPM_TV_EXPAND_CHILDREN     304
+#define IDPM_OPEN_CONTROLLER_DATA   305
+#define IDPM_OPEN_GEO_VIEWER        306
+
+#define IDDB_EDIT                   500
+
+#define IDDB_DIALOG_TYPE_1        1200
+
+#endif // RESOURCE_H_INCLUDED

@@ -1,0 +1,51 @@
+#include <windows.h>
+#include "resource.h"
+
+1 RT_MANIFEST "/manifest.xml"
+
+ID_CUR_DRAG CURSOR "cursor.cur"
+
+//IDI_ICON ICON "acdc_icon.ico"
+
+IDM_MAIN MENU DISCARDABLE
+BEGIN
+    POPUP " &File "
+    BEGIN
+    //MENUITEM "&New", IDM_FILE_NEW
+    //MENUITEM "&Open...", IDM_FILE_OPEN
+    //MENUITEM "&Save", IDM_FILE_SAVE
+    //MENUITEM "&Save as...", IDM_FILE_SAVEAS
+    //MENUITEM "&Export XML...", IDM_FILE_EXPORT
+    //MENUITEM SEPARATOR
+    MENUITEM "&Load files...", IDM_MDL_OPEN
+    POPUP "Load"
+        BEGIN
+        MENUITEM "&Load MDL...", IDM_MDL_OPEN
+        MENUITEM "&Load ASCII...", IDM_ASCII_OPEN
+        END
+    //MENUITEM "&Open...", IDM_FILE_OPEN
+    POPUP "Export"
+        BEGIN
+        MENUITEM "&Export MDL...", IDM_MDL_SAVE
+        MENUITEM "&Export ASCII...", IDM_ASCII_SAVE
+        END
+    MENUITEM SEPARATOR
+    MENUITEM "E&xit", IDM_FILE_EXIT
+    END
+    /**
+    POPUP " &MDL "
+    BEGIN
+    MENUITEM "&Open...", IDM_MDL_OPEN
+    END
+    POPUP " &MDX "
+    BEGIN
+    MENUITEM "&Open...", IDM_MDX_OPEN
+    END
+    /**
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About", IDM_HELP_ABOUT
+    END
+    /**/
+END
+
