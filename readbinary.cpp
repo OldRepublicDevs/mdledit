@@ -1119,10 +1119,17 @@ void MDL::DetermineSmoothing(){
                 double fS = (fA + fB + fC) / 2.0;
                 face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
                 fTotalArea +=  face.fArea;
+                Vector vAdd = face.vNormal * face.fArea;
                 if(patch.nVertex == face.nIndexVertex[0]){
-
+                    vAdd *= Angle(Edge1, Edge2);
                 }
-                vNormalBase += face.vNormal * face.fArea;
+                else if(patch.nVertex == face.nIndexVertex[1]){
+                    vAdd *= Angle(Edge1, Edge3);
+                }
+                else if(patch.nVertex == face.nIndexVertex[2]){
+                    vAdd *= Angle(Edge2, Edge3);
+                }
+                vNormalBase += vAdd;
             }
             //Now we've got a base, now we've got to construct a matching vertex normal
             //Create a boolean to track this
@@ -1289,9 +1296,17 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
                 double fC = Edge3.GetLength();
                 double fS = (fA + fB + fC) / 2.0;
                 face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
-
-                /*if(face.fArea != 0.0)*/ vWorking += face.vNormal * face.fArea;
-                //else vWorking += face.vNormal;
+                Vector vAdd = face.vNormal * face.fArea;
+                if(ourpatch.nVertex == face.nIndexVertex[0]){
+                    vAdd *= Angle(Edge1, Edge2);
+                }
+                else if(ourpatch.nVertex == face.nIndexVertex[1]){
+                    vAdd *= Angle(Edge1, Edge3);
+                }
+                else if(ourpatch.nVertex == face.nIndexVertex[2]){
+                    vAdd *= Angle(Edge2, Edge3);
+                }
+                vWorking += vAdd;
             }
             //We have just smoothed for patch nCount, add it to the list
             OurSmoothedPatches.push_back(nCount);
