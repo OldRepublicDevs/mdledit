@@ -389,6 +389,12 @@ struct Aabb{
     unsigned int nChild2;
     int nID; //An index to the face of the walkmesh
     int nChildFlag; //0 if no children, otherwise 2^something. I have seen 1 2 4 8 16 32
+    // 0x01 = Positive X //from nwntool
+    // 0x02 = Positive Y
+    // 0x04 = Positive Z
+    // 0x08 = Negative X
+    // 0x10 = Negative Y
+    // 0x20 = Negative Z
 
     //Added members
     unsigned int nOffset;
@@ -1180,7 +1186,8 @@ class MDL: public BinaryFile{
     void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes);
     void FillBinaryFields(Node & NODE, int & nMeshCounter);
 
-    //Smoothing
+    //Calculating
+    void CreatePatches();
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;

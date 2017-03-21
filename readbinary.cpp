@@ -1008,7 +1008,7 @@ void MDL::DetermineSmoothing(){
                     vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); //Update reference to new vector that is about to be created
                     Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); //Create new vector
                     std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
-                    file<<"Created LinkedFace group "<<vert.nLinkedFacesIndex<<" with vert "<<v<<" ("<<vert.fX<<", "<<vert.fY<<", "<<vert.fZ<<") in "<<Data.MH.Names.at(n).cName<<".\n";
+                    //file<<"Created LinkedFace group "<<vert.nLinkedFacesIndex<<" with vert "<<v<<" ("<<vert.fX<<", "<<vert.fY<<", "<<vert.fZ<<") in "<<Data.MH.Names.at(n).cName<<".\n";
 
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
                     for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
@@ -1056,6 +1056,9 @@ void MDL::DetermineSmoothing(){
         std::vector<LinkedFace> & LinkedFaceVector = Data.MH.LinkedFacesPointers.at(v);
         Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
         std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
+        int ngroup = Data.MH.PatchArrayPointers.size() - 1;
+        Vertex & vert = GetNodeByNameIndex(LinkedFaceVector.at(0).nNameIndex).Mesh.Vertices.at(LinkedFaceVector.at(0).nVertex);
+        file<<"Group "<<ngroup<<" ("<<vert.fX<<", "<<vert.fY<<", "<<vert.fZ<<")\n";
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){
@@ -1085,8 +1088,7 @@ void MDL::DetermineSmoothing(){
                         }
                     }
                 }
-                int ngroup = Data.MH.PatchArrayPointers.size() - 1;
-                file<<"Group "<<ngroup<<", patch "<<PatchVector.size()<<" (name "<<newpatch.nNameIndex<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
+                file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNameIndex).cName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
                 PatchVector.push_back(std::move(newpatch));
             }
         }
@@ -1096,6 +1098,18 @@ void MDL::DetermineSmoothing(){
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
         //std::cout<<"Checking "<<nPatchCount<<" patches...\n";
+        bool bSingleNormal = true;
+        if(nPatchCount<2) bSingleNormal = false;
+        Vector FirstNormal = GetNodeByNameIndex(Data.MH.PatchArrayPointers.at(pg).at(0).nNameIndex).Mesh.Vertices.at(Data.MH.PatchArrayPointers.at(pg).at(0).nVertex).MDXData.vNormal;
+        for(int p = 0; p < nPatchCount && bSingleNormal; p++){
+            if(!FirstNormal.Compare(GetNodeByNameIndex(Data.MH.PatchArrayPointers.at(pg).at(p).nNameIndex).Mesh.Vertices.at(Data.MH.PatchArrayPointers.at(pg).at(p).nVertex).MDXData.vNormal)){
+                bSingleNormal = false;
+            }
+        }
+        if(bSingleNormal){
+            //std::cout<<"All normals equal for patch group "<<pg<<". Expecting errors for the next "<<nPatchCount<<" patches.\n";
+            file<<"All normals equal for patch group "<<pg<<". Expecting errors for the next "<<nPatchCount<<" patches.\n";
+        }
         for(int p = 0; p < nPatchCount; p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
             Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
@@ -1103,6 +1117,7 @@ void MDL::DetermineSmoothing(){
             Vector vNormalBase = Vector(0.0, 0.0, 0.0);
             patch.SmoothedPatches.reserve(nPatchCount);
             patch.SmoothedPatches.clear();
+            file<<"Calculating for group "<<pg<<", patch "<<p<<" ("<<Data.MH.Names.at(patch.nNameIndex).cName<<", vert "<<patch.nVertex<<")";
 
             //First add this patch's face normals
             double fTotalArea = 0.0;
@@ -1144,6 +1159,7 @@ void MDL::DetermineSmoothing(){
             //First check if this patch's normal is enough
             Vector vCheck = vNormalBase;
             vCheck.Normalize();
+            file<<"\n   Comparing normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to base ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").";
             if(vCheck.Compare(vNormal)){
                 bFound = true;
             }
@@ -1158,15 +1174,18 @@ void MDL::DetermineSmoothing(){
                 //But there's nothing to do right now, we need to wait until all the patches in the group are checked
                 nNumOfFoundNormals++;
                 //file<<"Found a match for patch "<<p<<"'s vertex normal! :) \n";
-                file<<">Found a match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :) \n";
+                //file<<">Found a match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :) \n";
+                file<<"\n:)    MATCH FOUND!\n";
             }
             else if(fTotalArea == 0.0){
-                file<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
-                std::cout<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                //file<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                file<<"\n:(    NO MATCH FOUND! btw, this patch's area is 0\n";
+                std::cout<<"No match for vertex normal in group "<<pg<<", patch "<<p<<" ("<<Data.MH.Names.at(patch.nNameIndex).cName<<", vert "<<patch.nVertex<<")\n";
             }
             else{
-                file<<"Found no match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
-                std::cout<<"Found no match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                //file<<"Found no match for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).cName<<" :( \n";
+                file<<"\n:(    NO MATCH FOUND!\n";
+                std::cout<<"No match for vertex normal in group "<<pg<<", patch "<<p<<" ("<<Data.MH.Names.at(patch.nNameIndex).cName<<", vert "<<patch.nVertex<<")\n";
             }
         }
         //std::cout<<"Done comparing normals for patch group "<<pg<<"!\n";
@@ -1328,7 +1347,11 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
             //Check if this is it
             Vector vCheck = vWorking;
             vCheck.Normalize();
-            file<<"Comparing normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to proposed ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").\n";
+            file<<"\n   Comparing normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to proposed ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<"). Included patches:";
+            for(int g = 0; g < OurSmoothedPatches.size(); g++){
+                file<<" "<<OurSmoothedPatches.at(g);
+            }
+            //file<<"\n";
             if(vCheck.Compare(vNormal)){
                 Data.MH.PatchArrayPointers.at(nCurrentPatchGroup).at(nCurrentPatch).SmoothedPatches = OurSmoothedPatches;
                 return true;

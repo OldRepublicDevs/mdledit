@@ -14,7 +14,7 @@ HWND hTabs;
 MDL Model;
 MDX Mdx;
 WOK Walkmesh;
-bool FileEditor(HWND hwnd, int nID, std::string cFile);
+bool FileEditor(HWND hwnd, int nID, std::string & cFile);
 
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
@@ -389,7 +389,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
     return 0;
 }
 
-bool FileEditor(HWND hwnd, int nID, std::string cFile){
+bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     OPENFILENAME ofn;
     HANDLE hFile;
     DWORD dwBytesRead = 0;

@@ -420,86 +420,8 @@ void MDL::PrepareForBinary(){
     Data.MH.nUnknown1[2] = 1;
     Data.MH.nUnknown2 = 0;
 
-    std::cout<<"Building LinkedFaces array...\n";
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
-        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
-            Node & node = Data.MH.ArrayOfNodes.at(n);
-            for(int v = 0; v < node.Mesh.Vertices.size(); v++){
-                //For every vertex of every mesh
-
-                //Proceed only if this vertex group hasn't been processed yet
-                if(node.Mesh.Vertices.at(v).nLinkedFacesIndex == -1){
-                    Vertex & vert = node.Mesh.Vertices.at(v); // Make life easier
-                    vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); //Update reference to new vector that is about to be created
-                    Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); //Create new vector
-                    std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
-
-                    //We've already gone through the nodes up to n and linked any vertices, so we can skip those
-                    for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
-                        Node & node2 = Data.MH.ArrayOfNodes.at(n2);
-
-                        //Loop through all the faces in the mesh and look for matching vertices - theoretically, there is no way to optimize this part
-                        for(int f = 0; f < node2.Mesh.Faces.size(); f++){
-                            Face & face = node2.Mesh.Faces.at(f);
-
-                            //We are now checking the three vertices
-                            for(int i = 0; i < 3; i++){
-                                //Check if vertices are equal (enough)
-                                if(vert.Compare(node2.Mesh.Vertices.at(face.nIndexVertex[i]))){
-
-                                    //If they are equal, regardless of weldedness, add the face to the linked faces array
-                                    LinkedFaceArray.push_back(LinkedFace(n2, f, face.nIndexVertex[i]));
-
-                                    //Also update the other vert's linked face array reference index, so we can skip processing it later.
-                                    node2.Mesh.Vertices.at(face.nIndexVertex[i]).nLinkedFacesIndex = vert.nLinkedFacesIndex;
-
-                                    //Only one vertex in a face can match our vertex, so exit this small loop
-                                    i = 3;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    std::cout<<"Done building LinkedFaces array!\n";
-    std::cout<<"Creating patches... \n";
-    for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
-        //For every vector of linked faces, create a vector of patches
-        std::vector<LinkedFace> & LinkedFaceVector = Data.MH.LinkedFacesPointers.at(v);
-        Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
-        std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
-
-        for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
-            if(!LinkedFaceVector.at(lf).bAssignedToPatch){
-                Patch newpatch;
-                LinkedFace & patchhead = LinkedFaceVector.at(lf);
-                newpatch.nNameIndex = patchhead.nNameIndex;
-                newpatch.nVertex = patchhead.nVertex;
-                patchhead.bAssignedToPatch = true;
-                newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNameIndex).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
-                newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
-                for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
-                    if(!LinkedFaceVector.at(plf).bAssignedToPatch){
-                        //The following check is the whole point of this whole patch business
-                        //The patch only contains those faces which are welded, ie.
-                        //they have the same mesh index and vert index as the point we are constructing this patch for
-                        if(LinkedFaceVector.at(plf).nNameIndex == newpatch.nNameIndex &&
-                           LinkedFaceVector.at(plf).nVertex == newpatch.nVertex){
-                            LinkedFace & linked = LinkedFaceVector.at(plf);
-                            linked.bAssignedToPatch = true;
-                            newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(linked.nNameIndex).Mesh.Faces.at(linked.nFace).nSmoothingGroup;
-                            newpatch.FaceIndices.push_back(linked.nFace); //Assign linked face index to the patch
-                        }
-                    }
-                }
-                PatchVector.push_back(std::move(newpatch));
-            }
-        }
-    }
-    std::cout<<"Done creating patches!\n";
+    //This will take a while
+    CreatePatches();
 
     int nMeshCounter = 0;
     //Take care of animations and their nodes
