@@ -431,7 +431,7 @@ bool FileEditor(HWND hwnd, int nID, std::string cFile){
             sAsciiExport.clear();
             sAsciiExport.shrink_to_fit();
             bReturn = true;        }
-        else std::cout<<string_format("Selecting file failed. :( \n");
+        else std::cout<<"Selecting file failed. :( \n";
     }
     if(nID == IDM_MDL_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile<<"\n";
 
@@ -459,6 +459,21 @@ bool FileEditor(HWND hwnd, int nID, std::string cFile){
             //Put data into a strings
             std::string sBinaryExport;
             Model.Export(sBinaryExport);
+
+            //Write and close file
+            file<<sBinaryExport;
+            file.close();
+
+            //Save mdx
+            std::string cMdx;
+            cMdx = cFile;
+            char * cExt2 = PathFindExtension(cMdx.c_str());
+            sprintf(cExt2, ".mdx");
+
+            file.open(cMdx, std::ios::binary | std::fstream::out);
+
+            sBinaryExport.clear();
+            Mdx.Export(sBinaryExport);
 
             //Write and close file
             file<<sBinaryExport;
@@ -624,6 +639,7 @@ bool FileEditor(HWND hwnd, int nID, std::string cFile){
 
             //Process the data
             Model.DecompileModel();
+            if(!Walkmesh.empty()) Walkmesh.ProcessWalkmesh();
 
             //Load the data
             SetWindowText(hDisplayEdit, "");
@@ -637,7 +653,7 @@ bool FileEditor(HWND hwnd, int nID, std::string cFile){
     return bReturn;
 }
 
-void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer){
+void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     std::vector<std::string> cItem(15);
     LPARAM lParam;
 
@@ -645,11 +661,13 @@ void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer){
     TVITEM tvNewSelect;
     tvNewSelect.mask = TVIF_TEXT | TVIF_PARAM;
     tvNewSelect.cchTextMax = 255;
+    char cGet [255];
     tvNewSelect.hItem = hItem;
-    tvNewSelect.pszText = &cItem[0][0];
+    tvNewSelect.pszText = cGet;
     TreeView_GetItem(hTree, &tvNewSelect);
 
-    //Get pointer to data
+    //Get pointer to data and name
+    cItem[0] = cGet;
     lParam = tvNewSelect.lParam;
 
     //Fill cItem with all the ancestors of our item
@@ -657,8 +675,9 @@ void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer){
     int n = 1;
     while(!bStop && !(cItem[0] == Model.GetFilename()) && !(cItem[0] == Walkmesh.GetFilename())){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
-        tvNewSelect.pszText = &cItem[n][0];
+        tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
+        cItem[n] = cGet;
         if((cItem[n] == Model.GetFilename()) || (cItem[n] == Walkmesh.GetFilename())) bStop = true;
         else n++;
     }

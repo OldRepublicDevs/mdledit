@@ -24,6 +24,7 @@ class Frame{
 #define ACTION_ADD_MENU_LINES      1
 #define ACTION_OPEN_VIEWER         2
 #define ACTION_OPEN_GEO_VIEWER     3
-void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer = NULL);
+
+void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 
 #endif // FRAME_H_INCLUDED

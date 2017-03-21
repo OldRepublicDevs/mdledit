@@ -1001,7 +1001,7 @@ class File{
         return "";
     }
     bool empty(){
-        return bLoaded;
+        return !bLoaded;
     }
     void Export(std::string &sExport){
         sExport = std::string(sBuffer.begin(), sBuffer.end());
@@ -1013,12 +1013,14 @@ class File{
     //Loaders/Unloaders
     virtual std::vector<char> & CreateBuffer(int nSize){
         nBufferSize = nSize;
+        bLoaded = true;
         sBuffer.resize(nSize, '\0');
         return sBuffer;
     }
     virtual void FlushAll(){
         sBuffer.clear();
         nBufferSize = 0;
+        bLoaded = false;
     }
 
 };
@@ -1194,7 +1196,7 @@ class MDL: public BinaryFile{
   public:
     //Friends
     friend Ascii;
-    friend void ProcessTreeAction(HTREEITEM hItem, int nAction, void * Pointer);
+    friend void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer);
 
     //Version
     bool bK2 = true;
