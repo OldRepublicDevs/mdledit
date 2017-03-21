@@ -1095,6 +1095,8 @@ void MDL::DetermineSmoothing(){
     }
     std::cout<<"Done creating patches!\n";
 
+    std::vector<std::vector<unsigned long int>> nSmoothingGroupNumbers;
+    nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
         //std::cout<<"Checking "<<nPatchCount<<" patches...\n";
@@ -1192,10 +1194,9 @@ void MDL::DetermineSmoothing(){
         //When we get here all the data in the patch group has been worked over.
         //Our patches should now contain the info about which patches they smooth to.
         //Now we need to generate smoothing group numbers
-        std::vector<unsigned long int> nSmoothingGroupNumbers;
         //std::cout<<"Max number of smoothing groups is: "<<nPatchCount*(nPatchCount - 1)/2 + 1<<".\n";
         for(int n = 0; n < nPatchCount*(nPatchCount - 1)/2 + 1; n++){
-            nSmoothingGroupNumbers.push_back(pown(2, n));
+            nSmoothingGroupNumbers.at(pg).push_back(0);
         }
 
         int nSmoothingGroupCounter = 0;
@@ -1209,10 +1210,10 @@ void MDL::DetermineSmoothing(){
                     std::vector<int> SmoothingGroup;
                     SmoothingGroup.push_back(p);
                     SmoothingGroup.push_back(patch.SmoothedPatches.at(i));
-                    patch.SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
-                    Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(i)).SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
+                    patch.SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
+                    Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(i)).SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
 
-                    GenerateSmoothingNumber(SmoothingGroup, nSmoothingGroupNumbers, nSmoothingGroupCounter, pg);
+                    GenerateSmoothingNumber(SmoothingGroup, nSmoothingGroupNumbers.at(pg), nSmoothingGroupCounter, pg);
 
                     nSmoothingGroupCounter++;
                     //std::cout<<"Added smoothing groups for at least patch "<<patch.SmoothedPatches.at(i)<<" and patch "<<p<<"...\n";
@@ -1222,7 +1223,7 @@ void MDL::DetermineSmoothing(){
             //In case the patch doesn't smooth to any other patch, store an additional identity smoothing group for it
             if(patch.SmoothingGroupNumbers.size() == 0){
                 //std::cout<<"Patch "<<p<<" in patch group "<<pg<<" has no smoothing group, create one at "<<nSmoothingGroupCounter<<".\n";
-                patch.SmoothingGroupNumbers.push_back((unsigned long int*) &(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
+                patch.SmoothingGroupNumbers.push_back((unsigned long int*) &(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                 nSmoothingGroupCounter++;
             }
         }
@@ -1250,7 +1251,7 @@ void MDL::DetermineSmoothing(){
                 }
             }
         }*/
-
+        /**/
         for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
             unsigned long int nExistingSG = 0;
@@ -1262,8 +1263,62 @@ void MDL::DetermineSmoothing(){
                 GetNodeByNameIndex(patch.nNameIndex).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup = nExistingSG;
             }
         }
+        /**/
         //std::cout<<"Done updating face smoothing groups!\n";
     }
+    /*
+    /// Here we finally apply the smoothing groups to the faces in a principled way.
+    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+        for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
+            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+            if(pg == 0 && p == 0){
+                /// We have to start somewhere, so this is our starting point, we just fill it with values one to sgn
+                for(int sgn = 0; sgn < patch.SmoothingGroupNumbers; sgn++){
+                    *patch.SmoothingGroupNumbers.at(sgn) = pown(2, sgn);
+                }
+            }
+            /// Now go through all the faces in the patch
+            for(int f = 0; f < patch.FaceIndices.size(); f++){
+                Node & node = GetNodeByNameIndex(patch.nNameIndex);
+                Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
+                /// Now we need to make sure that all three patches (one for every vert) have exactly one slot
+                /// If they do, then we first copy  the number from our vert (this vert just by convention) to
+                /// all the patches where the number is 0, under the condition that our current number is unused in the patch.
+                /// Otherwise, start from 1 going up and find an unused one in the patch, and apply that one instead.
+                /// Then we bitOR all three numbers together into the smoothing number.
+
+                /** Alternative algorithm
+                The first thing we do is fill out all our 0 numbers. I will be traveling between patch groups that have been filled before
+                so this should happen rarely, and it shouldn't endanger our already written data. Now we proceed from patch group to patch group,
+                go through the patches and through every face, if the face does not have a double number in any corner, then we copy our number to those
+                slots, provided that that number is not used already in the patch group. If it is, then we probably need to generate a new number to replace it.
+                The way I see it now (which is not very clearly), it should work out more or less fine if we only process ever face once.
+                /**
+
+
+                if(face.nSmoothingGroup == 0){
+                    for(int v = 0; v < 3; v++){
+                        Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
+                        std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
+                        bool bFound = false;
+                        for(int p2 = 0; !bFound; ){
+                            if(PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
+                                bFound = true;
+                            }
+                            else p2++;
+                        }
+                        Patch & vertpatch = PatchVector.at(p2);
+                    }
+                }
+                else{
+
+                }
+            }
+        }
+    }
+    */
+
+
     double fPercentage = ((double)nNumOfFoundNormals / (double)nNumOfVerts) * 100.0;
     std::cout<<"Done calculating smoothing groups! Found normals: "<<nNumOfFoundNormals<<"/"<<nNumOfVerts<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
 
