@@ -225,10 +225,18 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         //sReturn << string_format("\r\n  specular 0.0 0.0 0.0", node->Mesh.nRender);
         sReturn << string_format("\r\n  shininess %i", node->Mesh.nShininess);
         sReturn << string_format("\r\n  animateuv %i", node->Mesh.nAnimateUV);
-        sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
-        sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
-        sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
-        sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
+        if(node->Mesh.nAnimateUV){
+            sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
+            sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
+            sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
+            sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
+        }
+        else{
+            sReturn << "\r\n  uvdirectionx 0.0";
+            sReturn << "\r\n  uvdirectiony 0.0";
+            sReturn << "\r\n  uvjitter 0.0";
+            sReturn << "\r\n  uvjitterspeed 0.0";
+        }
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
         sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
         if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
@@ -264,19 +272,19 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_SKIN){
         Node * node = (Node*) Data;
         if(!Mdx.sBuffer.empty()){
-            sReturn << string_format("\r\n  weights %i", node->Mesh.nNumberOfVerts);
-            for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
-                sReturn << string_format("\r\n   ");
+            sReturn << "\r\n  weights "<<node->Mesh.nNumberOfVerts;
+            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+                sReturn << "\r\n   ";
                 int i = 0;
-                int nBoneCount = (int) round(node->Mesh.Vertices[n].MDXData.fSkin2[i]);
-                while(nBoneCount != -1){
+                int nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fSkin2[i]);
+                while(nBoneCount != -1 && i < 4){
                     int nNameIndex = node->Skin.BoneNameIndexes[nBoneCount];
-                    sReturn << string_format(" %s %s", FH[0].MH.Names[nNameIndex].cName.c_str(), PrepareFloat(node->Mesh.Vertices[n].MDXData.fSkin1[i], 0));
+                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).cName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.fSkin1[i], 0);
                     i++;
-                    nBoneCount = (int) round(node->Mesh.Vertices[n].MDXData.fSkin2[i]);
+                    nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fSkin2[i]);
                 }
                 if(i == 0){
-                    sReturn << string_format(" root 1.0");
+                    sReturn << " root 1.0";
                 }
             }
         }
@@ -288,7 +296,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << string_format("\r\n  period %s", PrepareFloat(node->Dangly.fPeriod, 0));
         sReturn << string_format("\r\n  constraints %i", node->Dangly.ConstraintArray.nCount);
         for(int n = 0; n < node->Dangly.ConstraintArray.nCount; n++){
-            sReturn << string_format("\r\n    %s", PrepareFloat(node->Dangly.Constraints[n], 0));
+            sReturn << "\r\n    "<<PrepareFloat(node->Dangly.Constraints[n], 0);
         }
     }
     else if(nDataType == CONVERT_AABB){
@@ -307,10 +315,18 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         //sReturn << cCat;
         sReturn << string_format("\r\n  shininess %i", node->Mesh.nShininess);
         sReturn << string_format("\r\n  animateuv %i", node->Mesh.nAnimateUV);
-        sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
-        sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
-        sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
-        sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
+        if(node->Mesh.nAnimateUV){
+            sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
+            sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
+            sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
+            sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
+        }
+        else{
+            sReturn << "\r\n  uvdirectionx 0.0";
+            sReturn << "\r\n  uvdirectiony 0.0";
+            sReturn << "\r\n  uvjitter 0.0";
+            sReturn << "\r\n  uvjitterspeed 0.0";
+        }
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
         //sReturn << cCat;
         sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
