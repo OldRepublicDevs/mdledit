@@ -324,9 +324,9 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
         NODE->Head.oOrient.qZ = ReadFloat(&nPos, 2);
         NODE->Head.oOrient.ConvertToAA(); // just convert from quaternions right away
 
-        /// Let's do the transformations/translations here. First orientation, then translation.
-        vFromRoot.Rotate(NODE->Head.oOrient);
-        vFromRoot+=NODE->Head.vPos;
+        // Let's do the transformations/translations here. First orientation, then translation.
+        //vFromRoot.Rotate(NODE->Head.oOrient);
+        //vFromRoot+=NODE->Head.vPos;
 
         NODE->Head.ChildrenArray.nOffset = ReadInt(&nPos, 6);
         NODE->Head.ChildrenArray.nCount = ReadInt(&nPos, 1);
@@ -381,6 +381,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
             }
         }
 
+        /// Let's do the transformations/translations here. First orientation, then translation.
+        Location loc = NODE->GetLocation();
+        vFromRoot.Rotate(NODE->Head.oOrient);
+        vFromRoot+= loc.vPosition;
+
         if(NODE->Head.ChildrenArray.nCount > 0){
             //We gots children!
             NODE->Head.Children.resize(NODE->Head.ChildrenArray.nCount);
@@ -390,7 +395,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Head.Children[n].nOffset = ReadInt(&nPosData, 6);
                 NODE->Head.Children[n].nAnimation = NODE->nAnimation;
                 NODE->Head.Children[n].Head.nParentIndex = NODE->Head.nNameIndex;
-                ParseNode(&NODE->Head.Children[n], nNodeCounter);
+                ParseNode(&NODE->Head.Children[n], nNodeCounter, vFromRoot);
                 n++;
             }
         }
@@ -764,9 +769,17 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Mesh.Vertices[n].fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
 
-                NODE->Mesh.Vertices.at(n).fFromRootX = vFromRoot.fX;
-                NODE->Mesh.Vertices.at(n).fFromRootY = vFromRoot.fZ;
-                NODE->Mesh.Vertices.at(n).fFromRootZ = vFromRoot.fY;
+                Vector vTransform = NODE->Mesh.Vertices[n];
+                Location loc = NODE->GetLocation();
+                vTransform.Rotate(loc.oOrientation);
+                vTransform += vFromRoot;
+
+                NODE->Mesh.Vertices.at(n).fFromRootX = vTransform.fX;
+                NODE->Mesh.Vertices.at(n).fFromRootY = vTransform.fY;
+                NODE->Mesh.Vertices.at(n).fFromRootZ = vTransform.fZ;
+                //NODE->Mesh.Vertices.at(n).fFromRootX = vFromRoot.fX + NODE->Mesh.Vertices[n].fX;
+                //NODE->Mesh.Vertices.at(n).fFromRootY = vFromRoot.fY + NODE->Mesh.Vertices[n].fY;
+                //NODE->Mesh.Vertices.at(n).fFromRootZ = vFromRoot.fZ + NODE->Mesh.Vertices[n].fZ;
 
                 if(NODE->Mesh.nMdxDataSize > 0 && !Mdx.empty()){
                     NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;
@@ -1261,6 +1274,7 @@ void MDL::DetermineSmoothing(){
             }
         }*/
         /**/
+        //std::cout<<"Last loop!\n";
         for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
             unsigned long int nExistingSG = 0;

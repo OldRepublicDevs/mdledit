@@ -76,3 +76,7 @@ mdledit.layout
 MDLOpsM.pm
 
 MDLOps data.txt
+
+obj/Release/Settings.o
+
+obj/Release/readbinary.o

@@ -119,7 +119,7 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_LIGHT_RADIUS:               return "radius";
         case CONTROLLER_LIGHT_SHADOWRADIUS:         return "shadowradius";          //Missing from NWmax
         case CONTROLLER_LIGHT_VERTICALDISPLACEMENT: return "verticaldisplacement";  //Missing from NWmax
-        case CONTROLLER_LIGHT_MULTIPLIER:           return "multipler";             //NWmax reads 'multipler', not 'multiplier'
+        case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";             //NWmax reads 'multipler', not 'multiplier'
         }
     }
     else if(nType & NODE_HAS_EMITTER){
