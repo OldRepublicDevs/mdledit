@@ -1218,9 +1218,21 @@ bool Ascii::Read(FileHeader * FH){
                     ctrl.nControllerType = ReturnController(sID.substr(0, sID.length()-3));
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
-                    ctrl.nPadding[0] = 0;
-                    ctrl.nPadding[1] = 0;
-                    ctrl.nPadding[2] = 0;
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
+                       Model.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
+                        //For non-emitter and non-light controllers
+                        ctrl.nPadding[0] = 50;
+                        ctrl.nPadding[1] = 18;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else{
+                        //all emitter and light controllers
+                        ctrl.nPadding[0] = 51;
+                        ctrl.nPadding[1] = 18;
+                        ctrl.nPadding[2] = 0;
+                    }
                     //This is all we can tell right now.
                     int nSavePos = nPosition; //Save position
 
@@ -1291,9 +1303,33 @@ bool Ascii::Read(FileHeader * FH){
                     ctrl.nValueCount = 1;
                     ctrl.nNameIndex = node.Head.nNameIndex;
                     ctrl.nAnimation = -1;
-                    ctrl.nPadding[0] = 0;
-                    ctrl.nPadding[1] = 0;
-                    ctrl.nPadding[2] = 0;
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
+                        //Sometimes orientation and scaling have these values as well
+                        ctrl.nPadding[0] = 12;
+                        ctrl.nPadding[1] = 76;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                        ctrl.nPadding[0] = -59;
+                        ctrl.nPadding[1] = 73;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else if(ctrl.nControllerType == CONTROLLER_HEADER_SCALING){
+                        ctrl.nPadding[0] = 49;
+                        ctrl.nPadding[1] = 18;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else if(Model.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_LIGHT){
+                        ctrl.nPadding[0] = -5;
+                        ctrl.nPadding[1] = 54;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else{
+                        //This is largely gonna be for mesh and emitter controllers, they can have a range of unknown values.
+                        ctrl.nPadding[0] = 0;
+                        ctrl.nPadding[1] = 0;
+                        ctrl.nPadding[2] = 1; //This one seems to always be non-zero
+                    }
 
                     //First put in the 0.0 to fill the required timekey
                     node.Head.ControllerData.push_back(0.0);

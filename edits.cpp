@@ -411,9 +411,11 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                             SetBkColor(hdc, RGB(255, 255, 255));
                         }
                         char cToWrite;
-                        cToWrite = Edit->sBuffer->at(n * 16 + i);
-                        PrepareCharForDisplay(&cToWrite);
-                        ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_CHARSET_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, &cToWrite, 1, NULL);
+                        if(Edit->sBuffer->size() > n*16 + i){
+                            cToWrite = Edit->sBuffer->at(n * 16 + i);
+                            PrepareCharForDisplay(&cToWrite);
+                            ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_CHARSET_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, &cToWrite, 1, NULL);
+                        }
                     }
                     i++;
                 }
@@ -540,7 +542,9 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 }
 
 void Edits::PrintValues(bool bCheck){
-    if(nSelectStart < 0 || nSelectEnd < 0 || !bCheck){
+    if(nSelectStart < 0 ||
+       nSelectEnd < 0 ||
+       !bCheck){
         SetWindowText(hIntEdit, "");
         SetWindowText(hUIntEdit, "");
         SetWindowText(hFloatEdit, "");
@@ -548,16 +552,17 @@ void Edits::PrintValues(bool bCheck){
     }
 
     int nSize = nSelectEnd - nSelectStart + 1;
-    if(DEBUG_LEVEL > 70) std::cout<<string_format("Selected bytes: %i\n", nSize);
-    char * cString = new char [nSize+1];
+    if(DEBUG_LEVEL > 70) std::cout<<"Selected bytes: "<<nSize<<".\n";
+    std::string sString;
+    //char * cString = new char [nSize+1];
     char cInt [255];
     char cUInt [255];
     char cFloat [255];
     int n = 0;
     while(nSelectStart + n <= nSelectEnd){
-        if(DEBUG_LEVEL > 70) std::cout<<string_format("Extract byte #%i.\n", nSelectStart + n);
-        cString[n] = sBuffer->at(nSelectStart+n);
-        if(nSelectStart + n == nSelectEnd) cString[n+1] = '\0';
+        if(DEBUG_LEVEL > 70) std::cout<<"Extract byte #"<<nSelectStart + n<<".\n";
+        sString += sBuffer->at(nSelectStart+n);
+        //if(nSelectStart + n == nSelectEnd) cString[n+1] = '\0';
         n++;
     }
     char cBlock2 [2];
@@ -566,13 +571,13 @@ void Edits::PrintValues(bool bCheck){
 
     n = 0;
     if(nSize == 1){
-        sprintf(cInt, "%hhi", (signed int) *cString);
-        sprintf(cUInt, "%hhu", (unsigned int) *cString);
+        sprintf(cInt, "%hhi", (signed int) sString.at(0));
+        sprintf(cUInt, "%hhu", (unsigned int) sString.at(0));
         sprintf(cFloat, "");
     }
     else if(nSize == 2){
         while(n < 2){
-            ByteBlock2.bytes[n] = cString[n];
+            ByteBlock2.bytes[n] = sString[n];
             n++;
         }
         sprintf(cInt, "%hi", ByteBlock2.i);
@@ -582,7 +587,7 @@ void Edits::PrintValues(bool bCheck){
     }
     else if(nSize == 4){
         while(n < 4){
-            ByteBlock4.bytes[n] = cString[n];
+            ByteBlock4.bytes[n] = sString[n];
             n++;
         }
         sprintf(cInt, "%i", ByteBlock4.i);
@@ -591,7 +596,7 @@ void Edits::PrintValues(bool bCheck){
     }
     else if(nSize == 8){
         while(n < 8){
-            ByteBlock8.bytes[n] = cString[n];
+            ByteBlock8.bytes[n] = sString[n];
             n++;
         }
         sprintf(cInt, "%li", ByteBlock8.i);
@@ -607,7 +612,6 @@ void Edits::PrintValues(bool bCheck){
     SetWindowText(hIntEdit, cInt);
     SetWindowText(hUIntEdit, cUInt);
     SetWindowText(hFloatEdit, cFloat);
-    delete [] cString;
 }
 
 COLORREF DataColor(int nDataKnown, bool bHilite){

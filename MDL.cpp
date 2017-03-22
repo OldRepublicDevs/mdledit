@@ -265,172 +265,45 @@ for(int b = 0; b < NodeArray.size(); b++){
 
             /***
                 This if for checking controller "padding" values. These numbers are in no way random.
-                The final number can be 0, 1 or 2, as observed up until now. Header and light controllers always have 0,
-                while emitter and mesh controllers may have 1 or 2.
+                Header and light controllers always have 0, while emitter and mesh controllers have it greater than 0.
                 In keyed controllers, light and emitter seem to group together against header and mesh.
                 Selfillumcolor usually has the same padding values as scale, but they are different
                 in for example: n_admrlsaulkar or 003ebof
             /**/
-            if(ctrl.nControllerType==CONTROLLER_HEADER_POSITION && ctrl.nValueCount == 1 &&
+            if(ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
+               ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
+               ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
                 (ctrl.nPadding[0] == 12 &&
                  ctrl.nPadding[1] == 76 &&
                  ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 12 &&
-                      ctrl.nPadding[1] == 76 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 12 &&
-                      ctrl.nPadding[1] == 76 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION && ctrl.nValueCount == 1 &&
+            else if(ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION && ctrl.nAnimation == -1 &&
                      (ctrl.nPadding[0] == -59 &&
                       ctrl.nPadding[1] == 73 &&
                       ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nValueCount == 1 &&
+            else if(ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
                      (ctrl.nPadding[0] == 49 &&
                       ctrl.nPadding[1] == 18 &&
                       ctrl.nPadding[2] == 0   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -111 &&
-                      ctrl.nPadding[1] == 6 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 54 &&
-                      ctrl.nPadding[1] == -66 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 57 &&
-                      ctrl.nPadding[1] == -62 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 17 &&
-                      ctrl.nPadding[1] == -83 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -35 &&
-                      ctrl.nPadding[1] == -25 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -89 &&
-                      ctrl.nPadding[1] == -63 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -51 &&
-                      ctrl.nPadding[1] == -57 &&
-                      ctrl.nPadding[2] == 9   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -54 &&
-                      ctrl.nPadding[1] == -66 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -79 &&
-                      ctrl.nPadding[1] == 20 &&
-                      ctrl.nPadding[2] == 3   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 85 &&
-                      ctrl.nPadding[1] == -43 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 64 &&
-                      ctrl.nPadding[1] == -98 &&
-                      ctrl.nPadding[2] == 3   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -49 &&
-                      ctrl.nPadding[1] == -114 &&
-                      ctrl.nPadding[2] == 3   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 41 &&
-                      ctrl.nPadding[1] == -7 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -10 &&
-                      ctrl.nPadding[1] == -64 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -50 &&
-                      ctrl.nPadding[1] == -64 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -62 &&
-                      ctrl.nPadding[1] == -125 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 80 &&
-                      ctrl.nPadding[1] == -112 &&
-                      ctrl.nPadding[2] == 3   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -114 &&
-                      ctrl.nPadding[1] == -121 &&
-                      ctrl.nPadding[2] == 4   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 74 &&
-                      ctrl.nPadding[1] == 47 &&
-                      ctrl.nPadding[2] == 3   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -82 &&
-                      ctrl.nPadding[1] == -68 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -112 &&
-                      ctrl.nPadding[1] == -50 &&
-                      ctrl.nPadding[2] == 1   )){}
             else if( (ctrl.nControllerType==CONTROLLER_LIGHT_COLOR || ctrl.nControllerType==CONTROLLER_LIGHT_MULTIPLIER || ctrl.nControllerType==CONTROLLER_LIGHT_RADIUS ||
-                      ctrl.nControllerType==CONTROLLER_LIGHT_SHADOWRADIUS || ctrl.nControllerType==CONTROLLER_LIGHT_VERTICALDISPLACEMENT) && ctrl.nValueCount == 1 &&
+                      ctrl.nControllerType==CONTROLLER_LIGHT_SHADOWRADIUS || ctrl.nControllerType==CONTROLLER_LIGHT_VERTICALDISPLACEMENT) && ctrl.nAnimation == -1 &&
                      (ctrl.nPadding[0] == -5 &&
                       ctrl.nPadding[1] == 54 &&
                       ctrl.nPadding[2] == 0   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION || ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount >= 1 &&
+            else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
+                      ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
+                      ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
+                      GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
                      (ctrl.nPadding[0] == 50 &&
                       ctrl.nPadding[1] == 18 &&
                       ctrl.nPadding[2] == 0   )){}
-            else if(  ctrl.nValueCount >= 1 &&
+            else if(  ctrl.nAnimation != -1 &&
                      (ctrl.nPadding[0] == 51 &&
                       ctrl.nPadding[1] == 18 &&
                       ctrl.nPadding[2] == 0   )){}
-            // the following are all emitter controllers, but it's hard to mark this, leaving it open for now
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 7 &&
-                      ctrl.nPadding[1] == -63 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 12 &&
-                      ctrl.nPadding[1] == -63 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -73 &&
-                      ctrl.nPadding[1] == -68 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -84 &&
-                      ctrl.nPadding[1] == -70 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 95 &&
-                      ctrl.nPadding[1] == -9 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 103 &&
-                      ctrl.nPadding[1] == -9 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 13 &&
-                      ctrl.nPadding[1] == 81 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 125 &&
-                      ctrl.nPadding[1] == 96 &&
-                      ctrl.nPadding[2] == 2   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == 14 &&
-                      ctrl.nPadding[1] == -33 &&
-                      ctrl.nPadding[2] == 1   )){}
-            else if(  ctrl.nValueCount == 1 &&
-                     (ctrl.nPadding[0] == -118 &&
-                      ctrl.nPadding[1] == -71 &&
-                      ctrl.nPadding[2] == 1   )){}
-            /// This is the fuck it check, there's too many, so just in case it's a mesh controller, let it pass
-            else if( (ctrl.nControllerType==CONTROLLER_MESH_ALPHA || ctrl.nControllerType==CONTROLLER_MESH_SELFILLUMCOLOR) && ctrl.nValueCount == 1){}
+            /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
+            else if( (GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_EMITTER ||
+                      GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
+                      ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
             else{
                 ssAdd<<"\r\n     - Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
                 bUpdate = true;

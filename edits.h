@@ -132,6 +132,7 @@ class Edits{
             nSelectEnd = -1;
         }
         nSelectEnd = std::min(nSelectEnd, nBufferSize - 1);
+        nSelectStart = std::min(nSelectStart, nBufferSize - 1);
         if(DEBUG_LEVEL > 100) std::cout<<string_format("Current selection from byte %i to byte %i.\n", nSelectStart, nSelectEnd);
     }
     void UpdateStatusBar(bool bCheck = true){
