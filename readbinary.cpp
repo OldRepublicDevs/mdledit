@@ -86,8 +86,8 @@ void MDL::DecompileModel(){
     Data.nMdxLength = ReadInt(&nPos, 1);
     std::cout<<"File header read.\n";
 
-    Data.MH.GH.nFunctionPointer0 = ReadInt(&nPos, 6);
-    Data.MH.GH.nFunctionPointer1 = ReadInt(&nPos, 6);
+    Data.MH.GH.nFunctionPointer0 = ReadInt(&nPos, 9);
+    Data.MH.GH.nFunctionPointer1 = ReadInt(&nPos, 9);
 
     //Get game
     if(Data.MH.GH.nFunctionPointer0 == K2_FUNCTION_POINTER_0) bK2 = true;
@@ -182,8 +182,8 @@ void MDL::DecompileModel(){
             Data.MH.Animations[n].nOffset = ReadInt(&nPos, 6);
 
             nPos = Data.nLength + Data.MH.Animations[n].nOffset;
-            Data.MH.Animations[n].nFunctionPointer0 = ReadInt(&nPos, 6);
-            Data.MH.Animations[n].nFunctionPointer1 = ReadInt(&nPos, 6);
+            Data.MH.Animations[n].nFunctionPointer0 = ReadInt(&nPos, 9);
+            Data.MH.Animations[n].nFunctionPointer1 = ReadInt(&nPos, 9);
             //CopyChars(Data.MH.Animations[n].OpeningBytes, &nPos, 10, 8);
 
             ReadString(Data.MH.Animations[n].cName, &nPos, 3, 32);
@@ -236,7 +236,8 @@ void MDL::DecompileModel(){
             Data.MH.Animations[n].RootAnimationNode.nOffset = Data.MH.Animations[n].nOffsetToRootAnimationNode;
             Data.MH.Animations[n].RootAnimationNode.nAnimation = n;
             nNodeCounter = 0;
-            ParseNode(&(Data.MH.Animations[n].RootAnimationNode), &nNodeCounter);
+            Vector vFromRoot;
+            ParseNode(&(Data.MH.Animations[n].RootAnimationNode), &nNodeCounter, vFromRoot);
             //Data.MH.Animations[n].nNodeCount = nNodeCounter;
             //std::cout<<string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfObjects);
             Data.MH.Animations[n].ArrayOfNodes.clear();
@@ -252,7 +253,8 @@ void MDL::DecompileModel(){
         Data.MH.RootNode.nAnimation = -1;
         //std::cout<<string_format("Offset to Root Node: %i\n", Data.MH.RootNode.nOffset);
         nNodeCounter = 0;
-        ParseNode(&(Data.MH.RootNode), &nNodeCounter);
+        Vector vFromRoot;
+        ParseNode(&(Data.MH.RootNode), &nNodeCounter, vFromRoot);
         //std::cout<<string_format("Node count for the Geometry: %i, compared to the number in the header, %i.\n", nNodeCounter, Data.MH.GH.nNumberOfNodes);
         //Data.MH.ArrayOfNodes.clear();
         Data.MH.ArrayOfNodes.resize(Data.MH.NameArray.GetCount());
@@ -281,7 +283,7 @@ void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
     AABB->nChild1 = ReadInt(&nPos, 6);
     AABB->nChild2 = ReadInt(&nPos, 6);
     AABB->nID = ReadInt(&nPos, 4);
-    AABB->nChildFlag = ReadInt(&nPos, 10);
+    AABB->nProperty = ReadInt(&nPos, 4);
 
     if(AABB->nChild1 > 0){
         //AABB->Child1 = new Aabb;
@@ -296,7 +298,7 @@ void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
     }
 }
 
-void MDL::ParseNode(Node * NODE, int * nNodeCounter){
+void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
     unsigned int nPos = FH[0].nLength + NODE->nOffset;
     unsigned int nPosData;
     (*nNodeCounter)++;
@@ -321,6 +323,10 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter){
         NODE->Head.oOrient.qY = ReadFloat(&nPos, 2);
         NODE->Head.oOrient.qZ = ReadFloat(&nPos, 2);
         NODE->Head.oOrient.ConvertToAA(); // just convert from quaternions right away
+
+        /// Let's do the transformations/translations here. First orientation, then translation.
+        vFromRoot.Rotate(NODE->Head.oOrient);
+        vFromRoot+=NODE->Head.vPos;
 
         NODE->Head.ChildrenArray.nOffset = ReadInt(&nPos, 6);
         NODE->Head.ChildrenArray.nCount = ReadInt(&nPos, 1);
@@ -485,8 +491,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter){
     }
 
     if(NODE->Head.nType & NODE_HAS_MESH){
-        NODE->Mesh.nFunctionPointer0 = ReadInt(&nPos, 6);
-        NODE->Mesh.nFunctionPointer1 = ReadInt(&nPos, 6);
+        NODE->Mesh.nFunctionPointer0 = ReadInt(&nPos, 9);
+        NODE->Mesh.nFunctionPointer1 = ReadInt(&nPos, 9);
 
         NODE->Mesh.FaceArray.nOffset = ReadInt(&nPos, 6);
         NODE->Mesh.FaceArray.nCount = ReadInt(&nPos, 1);
@@ -676,11 +682,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter){
             nPosData = FH[0].nLength + NODE->Dangly.ConstraintArray.nOffset;
             unsigned int nPosData2 = FH[0].nLength + NODE->Dangly.nOffsetToData2;
             while(n < NODE->Dangly.ConstraintArray.nCount){
-                NODE->Dangly.Constraints[n] = ReadFloat(&nPosData, 2);
+                NODE->Dangly.Constraints.at(n) = ReadFloat(&nPosData, 2);
 
-                NODE->Dangly.Data2[n].fValues[0] = ReadFloat(&nPosData2, 2);
-                NODE->Dangly.Data2[n].fValues[1] = ReadFloat(&nPosData2, 2);
-                NODE->Dangly.Data2[n].fValues[2] = ReadFloat(&nPosData2, 2);
+                NODE->Dangly.Data2.at(n).fX = ReadFloat(&nPosData2, 2);
+                NODE->Dangly.Data2.at(n).fY = ReadFloat(&nPosData2, 2);
+                NODE->Dangly.Data2.at(n).fZ = ReadFloat(&nPosData2, 2);
 
                 n++;
             }
@@ -757,6 +763,10 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter){
                 NODE->Mesh.Vertices[n].fX = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
+
+                NODE->Mesh.Vertices.at(n).fFromRootX = vFromRoot.fX;
+                NODE->Mesh.Vertices.at(n).fFromRootY = vFromRoot.fZ;
+                NODE->Mesh.Vertices.at(n).fFromRootZ = vFromRoot.fY;
 
                 if(NODE->Mesh.nMdxDataSize > 0 && !Mdx.empty()){
                     NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;
@@ -1008,6 +1018,7 @@ void MDL::DetermineSmoothing(){
                     vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); //Update reference to new vector that is about to be created
                     Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); //Create new vector
                     std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
+                    Vector vCoords = Vector(vert.fFromRootX, vert.fFromRootY, vert.fFromRootZ);
                     //file<<"Created LinkedFace group "<<vert.nLinkedFacesIndex<<" with vert "<<v<<" ("<<vert.fX<<", "<<vert.fY<<", "<<vert.fZ<<") in "<<Data.MH.Names.at(n).cName<<".\n";
 
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
@@ -1021,10 +1032,12 @@ void MDL::DetermineSmoothing(){
                                 Face & face = node2.Mesh.Faces.at(f);
 
                                 //We are now checking the three vertices
-                                int nVertIndex = -1;
                                 for(int i = 0; i < 3; i++){
                                     //Check if vertices are equal (enough)
-                                    if(vert.Compare(node2.Mesh.Vertices.at(face.nIndexVertex[i]))){
+                                    Vector vCoords2 = Vector(node2.Mesh.Vertices.at(face.nIndexVertex[i]).fFromRootX,
+                                                             node2.Mesh.Vertices.at(face.nIndexVertex[i]).fFromRootY,
+                                                             node2.Mesh.Vertices.at(face.nIndexVertex[i]).fFromRootZ);
+                                    if(vCoords.Compare(vCoords2)){
 
                                         //If they are equal, regardless of weldedness, add the face to the linked faces array
                                         LinkedFaceArray.push_back(LinkedFace(n2, f, face.nIndexVertex[i]));
@@ -1037,10 +1050,6 @@ void MDL::DetermineSmoothing(){
                                         ///Well, it turns out that's not true <_< *swears*
                                         //i = 3;
                                     }
-                                }
-                                if(nVertIndex != -1){
-                                    //Here we actually add the face, only once, with the index of the first vertex we found
-                                    LinkedFaceArray.push_back(LinkedFace(n2, f, face.nIndexVertex[nVertIndex]));
                                 }
                             }
                         }
@@ -1058,7 +1067,7 @@ void MDL::DetermineSmoothing(){
         std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
         int ngroup = Data.MH.PatchArrayPointers.size() - 1;
         Vertex & vert = GetNodeByNameIndex(LinkedFaceVector.at(0).nNameIndex).Mesh.Vertices.at(LinkedFaceVector.at(0).nVertex);
-        file<<"Group "<<ngroup<<" ("<<vert.fX<<", "<<vert.fY<<", "<<vert.fZ<<")\n";
+        file<<"Group "<<ngroup<<" ("<<vert.fFromRootX<<", "<<vert.fFromRootY<<", "<<vert.fFromRootZ<<")\n";
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){

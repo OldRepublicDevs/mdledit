@@ -29,6 +29,8 @@
 #define IDM_MDX_SAVE        120
 #define IDM_WOK_SAVE        121
 #define IDM_ASCII_SAVE      122
+#define IDM_LINK_HEAD       123
+#define IDM_SETTINGS        124
 
 //GUI controls
 #define IDC_STATUSBAR    200
@@ -56,6 +58,11 @@
 #define IDPM_TV_EXPAND_CHILDREN     304
 #define IDPM_OPEN_CONTROLLER_DATA   305
 #define IDPM_OPEN_GEO_VIEWER        306
+
+#define DLG_SETTINGS     401
+#define DLG_ID_AREA_WEIGHT 402
+#define DLG_ID_ANGLE_WEIGHT 403
+#define DLG_ID_STATIC 404
 
 #define IDDB_EDIT                   500
 

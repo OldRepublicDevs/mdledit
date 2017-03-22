@@ -26,5 +26,6 @@ class Frame{
 #define ACTION_OPEN_GEO_VIEWER     3
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
+INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif // FRAME_H_INCLUDED

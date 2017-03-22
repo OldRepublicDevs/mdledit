@@ -73,7 +73,7 @@ void WOK::ProcessWalkmesh(){
         aabb[n].vBBmax.fZ = ReadFloat(&nPos, 2);
         aabb[n].nID = ReadInt(&nPos, 4);
         aabb[n].nExtra = ReadInt(&nPos, 4);
-        aabb[n].nChildFlag = ReadInt(&nPos, 4);
+        aabb[n].nProperty = ReadInt(&nPos, 4);
         aabb[n].nChild1 = ReadInt(&nPos, 4);
         aabb[n].nChild2 = ReadInt(&nPos, 4);
     }

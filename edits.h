@@ -25,8 +25,8 @@ class Edits{
     int nSelectStart;
     int nSelectEnd;
     bool bSelection;
-    std::vector<int> nKnownArray;
-    std::vector<char> sBuffer;
+    std::vector<int> * nKnownArray;
+    std::vector<char> * sBuffer;
     int nBufferSize;
 
     public:
@@ -41,23 +41,23 @@ class Edits{
     void LoadData(){
         int nSel = TabCtrl_GetCurSel(hTabs);
         if(nSel == 0){
-            nKnownArray = Model.GetKnownData();
-            sBuffer = Model.GetBuffer();
+            nKnownArray = &Model.GetKnownData();
+            sBuffer = &Model.GetBuffer();
             nBufferSize = Model.GetBufferLength();
         }
         else if(nSel == 1){
-            nKnownArray = Mdx.GetKnownData();
-            sBuffer = Mdx.GetBuffer();
+            nKnownArray = &Mdx.GetKnownData();
+            sBuffer = &Mdx.GetBuffer();
             nBufferSize = Mdx.GetBufferLength();
         }
         else if(nSel == 2){
-            nKnownArray = Walkmesh.GetKnownData();
-            sBuffer = Walkmesh.GetBuffer();
+            nKnownArray = &Walkmesh.GetKnownData();
+            sBuffer = &Walkmesh.GetBuffer();
             nBufferSize = Walkmesh.GetBufferLength();
         }
         else Error("Trying to select a tab that does not exist! (Don't ask me how that's possible)");
 
-        if(nBufferSize == 0 || sBuffer.empty()) ShowWindow(hScrollVert, false);
+        if(nBufferSize == 0 || sBuffer->empty()) ShowWindow(hScrollVert, false);
         else ShowWindow(hScrollVert, true);
 
         SetClassLongPtr(hMe, GCLP_HCURSOR, (LONG_PTR) LoadCursor(NULL, IDC_ARROW));
@@ -93,7 +93,8 @@ class Edits{
     void UpdateEdit(){
         UpdateClientRect();
         InvalidateRect(hMe, &rcClient, false);
-        if(!sBuffer.empty()){
+        if(sBuffer == nullptr) return;
+        if(!sBuffer->empty()){
             SCROLLINFO si;
             si.cbSize = sizeof(SCROLLINFO);
             si.fMask = SIF_POS | SIF_RANGE | SIF_PAGE;

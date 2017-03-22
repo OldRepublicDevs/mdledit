@@ -32,6 +32,9 @@ Edits::Edits(){
     // #7 Other
     WindowClass.cbClsExtra = 0; // Extra bytes to allocate following the wndclassex structure
     WindowClass.cbWndExtra = 0; // Extra bytes to allocate following an instance of the structure
+
+    sBuffer = nullptr;
+    nKnownArray = nullptr;
 }
 
 bool Edits::Run(HWND hParent, UINT nID){
@@ -77,7 +80,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
     switch(message){
         case WM_CREATE:
         {
-                if(DEBUG_LEVEL > 80) std::cout<<string_format("Should be creating the scrollbar now.\n");
+                if(DEBUG_LEVEL > 80) std::cout<<"Should be creating the scrollbar now.\n";
 
                 bDrag = false;
                 bDblClick = false;
@@ -128,7 +131,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         }
         case WM_MOUSEMOVE:
         {
-            if(Edit->sBuffer.empty()) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer == nullptr) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer->empty()) return DefWindowProc(hwnd, message, wParam, lParam);
 
             //Determine drag
 
@@ -216,7 +220,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         break;
         case WM_LBUTTONDBLCLK:
         {
-            if(Edit->sBuffer.empty()) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer == nullptr) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer->empty()) return DefWindowProc(hwnd, message, wParam, lParam);
 
             if(nArea == 1){ //We are in the byte view region
                 nClickArea = nArea;
@@ -232,7 +237,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         break;
         case WM_LBUTTONDOWN:
         {
-            if(Edit->sBuffer.empty()) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer == nullptr) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer->empty()) return DefWindowProc(hwnd, message, wParam, lParam);
 
             if(nArea == 1 || nArea == 2){ //We are in the byte or chAR view region
                 nClickArea = nArea;
@@ -253,7 +259,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         break;
         case WM_LBUTTONUP:
         {
-            if(Edit->sBuffer.empty()) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer == nullptr) return DefWindowProc(hwnd, message, wParam, lParam);
+            if(Edit->sBuffer->empty()) return DefWindowProc(hwnd, message, wParam, lParam);
             ReleaseCapture(); //Release mouse
             if(bDrag){
                 Edit->ptRelease = Edit->ptHover;
@@ -307,7 +314,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             DeleteObject(hFill);
 
             /**/
-        if(!Edit->sBuffer.empty()){
+        if(!(Edit->sBuffer == nullptr)){
+        if(!Edit->sBuffer->empty()){
 
             HPEN hPenLine = CreatePen(PS_SOLID, 1, RGB(80, 80, 80));
             SelectObject(hdc, hPenLine);
@@ -358,7 +366,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. Beginning data while. Starting position: %i. Max: %i.\n", n, nMax);
             char cHexText [50];
             while(n < nMax){
-                CharsToHex(cHexText, Edit->sBuffer, n * 16, 16);
+                CharsToHex(cHexText, *Edit->sBuffer, n * 16, 16);
                 nStrlen = std::min((Edit->nBufferSize - (n * 16))*3, (int) strlen(cHexText));
                 i = 0;
                 while(i < nStrlen){
@@ -367,7 +375,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                     sprintf(cIntPrint, "%i", n*16);
                     AddSignificantZeroes(cIntPrint, 8);
                     ExtTextOut(hdc, ME_EDIT_PADDING_LEFT, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cIntPrint, strlen(cIntPrint), NULL);
-                    nDataKnown = Edit->nKnownArray.at(n*16 + i / 3);
+                    if(Edit->nKnownArray->size() > n*16 + i / 3) nDataKnown = Edit->nKnownArray->at(n*16 + i / 3);
+                    else nDataKnown = 0;
                     if(bHilite && (
                        ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
                        || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16 * 3) <= i && (Edit->nSelectEnd % 16 * 3) >= i - 1)
@@ -385,7 +394,8 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
                     //Do a completely separate draw for the charset.
                     if(i <= nStrlen / 3){
-                        nDataKnown = Edit->nKnownArray.at(n*16 + i);
+                        if(Edit->nKnownArray->size() > n*16 + i) nDataKnown = Edit->nKnownArray->at(n*16 + i);
+                        else nDataKnown = 0;
                         if(bHilite && (
                         ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
                         || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16) <= i && (Edit->nSelectEnd % 16) >= i)
@@ -401,7 +411,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                             SetBkColor(hdc, RGB(255, 255, 255));
                         }
                         char cToWrite;
-                        cToWrite = Edit->sBuffer[n * 16 + i];
+                        cToWrite = Edit->sBuffer->at(n * 16 + i);
                         PrepareCharForDisplay(&cToWrite);
                         ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_CHARSET_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, &cToWrite, 1, NULL);
                     }
@@ -410,6 +420,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 n++;
             }
             if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. Ending data while. Ending position: %i\n", n);
+        }
         }
             /**/
 
@@ -545,7 +556,7 @@ void Edits::PrintValues(bool bCheck){
     int n = 0;
     while(nSelectStart + n <= nSelectEnd){
         if(DEBUG_LEVEL > 70) std::cout<<string_format("Extract byte #%i.\n", nSelectStart + n);
-        cString[n] = sBuffer[nSelectStart+n];
+        cString[n] = sBuffer->at(nSelectStart+n);
         if(nSelectStart + n == nSelectEnd) cString[n+1] = '\0';
         n++;
     }
@@ -605,9 +616,9 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
         case 10: //known unknowns, mark red
             return RGB(255, 0, 0);
         case 1: //anything that counts something, unsigned by definition. (uint32 or uint16)
-            return RGB(255, 200, 100);
+            return RGB(235, 220, 0);
         case 2: //float
-            return RGB(100, 200, 100);
+            return RGB(76, 206, 20);
         case 3: //string
             return RGB(110, 110, 110);
         case 4: //int ((u)int32)
@@ -619,7 +630,9 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
         case 7: //byte
             return RGB(165, 103, 16);
         case 8: //Possibly constant/meaningless/padding
-            return RGB(249, 162, 182);
+            return RGB(232, 232, 232);
+        case 9: //function pointer - it can make the beginning certain structures stand out more
+            return RGB(255, 160, 80);
     }
     return RGB(0, 0, 0);
 }

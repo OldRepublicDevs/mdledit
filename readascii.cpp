@@ -253,14 +253,17 @@ bool Ascii::Read(FileHeader * FH){
             }
 
             if(bFound){
-                node.Mesh.Vertices.push_back(vert);
-                if(nNode & NODE_HAS_SABER) node.Saber.SaberData.push_back(saberdata);
+                if(nNode & NODE_HAS_DANGLY){
+                    node.Dangly.Data2.push_back(Vector(vert.fX, vert.fY, vert.fZ));
+                }
+                node.Mesh.Vertices.push_back(std::move(vert));
+                if(nNode & NODE_HAS_SABER) node.Saber.SaberData.push_back(std::move(saberdata));
             }
             else bError = true;
             nDataCounter++;
             if(nDataCounter >= nDataMax){
                 bVerts = false;
-                node.Mesh.nNumberOfVerts = node.Mesh.Vertices.size();
+                //node.Mesh.nNumberOfVerts = node.Mesh.Vertices.size();
             }
             SkipLine();
         }

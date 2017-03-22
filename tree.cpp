@@ -21,7 +21,7 @@ void MDL::AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdd
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
     }
-    else if((cItem[1] == "Controllers")){
+    else if((cItem[1] == "Controllers") && cItem.at(0) != "Controller Data"){
         //Controller * ctrl = (Controller*) lParam;
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
@@ -272,9 +272,9 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
                 for(int n = 0; n < node.Mesh.nNumberOfVerts; n++){
                     sprintf(cVert, "Vertex %i", n);
                     Vert = Append(cVert, (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
-                    if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
+                    //if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
                 }
-                if(node.Mesh.nMdxDataSize > 0) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
+                if(node.Mesh.nMdxDataSize > 0 && !Mdx.empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
             }
             HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
             if(node.Mesh.Faces.size() > 0){
@@ -330,10 +330,11 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             Append("Period", (LPARAM) &node.Dangly.fPeriod);
             HTREEITEM Data2 = Append("Data2", (LPARAM) &node.Dangly);
             if(node.Dangly.Constraints.size() > 0){
-                char cDatum [255];
+                std::stringstream ssVert;
                 for(int i = 0; i < node.Dangly.ConstraintArray.nCount; i++){
-                    sprintf(cDatum, "Datum %i", i);
-                    Append(cDatum, (LPARAM) &(node.Dangly.Data2[i]), Data2);
+                    ssVert.str(std::string());
+                    ssVert << "Vertex " << i;
+                    Append(ssVert.str(), (LPARAM) &(node.Dangly.Data2.at(i)), Data2);
                 }
             }
         }
@@ -389,6 +390,7 @@ void MDL::BuildTree(){
             CurrentNode = Append(Data.MH.Names[node.Head.nNameIndex].cName, (LPARAM) &node, Nodes);
 
             HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
+            Append("Controller Data", (LPARAM) &node.Head, Controllers);
             for(int n = 0; n < node.Head.Controllers.size(); n++){
                 int nCtrlIndex = node.Head.Controllers[n].nNameIndex;
                 int nCtrlType = node.Head.Controllers[n].nControllerType;
@@ -398,8 +400,6 @@ void MDL::BuildTree(){
                 else sName+="key";
                 Append(sName, (LPARAM) &(node.Head.Controllers[n]), Controllers);
             }
-
-            Append("Controller Data", (LPARAM) &node.Head, CurrentNode);
 
             HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
             if(node.Head.nParentIndex != -1){
@@ -434,16 +434,15 @@ void MDL::BuildTree(){
 
         AppendChildren(node, CurrentNode, Data.MH.Names);
 
-        Append("Position", (LPARAM) &(node.Head.vPos), CurrentNode);
+        //Append("Position", (LPARAM) &(node.Head.vPos), CurrentNode);
 
-        Append("Orientation", (LPARAM) &(node.Head.oOrient));
+        //Append("Orientation", (LPARAM) &(node.Head.oOrient));
 
         HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
+        Append("Controller Data", (LPARAM) &node.Head, Controllers);
         for(int n = 0; n < node.Head.Controllers.size(); n++){
             Append(ReturnControllerName(node.Head.Controllers[n].nControllerType, node.Head.nType), (LPARAM) &(node.Head.Controllers[n]), Controllers);
         }
-
-        Append("Controller Data", (LPARAM) &node.Head, CurrentNode);
 
         HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
         if(node.Head.nParentIndex != -1){
@@ -488,8 +487,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\n\r\nMDL Length: %i\r\nMDX Length: %i\r\nFunction Pointer 0: %i\r\nFunction Pointer 1: %i",
                     FH[0].nMdlLength, FH[0].nMdxLength, FH[0].MH.GH.nFunctionPointer0, FH[0].MH.GH.nFunctionPointer1);
     }
-    else if((cItem[0] == "Bounding Box Min")) sPrint << string_format("Bounding Box Min: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Bounding Box Max")) sPrint << string_format("Bounding Box Max: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if((cItem[0] == "Bounding Box Min")) sPrint << "Bounding Box Min:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
+    else if((cItem[0] == "Bounding Box Max")) sPrint << "Bounding Box Max:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
     else if((cItem[0] == "Radius")) sPrint << string_format("Radius:\r\n%f", *((double*) lParam));
     else if((cItem[0] == "Scale")) sPrint << string_format("Scale:\r\n%f", *((double*) lParam));
 
@@ -540,20 +539,22 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             else sPrint << "unknown - file likely faulty!";
             sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].cName.c_str();
             sPrint << string_format("\r\nOffset: %i\r\nOffset to Root: %i\r\nOffset to Parent: %i\r\nID: %i", node->nOffset, node->Head.nOffsetToRoot, node->Head.nOffsetToParent, node->Head.nID1);
-    }
+            sPrint << "\r\nPosition: "<<PrepareFloat(node->Head.vPos.fX, 0);
+            sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fY, 0);
+            sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fZ, 0);
+            sPrint << "\r\nOrientation: "<<PrepareFloat(node->Head.oOrient.qX, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fX, 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qY, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fY, 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qZ, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fZ, 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qW, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fAngle, 1)<<")";
+    }/*
     else if((cItem[0] == "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if((cItem[0] == "Orientation")){
         Orientation * orient = (Orientation*) lParam;
         sPrint << "Orientation: \r\nx: "<<orient->qX<<" (aa "<<orient->fX<<")\r\ny: "<<orient->qY<<" (aa "<<orient->fY<<")\r\nz: "<<orient->qZ<<" (aa "<<orient->fZ<<")\r\nw: "<<orient->qW<<" (aa "<<orient->fAngle<<")";
-    }
+    }*/
     else if((cItem[0] == "Controllers")){
         Header * head = (Header * ) lParam;
         sPrint << string_format("Controllers\r\nOffset: %u\r\nCount: %u", head->ControllerArray.nOffset, head->ControllerArray.nCount);
-    }
-    else if((cItem[1] == "Controllers")){
-        Controller * ctrl = (Controller*) lParam;
-        sPrint << string_format("%s\r\n\r\nController type:  %i\r\nUnknown int16:   %hi\r\nValue Count:      %hi\r\nTimekey Start:    %hi\r\nData Start:       %hi\r\nColumn Count:     %hhi\r\nPadding?:         %hhi, %hhi, %hhi",
-                cItem[0].c_str(), ctrl->nControllerType, ctrl->nUnknown2, ctrl->nValueCount, ctrl->nTimekeyStart, ctrl->nDataStart, ctrl->nColumnCount, ctrl->nPadding[0], ctrl->nPadding[1], ctrl->nPadding[2]);
     }
     else if((cItem[0] == "Controller Data")){
         Header * head = (Header * ) lParam;
@@ -570,6 +571,11 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\n%i.%s %f", i, cSpaces, fFloats[i]);
             i++;
         }
+    }
+    else if((cItem[1] == "Controllers")){
+        Controller * ctrl = (Controller*) lParam;
+        sPrint << string_format("%s\r\n\r\nController type:  %i\r\nUnknown int16:   %hi\r\nValue Count:      %hi\r\nTimekey Start:    %hi\r\nData Start:       %hi\r\nColumn Count:     %hhi\r\nPadding?:         %hhi, %hhi, %hhi",
+                cItem[0].c_str(), ctrl->nControllerType, ctrl->nUnknown2, ctrl->nValueCount, ctrl->nTimekeyStart, ctrl->nDataStart, ctrl->nColumnCount, ctrl->nPadding[0], ctrl->nPadding[1], ctrl->nPadding[2]);
     }
     else if((cItem[0] == "Children")){
         Header * head = (Header * ) lParam;
@@ -692,14 +698,9 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Vertices\r\nOffset: %u\r\nCount: %u", mesh->nOffsetToVertArray, mesh->nNumberOfVerts);
     }
-    else if((cItem[0] == "MDX Data") || (cItem[0] == "Extra MDX Data")){
+    else if((cItem[0] == "Extra MDX Data")){
         MDXDataStruct * mdx = (MDXDataStruct * ) lParam;
-        if((cItem[0] == "Extra MDX Data")){
-            sPrint << cItem[0].c_str();
-        }
-        else{
-            sPrint << cItem[1].c_str()<<" MDX Data";
-        }
+        sPrint << cItem[0].c_str();
         Node & node = GetNodeByNameIndex(mdx->nNameIndex);
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
             sPrint << string_format("\r\n\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
@@ -752,6 +753,57 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         Vertex * vert = (Vertex * ) lParam;
         sPrint << string_format("%s\r\nx: %f\r\ny: %f\r\nz: %f",
                 cItem[0].c_str(), vert->fX, vert->fY, vert->fZ);
+        MDXDataStruct * mdx = &vert->MDXData;
+        Node & node = GetNodeByNameIndex(mdx->nNameIndex);
+        if(node.Mesh.nMdxDataSize > 0 && !Mdx.empty()){
+            sPrint << "\r\n\r\nMDX Data";
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+                sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
+                sPrint << string_format("\r\n\r\nNormal: %f\r\n        %f\r\n        %f", mdx->vNormal.fX, mdx->vNormal.fY, mdx->vNormal.fZ);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+                sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->fUV1[0], mdx->fUV1[1]);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+                sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->fUV2[0], mdx->fUV2[1]);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+                sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->fUV3[0], mdx->fUV3[1]);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+                sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->fUV4[0], mdx->fUV4[1]);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
+                sPrint << string_format("\r\n\r\nTangent Space 1");
+                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent1[0].fX, mdx->vTangent1[0].fY, mdx->vTangent1[0].fZ);
+                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent1[1].fX, mdx->vTangent1[1].fY, mdx->vTangent1[1].fZ);
+                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent1[2].fX, mdx->vTangent1[2].fY, mdx->vTangent1[2].fZ);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
+                sPrint << string_format("\r\n\r\nTangent Space 2");
+                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent2[0].fX, mdx->vTangent2[0].fY, mdx->vTangent2[0].fZ);
+                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent2[1].fX, mdx->vTangent2[1].fY, mdx->vTangent2[1].fZ);
+                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent2[2].fX, mdx->vTangent2[2].fY, mdx->vTangent2[2].fZ);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
+                sPrint << string_format("\r\n\r\nTangent Space 3");
+                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent3[0].fX, mdx->vTangent3[0].fY, mdx->vTangent3[0].fZ);
+                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent3[1].fX, mdx->vTangent3[1].fY, mdx->vTangent3[1].fZ);
+                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent3[2].fX, mdx->vTangent3[2].fY, mdx->vTangent3[2].fZ);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
+                sPrint << string_format("\r\n\r\nTangent Space 4");
+                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent4[0].fX, mdx->vTangent4[0].fY, mdx->vTangent4[0].fZ);
+                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent4[1].fX, mdx->vTangent4[1].fY, mdx->vTangent4[1].fZ);
+                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
+            }
+            if(node.Head.nType & NODE_HAS_SKIN){
+                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin1[0], mdx->fSkin1[1], mdx->fSkin1[2], mdx->fSkin1[3]);
+                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin2[0], mdx->fSkin2[1], mdx->fSkin2[2], mdx->fSkin2[3]);
+            }
+        }
     }
     else if((cItem[0] == "Number of Vertex Indices 2 Array")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
@@ -873,9 +925,11 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << string_format("Data2\r\nOffset: %u\r\nCount: %u", dangly->nOffsetToData2, dangly->ConstraintArray.nCount);
     }
     else if((cItem[1] == "Data2")){
-        DanglyData2Struct * data = (DanglyData2Struct * ) lParam;
-        sPrint << string_format("%s\r\n%f\r\n%f\r\n%f",
-                cItem[0].c_str(), data->fValues[0], data->fValues[1], data->fValues[2]);
+        Vector * data = (Vector * ) lParam;
+        sPrint << cItem[0].c_str();
+        sPrint << "\r\nx: "<<data->fX;
+        sPrint << "\r\ny: "<<data->fY;
+        sPrint << "\r\nz: "<<data->fZ;
     }
 
     /// Walkmesh ///
@@ -885,8 +939,26 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
     else if((cItem[1] == "Walkmesh")){
         Aabb * aabb = (Aabb * ) lParam;
-        sPrint << string_format("%s\r\nOffset: %u\r\nValues: %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\nID: %i\r\nChild Flag: %i\r\nOffset to Child 1: %i\r\nOffset to Child 2: %i",
-                cItem[0].c_str(), aabb->nOffset, aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2);
+        std::string sProperty;
+        if(aabb->nProperty == 1) sProperty = "Positive X";
+        else if(aabb->nProperty == 2) sProperty = "Positive Y";
+        else if(aabb->nProperty == 4) sProperty = "Positive Z";
+        else if(aabb->nProperty == 8) sProperty = "Negative X";
+        else if(aabb->nProperty == 16) sProperty = "Negative Y";
+        else if(aabb->nProperty == 32) sProperty = "Negative Z";
+        else sProperty = "None";
+        sPrint << cItem[0];
+        sPrint << "\r\nOffset: "<<aabb->nOffset;
+        sPrint << "\r\nBounding Box Min: "<<aabb->vBBmin.fX;
+        sPrint << "\r\n                  "<<aabb->vBBmin.fY;
+        sPrint << "\r\n                  "<<aabb->vBBmin.fZ;
+        sPrint << "\r\nBounding Box Max: "<<aabb->vBBmax.fX;
+        sPrint << "\r\n                  "<<aabb->vBBmax.fY;
+        sPrint << "\r\n                  "<<aabb->vBBmax.fZ;
+        sPrint << "\r\nFace Index: "<<aabb->nID;
+        sPrint << "\r\n2nd Child Property: "<<sProperty;
+        sPrint << "\r\nOffset to Child 1: "<<aabb->nChild1;
+        sPrint << "\r\nOffset to Child 2: "<<aabb->nChild2;
     }
 
     /// Saber ///
@@ -907,8 +979,27 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     /// WOK ///
     else if((cItem[1] == "Aabb")){
         Aabb * aabb = (Aabb * ) lParam;
-        sPrint << string_format("%s\r\nValues: %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\n        %f\r\nID: %i\r\nChild Flag: %i\r\nOffset to Child 1: %i\r\nOffset to Child 2: %i\r\nExtra: %i",
-                cItem[0].c_str(),aabb->vBBmin.fX, aabb->vBBmin.fY, aabb->vBBmin.fZ, aabb->vBBmax.fX, aabb->vBBmax.fY, aabb->vBBmax.fZ, aabb->nID, aabb->nChildFlag, aabb->nChild1, aabb->nChild2, aabb->nExtra);
+        std::string sProperty;
+        if(aabb->nProperty == 1) sProperty = "Positive X";
+        else if(aabb->nProperty == 2) sProperty = "Positive Y";
+        else if(aabb->nProperty == 4) sProperty = "Positive Z";
+        else if(aabb->nProperty == 8) sProperty = "Negative X";
+        else if(aabb->nProperty == 16) sProperty = "Negative Y";
+        else if(aabb->nProperty == 32) sProperty = "Negative Z";
+        else sProperty = "None";
+        sPrint << cItem[0];
+        sPrint << "\r\nOffset: "<<aabb->nOffset;
+        sPrint << "\r\nBounding Box Min: "<<aabb->vBBmin.fX;
+        sPrint << "\r\n                  "<<aabb->vBBmin.fY;
+        sPrint << "\r\n                  "<<aabb->vBBmin.fZ;
+        sPrint << "\r\nBounding Box Max: "<<aabb->vBBmax.fX;
+        sPrint << "\r\n                  "<<aabb->vBBmax.fY;
+        sPrint << "\r\n                  "<<aabb->vBBmax.fZ;
+        sPrint << "\r\nFace Index: "<<aabb->nID;
+        sPrint << "\r\n2nd Child Property: "<<sProperty;
+        sPrint << "\r\nChild 1 Index: "<<aabb->nChild1;
+        sPrint << "\r\nChild 2 Index: "<<aabb->nChild2;
+        sPrint << "\r\nExtra: "<<aabb->nExtra;
     }
     else if((cItem[1] == "Array 1")){
         sPrint << string_format("Values:\r\n%i\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2, ((Triples*) lParam)->n3);

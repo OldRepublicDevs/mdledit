@@ -280,7 +280,16 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_MDL_OPEN:
                 {
-                    FileEditor(hwnd, nID, sFile);
+                    bool bSuccess = FileEditor(hwnd, nID, sFile);
+                    if(bSuccess){
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        bool bLinkHead = Model.HeadLinked();
+                        if(bLinkHead) mii.fState = MFS_CHECKED;
+                        else mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                    }
                 }
                 break;
                 case IDM_MDL_SAVE:
@@ -291,7 +300,14 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_ASCII_OPEN:
                 {
-                    FileEditor(hwnd, nID, sFile);
+                    bool bSuccess = FileEditor(hwnd, nID, sFile);
+                    if(bSuccess){
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                    }
                 }
                 break;
                 case IDM_ASCII_SAVE:
@@ -299,6 +315,31 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     int nReturn = IDOK;
                     if(Mdx.empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
                     if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
+                }
+                break;
+                case IDM_LINK_HEAD:
+                {
+                    if(!Model.empty()){
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                        bool bLinkHead = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                        if(Model.LinkHead(bLinkHead)){
+                            if(bLinkHead) mii.fState = MFS_CHECKED;
+                            else mii.fState = MFS_UNCHECKED;
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                            Edit1.UpdateEdit();
+                            HTREEITEM hSel = TreeView_GetSelection(hTree);
+                            ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
+                        }
+                        else std::cout<<"neck_g was not found!\n";
+                    }
+                }
+                break;
+                case IDM_SETTINGS:
+                {
+                    DialogBox(NULL, MAKEINTRESOURCE(DLG_SETTINGS), hwnd, SettingsProc);
                 }
                 break;
                 case IDPM_TV_FOLD:

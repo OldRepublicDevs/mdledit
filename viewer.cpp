@@ -110,9 +110,10 @@ void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
             sLocation = "animation '" + std::string(FH[0].MH.Animations[ctrl->nAnimation].cName.c_str()) + "'";
         }
         std::string sController = ReturnControllerName(ctrl->nControllerType, GetNodeByNameIndex(ctrl->nNameIndex).Head.nType);
-        if(ctrl->nColumnCount == 19) sController+="bezierkey";
-        else sController+="key";
-        sName<<"controller '"<<sController<<"' in node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' in "<<sLocation;
+        if(ctrl->nColumnCount & 16) sController+="bezierkey";
+        else if(ctrl->nAnimation != -1) sController+="key";
+        sName<<sLocation<<" > node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' > controller '"<<sController<<"'";
+        //sName<<"controller '"<<sController<<"' in node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' in "<<sLocation;
         if(!(cItem[3] == "Geometry")){
             ConvertToAscii(CONVERT_CONTROLLER_KEYED, sPrint, (void*) lParam);
         }

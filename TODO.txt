@@ -1,0 +1,34 @@
+ 1. viewer for Walkmesh (somewhat done)
+ 2. interpret WOK (mostly done)
+ 3. ascii importer (mostly done)
+ 4. after import, calculate adjacent faces, face normals, vertex normals
+
+
+ Binary diff shortcomings:
+ 1. I cannot accurately reproduce the correct radius and average values. For now, I will settle with the largest radius and the mean average of all points.
+ 2. unknown padding mismatches
+ 3. unknown controller int16 mismatches
+ 4. precision issues, probably cannot avoid this
+ 5. inverted counter - I can create the correct values, but I cannot figure out how to count them
+
+ Calculations:
+ 1. face adjacencies -DONE
+ 2. face normals -DONE
+ 3. vertex normals -DONE (but they now depend on smoothing groups, which I cannot convert from the model)
+ 4. AABB tree creator
+
+
+ Smoothing group calculation:
+ 1. determine linked faces for every vertex
+ 2. go through all vertices and for each
+    2a. Take all welded face normals into account
+    2b. Calculate a vertex normal for every combination of unwelded faces + all welded faces
+    2c. Check if we have the right outcome, if so, save a boolean into LinkedFace whether a face smooths over this vert or not
+
+
+    1. check if all the nodes that have index i, also have some index j. If they do, delete all i.
+    ie: for the first node, save index i and the binary int of the indexes, then
+        every time i is present, remove all indexes from the binary int that are not present in this node
+        repeat until the binary int is 0, at which point we may stop. If we get to the end, that means that
+        the binary int is > 0, so we may now delete all i.
+

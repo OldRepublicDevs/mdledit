@@ -18,7 +18,7 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
 
 char cReturn[4][255];
 char * PrepareFloat(double fFloat, unsigned int n){
-    sprintf(cReturn[n], "%#.10f", RoundDec(fFloat, 10));
+    sprintf(cReturn[n], "%#.7f", RoundDec(fFloat, 8));
     TruncateDec(cReturn[n]);
     return cReturn[n];
 }

@@ -643,6 +643,9 @@ bool MDL::Compile(){
     WriteIntToPH(Mdx.nPosition, PHnMdxLength2, Data->MH.nMdxLength2);
     nBufferSize = sBuffer.size();
     Mdx.nBufferSize = Mdx.sBuffer.size();
+
+    bLoaded = true;
+    Mdx.bLoaded = true;
 }
 
 void MDL::WriteAabb(Aabb & aabb){
@@ -657,7 +660,7 @@ void MDL::WriteAabb(Aabb & aabb){
     int PHnChild2 = nPosition;
     WriteInt(0xFFFFFFFF, 6);
     WriteInt(aabb.nID, 4);
-    WriteInt(aabb.nChildFlag, 10);
+    WriteInt(aabb.nProperty, 4);
     if(aabb.Child1.size() > 0){
         WriteIntToPH(nPosition - 12, PHnChild1, aabb.nChild1);
         WriteAabb(aabb.Child1.front());
@@ -1026,9 +1029,9 @@ void MDL::WriteNodes(Node & node){
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToConstraints, GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Dangly.ConstraintArray.nOffset);
         for(int d = 0; d < node.Dangly.Data2.size(); d++){
-            WriteFloat(node.Dangly.Data2.at(d).fValues[0], 2);
-            WriteFloat(node.Dangly.Data2.at(d).fValues[1], 2);
-            WriteFloat(node.Dangly.Data2.at(d).fValues[2], 2);
+            WriteFloat(node.Dangly.Data2.at(d).fX, 2);
+            WriteFloat(node.Dangly.Data2.at(d).fY, 2);
+            WriteFloat(node.Dangly.Data2.at(d).fZ, 2);
         }
     }
 

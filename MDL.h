@@ -13,7 +13,7 @@
      - last three bytes (padding?) after ModelType in Header and Animation
      - bytes after RenderOrder in EmitterHeader (possibly padding like above?)
      - short nUnknown2 and last three bytes (padding?) in Controller
-     - nChildFlag in Aabb
+     - nProperty in Aabb
      - an unknown array in LightHeader
      - data2 array (3 floats, likely coordinates) in DanglyHeader
      - Array8 in SkinHeader (I believe this one to be unused, any data inside is ignored. So it can just be anything. Need to test this.)
@@ -388,7 +388,7 @@ struct Aabb{
     unsigned int nChild1;
     unsigned int nChild2;
     int nID; //An index to the face of the walkmesh
-    int nChildFlag; //0 if no children, otherwise 2^something. I have seen 1 2 4 8 16 32
+    int nProperty; //0 if no children, otherwise 2^something. I have seen 1 2 4 8 16 32
     // 0x01 = Positive X //from nwntool
     // 0x02 = Positive Y
     // 0x04 = Positive Z
@@ -429,15 +429,9 @@ struct Name{
     std::string cName;
 };
 
-struct DanglyData2Struct{
-    double fValues [3];
-};
-
 struct SaberDataStruct{
-    //double fVertex[3];
     Vector vVertex;
     double fUV[2];
-    //double fValues3[3];
     Vector vNormal;
 };
 
@@ -506,6 +500,9 @@ struct Patch{
 };
 
 struct Vertex: public Vector{
+    float fFromRootX;
+    float fFromRootY;
+    float fFromRootZ;
     MDXDataStruct MDXData;
     int nLinkedFacesIndex = -1;
 };
@@ -797,7 +794,7 @@ struct DanglymeshHeader{
     //Added members
     int nLength = 28;
     std::vector<double> Constraints;
-    std::vector<DanglyData2Struct> Data2;
+    std::vector<Vector> Data2;
 };
 
 // if NODE_HAS_AABB
@@ -1025,6 +1022,7 @@ class File{
     }
     virtual void FlushAll(){
         sBuffer.clear();
+        sBuffer.shrink_to_fit();
         nBufferSize = 0;
         bLoaded = false;
     }
@@ -1151,7 +1149,7 @@ class MDL: public BinaryFile{
     Ascii AsciiReader;
 
     //Reading
-    void ParseNode(Node * NODE, int * nNodeCounter);
+    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot);
     void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
     void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
         for(int n = 0; n < NODE.Head.Children.size(); n++){
@@ -1194,6 +1192,7 @@ class MDL: public BinaryFile{
     bool bSmoothAngleWeighting = false;
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
     bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
+    Vector GetTransformedCoordinates(Vertex & vert, int nNameIndex);
 
     //Getters
     const std::string GetName(){
@@ -1228,6 +1227,15 @@ class MDL: public BinaryFile{
             }
         }
     }
+    bool HeadLinked(){
+        for(int n = 0; n < FH[0].MH.ArrayOfNodes.size(); n++){
+            if(FH[0].MH.ArrayOfNodes.at(n).nOffset == FH[0].MH.nOffsetToHeadRootNode){
+                if(FH[0].MH.Names.at(FH[0].MH.ArrayOfNodes.at(n).Head.nNameIndex).cName == "neck_g") return true;
+                else return false;
+            }
+        }
+        return false;
+    }
 
 
     //Loaders
@@ -1240,6 +1248,27 @@ class MDL: public BinaryFile{
     void UpdateDisplay(HTREEITEM hItem);
     void FlushData(){
         FH.clear();
+    }
+
+    //Setters/general
+    bool LinkHead(bool bLink){
+        unsigned int nOffset;
+        if(bLink){
+            int nNameIndex = -1;
+            for(int n = 0; n < FH[0].MH.Names.size() && nNameIndex == -1; n++){
+                if(FH[0].MH.Names.at(n).cName == "neck_g") nNameIndex = n;
+            }
+            if(nNameIndex != -1){
+                nOffset = GetNodeByNameIndex(nNameIndex).nOffset;
+            }
+            else return false;
+        }
+        else{
+            nOffset = FH[0].MH.GH.nOffsetToRootNode;
+        }
+        FH[0].MH.nOffsetToHeadRootNode = nOffset;
+        WriteIntToPH(nOffset, 180, nOffset);
+        return true;
     }
 
     //ascii

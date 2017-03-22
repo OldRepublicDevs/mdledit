@@ -55,6 +55,21 @@ Orientation operator*(Orientation o1, const Orientation & o2){
     return o1;
 }
 
+Vector MDL::GetTransformedCoordinates(Vertex & vert, int nNameIndex){
+    Vector vReturn;
+    std::vector<int> Indexes;
+    int nIndex = nNameIndex;
+    while(nIndex != -1){
+        Indexes.push_back(nIndex);
+        nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
+    }
+    for(int n = Indexes.size() - 1; n >= 0; n--){
+        vReturn += GetNodeByNameIndex(Indexes.at(n)).Head.vPos;
+        vReturn.Rotate(GetNodeByNameIndex(Indexes.at(n)).Head.oOrient);
+    }
+    return vReturn;
+}
+
 void MDL::CreatePatches(){
     FileHeader & Data = FH[0];
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
