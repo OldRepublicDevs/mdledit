@@ -265,7 +265,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(!Mdx.sBuffer.empty()){
             sReturn << string_format("\r\n  tverts %i", node->Mesh.nNumberOfVerts);
             for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
-                sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Mesh.Vertices[n].MDXData.fUV1[0], 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.fUV1[1], 1));
+                sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fX, 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fY, 1));
             }
         }
     }
@@ -347,7 +347,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         sReturn << string_format("\r\n  tverts %i", node->Mesh.nNumberOfVerts);
         for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
-            sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Saber.SaberData[n].fUV[0], 0), PrepareFloat(node->Saber.SaberData[n].fUV[1], 1));
+            sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Saber.SaberData[n].vUV.fX, 0), PrepareFloat(node->Saber.SaberData[n].vUV.fY, 1));
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0

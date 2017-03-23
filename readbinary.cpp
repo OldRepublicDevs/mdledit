@@ -797,23 +797,23 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUVsInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fUV1[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fUV1[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV1.fX = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV1.fY = Mdx.ReadFloat(&nPosData2, 2);
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV2sInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fUV2[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fUV2[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV2.fX = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV2.fY = Mdx.ReadFloat(&nPosData2, 2);
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV3sInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fUV3[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fUV3[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV3.fX = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV3.fY = Mdx.ReadFloat(&nPosData2, 2);
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV4sInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fUV4[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fUV4[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV4.fX = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.vUV4.fY = Mdx.ReadFloat(&nPosData2, 2);
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUnknownStructInMDX;
@@ -887,23 +887,23 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUVsInMDX;
-                    NODE->Mesh.MDXData.fUV1[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fUV1[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV1.fX = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV1.fY = Mdx.ReadFloat(&nPosData2, 8);
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV2sInMDX;
-                    NODE->Mesh.MDXData.fUV2[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fUV2[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV2.fX = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV2.fY = Mdx.ReadFloat(&nPosData2, 8);
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV3sInMDX;
-                    NODE->Mesh.MDXData.fUV3[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fUV3[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV3.fX = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV3.fY = Mdx.ReadFloat(&nPosData2, 8);
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV4sInMDX;
-                    NODE->Mesh.MDXData.fUV4[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fUV4[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV4.fX = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.vUV4.fY = Mdx.ReadFloat(&nPosData2, 8);
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUnknownStructInMDX;
@@ -985,8 +985,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Saber.SaberData[n].vVertex.fY = ReadFloat(&nPosData, 2);
                 NODE->Saber.SaberData[n].vVertex.fZ = ReadFloat(&nPosData, 2);
 
-                NODE->Saber.SaberData[n].fUV[0] = ReadFloat(&nPosData2, 2);
-                NODE->Saber.SaberData[n].fUV[1] = ReadFloat(&nPosData2, 2);
+                NODE->Saber.SaberData[n].vUV.fX = ReadFloat(&nPosData2, 2);
+                NODE->Saber.SaberData[n].vUV.fY = ReadFloat(&nPosData2, 2);
 
                 NODE->Saber.SaberData[n].vNormal.fX = ReadFloat(&nPosData3, 4);
                 NODE->Saber.SaberData[n].vNormal.fY = ReadFloat(&nPosData3, 4);
@@ -1029,7 +1029,11 @@ void MDL::DetermineSmoothing(){
                 Vector Edge1 = v2 - v1;
                 Vector Edge2 = v3 - v1;
                 Vector Edge3 = v3 - v2;
+
+                //Area calculation
                 face.fArea = HeronFormula(Edge1, Edge2, Edge3);
+
+                //Tangent and Bitangent calculation
             }
         }
     }

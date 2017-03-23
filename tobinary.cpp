@@ -1009,8 +1009,8 @@ void MDL::WriteNodes(Node & node){
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToSaberData2, GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Saber.nOffsetToSaberData2);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
-            WriteFloat(node.Saber.SaberData[d].fUV[0], 2);
-            WriteFloat(node.Saber.SaberData[d].fUV[1], 2);
+            WriteFloat(node.Saber.SaberData[d].vUV.fX, 2);
+            WriteFloat(node.Saber.SaberData[d].vUV.fY, 2);
         }
 
     }
@@ -1077,20 +1077,20 @@ void MDL::WriteNodes(Node & node){
                 Mdx.WriteFloat(vert.MDXData.vNormal.fZ, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                Mdx.WriteFloat(vert.MDXData.fUV1[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fUV1[1], 2);
+                Mdx.WriteFloat(vert.MDXData.vUV1.fX, 2);
+                Mdx.WriteFloat(vert.MDXData.vUV1.fY, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                Mdx.WriteFloat(vert.MDXData.fUV2[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fUV2[1], 2);
+                Mdx.WriteFloat(vert.MDXData.vUV2.fX, 2);
+                Mdx.WriteFloat(vert.MDXData.vUV2.fY, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                Mdx.WriteFloat(vert.MDXData.fUV3[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fUV3[1], 2);
+                Mdx.WriteFloat(vert.MDXData.vUV3.fX, 2);
+                Mdx.WriteFloat(vert.MDXData.vUV3.fY, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                Mdx.WriteFloat(vert.MDXData.fUV4[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fUV4[1], 2);
+                Mdx.WriteFloat(vert.MDXData.vUV4.fX, 2);
+                Mdx.WriteFloat(vert.MDXData.vUV4.fY, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
                 Mdx.WriteFloat(vert.MDXData.vTangent1[0].fX, 2);

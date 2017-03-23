@@ -311,16 +311,16 @@ bool Ascii::Read(FileHeader * FH){
             bFound = true;
             if(nNode & NODE_HAS_SABER){
                 SaberDataStruct saberdata = node.Saber.SaberData.back();
-                if(ReadFloat(fConvert)) saberdata.fUV[0] = fConvert;
+                if(ReadFloat(fConvert)) saberdata.vUV.fX = fConvert;
                 else bFound = false;
-                if(ReadFloat(fConvert)) saberdata.fUV[1] = fConvert;
+                if(ReadFloat(fConvert)) saberdata.vUV.fY = fConvert;
                 else bFound = false;
             }
             else{
                 Vertex & vert = node.Mesh.Vertices.back();
-                if(ReadFloat(fConvert)) vert.MDXData.fUV1[0] = fConvert;
+                if(ReadFloat(fConvert)) vert.MDXData.vUV1.fX = fConvert;
                 else bFound = false;
-                if(ReadFloat(fConvert)) vert.MDXData.fUV1[1] = fConvert;
+                if(ReadFloat(fConvert)) vert.MDXData.vUV1.fY = fConvert;
                 else bFound = false;
             }
 
@@ -336,9 +336,9 @@ bool Ascii::Read(FileHeader * FH){
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
             Vertex & vert = node.Mesh.Vertices.back();
-            if(ReadFloat(fConvert)) vert.MDXData.fUV2[0] = fConvert;
+            if(ReadFloat(fConvert)) vert.MDXData.vUV2.fX = fConvert;
             else bFound = false;
-            if(ReadFloat(fConvert)) vert.MDXData.fUV2[1] = fConvert;
+            if(ReadFloat(fConvert)) vert.MDXData.vUV2.fY = fConvert;
             else bFound = false;
 
             if(!bFound) bError = true;

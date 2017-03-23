@@ -709,16 +709,16 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\n\r\nNormal: %f\r\n        %f\r\n        %f", mdx->vNormal.fX, mdx->vNormal.fY, mdx->vNormal.fZ);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-            sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->fUV1[0], mdx->fUV1[1]);
+            sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->vUV1.fX, mdx->vUV1.fY);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-            sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->fUV2[0], mdx->fUV2[1]);
+            sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->vUV2.fX, mdx->vUV2.fY);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-            sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->fUV3[0], mdx->fUV3[1]);
+            sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->vUV3.fX, mdx->vUV3.fY);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-            sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->fUV4[0], mdx->fUV4[1]);
+            sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->vUV4.fX, mdx->vUV4.fY);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
             sPrint << string_format("\r\n\r\nTangent Space 1");
@@ -764,16 +764,16 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 sPrint << string_format("\r\n\r\nNormal: %f\r\n        %f\r\n        %f", mdx->vNormal.fX, mdx->vNormal.fY, mdx->vNormal.fZ);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->fUV1[0], mdx->fUV1[1]);
+                sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->vUV1.fX, mdx->vUV1.fY);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->fUV2[0], mdx->fUV2[1]);
+                sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->vUV2.fX, mdx->vUV2.fY);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->fUV3[0], mdx->fUV3[1]);
+                sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->vUV3.fX, mdx->vUV3.fY);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->fUV4[0], mdx->fUV4[1]);
+                sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->vUV4.fX, mdx->vUV4.fY);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
                 sPrint << string_format("\r\n\r\nTangent Space 1");
@@ -970,7 +970,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         SaberDataStruct * saber = (SaberDataStruct *) lParam;
         sPrint << string_format("%s", cItem[0].c_str());
         sPrint << string_format("\r\n1. Vertex Coordinates:\r\n   %f\r\n   %f\r\n   %f", saber->vVertex.fX, saber->vVertex.fY, saber->vVertex.fZ);
-        sPrint << string_format("\r\n\r\n2. UV:\r\n   %f\r\n   %f", saber->fUV[0], saber->fUV[1]);
+        sPrint << string_format("\r\n\r\n2. UV:\r\n   %f\r\n   %f", saber->vUV.fX, saber->vUV.fY);
         sPrint << string_format("\r\n\r\n3. Normal?:\r\n   %f\r\n   %f\r\n   %f", saber->vNormal.fX, saber->vNormal.fY, saber->vNormal.fZ);
     }
     else if((cItem[0] == "Mesh Inverted Counter 1")) sPrint << string_format("Mesh Inverted Counter 1:\r\n%u", *((int*) lParam));

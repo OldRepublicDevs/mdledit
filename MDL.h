@@ -428,7 +428,8 @@ struct Name{
 
 struct SaberDataStruct{
     Vector vVertex;
-    double fUV[2];
+    Vector vUV;
+    //double fUV[2];
     Vector vNormal;
 };
 
@@ -440,10 +441,14 @@ struct MDXDataStruct{
     int nNameIndex;
     Vector vVertex;
     Vector vNormal;
-    double fUV1[2];
-    double fUV2[2];
-    double fUV3[2];
-    double fUV4[2];
+    Vector vUV1;
+    Vector vUV2;
+    Vector vUV3;
+    Vector vUV4;
+    //double fUV1[2];
+    //double fUV2[2];
+    //double fUV3[2];
+    //double fUV4[2];
     Vector vTangent1[3];
     Vector vTangent2[3];
     Vector vTangent3[3];
