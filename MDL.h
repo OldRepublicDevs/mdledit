@@ -241,6 +241,12 @@ struct Vector{
         fZ = f3;
     }
 
+    std::string Print(){
+        std::stringstream ss;
+        ss<<"("<<fX<<", "<<fY<<", "<<fZ<<")";
+        return ss.str();
+    }
+
     void print(const std::string & sMsg){
         std::cout<<sMsg<<" fX="<<fX<<", fY="<<fY<<".\n";
     }
@@ -1238,8 +1244,8 @@ class MDL: public BinaryFile{
     bool bSmoothAngleWeighting = false;
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
     bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
-    bool FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
-                           const Vector & vTangentBase, const Vector & vBitangentBase,
+    int FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
+                           const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
                            std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
 
