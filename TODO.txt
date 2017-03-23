@@ -1,8 +1,11 @@
  1. viewer for Walkmesh (somewhat done)
  2. interpret WOK (mostly done)
  3. ascii importer (mostly done)
- 4. after import, calculate adjacent faces, face normals, vertex normals
+ 4. after import, calculate adjacent faces, face normals, vertex normals (mostly done)
 
+ For today:
+ 1. add bitangent and tanget calculations for VerticesEqual
+ 2. Make debug show if constraint is 0.0 for a failed normal calculation
 
  Binary diff shortcomings:
  1. I cannot accurately reproduce the correct radius and average values. For now, I will settle with the largest radius and the mean average of all points.
@@ -14,7 +17,7 @@
  Calculations:
  1. face adjacencies -DONE
  2. face normals -DONE
- 3. vertex normals -DONE (but they now depend on smoothing groups, which I cannot convert from the model)
+ 3. vertex normals -DONE (but they now depend on smoothing groups, which I cannot convert from the model - working on that)
  4. AABB tree creator
 
 

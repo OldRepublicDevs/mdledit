@@ -1202,7 +1202,10 @@ class MDL: public BinaryFile{
     bool bSmoothAngleWeighting = false;
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
     bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
-    Vector GetTransformedCoordinates(Vertex & vert, int nNameIndex);
+    bool FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
+                           const Vector & vTangentBase, const Vector & vBitangentBase,
+                           const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
+                           std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
 
     //Getters
     const std::string GetName(){
