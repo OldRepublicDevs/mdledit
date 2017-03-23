@@ -1256,7 +1256,8 @@ void MDL::DetermineSmoothing(){
                 vNormalBase += vAdd;
                 vTangentBase += face.vTangent;
                 vBitangentBase += face.vBitangent;
-                vTangentNormalBase = face.vBitangent / face.vTangent;
+
+                vTangentNormalBase += (face.vBitangent / face.vTangent);
             }
             //Now we've got a base, now we've got to construct a matching vertex normal
             //Create a boolean to track this
@@ -1603,7 +1604,8 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
 
                 vWorkingT += face.vTangent;
                 vWorkingB += face.vBitangent;
-                vWorkingN += face.vBitangent / face.vTangent;
+
+                vWorkingN += (face.vBitangent / face.vTangent);
             }
             //We have just smoothed for patch nCount, add it to the list
             OurSmoothedPatches.push_back(nCount);
