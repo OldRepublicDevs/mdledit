@@ -769,12 +769,12 @@ void MDL::WriteNodes(Node & node){
 
     /// EMITTER HEADER
     if(node.Head.nType & NODE_HAS_EMITTER){
-        WriteInt(0, 8); //Zero 1
-        WriteInt(0, 8); //Zero 2
-
         WriteFloat(node.Emitter.fDeadSpace, 2);
         WriteFloat(node.Emitter.fBlastRadius, 2);
         WriteFloat(node.Emitter.fBlastLength, 2);
+
+        WriteInt(node.Emitter.nBranchCount, 1);
+        WriteFloat(node.Emitter.fControlPointSmoothing, 2);
 
         WriteInt(node.Emitter.nxGrid, 4);
         WriteInt(node.Emitter.nyGrid, 4);
@@ -786,16 +786,21 @@ void MDL::WriteNodes(Node & node){
         WriteString(node.Emitter.cRender, 3);
         node.Emitter.cBlend.resize(32);
         WriteString(node.Emitter.cBlend, 3);
-        node.Emitter.cTexture.resize(64);
+        node.Emitter.cTexture.resize(32);
         WriteString(node.Emitter.cTexture, 3);
         node.Emitter.cChunkName.resize(16);
         WriteString(node.Emitter.cChunkName, 3);
 
         WriteInt(node.Emitter.nTwosidedTex, 4);
         WriteInt(node.Emitter.nLoop, 4);
-        WriteInt(node.Emitter.nRenderOrder, 5, 2);
-        WriteInt(node.Emitter.nUnknown6, 10, 2);
-        WriteInt(node.Emitter.nFlags, 4);
+        WriteInt(node.Emitter.nUnknown1, 10, 2);
+        WriteInt(node.Emitter.nFrameBlending, 7, 1);
+
+        node.Emitter.cDepthTextureName.resize(32);
+        WriteString(node.Emitter.cDepthTextureName, 3);
+
+        WriteInt(node.Emitter.nUnknown2, 10, 1);
+        WriteInt(node.Emitter.nFlags, 10);
     }
 
     /// MESH HEADER

@@ -331,16 +331,8 @@ for(int b = 0; b < NodeArray.size(); b++){
         }
     }
     if(NodeArray[b].Head.nType & NODE_HAS_EMITTER){
-        if(NodeArray[b].Emitter.nUnknown6 != 0){
-            ssAdd<<"\r\n     - Emitter: Unknown short after RenderOrder has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Emitter.nZero1 != 0){
-            ssAdd<<"\r\n     - Emitter: Zero1 has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Emitter.nZero2 != 0){
-            ssAdd<<"\r\n     - Emitter: Zero2 has a value!";
+        if(NodeArray[b].Emitter.nUnknown1 != 0){
+            ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
             bUpdate = true;
         }
     }

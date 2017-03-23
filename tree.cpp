@@ -247,6 +247,8 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             Append("Dead Space", (LPARAM) &node.Emitter.fDeadSpace, Emitter);
             Append("Blast Radius", (LPARAM) &node.Emitter.fBlastRadius);
             Append("Blast Length", (LPARAM) &node.Emitter.fBlastLength);
+            Append("Branch Count", (LPARAM) &node.Emitter.nBranchCount);
+            Append("Control Point Smoothing", (LPARAM) &node.Emitter.fControlPointSmoothing);
             Append("X Grid", (LPARAM) &node.Emitter.nxGrid);
             Append("Y Grid", (LPARAM) &node.Emitter.nyGrid);
             Append("Spawn Type", (LPARAM) &node.Emitter.nSpawnType);
@@ -257,9 +259,13 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             Append("Chunk Name", (LPARAM) node.Emitter.cChunkName.c_str());
             Append("Twosided Texture", (LPARAM) &node.Emitter.nTwosidedTex);
             Append("Loop", (LPARAM) &node.Emitter.nLoop);
-            Append("Render Order", (LPARAM) &node.Emitter.nRenderOrder);
-            Append("Unknown Int16 1", (LPARAM) &node.Emitter.nUnknown6);
-            Append("Emitter Flags", (LPARAM) &node.Emitter.nFlags);
+            //Append("Render Order", (LPARAM) &node.Emitter.nRenderOrder);
+            Append("Unknown Int16 1", (LPARAM) &node.Emitter.nUnknown1);
+            Append("Frame Blending", (LPARAM) &node.Emitter.nFrameBlending);
+            Append("Depth Texture Name", (LPARAM) node.Emitter.cDepthTextureName.c_str());
+            Append("Unknown Byte 1", (LPARAM) &node.Emitter.nUnknown2);
+
+            Append("Emitter Flags?", (LPARAM) &node.Emitter.nFlags);
         }
         if(node.Head.nType & NODE_HAS_MESH){
             HTREEITEM Mesh = Append("Mesh", (LPARAM) &node.Mesh, Prev);
@@ -637,14 +643,11 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     else if((cItem[0] == "Fading Light")) sPrint << string_format("Fading Light:\r\n%u", *((int*) lParam));
 
     /// Emitter ///
-    else if((cItem[0] == "Emitter")){
-        EmitterHeader * emitter = (EmitterHeader * ) lParam;
-        sPrint << string_format("Emitter\r\nZero 1: %u\r\nZero 2: %u\r\n",
-                emitter->nZero1, emitter->nZero2);
-    }
     else if((cItem[0] == "Dead Space")) sPrint << string_format("Dead Space:\r\n%f", *((double*) lParam));
     else if((cItem[0] == "Blast Radius")) sPrint << string_format("Blast Radius:\r\n%f", *((double*) lParam));
     else if((cItem[0] == "Blast Length")) sPrint << string_format("Blast Length:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Branch Count")) sPrint << string_format("Branch Count:\r\n%u", *((unsigned int*) lParam));
+    else if((cItem[0] == "Control Point Smoothing")) sPrint << string_format("Control Point Smoothing:\r\n%f", *((double*) lParam));
     else if((cItem[0] == "X Grid")) sPrint << string_format("X Grid:\r\n%u", *((int*) lParam));
     else if((cItem[0] == "Y Grid")) sPrint << string_format("Y Grid:\r\n%u", *((int*) lParam));
     else if((cItem[0] == "Spawn Type")) sPrint << string_format("Spawn Type:\r\n%u", *((int*) lParam));
@@ -655,10 +658,13 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     else if((cItem[0] == "Chunk Name")) sPrint << string_format("Chunk Name:\r\n%s", ((char*) lParam));
     else if((cItem[0] == "Twosided Texture")) sPrint << string_format("Twosided Texture:\r\n%u", *((int*) lParam));
     else if((cItem[0] == "Loop")) sPrint << string_format("Loop:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
     else if((cItem[0] == "Unknown Int16 1")) sPrint << string_format("Unknown Int16 1:\r\n%u", *((short*) lParam));
-    else if((cItem[0] == "Emitter Flags"))
-        sPrint << string_format("Emitter Flags\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
+    //else if((cItem[0] == "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
+    else if((cItem[0] == "Frame Blending")) sPrint << string_format("Frame Blending:\r\n%u", *((unsigned char*) lParam));
+    else if((cItem[0] == "Depth Texture Name")) sPrint << string_format("Depth Texture Name:\r\n%s", ((char*) lParam));
+    else if((cItem[0] == "Unknown Byte 1")) sPrint << string_format("Unknown Byte 1:\r\n%u", *((unsigned char*) lParam));
+    else if((cItem[0] == "Emitter Flags?"))
+        sPrint << string_format("Emitter Flags??\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
                 *((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_BOUNCE ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_RANDOM ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_VEL ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);

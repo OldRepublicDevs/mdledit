@@ -202,7 +202,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << string_format("\r\n  chunkname %s", node->Emitter.cChunkName.c_str());
         sReturn << string_format("\r\n  twosidedtex %i", node->Emitter.nTwosidedTex);
         sReturn << string_format("\r\n  loop %i", node->Emitter.nLoop);
-        sReturn << string_format("\r\n  renderorder %i", node->Emitter.nRenderOrder);
+        //sReturn << string_format("\r\n  renderorder %i", node->Emitter.nRenderOrder);
         sReturn << string_format("\r\n  p2p %i", node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0 ? 1 : 0);
         sReturn << string_format("\r\n  p2p_sel %i", node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0 ? 1 : 0);
         sReturn << string_format("\r\n  affectedByWind %i", node->Emitter.nFlags & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0 ? 1 : 0);

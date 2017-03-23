@@ -596,32 +596,51 @@ struct LightHeader{
 
 // if NODE_HAS_EMITTER
 struct EmitterHeader{
+    /***
+    ndix UR's emitter
+    # item offset size (bytes) data type notes
+    1 Deadspace 0 4 float
+    2 Blast Radius 4 4 float
+    3 Blast Length 8 4 float
+    4 Number of Branches 12 4 uint32
+    5 Control Point Smoothing 16 4 float
+    6 X Grid 20 4 uint32
+    7 Y Grid 24 4 uint32
+    8 Spawn Type 28 4 uint32
+    9 Update 32 32 string Fountain, Single, Explosion, Lightning
+    10 Render 64 32 string Normal, Billboard_to_Local_Z, Billboard_to_World_Z, Aligned_to_World_Z, Aligned_to_Particle_Dir, Motion_Blur, Linked
+    11 Blend 96 32 string Normal, Lighten, PunchThrough, Punch-Through
+    12 Texture 128 32 string
+    13 Chunkname 160 16 string particle model?
+    14 Two Sided Texture 176 4 uint16
+    15 Loop 180 4 uint16
+    16 Render Order ??? 184 2 uint16 Flags?
+    17 Frame Blending 186 1 ubyte
+    18 Depth Texture Name 187 32 string
+    19 Padding ??? 219 1 ubyte
+    20 Flags ??? 220 4? uint32 Maybe this is 2 uint16? Just padding? Render order?
+    /***/
     //Binary Members
-    unsigned int nZero1 = 0; //These aren't function pointers though
-    unsigned int nZero2 = 0;
     double fDeadSpace;
     double fBlastRadius;
     double fBlastLength;
-    int nxGrid;
-    int nyGrid;
-    int nSpawnType;
+    unsigned int nBranchCount;
+    double fControlPointSmoothing;
+    unsigned int nxGrid;
+    unsigned int nyGrid;
+    unsigned int nSpawnType;
     std::string cUpdate; //32B
     std::string cRender; //32B
-    std::string cBlend; //32B // By here 128B, left: 96B
-    std::string cTexture; ///64B  ///There is a way to test this. Change v_shockwave_imp in w_rokplasma.mdl > Geo > shockwave > Header > Emitter > cTexture(per current convention)
-    //char cChunkName [32];
-    // For MDLOps, this string is part of cTexture
-    // and cUnknownBytes is cChunkName. Same for Farmboy0.
-    // If these are both normal 32B strings
-    // then by now we've got 192B, left: 32B
+    std::string cBlend; //32B
+    std::string cTexture; //32B
     std::string cChunkName; //16B
     unsigned int nTwosidedTex;
     unsigned int nLoop;
-    //The following two shorts might constitute a float, test on more models
-    //Some really large floats would result, maybe a byte per byte approach?
-    unsigned short nRenderOrder; // Possibly an int32?
-    unsigned short nUnknown6; //Farmboy0: this is padding
-    int nFlags;
+    unsigned short nUnknown1;
+    unsigned char nFrameBlending;
+    std::string cDepthTextureName; //32B
+    unsigned char nUnknown2;
+    unsigned int nFlags; //unsure
 
     //Added Members
     int nLength = 224;

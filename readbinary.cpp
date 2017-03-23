@@ -20,7 +20,7 @@ int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
         //std::cout<<"ReadInt() return: "<<ByteBlock4.i<<"\n";
         return ByteBlock4.i;
     }
-    else{
+    else if(nBytes ==2){
         int n = 0;
         while(n < 2){
             ByteBlock2.bytes[n] = sBuffer[*nCurPos + n];
@@ -30,6 +30,13 @@ int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
         *nCurPos += 2;
         return ByteBlock2.i;
     }
+    else if(nBytes == 1){
+        int nReturn = (int) sBuffer[*nCurPos];
+        MarkBytes(*nCurPos, 1, nMarking);
+        *nCurPos += 1;
+        return nReturn;
+    }
+    else return -1;
 }
 
 float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
@@ -470,12 +477,12 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
     }
 
     if(NODE->Head.nType & NODE_HAS_EMITTER){
-        NODE->Emitter.nZero1 = ReadInt(&nPos, 8);
-        NODE->Emitter.nZero2 = ReadInt(&nPos, 8);
-
         NODE->Emitter.fDeadSpace = ReadFloat(&nPos, 2);
         NODE->Emitter.fBlastRadius = ReadFloat(&nPos, 2);
         NODE->Emitter.fBlastLength = ReadFloat(&nPos, 2);
+
+        NODE->Emitter.nBranchCount = ReadInt(&nPos, 1);
+        NODE->Emitter.fControlPointSmoothing = ReadFloat(&nPos, 2);
 
         NODE->Emitter.nxGrid = ReadInt(&nPos, 4);
         NODE->Emitter.nyGrid = ReadInt(&nPos, 4);
@@ -485,14 +492,16 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
         ReadString(NODE->Emitter.cUpdate, &nPos, 3, 32);
         ReadString(NODE->Emitter.cRender, &nPos, 3, 32);
         ReadString(NODE->Emitter.cBlend, &nPos, 3, 32);
-        ReadString(NODE->Emitter.cTexture, &nPos, 3, 64);
+        ReadString(NODE->Emitter.cTexture, &nPos, 3, 32);
         ReadString(NODE->Emitter.cChunkName, &nPos, 3, 16);
 
         NODE->Emitter.nTwosidedTex = ReadInt(&nPos, 4);
         NODE->Emitter.nLoop = ReadInt(&nPos, 4);
-        NODE->Emitter.nRenderOrder = ReadInt(&nPos, 5, 2);
-        NODE->Emitter.nUnknown6 = ReadInt(&nPos, 10, 2);
-        NODE->Emitter.nFlags = ReadInt(&nPos, 4);
+        NODE->Emitter.nUnknown1 = ReadInt(&nPos, 10, 2);
+        NODE->Emitter.nFrameBlending = ReadInt(&nPos, 7, 1);
+        ReadString(NODE->Emitter.cDepthTextureName, &nPos, 3, 32);
+        NODE->Emitter.nUnknown2 = ReadInt(&nPos, 10, 1);
+        NODE->Emitter.nFlags = ReadInt(&nPos, 10);
     }
 
     if(NODE->Head.nType & NODE_HAS_MESH){
@@ -1286,10 +1295,11 @@ void MDL::DetermineSmoothing(){
         if(GetNodeByNameIndex(patch.nNameIndex).Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
             Vector vCheckT = vTangentBase;
             Vector vCheckB = vBitangentBase;
-            Vector vCheckN = vCheckT / vCheckB; //Might be the other way around, not sure
+            //Vector vCheckN = vCheckT / vCheckB; //Might be the other way around, not sure
             vCheckT.Normalize();
             vCheckB.Normalize();
-            vCheckN.Normalize();
+            //vCheckN.Normalize();
+            Vector vCheckN = vCheckT / vCheckB; //Might be the other way around, not sure
             file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
             file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
             file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";

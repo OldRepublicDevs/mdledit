@@ -597,18 +597,22 @@ bool Ascii::Read(FileHeader * FH){
                         node.Emitter.fDeadSpace = 0.0;
                         node.Emitter.fBlastLength = 0.0;
                         node.Emitter.fBlastRadius = 0.0;
+                        node.Emitter.nBranchCount = 0;
+                        node.Emitter.fControlPointSmoothing = 0.0;
                         node.Emitter.nxGrid = 0;
                         node.Emitter.nyGrid = 0;
                         node.Emitter.nSpawnType = 0;
                         node.Emitter.nTwosidedTex = 0;
                         node.Emitter.nLoop = 0;
-                        node.Emitter.nRenderOrder = 0;
+                        //node.Emitter.nRenderOrder = 0;
                         node.Emitter.cUpdate = "";
                         node.Emitter.cRender = "";
                         node.Emitter.cBlend = "";
                         node.Emitter.cTexture = "";
                         node.Emitter.cChunkName = "";
-                        node.Emitter.nUnknown6 = 0;
+                        node.Emitter.cDepthTextureName = "NULL";
+                        node.Emitter.nUnknown1 = 0;
+                        node.Emitter.nUnknown2 = 0;
                         node.Emitter.nFlags = 0;
                     }
                     if(nType & NODE_HAS_MESH){
@@ -860,14 +864,14 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)) node.Emitter.nLoop = nConvert;
                     else bError = true;
                     SkipLine();
-                }
+                }/* Have to take this out until we figure out where it is
                 else if(sID == "renderorder" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nRenderOrder = nConvert;
                     else bError = true;
                     SkipLine();
-                }
+                }*/
                 else if(sID == "update" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
