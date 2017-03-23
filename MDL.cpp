@@ -55,19 +55,12 @@ Orientation operator*(Orientation o1, const Orientation & o2){
     return o1;
 }
 
-Vector MDL::GetTransformedCoordinates(Vertex & vert, int nNameIndex){
-    Vector vReturn;
-    std::vector<int> Indexes;
-    int nIndex = nNameIndex;
-    while(nIndex != -1){
-        Indexes.push_back(nIndex);
-        nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
-    }
-    for(int n = Indexes.size() - 1; n >= 0; n--){
-        vReturn += GetNodeByNameIndex(Indexes.at(n)).Head.vPos;
-        vReturn.Rotate(GetNodeByNameIndex(Indexes.at(n)).Head.oOrient);
-    }
-    return vReturn;
+double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
+    double fA = e1.GetLength();
+    double fB = e2.GetLength();
+    double fC = e3.GetLength();
+    double fS = (fA + fB + fC) / 2.0;
+    return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
 }
 
 void MDL::CreatePatches(){

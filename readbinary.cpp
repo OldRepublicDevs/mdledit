@@ -997,6 +997,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
     }
 }
 
+/// This function will become the main binary decompilation post-processing function
 void MDL::DetermineSmoothing(){
     //std::cout<<"Calculating smoothing groups...\n";
     FileHeader & Data = FH[0];
@@ -1015,6 +1016,23 @@ void MDL::DetermineSmoothing(){
             }
     int nNumOfVerts = 0;
     int nNumOfFoundNormals = 0;
+
+    ///I will first do it the inefficient way, but a clear way, so I can merge stuff later if need be.
+    // The point is twofold - calculate area and calculate tangent space vectors
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
+            for(int f = 0; f < Data.MH.ArrayOfNodes.at(n).Mesh.Faces.size(); f++){
+                Face & face = Data.MH.ArrayOfNodes.at(n).Mesh.Faces.at(f);
+                Vertex & v1 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[0]);
+                Vertex & v2 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[1]);
+                Vertex & v3 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[2]);
+                Vector Edge1 = v2 - v1;
+                Vector Edge2 = v3 - v1;
+                Vector Edge3 = v3 - v2;
+                face.fArea = HeronFormula(Edge1, Edge2, Edge3);
+            }
+        }
+    }
 
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
@@ -1154,12 +1172,6 @@ void MDL::DetermineSmoothing(){
                 Vector Edge2 = v3 - v1;
                 Vector Edge3 = v3 - v2;
 
-                //Get the area of the face and update total area
-                double fA = Edge1.GetLength();
-                double fB = Edge2.GetLength();
-                double fC = Edge3.GetLength();
-                double fS = (fA + fB + fC) / 2.0;
-                face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
                 fTotalArea +=  face.fArea;
                 Vector vAdd = face.vNormal;
                 if(bSmoothAreaWeighting) vAdd *= face.fArea;
@@ -1397,12 +1409,6 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
                 Vector Edge2 = v3 - v1;
                 Vector Edge3 = v3 - v2;
 
-                //Get the area of the face and update total area
-                double fA = Edge1.GetLength();
-                double fB = Edge2.GetLength();
-                double fC = Edge3.GetLength();
-                double fS = (fA + fB + fC) / 2.0;
-                face.fArea = sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
                 Vector vAdd = face.vNormal;
                 if(bSmoothAreaWeighting) vAdd *= face.fArea;
                 if(bSmoothAngleWeighting){

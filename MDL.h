@@ -10,16 +10,18 @@
     1. Non-static data
      - Supermodel int32 in Header
      - last three bytes (padding?) after Classification in Header
+       - ndix UR: unconfirmed theory, the byte immediately following == 4 for placeables,
+                  2 for most characaters and a few other random things, in NWN it was
+                  'is this model affected by fog' I've spent a little bit of time trying to see
+                  if this might be the same, inconclusive. my current logic for this is if
+                  classification = placeable, then set to 4, otherwise set to 0.
      - last three bytes (padding?) after ModelType in Header and Animation
+       - ndix UR: padding
      - bytes after RenderOrder in EmitterHeader (possibly padding like above?)
      - short nUnknown2 and last three bytes (padding?) in Controller
-     - nProperty in Aabb
-     - an unknown array in LightHeader
-     - data2 array (3 floats, likely coordinates) in DanglyHeader
-     - Array8 in SkinHeader (I believe this one to be unused, any data inside is ignored. So it can just be anything. Need to test this.)
+     - an unknown array in LightHeader (remains unknown and unused)
      - MeshHeader:
        - two unknown bytes after Render
-       - "total area"
        - Unknown float at the end
        - Unknown lightsaber bytes
        - K2 unknown 1 (float)
@@ -55,12 +57,6 @@ struct Aabb;
 struct Controller;
 struct Sound;
 struct Name;
-struct ConstraintsStruct;
-struct DanglyData2Struct;
-//struct BonemapStruct;
-//struct QBoneStruct;
-//struct TBoneStruct;
-//struct Array8Struct;
 struct SaberDataStruct;
 struct VertIndicesStruct;
 struct MDXDataStruct;
@@ -354,6 +350,7 @@ Vector operator+(Vector v, const Vector & v2);
 Vector operator-(Vector v, const Vector & v2);
 double Angle(const Vector & v, const Vector & v2);
 Orientation operator*(Orientation o1, const Orientation & o2);
+double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3);
 
 struct Location{
     Vector vPosition;
