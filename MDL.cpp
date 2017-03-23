@@ -340,7 +340,7 @@ for(int b = 0; b < NodeArray.size(); b++){
         if(NodeArray[b].Mesh.nUnknown3[0] != -1 || NodeArray[b].Mesh.nUnknown3[1] != -1 || NodeArray[b].Mesh.nUnknown3[2] != 0){
             ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
             bUpdate = true;
-        }
+        }/*
         if(NodeArray[b].Mesh.nUnknown30 != 0){
             ssAdd<<"\r\n     - Mesh: Unknown30 byte after Render byte has a value!";
             bUpdate = true;
@@ -348,7 +348,7 @@ for(int b = 0; b < NodeArray.size(); b++){
         if(NodeArray[b].Mesh.nK2Unknown2 != 0){
             ssAdd<<"\r\n     - Mesh: K2Unknown2 has a value!";
             bUpdate = true;
-        }
+        }*/
         if(NodeArray[b].Mesh.FaceArray.GetDoCountsDiffer()){
             ssAdd<<"\r\n     - FaceArray counts differ!";
             bUpdate = true;

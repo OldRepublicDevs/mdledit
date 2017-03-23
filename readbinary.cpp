@@ -607,18 +607,19 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
         nPos++;
         NODE->Mesh.nRender = sBuffer[nPos];
         nPos++;
-        MarkBytes(nPos, 2, 10);
-        NODE->Mesh.nUnknown30 = sBuffer[nPos];
-        nPos++;
-        NODE->Mesh.nUnknown31 = sBuffer[nPos];
-        nPos++;
 
-        NODE->Mesh.nUnknown32 = ReadInt(&nPos, 10, 2);
-        NODE->Mesh.nUnknown33 = ReadInt(&nPos, 10, 2);
+        NODE->Mesh.nDirtEnabled = ReadInt(&nPos, 7, 1);
+        NODE->Mesh.nUnknown1 = ReadInt(&nPos, 10, 1);
+        NODE->Mesh.nDirtTexture = ReadInt(&nPos, 5, 2);
+        NODE->Mesh.nDirtCoordSpace = ReadInt(&nPos, 5, 2);
 
-        NODE->Mesh.fUnknown7 = ReadFloat(&nPos, 10);
+        NODE->Mesh.nHideInHolograms = ReadInt(&nPos, 7, 1);
+        NODE->Mesh.nUnknown2 = ReadInt(&nPos, 10, 1);
+
+        NODE->Mesh.nUnknown4 = ReadInt(&nPos, 10, 2);
+
         NODE->Mesh.fTotalArea = ReadFloat(&nPos, 2);
-        NODE->Mesh.nK2Unknown2 = ReadInt(&nPos, 8);
+        NODE->Mesh.nPadding = ReadInt(&nPos, 8);
         NODE->Mesh.nOffsetIntoMdx = ReadInt(&nPos, 6);
         NODE->Mesh.nOffsetToVertArray = ReadInt(&nPos, 6);
 

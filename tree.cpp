@@ -306,11 +306,9 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             Append("Animated UV", (LPARAM) &node.Mesh);
             Append("Unknown Array of 3 Integers", (LPARAM) node.Mesh.nUnknown3);
             Append("Unknown Lightsaber Bytes", (LPARAM) &node.Mesh);
-            Append("Unknown int16 1", (LPARAM) &node.Mesh.nUnknown32);
-            Append("Unknown int16 2", (LPARAM) &node.Mesh.nUnknown33);
-            Append("Unknown Float", (LPARAM) &node.Mesh.fUnknown7);
+            Append("Dirt", (LPARAM) &node.Mesh);
             Append("Total Area", (LPARAM) &node.Mesh.fTotalArea);
-            Append("K2 Unknown 2", (LPARAM) &node.Mesh.nK2Unknown2);
+            //Append("Padding", (LPARAM) &node.Mesh.nPadding);
         }
         if(node.Head.nType & NODE_HAS_SKIN){
             char cBone [255];
@@ -811,23 +809,6 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Number of Vertex Indices 2 Array")){
-        MeshHeader * mesh = (MeshHeader * ) lParam;
-        sPrint << string_format("Number of Vertex Indices 2 Array\r\nOffset: %u\r\nCount: %u",
-                mesh->IndexCounterArray.nOffset, mesh->IndexCounterArray.nCount, mesh->nVertIndicesCount);
-        if(mesh->IndexCounterArray.nCount > 0){
-            sPrint << string_format("\r\nValues: %i", mesh->nVertIndicesCount);
-        }
-    }
-    else if((cItem[0] == "Location of Vertex Indices 2 Array")){
-        MeshHeader * mesh = (MeshHeader * ) lParam;
-        sPrint << string_format("Location of Vertex Indices 2 Array\r\nOffset: %u\r\nCount: %u",
-                mesh->IndexLocationArray.nOffset, mesh->IndexLocationArray.nCount, mesh->nVertIndicesLocation);
-        char cCat [255];
-        if(mesh->IndexLocationArray.nCount > 0){
-            sPrint << string_format("\r\nValues: %i", mesh->nVertIndicesLocation);
-        }
-    }
     else if((cItem[0] == "Faces") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Faces\r\nOffset: %u\r\nCount: %u", mesh->FaceArray.nOffset, mesh->FaceArray.nCount);
@@ -859,9 +840,9 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 mesh->nTextureNumber, mesh->GetTexture(1), mesh->GetTexture(2), mesh->GetTexture(3), mesh->GetTexture(4));
     }
     else if((cItem[0] == "Trimesh Flags"))
-        sPrint << string_format("Trimesh Flags\r\nHasLightmap: %i\r\nRotateTexture: %i\r\nBackgroundGeometry: %i\r\nShadow: %i\r\nBeaming: %i\r\nRender: %i\r\nUnknown: %i\r\nUnknown: %i",
+        sPrint << string_format("Trimesh Flags\r\nHasLightmap: %i\r\nRotateTexture: %i\r\nBackgroundGeometry: %i\r\nShadow: %i\r\nBeaming: %i\r\nRender: %i\r\nDirt Enabled: %i\r\nHide in Holograms: %i",
                 ((MeshHeader*) lParam)->nHasLightmap, ((MeshHeader*) lParam)->nRotateTexture, ((MeshHeader*) lParam)->nBackgroundGeometry, ((MeshHeader*) lParam)->nShadow,
-                ((MeshHeader*) lParam)->nBeaming, ((MeshHeader*) lParam)->nRender, ((MeshHeader*) lParam)->nUnknown30, ((MeshHeader*) lParam)->nUnknown31);
+                ((MeshHeader*) lParam)->nBeaming, ((MeshHeader*) lParam)->nRender, ((MeshHeader*) lParam)->nDirtEnabled, ((MeshHeader*) lParam)->nHideInHolograms);
     else if((cItem[0] == "Animated UV"))
         sPrint << string_format("Animated UV\r\nAnimate UV:      %i\r\nUV Direction X:  %f\r\nUV Direction Y:  %f\r\nUV Jitter:       %f\r\nUV Jitter Speed: %f",
                 ((MeshHeader*) lParam)->nAnimateUV, ((MeshHeader*) lParam)->fUVDirectionX, ((MeshHeader*) lParam)->fUVDirectionY, ((MeshHeader*) lParam)->fUVJitter, ((MeshHeader*) lParam)->fUVJitterSpeed);
@@ -870,9 +851,13 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 ((MeshHeader*) lParam)->nSaberUnknown1, ((MeshHeader*) lParam)->nSaberUnknown2, ((MeshHeader*) lParam)->nSaberUnknown3, ((MeshHeader*) lParam)->nSaberUnknown4,
                 ((MeshHeader*) lParam)->nSaberUnknown5, ((MeshHeader*) lParam)->nSaberUnknown6, ((MeshHeader*) lParam)->nSaberUnknown7, ((MeshHeader*) lParam)->nSaberUnknown8);
     else if((cItem[0] == "Unknown Array of 3 Integers")) sPrint << string_format("Unknown Array of 3 Integers: \r\n%i\r\n%i\r\n%i", ((int*) lParam)[0], ((int*) lParam)[1], ((int*) lParam)[2]);
-    else if((cItem[0] == "Unknown Float")) sPrint << string_format("Unknown Float:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Dirt")){
+        MeshHeader * mesh = (MeshHeader *) lParam;
+        sPrint << "Dirt Texture: " << mesh->nDirtTexture;
+        sPrint << "\r\nDirt Coord Space: " << mesh->nDirtCoordSpace;
+    }
     else if((cItem[0] == "Total Area")) sPrint << string_format("Total Area:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "K2 Unknown 2")) sPrint << string_format("K2 Unknown 2:\r\n%i or %f", *((int*) lParam), *((double*) lParam));
+    else if((cItem[0] == "Padding")) sPrint << string_format("Padding:\r\n%i", *((int*) lParam));
 
     /// Skin ///
     else if((cItem[0] == "Bones")){

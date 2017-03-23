@@ -758,15 +758,32 @@ struct MeshHeader{
     char nShadow; //MDLOps: Shadow
     char nBeaming; //Apparently always 0, might correspond to beaming in nwn (per ndix UR)
     char nRender; //MDLOps: Render
-    char nUnknown30; //Still unknown
-    char nUnknown31; //Still unknown
-    short nUnknown32;
-    short nUnknown33;
-    double fUnknown7; // = 0 (not zero!)
-    double fTotalArea; //K2 only!
-    unsigned int nK2Unknown2 = 0; //K2 only!
+    char nDirtEnabled; //K2
+    char nUnknown1; //K2
+    short nDirtTexture; //K2
+    short nDirtCoordSpace; //K2
+    char nHideInHolograms; //K2
+    char nUnknown2; //K2
+    short nUnknown4;
+    double fTotalArea;
+    unsigned int nPadding = 0;
     unsigned int nOffsetIntoMdx;
     unsigned int nOffsetToVertArray;
+
+    /*** ndix UR's knowleadge
+    # item offset size (bytes) data type notes
+    73 Dirt Enabled 314 1 ubyte K2ONLY
+    74 Padding? 315 1 ubyte K2ONLY
+    75 Dirt Texture 316 2 uint16 K2ONLY
+    76 Dirt Coord space 318 2 uint16 K2ONLY
+    77 Hide in holograms 320 1 ubyte K2ONLY
+    78 Padding? 321 1 ubyte K2ONLY
+    79 Padding? 322 1 uint16 K1@314
+    80 Total Surface Area 324 4 float K1@316
+    81 Padding 328 4 uint32 K1@320
+    82 MDX data location 332 4 uint32 K1@324
+    83 Vertex data location 336 4 uint32 K1@328
+    /***/
 
     //Added members
     std::vector<Face> Faces;

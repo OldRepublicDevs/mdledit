@@ -918,15 +918,18 @@ void MDL::WriteNodes(Node & node){
         WriteByte(node.Mesh.nShadow, 7);
         WriteByte(node.Mesh.nBeaming, 7);
         WriteByte(node.Mesh.nRender, 7);
-        WriteByte(node.Mesh.nUnknown30, 10);
-        WriteByte(node.Mesh.nUnknown31, 10);
+        WriteByte(node.Mesh.nDirtEnabled, 7);
+        WriteByte(node.Mesh.nUnknown1, 10);
 
-        WriteInt(node.Mesh.nUnknown32, 10, 2);
-        WriteInt(node.Mesh.nUnknown33, 10, 2);
+        WriteInt(node.Mesh.nDirtTexture, 5, 2);
+        WriteInt(node.Mesh.nDirtCoordSpace, 5, 2);
 
-        WriteFloat(node.Mesh.fUnknown7, 10);
+        WriteByte(node.Mesh.nHideInHolograms, 7);
+        WriteByte(node.Mesh.nUnknown2, 10);
+        WriteInt(node.Mesh.nUnknown4, 10, 2);
+
         WriteFloat(node.Mesh.fTotalArea, 2);
-        WriteInt(node.Mesh.nK2Unknown2, 8);
+        WriteInt(0, 8);
 
         PHnOffsetIntoMdx = nPosition;
         WriteInt(0xFFFFFFFF, 6);
