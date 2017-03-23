@@ -1084,7 +1084,7 @@ void MDL::DetermineSmoothing(){
                     face.vBitangent *= -1.0;
                 }
                 Vector vCross = face.vBitangent / face.vTangent;
-                file<<Data.MH.Names.at(Data.MH.ArrayOfNodes.at(n).Head.nNameIndex).cName<<" > face "<<f<<" > Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<", Normal "<<face.vNormal.Print()<<", Bitangent × Tangent "<<vCross.Print()<<"\n";
+                //file<<Data.MH.Names.at(Data.MH.ArrayOfNodes.at(n).Head.nNameIndex).cName<<" > face "<<f<<" > Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<", Normal "<<face.vNormal.Print()<<", Bitangent × Tangent "<<vCross.Print()<<"\n";
 
                 //Area calculation
                 face.fArea = HeronFormula(Edge1, Edge2, Edge3);
@@ -1311,40 +1311,85 @@ void MDL::DetermineSmoothing(){
             file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
             file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
             file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
-            if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
+            std::vector<int> nDummyPatchVector;
+            /// I'm gonna be keeping commented code for two kinds of checks - the one where we take the patch from the vertex normal calculation
+            /// and the one where we try to figure out the patches included for the tangent space separately. It does seem however that smoothing
+            /// groups affect the tangent space calculations as well.
+            //if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
+            if(patch.SmoothedPatches.size() == 0){
                 file<<"\n   Correct:";
+                bool b1 = false;
                 if(vCheckB.Compare(vBitangent)){
                     file<<" bitangent";
                     nNumOfFoundTSB++;
+                    b1 = true;
                 }
                 if(vCheckT.Compare(vTangent)){
                     file<<" tangent";
                     nNumOfFoundTST++;
+                    b1 = true;
                 }
                 if(vCheckN.Compare(vNormalTS)){
                     file<<" normal";
                     nNumOfFoundTSN++;
+                    b1 = true;
                 }
-                bFoundTS = true;
+                if(!b1) file<<" none";
+                if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS)) bFoundTS = true;
+                else file << " (incomplete)";
             }
-            std::vector<int> nDummyPatchVector;
-            if(!bFoundTS){
-                std::vector<int> nDummyPatchVector;
-                int nFound = FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
-                if(nFound > 0) bFoundTS = true;
+            else{
+                //std::vector<int> nDummyPatchVector;
+                int nFound = 0; //FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
+
+                /**/
+                for(int t = 0; t < patch.SmoothedPatches.size(); t++){
+                    Patch & curpatch = Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(t));
+                    for(int f = 0; f < curpatch.FaceIndices.size(); f++){
+                        Face & face = GetNodeByNameIndex(curpatch.nNameIndex).Mesh.Faces.at(curpatch.FaceIndices.at(f));
+                        vTangentBase += face.vTangent;
+                        vBitangentBase += face.vBitangent;
+                        vTangentNormalBase += (face.vBitangent / face.vTangent);
+                    }
+                }//Check if this is it
+                vCheckT = vTangentBase;
+                vCheckB = vBitangentBase;
+                vCheckN = vTangentNormalBase;
+                vCheckT.Normalize();
+                vCheckB.Normalize();
+                vCheckN.Normalize();
+                file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
+                file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
+                file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to proposed ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
+                if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
+                    file<<"\n   Correct:";
+                    if(vCheckB.Compare(vBitangent)){
+                        file<<" bitangent";
+                        nFound = nFound | 1;
+                    }
+                    if(vCheckT.Compare(vTangent)){
+                        file<<" tangent";
+                        nFound = nFound | 2;
+                    }
+                    if(vCheckN.Compare(vNormalTS)){
+                        file<<" normal";
+                        nFound = nFound | 4;
+                    }
+                    if(nFound != 7) file << " (incomplete)";
+                }
+                /**/
+
+                if(nFound == 7) bFoundTS = true;
                 if(nFound & 1) nNumOfFoundTSB++;
                 if(nFound & 2) nNumOfFoundTST++;
                 if(nFound & 4) nNumOfFoundTSN++;
-            }
-            if(nDummyPatchVector != patch.SmoothedPatches){
-                std::cout<<"Warning! Tangent space match is not predicted from smoothing groups!\n";
-                file<<"\n      Warning! Tangent space match is not predicted from smoothing groups!";
             }
             if(bFoundTS){
                 file<<"\n:)    MATCH FOUND!\n";
                 nNumOfFoundTS++;
             }
             else{
+                std::cout<<"No match for tangent space in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).cName<<", vert "<<patch.nVertex<<")\n";
                 file<<"\n:(    NO MATCH FOUND!\n";
             }
         }
@@ -1641,6 +1686,7 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
                     file<<" normal";
                     nReturn = nReturn | 4;
                 }
+                if(nReturn != 7) file << " (incomplete)";
                 CurrentlySmoothedPatches = OurSmoothedPatches;
                 return nReturn;
             }

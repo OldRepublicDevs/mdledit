@@ -339,7 +339,7 @@ struct Vector{
         }
         else *this /= fNorm;
     }
-    bool Compare(const Vector & v1, double fDiff = 0.00001){
+    bool Compare(const Vector & v1, double fDiff = 0.0001){
         if(abs(fX - v1.fX) < fDiff &&
            abs(fY - v1.fY) < fDiff &&
            abs(fZ - v1.fZ) < fDiff ) return true;
