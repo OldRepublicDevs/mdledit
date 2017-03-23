@@ -27,6 +27,11 @@ Vector operator/(Vector v, const double & f){
     return v;
 }
 
+Vector operator*(const double & f, Vector v){
+    v *= f;
+    return v;
+}
+
 double operator*(const Vector & v, const Vector & v2){ //dot product
     return (v.fX * v2.fX + v.fY * v2.fY + v.fZ * v2.fZ);
 }

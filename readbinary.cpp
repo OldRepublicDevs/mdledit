@@ -1026,14 +1026,51 @@ void MDL::DetermineSmoothing(){
                 Vertex & v1 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[0]);
                 Vertex & v2 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[1]);
                 Vertex & v3 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[2]);
+                Vector & v1UV = v1.MDXData.vUV1;
+                Vector & v2UV = v2.MDXData.vUV1;
+                Vector & v3UV = v3.MDXData.vUV1;
                 Vector Edge1 = v2 - v1;
                 Vector Edge2 = v3 - v1;
                 Vector Edge3 = v3 - v2;
+                Vector EUV1 = v2UV - v1UV;
+                Vector EUV2 = v3UV - v1UV;
+                Vector EUV3 = v3UV - v2UV;
+
+                //Tangent and Bitangent calculation
+                //Now comes the calculation. Will be using edges 1 and 2
+                double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
+                //This is division, need to check for 0
+                if(r != 0){
+                    r = 1.0 / r;
+                }
+                else{
+                    //???
+                    //ndix UR's magic factor
+                    r = 2406.6388;
+                }
+                face.vTangent = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
+                face.vBitangent = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
+                face.vTangent.Normalize();
+                face.vBitangent.Normalize();
+                if(face.vTangent.Null()){
+                    face.vTangent = Vector(1.0, 0.0, 0.0);
+                }
+                if(face.vBitangent.Null()){
+                    face.vBitangent = Vector(1.0, 0.0, 0.0);
+                }
+                //Handedness
+                if((face.vNormal / face.vTangent) * face.vBitangent > 0.0){
+                    face.vTangent *= -1.0;
+                }
+                //Now check if we need to invert  T and B. But first we need a UV normal
+                Vector vNormalUV = EUV1 / EUV2; //cross product
+                if(vNormalUV.fZ > 0.0){
+                    face.vTangent *= -1.0;
+                    face.vBitangent *= -1.0;
+                }
 
                 //Area calculation
                 face.fArea = HeronFormula(Edge1, Edge2, Edge3);
-
-                //Tangent and Bitangent calculation
             }
         }
     }
@@ -1160,7 +1197,9 @@ void MDL::DetermineSmoothing(){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
             Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
             Vector vNormal = vert.MDXData.vNormal;
-            Vector vNormalBase = Vector(0.0, 0.0, 0.0);
+            Vector vNormalBase;
+            Vector vTangentBase;
+            Vector vBitangentBase;
             patch.SmoothedPatches.reserve(nPatchCount);
             patch.SmoothedPatches.clear();
             file<<"Calculating for group "<<pg<<", patch "<<p<<" ("<<Data.MH.Names.at(patch.nNameIndex).cName<<", vert "<<patch.nVertex<<")";

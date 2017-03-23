@@ -339,11 +339,18 @@ struct Vector{
            abs(fZ - v1.fZ) < fDiff ) return true;
         else return false;
     }
+    bool Null(double fDiff = 0.0){
+        if(abs(fX) <= fDiff &&
+           abs(fY) <= fDiff &&
+           abs(fZ) <= fDiff ) return true;
+        else return false;
+    }
 };
 
 Vector operator*(Vector v, const Matrix22 & m);
 Vector operator*(Vector v, const double & f);
 Vector operator/(Vector v, const double & f);
+Vector operator*(const double & f, Vector v);
 double operator*(const Vector & v, const Vector & v2); //dot product
 Vector operator/(Vector v, const Vector & v2); //cross product
 Vector operator+(Vector v, const Vector & v2);
@@ -365,7 +372,6 @@ struct Triples{
 
 struct Face{
     //Binary members
-    int nLength = 32;
     Vector vNormal; // from farmboy0
     double fDistance; // from farmboy0
     int nMaterialID; //possibly imported as material group!
@@ -373,8 +379,11 @@ struct Face{
     short nIndexVertex[3];  // from farmboy0
 
     //Added members
+    int nLength = 32;
     int nSmoothingGroup = 1;
     double fArea = 0.0;
+    Vector vTangent;
+    Vector vBitangent;
 };
 
 
@@ -429,7 +438,6 @@ struct Name{
 struct SaberDataStruct{
     Vector vVertex;
     Vector vUV;
-    //double fUV[2];
     Vector vNormal;
 };
 
