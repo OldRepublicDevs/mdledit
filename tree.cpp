@@ -316,15 +316,12 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
             if(node.Skin.Bones.size() > 0){
                 for(int n = 0; n < node.Skin.Bones.size(); n++){
-                    std::string sBone = "Bone " + Names[n].cName;
+                    std::string sBone = "Bone " + Names[n].sName;
                     Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
                 }
             }
             Append("Bone Indexes", (LPARAM) &node.Skin.nBoneIndexes, Skin);
             Append("MDX Data Pointers", (LPARAM) &node.Skin, Skin);
-            Append("Unknown Int32 1", (LPARAM) &node.Skin.nUnknown1, Skin);
-            Append("Unknown Int32 2", (LPARAM) &node.Skin.nUnknown2);
-            Append("Unknown Int32 3", (LPARAM) &node.Skin.nUnknown3);
         }
         if(node.Head.nType & NODE_HAS_DANGLY){
             HTREEITEM Danglymesh = Append("Danglymesh", (LPARAM) &node.Dangly, Prev);
@@ -380,18 +377,18 @@ void MDL::BuildTree(){
     HTREEITEM Animations = Append("Animations", NULL, Root);
     HTREEITEM Nodes, Animation, Sounds, CurrentNode;
     for(int n = 0; n < Data.MH.AnimationArray.nCount; n++){
-        Animation = Append(Data.MH.Animations[n].cName, (LPARAM) &(Data.MH.Animations[n]), Animations);
+        Animation = Append(Data.MH.Animations[n].sName, (LPARAM) &(Data.MH.Animations[n]), Animations);
         Append("Length", (LPARAM) &(Data.MH.Animations[n].fLength), Animation);
         Append("Transition", (LPARAM) &(Data.MH.Animations[n].fTransition));
         Sounds = Append("Sounds", (LPARAM) &(Data.MH.Animations[n]));
         for(int i = 0; i < Data.MH.Animations[n].SoundArray.nCount; i++){
-            Append(Data.MH.Animations[n].Sounds[i].cName.c_str(), (LPARAM) &(Data.MH.Animations[n].Sounds[i]), Sounds);
+            Append(Data.MH.Animations[n].Sounds[i].sName.c_str(), (LPARAM) &(Data.MH.Animations[n].Sounds[i]), Sounds);
         }
         Nodes = Append("Animated Nodes", NULL, Animation);
         for(int a = 0; a < Data.MH.Animations[n].ArrayOfNodes.size(); a++){
             Node & node = Data.MH.Animations[n].ArrayOfNodes[a];
 
-            CurrentNode = Append(Data.MH.Names[node.Head.nNameIndex].cName, (LPARAM) &node, Nodes);
+            CurrentNode = Append(Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
 
             HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
             Append("Controller Data", (LPARAM) &node.Head, Controllers);
@@ -407,14 +404,14 @@ void MDL::BuildTree(){
 
             HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
             if(node.Head.nParentIndex != -1){
-                Append(Data.MH.Names[node.Head.nParentIndex].cName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, n), Parent);
+                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, n), Parent);
             }
 
             HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
             for(int g = 0; g < Data.MH.Animations[n].ArrayOfNodes.size(); g++){
                 Node & curnode = Data.MH.Animations[n].ArrayOfNodes[g];
                 if(curnode.Head.nParentIndex == node.Head.nNameIndex){
-                    Append(Data.MH.Names[curnode.Head.nNameIndex].cName, (LPARAM) &curnode, Children);
+                    Append(Data.MH.Names[curnode.Head.nNameIndex].sName, (LPARAM) &curnode, Children);
                 }
             }
         }
@@ -434,7 +431,7 @@ void MDL::BuildTree(){
         else if(node.Head.nType & NODE_HAS_LIGHT) sType = "(light) ";
         else if(node.Head.nType & NODE_HAS_HEADER) sType = "(basic) ";
         else sType = "(error) ";
-        CurrentNode = Append(sType + Data.MH.Names[node.Head.nNameIndex].cName, (LPARAM) &node, Nodes);
+        CurrentNode = Append(sType + Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
 
         AppendChildren(node, CurrentNode, Data.MH.Names);
 
@@ -450,14 +447,14 @@ void MDL::BuildTree(){
 
         HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
         if(node.Head.nParentIndex != -1){
-            Append(Data.MH.Names[node.Head.nParentIndex].cName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
+            Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
         }
 
         HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
         for(int g = 0; g < Data.MH.ArrayOfNodes.size(); g++){
             Node & curnode = Data.MH.ArrayOfNodes[g];
             if(curnode.Head.nParentIndex == node.Head.nNameIndex){
-                Append(Data.MH.Names[curnode.Head.nNameIndex].cName, (LPARAM) &curnode, Children);
+                Append(Data.MH.Names[curnode.Head.nNameIndex].sName, (LPARAM) &curnode, Children);
             }
         }
     }
@@ -483,7 +480,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     /// Header ///
     else if((cItem[0] == "Header")){
             sPrint << string_format("Header\r\nModel Name: %s\r\nModel Type: %i\r\nClassification: %s\r\nSupermodel: %s",
-                    FH[0].MH.GH.cName.c_str(), FH[0].MH.GH.nModelType, ReturnClassificationName(FH[0].MH.nClassification).c_str(),
+                    FH[0].MH.GH.sName.c_str(), FH[0].MH.GH.nModelType, ReturnClassificationName(FH[0].MH.nClassification).c_str(),
                     FH[0].MH.cSupermodelName.c_str()/*, FH[0].MH.nChildModelCount*/);
             sPrint << "\r\nUnknown Supermodel uint32?: "<<FH[0].MH.nUnknown2;
             sPrint << "\r\n\r\nPadding? (Model Type): "<<(int)FH[0].MH.GH.nPadding[0]<<" "<<(int)FH[0].MH.GH.nPadding[1]<<" "<<(int)FH[0].MH.GH.nPadding[2];
@@ -504,7 +501,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     else if((cItem[1] == "Animations")){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Animation %s\r\nOffset: %u\r\nOffset to Root: %u\r\nOwner: %s\r\nNumber of Objects: %u",
-                anim->cName.c_str(), anim->nOffset, anim->nOffsetToRootAnimationNode, anim->cName2.c_str(), anim->nNumberOfObjects);
+                anim->sName.c_str(), anim->nOffset, anim->nOffsetToRootAnimationNode, anim->sAnimRoot.c_str(), anim->nNumberOfObjects);
         sPrint << "\r\n\r\nModel Type: "<<(int)anim->nModelType;
         sPrint << "\r\nPadding?: "<<(int)anim->nPadding[0]<<" "<<(int)anim->nPadding[1]<<" "<<(int)anim->nPadding[2];
         sPrint << string_format("\r\n\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u\r\n",
@@ -518,7 +515,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
     else if((cItem[1] == "Sounds")){
         Sound * snd = (Sound*) lParam;
-        sPrint << string_format("Sound:\r\n%s\r\n\r\nTime:\r\n%f", snd->cName.c_str(), snd->fTime);
+        sPrint << string_format("Sound:\r\n%s\r\n\r\nTime:\r\n%f", snd->sName.c_str(), snd->fTime);
     }
 
     /// Geometry ///
@@ -541,15 +538,15 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             else if(node->Head.nType & NODE_HAS_LIGHT) sPrint << "light";
             else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
             else sPrint << "unknown - file likely faulty!";
-            sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].cName.c_str();
+            sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
             sPrint << string_format("\r\nOffset: %i\r\nOffset to Root: %i\r\nOffset to Parent: %i\r\nID: %i", node->nOffset, node->Head.nOffsetToRoot, node->Head.nOffsetToParent, node->Head.nID1);
             sPrint << "\r\nPosition: "<<PrepareFloat(node->Head.vPos.fX, 0);
             sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fY, 0);
             sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fZ, 0);
-            sPrint << "\r\nOrientation: "<<PrepareFloat(node->Head.oOrient.qX, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fX, 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qY, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fY, 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qZ, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fZ, 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.qW, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.fAngle, 1)<<")";
+            sPrint << "\r\nOrientation: "<<PrepareFloat(node->Head.oOrient.Get(QU_X), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_X), 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_Y), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Y), 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
+            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
     }/*
     else if((cItem[0] == "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if((cItem[0] == "Orientation")){
@@ -628,7 +625,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         if(light->FlareTextureNames.size() > 0){
             sPrint << "\r\nData:";
             for(int n = 0; n < light->FlareTextureNameArray.nCount; n++){
-                sPrint << "\r\n"<<n+1<<". " << light->FlareTextureNames[n].cName;
+                sPrint << "\r\n"<<n+1<<". " << light->FlareTextureNames[n].sName;
             }
         }
     }
@@ -693,10 +690,10 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 mesh->nMdxDataBitmap & MDX_FLAG_HAS_UV3 ? 1 : 0, mesh->nOffsetToUV3sInMDX,
                 mesh->nMdxDataBitmap & MDX_FLAG_HAS_UV4 ? 1 : 0, mesh->nOffsetToUV4sInMDX,
                 mesh->nMdxDataBitmap & MDX_FLAG_0040 ? 1 : 0, mesh->nOffsetToUnknownInMDX,
-                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0, mesh->nOffsetToUnknownStructInMDX,
-                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2 ? 1 : 0, mesh->nOffsetToUnusedMDXStructure1,
-                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3 ? 1 : 0, mesh->nOffsetToUnusedMDXStructure2,
-                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4 ? 1 : 0, mesh->nOffsetToUnusedMDXStructure3);
+                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0, mesh->nOffsetToTangentSpaceInMDX,
+                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2 ? 1 : 0, mesh->nOffsetToTangentSpace2InMDX,
+                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3 ? 1 : 0, mesh->nOffsetToTangentSpace3InMDX,
+                mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4 ? 1 : 0, mesh->nOffsetToTangentSpace4InMDX);
     }
     else if((cItem[0] == "Vertices") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
@@ -749,8 +746,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
         }
         if(node.Head.nType & NODE_HAS_SKIN){
-            sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin1[0], mdx->fSkin1[1], mdx->fSkin1[2], mdx->fSkin1[3]);
-            sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin2[0], mdx->fSkin2[1], mdx->fSkin2[2], mdx->fSkin2[3]);
+            sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightValue[0], mdx->fWeightValue[1], mdx->fWeightValue[2], mdx->fWeightValue[3]);
+            sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightIndex[0], mdx->fWeightIndex[1], mdx->fWeightIndex[2], mdx->fWeightIndex[3]);
         }
     }
     else if((cItem[1] == "Vertices")){
@@ -804,8 +801,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
             }
             if(node.Head.nType & NODE_HAS_SKIN){
-                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin1[0], mdx->fSkin1[1], mdx->fSkin1[2], mdx->fSkin1[3]);
-                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fSkin2[0], mdx->fSkin2[1], mdx->fSkin2[2], mdx->fSkin2[3]);
+                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightValue[0], mdx->fWeightValue[1], mdx->fWeightValue[2], mdx->fWeightValue[3]);
+                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightIndex[0], mdx->fWeightIndex[1], mdx->fWeightIndex[2], mdx->fWeightIndex[3]);
             }
         }
     }
@@ -874,16 +871,16 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << "\r\n\r\nTBone: "<<PrepareFloat(bone->TBone.fX, 0);
         sPrint << "\r\n       "<<PrepareFloat(bone->TBone.fY, 0);
         sPrint << "\r\n       "<<PrepareFloat(bone->TBone.fZ, 0);
-        sPrint << "\r\n\r\nQBone: "<<PrepareFloat(bone->QBone.qX, 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.qY, 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.qZ, 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.qW, 0);
-        sPrint << "\r\n\r\nArray8: "<<PrepareFloat(bone->fArray8, 0);
+        sPrint << "\r\n\r\nQBone: "<<PrepareFloat(bone->QBone.Get(QU_X), 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_Y), 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_Z), 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_W), 0);
+        //sPrint << "\r\n\r\nArray8: "<<PrepareFloat(bone->fArray8, 0);
     }
     else if((cItem[0] == "MDX Data Pointers") && (cItem[1] == "Skin")){
         SkinHeader * skin = (SkinHeader *) lParam;
         sPrint << string_format("MDX Data Pointers\r\nTo Weight Value: %i\r\nTo Weight Index: %i",
-            skin->nPointerToStruct1InMDX, skin->nPointerToStruct2InMDX);
+            skin->nOffsetToWeightValuesInMDX, skin->nOffsetToBoneIndexInMDX);
     }
     else if((cItem[0] == "Bone Indexes")){
         short * sarray = (short * ) lParam;

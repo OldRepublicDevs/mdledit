@@ -28,12 +28,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
         sReturn << string_format("# MDLedit from KOTOR binary source");
-        sReturn << string_format("\r\n# model %s", mh->GH.cName.c_str());
-        sReturn << string_format("\r\nnewmodel %s", mh->GH.cName.c_str());
-        sReturn << string_format("\r\nsetsupermodel %s %s", mh->GH.cName.c_str(), mh->cSupermodelName.c_str());
+        sReturn << string_format("\r\n# model %s", mh->GH.sName.c_str());
+        sReturn << string_format("\r\nnewmodel %s", mh->GH.sName.c_str());
+        sReturn << string_format("\r\nsetsupermodel %s %s", mh->GH.sName.c_str(), mh->cSupermodelName.c_str());
         sReturn << string_format("\r\nclassification %s", ReturnClassificationName(mh->nClassification).c_str());
         sReturn << string_format("\r\nsetanimationscale %s", PrepareFloat(mh->fScale, 0));
-        sReturn << string_format("\r\n\r\nbeginmodelgeom %s", mh->GH.cName.c_str());
+        sReturn << string_format("\r\n\r\nbeginmodelgeom %s", mh->GH.sName.c_str());
         sReturn << string_format("\r\n  bmin %s %s %s", PrepareFloat(mh->vBBmin.fX, 0), PrepareFloat(mh->vBBmin.fY, 1), PrepareFloat(mh->vBBmin.fZ, 2));
         sReturn << string_format("\r\n  bmax %s %s %s", PrepareFloat(mh->vBBmax.fX, 0), PrepareFloat(mh->vBBmax.fY, 1), PrepareFloat(mh->vBBmax.fZ, 2));
         sReturn << string_format("\r\n  radius %s", PrepareFloat(mh->fRadius, 0));
@@ -71,32 +71,32 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
         }
-        sReturn << string_format("\r\nendmodelgeom %s\r\n", mh->GH.cName.c_str());
+        sReturn << string_format("\r\nendmodelgeom %s\r\n", mh->GH.sName.c_str());
 
         for(int n = 0; n < mh->AnimationArray.nCount; n++){
             ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
         }
-        sReturn << string_format("\r\ndonemodel %s\r\n", mh->GH.cName.c_str());
+        sReturn << string_format("\r\ndonemodel %s\r\n", mh->GH.sName.c_str());
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
-        sReturn << string_format("\r\nnewanim %s %s", anim->cName.c_str(), FH[0].MH.GH.cName.c_str());
+        sReturn << string_format("\r\nnewanim %s %s", anim->sName.c_str(), FH[0].MH.GH.sName.c_str());
         sReturn << string_format("\r\n  length %s", PrepareFloat(anim->fLength, 0));
         sReturn << string_format("\r\n  transtime %s", PrepareFloat(anim->fTransition, 0));
-        sReturn << string_format("\r\n  animroot %s", anim->cName2.c_str());
+        sReturn << string_format("\r\n  animroot %s", anim->sAnimRoot.c_str());
         if(anim->Sounds.size() > 0){
-            sReturn << string_format("\r\n  eventlist %s", anim->cName2.c_str());
+            sReturn << string_format("\r\n  eventlist %s", anim->sAnimRoot.c_str());
             for(int s = 0; s < anim->Sounds.size(); s++){
-                sReturn << "\r\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).cName.c_str();
+                sReturn << "\r\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
             }
-            sReturn << string_format("\r\n  endlist %s", anim->cName2.c_str());
+            sReturn << string_format("\r\n  endlist %s", anim->sAnimRoot.c_str());
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
             ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
         }
-        sReturn << string_format("\r\ndoneanim %s %s", anim->cName.c_str(), FH[0].MH.GH.cName.c_str());
+        sReturn << string_format("\r\ndoneanim %s %s", anim->sName.c_str(), FH[0].MH.GH.sName.c_str());
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
@@ -108,9 +108,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType & NODE_HAS_EMITTER) sprintf(cType, "emitter");
         else if(node->Head.nType & NODE_HAS_LIGHT) sprintf(cType, "light");
         else if(node->Head.nType & NODE_HAS_HEADER) sprintf(cType, "dummy");
-        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].cName.c_str());
+        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].sName.c_str());
         if(node->Head.nParentIndex != -1){
-            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].cName.c_str());
+            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].sName.c_str());
         }
         else{
             sReturn << "\r\n  parent NULL";
@@ -131,9 +131,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType & NODE_HAS_EMITTER) sprintf(cType, "emitter");
         else if(node->Head.nType & NODE_HAS_LIGHT) sprintf(cType, "light");
         else if(node->Head.nType & NODE_HAS_HEADER) sprintf(cType, "dummy");
-        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].cName.c_str());
+        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].sName.c_str());
         if(node->Head.nParentIndex != -1){
-            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].cName.c_str());
+            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].sName.c_str());
         }
         else{
             sReturn << string_format("\r\n  parent NULL");
@@ -142,11 +142,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
                 sReturn << string_format("\r\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
                 if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                    sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.qX, 0), PrepareFloat(node->Head.Orient.qY, 1), PrepareFloat(node->Head.Orient.qZ, 2), PrepareFloat(node->Head.Orient.qW, 3));
+                    sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
                 }
             }
             else if(node->Head.Controllers[1].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.qX, 0), PrepareFloat(node->Head.Orient.qY, 1), PrepareFloat(node->Head.Orient.qZ, 2), PrepareFloat(node->Head.Orient.qW, 3));
+                sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
             }*/
             for(int n = 0; n < node->Head.ControllerArray.nCount; n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers[n]));
@@ -154,7 +154,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }/*
         else{
             sReturn << string_format("\r\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
-            sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.qX, 0), PrepareFloat(node->Head.Orient.qY, 1), PrepareFloat(node->Head.Orient.qZ, 2), PrepareFloat(node->Head.Orient.qW, 3));
+            sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
         }*/
     }
     else if(nDataType == CONVERT_ENDNODE){
@@ -172,7 +172,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << string_format("\r\n  flareradius %s", PrepareFloat(node->Light.fFlareRadius, 0)); //NWmax reads this as an int
         sReturn << string_format("\r\n  texturenames %i", node->Light.FlareTextureNameArray.nCount);
         for(int n = 0; n < node->Light.FlareTextureNameArray.nCount; n++){
-            sReturn<<"\r\n    "<<node->Light.FlareTextureNames[n].cName;
+            sReturn<<"\r\n    "<<node->Light.FlareTextureNames[n].sName;
         }
         sReturn << string_format("\r\n  flaresizes %i", node->Light.FlareSizeArray.nCount);
         for(int n = 0; n < node->Light.FlareSizeArray.nCount; n++){
@@ -276,12 +276,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   ";
                 int i = 0;
-                int nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fSkin2[i]);
+                int nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fWeightIndex[i]);
                 while(nBoneCount != -1 && i < 4){
                     int nNameIndex = node->Skin.BoneNameIndexes[nBoneCount];
-                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).cName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.fSkin1[i], 0);
+                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.fWeightValue[i], 0);
                     i++;
-                    nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fSkin2[i]);
+                    nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fWeightIndex[i]);
                 }
                 if(i == 0){
                     sReturn << " root 1.0";
@@ -364,10 +364,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn<<"\r\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 Orientation CtrlOrient;
                 ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
-                CtrlOrient.nCompressed = ByteBlock4.ui;
-                CtrlOrient.Decompress();
+                CtrlOrient.Decompress(ByteBlock4.ui);
                 CtrlOrient.ConvertToAA();
-                sReturn << PrepareFloat(CtrlOrient.fX, 0) << " " << PrepareFloat(CtrlOrient.fY, 1) << " " << PrepareFloat(CtrlOrient.fZ, 2) << " " << PrepareFloat(CtrlOrient.fAngle, 3);
+                sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
             }
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
@@ -376,12 +375,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\r\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 Orientation CtrlOrient;
-                CtrlOrient.qX = node.Head.ControllerData[ctrl->nDataStart + n*4 + 0];
-                CtrlOrient.qY = node.Head.ControllerData[ctrl->nDataStart + n*4 + 1];
-                CtrlOrient.qZ = node.Head.ControllerData[ctrl->nDataStart + n*4 + 2];
-                CtrlOrient.qW = node.Head.ControllerData[ctrl->nDataStart + n*4 + 3];
+                double fQX = node.Head.ControllerData[ctrl->nDataStart + n*4 + 0];
+                double fQY = node.Head.ControllerData[ctrl->nDataStart + n*4 + 1];
+                double fQZ = node.Head.ControllerData[ctrl->nDataStart + n*4 + 2];
+                double fQW = node.Head.ControllerData[ctrl->nDataStart + n*4 + 3];
+                CtrlOrient.Quaternion(fQX, fQY, fQZ, fQW);
                 CtrlOrient.ConvertToAA();
-                sReturn << PrepareFloat(CtrlOrient.fX, 0) << " " << PrepareFloat(CtrlOrient.fY, 1) << " " << PrepareFloat(CtrlOrient.fZ, 2) << " " << PrepareFloat(CtrlOrient.fAngle, 3);
+                sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
             }
         }
         else if(ctrl->nColumnCount == 19 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
@@ -422,8 +422,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].cName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].cName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
         sReturn << "\r\nendlist";
@@ -440,20 +440,20 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             //Compressed orientation
             Orientation CtrlOrient;
             ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart];
-            CtrlOrient.nCompressed = ByteBlock4.ui;
-            CtrlOrient.Decompress();
+            CtrlOrient.Decompress(ByteBlock4.ui);
             CtrlOrient.ConvertToAA();
-            sReturn << PrepareFloat(CtrlOrient.fX, 0) << " " << PrepareFloat(CtrlOrient.fY, 1) << " " << PrepareFloat(CtrlOrient.fZ, 2) << " " << PrepareFloat(CtrlOrient.fAngle, 3);
+            sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
             Orientation CtrlOrient;
-            CtrlOrient.qX = node.Head.ControllerData[ctrl->nDataStart + 0];
-            CtrlOrient.qY = node.Head.ControllerData[ctrl->nDataStart + 1];
-            CtrlOrient.qZ = node.Head.ControllerData[ctrl->nDataStart + 2];
-            CtrlOrient.qW = node.Head.ControllerData[ctrl->nDataStart + 3];
+            double fQX = node.Head.ControllerData[ctrl->nDataStart + 0];
+            double fQY = node.Head.ControllerData[ctrl->nDataStart + 1];
+            double fQZ = node.Head.ControllerData[ctrl->nDataStart + 2];
+            double fQW = node.Head.ControllerData[ctrl->nDataStart + 3];
+            CtrlOrient.Quaternion(fQX, fQY, fQZ, fQW);
             CtrlOrient.ConvertToAA();
-            sReturn << PrepareFloat(CtrlOrient.fX, 0) << " " << PrepareFloat(CtrlOrient.fY, 1) << " " << PrepareFloat(CtrlOrient.fZ, 2) << " " << PrepareFloat(CtrlOrient.fAngle, 3);
+            sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
         }
     /*  else if(ctrl->nColumnCount == 19 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
@@ -470,8 +470,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].cName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].cName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }

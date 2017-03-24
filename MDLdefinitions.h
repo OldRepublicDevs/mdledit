@@ -1,6 +1,25 @@
 #ifndef MDLDEFINITIONS_H_INCLUDED
 #define MDLDEFINITIONS_H_INCLUDED
 
+#define MDL_OFFSET 12
+#define ANIM_OFFSET 136
+
+#define CONVERT_CONTROLLER_SINGLE        1
+#define CONVERT_CONTROLLER_KEYED         2
+#define CONVERT_HEADER                   3
+#define CONVERT_LIGHT                    4
+#define CONVERT_EMITTER                  5
+#define CONVERT_MESH                     6
+#define CONVERT_SKIN                     7
+#define CONVERT_DANGLY                   8
+#define CONVERT_AABB                     9
+#define CONVERT_SABER                    10
+#define CONVERT_ENDNODE                  11
+#define CONVERT_ANIMATION                12
+#define CONVERT_ANIMATION_NODE           13
+#define CONVERT_MODEL_GEO                14
+#define CONVERT_MODEL                    15
+
 #define K1_FUNCTION_POINTER_0 4273776
 #define K1_FUNCTION_POINTER_1 4216096
 #define K2_FUNCTION_POINTER_0 4285200
@@ -81,12 +100,12 @@
 //#define MDX_FLAG_4000                0x8000
 
 #define AABB_NO_CHILDREN    0x00
-#define AABB_01             0x01
-#define AABB_02             0x02
-#define AABB_04             0x04
-#define AABB_08             0x08
-#define AABB_10             0x10
-#define AABB_20             0x20
+#define AABB_POSITIVE X     0x01
+#define AABB_POSITIVE Y     0x02
+#define AABB_POSITIVE Z     0x04
+#define AABB_NEGATIVE X     0x08
+#define AABB_NEGATIVE Y     0x10
+#define AABB_NEGATIVE Z     0x20
 //#define AABB_40           0x40
 //#define AABB_80           0x80
 

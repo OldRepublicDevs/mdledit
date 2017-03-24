@@ -27,29 +27,13 @@
        - K2 unknown 1 (float)
 
     2. Static data - always 0 (usually it's 0)
-     - short nUnknownEmpty1 in NodeHeader
+     - short nPadding1 in NodeHeader
      - 3 int32s in SkinHeader
      - K2 unknown 2 in MeshHeader
      - zero1 and zero2 in EmitterHeader
      - -1 -1 0 Array in MeshHeader
 
 /**/
-
-#define CONVERT_CONTROLLER_SINGLE        1
-#define CONVERT_CONTROLLER_KEYED         2
-#define CONVERT_HEADER                   3
-#define CONVERT_LIGHT                    4
-#define CONVERT_EMITTER                  5
-#define CONVERT_MESH                     6
-#define CONVERT_SKIN                     7
-#define CONVERT_DANGLY                   8
-#define CONVERT_AABB                     9
-#define CONVERT_SABER                    10
-#define CONVERT_ENDNODE                  11
-#define CONVERT_ANIMATION                12
-#define CONVERT_ANIMATION_NODE           13
-#define CONVERT_MODEL_GEO                14
-#define CONVERT_MODEL                    15
 
 //Forward declarations
 struct Face;
@@ -75,7 +59,7 @@ struct GeometryHeader;
 struct ModelHeader;
 struct FileHeader;
 struct Vector;
-struct Orientation;
+class Orientation;
 struct Color;
 struct Triples;
 struct Bone;
@@ -100,48 +84,70 @@ struct Matrix22{
     }
 };
 
-struct Orientation{
-    unsigned int nCompressed; //Since it is compressed, best to get it in a neutral type
-    double qX;
-    double qY;
-    double qZ;
-    double qW;
-    double fX;
-    double fY;
-    double fZ;
-    double fAngle;
+extern const char QU_X;
+extern const char QU_Y;
+extern const char QU_Z;
+extern const char QU_W;
+extern const char AA_X;
+extern const char AA_Y;
+extern const char AA_Z;
+extern const char AA_A;
+class Orientation{
+    //unsigned int nCompressed = 0; //Since it is compressed, best to get it in a neutral type
+    double qX = 0.0;
+    double qY = 0.0;
+    double qZ = 0.0;
+    double qW = 0.0;
+    double fX = 0.0;
+    double fY = 0.0;
+    double fZ = 0.0;
+    double fAngle = 0.0;
+    bool bQuaternion = false, bAA = false;
+
+  public:
     Orientation(){
         qX = 0.0;
         qY = 0.0;
         qZ = 0.0;
         qW = 1.0;
+        bQuaternion = true;
+        bAA = false;
     }
     Orientation(const double & f1, const double & f2, const double & f3, const double & f4){
         qX = f1;
         qY = f2;
         qZ = f3;
         qW = f4;
+        bQuaternion = true;
+        bAA = false;
     }
     void Quaternion(const double & f1, const double & f2, const double & f3, const double & f4){
         qX = f1;
         qY = f2;
         qZ = f3;
         qW = f4;
+        bQuaternion = true;
+        bAA = false;
     }
     void AA(const double & f1, const double & f2, const double & f3, const double & f4){
         fX = f1;
         fY = f2;
         fZ = f3;
         fAngle = f4;
+        bQuaternion = false;
+        bAA = true;
     }
     void ConvertToQuaternions(){
+        if(!bAA) std::cout<<"Orientation::ConvertToQuaternions(): Calculating with invalid AA values\n";
         double a = fAngle / 2.0;
         qW = cosf(a);
         qX = fX * sinf(a);
         qY = fY * sinf(a);
         qZ = fZ * sinf(a);
+        bQuaternion = true;
     }
     void ConvertToAA(){
+        if(!bQuaternion) std::cout<<"Orientation::ConvertToAA(): Calculating with invalid quaternion values\n";
         if(qW > 1.0){
             //Normalize
         }
@@ -160,8 +166,9 @@ struct Orientation{
             fY = qY / s;
             fZ = qZ / s;
         }
+        bQuaternion = true;
     }
-    void Decompress(){
+    void Decompress(unsigned int nCompressed){
         //Special compressed quaternion - from MDLOps
         /// Get only the first 11 bits (max value 0x07FF or 2047)
         /// Divide by half to get values in range from 0.0 to 2.0
@@ -196,15 +203,18 @@ struct Orientation{
             /// x^2 / fSq + y^2 / fSq + z^2 / fSq + 0.0 == 1
             /// x^2 + y^2 + z^2 == fSq (which is the definition of fSquare)
         }
+        bQuaternion = true;
+        bAA = false;
     }
     void Compress(){
 
     }
     Orientation & operator*=(const Orientation & o){
-        double fTempX =  qX * o.qW + qW * o.qX - qZ * o.qY + qY * o.qZ;
-        double fTempY =  qY * o.qW + qZ * o.qX + qW * o.qY - qX * o.qZ;
-        double fTempZ =  qZ * o.qW - qY * o.qX + qX * o.qY + qW * o.qZ;
-        double fTempW =  qW * o.qW - qX * o.qX - qY * o.qY - qZ * o.qZ;
+        if(!bQuaternion) std::cout<<"Orientation::operator*=(): Calculating with invalid quaternion values\n";
+        double fTempX =  qX * o.Get(QU_W) + qW * o.Get(QU_X) - qZ * o.Get(QU_Y) + qY * o.Get(QU_Z);
+        double fTempY =  qY * o.Get(QU_W) + qZ * o.Get(QU_X) + qW * o.Get(QU_Y) - qX * o.Get(QU_Z);
+        double fTempZ =  qZ * o.Get(QU_W) - qY * o.Get(QU_X) + qX * o.Get(QU_Y) + qW * o.Get(QU_Z);
+        double fTempW =  qW * o.Get(QU_W) - qX * o.Get(QU_X) - qY * o.Get(QU_Y) - qZ * o.Get(QU_Z);
         qX = std::move(fTempX);
         qY = std::move(fTempY);
         qZ = std::move(fTempZ);
@@ -213,15 +223,43 @@ struct Orientation{
         return *this;
     }
     Orientation & ReverseW(){
+        if(!bQuaternion) std::cout<<"Orientation::ReverseW(): Calculating with invalid quaternion values\n";
         qW = - qW;
         return *this;
     }
     Orientation & Reverse(){
+        if(!bQuaternion) std::cout<<"Orientation::Reverse(): Calculating with invalid quaternion values\n";
         qX = - qX;
         qY = - qY;
         qZ = - qZ;
         qW = - qW;
         return *this;
+    }
+    const double & Get(const char cID) const {
+        if(cID == 0){
+            std::cout<<"Orientation::Get(): invalid ID\n";
+            return 0.0;
+        }
+        else if(cID <= QU_W && !bQuaternion){
+            std::cout<<"Orientation::Get(): trying to get quaternion value when it's not set!\n";
+            return 0.0;
+        }
+        else if(cID == QU_X) return qX;
+        else if(cID == QU_Y) return qY;
+        else if(cID == QU_Z) return qZ;
+        else if(cID == QU_W) return qW;
+        else if(cID <= AA_A && !bAA){
+            std::cout<<"Orientation::Get(): trying to get quaternion value when it's not set!\n";
+            return 0.0;
+        }
+        else if(cID == AA_X) return fX;
+        else if(cID == AA_Y) return fY;
+        else if(cID == AA_Z) return fZ;
+        else if(cID == AA_A) return fAngle;
+        else{
+            std::cout<<"Orientation::Get(): invalid ID\n";
+            return 0.0;
+        }
     }
 };
 
@@ -308,15 +346,15 @@ struct Vector{
     Vector & Rotate(const Orientation & o){
         if(fX == 0.0 && fY == 0.0 && fZ == 0.0) return *this;
 
-        double fTempX = fX * (o.qW * o.qW + o.qX * o.qX - o.qY * o.qY - o.qZ * o.qZ)
-                     + fY * 2.0 * (o.qX * o.qY - o.qZ * o.qW)
-                     + fZ * 2.0 * (o.qX * o.qZ + o.qY * o.qW);
-        double fTempY = fX * 2.0 * (o.qY * o.qX + o.qZ * o.qW)
-                     + fY * (o.qW * o.qW - o.qX * o.qX + o.qY * o.qY - o.qZ * o.qZ)
-                     + fZ * 2.0 * (o.qY * o.qZ - o.qX * o.qW);
-        double fTempZ = fX * 2.0 * (o.qZ * o.qX - o.qY * o.qW)
-                     + fY * 2.0 * (o.qZ * o.qY + o.qX * o.qW)
-                     + fZ * (o.qW * o.qW - o.qX * o.qX - o.qY * o.qY + o.qZ * o.qZ);
+        double fTempX = fX * (o.Get(QU_W) * o.Get(QU_W) + o.Get(QU_X) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_Z))
+                     + fY * 2.0 * (o.Get(QU_X) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_W))
+                     + fZ * 2.0 * (o.Get(QU_X) * o.Get(QU_Z) + o.Get(QU_Y) * o.Get(QU_W));
+        double fTempY = fX * 2.0 * (o.Get(QU_Y) * o.Get(QU_X) + o.Get(QU_Z) * o.Get(QU_W))
+                     + fY * (o.Get(QU_W) * o.Get(QU_W) - o.Get(QU_X) * o.Get(QU_X) + o.Get(QU_Y) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_Z))
+                     + fZ * 2.0 * (o.Get(QU_Y) * o.Get(QU_Z) - o.Get(QU_X) * o.Get(QU_W));
+        double fTempZ = fX * 2.0 * (o.Get(QU_Z) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_W))
+                     + fY * 2.0 * (o.Get(QU_Z) * o.Get(QU_Y) + o.Get(QU_X) * o.Get(QU_W))
+                     + fZ * (o.Get(QU_W) * o.Get(QU_W) - o.Get(QU_X) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_Y) + o.Get(QU_Z) * o.Get(QU_Z));
         fX = std::move(fTempX);
         fY = std::move(fTempY);
         fZ = std::move(fTempZ);
@@ -378,16 +416,16 @@ struct Triples{
 
 struct Face{
     //Binary members
-    Vector vNormal; // from farmboy0
-    double fDistance; // from farmboy0
-    int nMaterialID; //possibly imported as material group!
-    short nAdjacentFaces [3]; // from farmboy0
-    short nIndexVertex[3];  // from farmboy0
+    Vector vNormal;
+    double fDistance = 0.0;
+    int nMaterialID = 0;
+    short nAdjacentFaces [3] = {-1, -1, -1};
+    short nIndexVertex[3] = {-1, -1, -1};
 
     //Added members
-    int nLength = 32;
     int nSmoothingGroup = 1;
     double fArea = 0.0;
+    double fAreaUV = 0.0;
     Vector vTangent;
     Vector vBitangent;
 };
@@ -397,10 +435,10 @@ struct Aabb{
     //binary members
     Vector vBBmin;
     Vector vBBmax;
-    unsigned int nChild1;
-    unsigned int nChild2;
-    int nID; //An index to the face of the walkmesh
-    int nProperty; //0 if no children, otherwise 2^something. I have seen 1 2 4 8 16 32
+    unsigned int nChild1 = 0;
+    unsigned int nChild2 = 0;
+    int nID = -1; //An index to the face of the walkmesh
+    int nProperty = 0;
     // 0x01 = Positive X //from nwntool
     // 0x02 = Positive Y
     // 0x04 = Positive Z
@@ -409,36 +447,35 @@ struct Aabb{
     // 0x20 = Negative Z
 
     //Added members
-    unsigned int nOffset;
+    unsigned int nOffset = 0;
     std::vector<Aabb> Child1;
     std::vector<Aabb> Child2;
-    int nExtra;
+    int nExtra = 0;
 };
 
 struct Controller{
     //Binary members
-    int nControllerType; // MDLOps: Controller type
-    short nUnknown2;
-    unsigned short nValueCount; // MDLOps: rows of data
-    unsigned short nTimekeyStart; // MDLOps: Time start offset
-    unsigned short nDataStart;  // MDLOps: Data start offset
-    char nColumnCount; // MDLOps: columns of data
-    char nPadding [3];  // MDLOps: unknown values
+    int nControllerType = 0; // MDLOps: Controller type
+    short nUnknown2 = -1;
+    unsigned short nValueCount = 0; // MDLOps: rows of data
+    unsigned short nTimekeyStart = 0; // MDLOps: Time start offset
+    unsigned short nDataStart = 0;  // MDLOps: Data start offset
+    char nColumnCount = 0; // MDLOps: columns of data
+    char nPadding [3] = {0, 0, 0};  // MDLOps: unknown values
 
     //Added members
-    int nLength = 16;
-    int nNameIndex;
-    int nAnimation;
+    int nNameIndex = -1;
+    int nAnimation = -1;
 };
 
 struct Sound{
-    double fTime;
-    std::string cName;
+    double fTime = 0.0;
+    std::string sName;
 };
 
 struct Name{
-    unsigned int nOffset;
-    std::string cName;
+    unsigned int nOffset = 0;
+    std::string sName;
 };
 
 struct SaberDataStruct{
@@ -448,36 +485,33 @@ struct SaberDataStruct{
 };
 
 struct VertIndicesStruct{
-    short nValues[3];
+    short nValues[3] = {-1, -1, -1};
 };
 
 struct MDXDataStruct{
-    int nNameIndex;
+    //Binary members
     Vector vVertex;
     Vector vNormal;
     Vector vUV1;
     Vector vUV2;
     Vector vUV3;
     Vector vUV4;
-    //double fUV1[2];
-    //double fUV2[2];
-    //double fUV3[2];
-    //double fUV4[2];
     Vector vTangent1[3];
     Vector vTangent2[3];
     Vector vTangent3[3];
     Vector vTangent4[3];
-    double fSkin1[4];
-    double fSkin2[4];
-    MDXDataStruct(){
-        for(int n = 0; n < 4; n++) fSkin2[n] = -1.0;
-    }
+    double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
+    double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
+
+    //Added members
+    int nNameIndex = -1;
 };
 
 struct ArrayHead{
-    unsigned int nOffset;
-    unsigned int nCount;
-    unsigned int nCount2;
+    unsigned int nOffset = 0;
+    unsigned int nCount = 0;
+    unsigned int nCount2 = 0;
+
     bool GetDoCountsDiffer(){
         if(nCount == nCount2) return false;
         else return true; //We sure don't expect that!
@@ -489,6 +523,10 @@ struct ArrayHead{
         nOffset = 0;
         nCount = nSize;
         nCount2 = nSize;
+    }
+    bool empty(){
+        if(nOffset == 0 && nCount == 0 && nCount2 == 0) return true;
+        return false;
     }
 };
 
@@ -516,21 +554,20 @@ struct Patch{
 };
 
 struct Vertex: public Vector{
-    float fFromRootX;
-    float fFromRootY;
-    float fFromRootZ;
+    float fFromRootX = 0.0;
+    float fFromRootY = 0.0;
+    float fFromRootZ = 0.0;
     MDXDataStruct MDXData;
     int nLinkedFacesIndex = -1;
 };
-bool VerticesEqual(const Vertex & v1, const Vertex & v2);
 
 struct Color{
-    double fR;
-    double fG;
-    double fB;
-    int nR;
-    int nG;
-    int nB;
+    double fR = 0.0;
+    double fG = 0.0;
+    double fB = 0.0;
+    int nR = 0;
+    int nG = 0;
+    int nB = 0;
 
     Color(){}
     Color(double f1, double f2, double f3){
@@ -549,7 +586,6 @@ struct Bone{
     double fBonemap = -1.0;
     Orientation QBone;
     Vector TBone;
-    double fArray8;
 };
 
 /**** NODE ELEMENTS ****/
@@ -557,12 +593,12 @@ struct Bone{
 // if NODE_HAS_HEADER
 struct Header{
     //Binary members
-    unsigned short nType; //Check against NODE_HAS_* constants defined at the top
-    unsigned short nID1;
-    unsigned short nNameIndex;
-    short nUnknownEmpty1;
-    unsigned int nOffsetToRoot; // ???
-    unsigned int nOffsetToParent;
+    unsigned short nType = 0;
+    short nID1 = -1;
+    short nNameIndex = -1;
+    unsigned short nPadding1 = 0;
+    unsigned int nOffsetToRoot = 0; // ???
+    unsigned int nOffsetToParent = 0;
     Vector vPos;
     Orientation oOrient;
     ArrayHead ChildrenArray;
@@ -579,21 +615,21 @@ struct Header{
 // if NODE_HAS_LIGHT
 struct LightHeader{
     //Binary members
-    // According to Farmboy0, the arrays would include the following. Looks plausible.
-    double fFlareRadius;
+    double fFlareRadius = 0.0;
     ArrayHead UnknownArray;
     ArrayHead FlareSizeArray;
     ArrayHead FlarePositionArray;
     ArrayHead FlareColorShiftArray;
     ArrayHead FlareTextureNameArray;
-    int nLightPriority;
-    int nAmbientOnly;
-    int nDynamicType;
-    int nAffectDynamic;
-    int nShadow;
-    int nFlare;
-    int nFadingLight;
+    int nLightPriority = 0;
+    int nAmbientOnly = 0;
+    int nDynamicType = 0;
+    int nAffectDynamic = 0;
+    int nShadow = 0;
+    int nFlare = 0;
+    int nFadingLight = 0;
 
+    //Added members
     std::vector<Name> FlareTextureNames;
     std::vector<Color> FlareColorShifts;
     std::vector<double> FlarePositions;
@@ -627,51 +663,51 @@ struct EmitterHeader{
     20 Flags ??? 220 4? uint32 Maybe this is 2 uint16? Just padding? Render order?
     /***/
     //Binary Members
-    double fDeadSpace;
-    double fBlastRadius;
-    double fBlastLength;
-    unsigned int nBranchCount;
-    double fControlPointSmoothing;
-    unsigned int nxGrid;
-    unsigned int nyGrid;
-    unsigned int nSpawnType;
+    double fDeadSpace = 0.0;
+    double fBlastRadius = 0.0;
+    double fBlastLength = 0.0;
+    unsigned int nBranchCount = 0;
+    double fControlPointSmoothing = 0.0;
+    unsigned int nxGrid = 0;
+    unsigned int nyGrid = 0;
+    unsigned int nSpawnType = 0;
     std::string cUpdate; //32B
     std::string cRender; //32B
     std::string cBlend; //32B
     std::string cTexture; //32B
     std::string cChunkName; //16B
-    unsigned int nTwosidedTex;
-    unsigned int nLoop;
-    unsigned short nUnknown1;
-    unsigned char nFrameBlending;
+    unsigned int nTwosidedTex = 0;
+    unsigned int nLoop = 0;
+    unsigned short nUnknown1 = 0;
+    unsigned char nFrameBlending = 0;
     std::string cDepthTextureName; //32B
-    unsigned char nUnknown2;
-    unsigned int nFlags; //unsure
-
-    //Added Members
-    int nLength = 224;
+    unsigned char nUnknown2 = 0;
+    unsigned int nFlags = 0; //unsure
 };
 
 // if NODE_HAS_MESH
 struct MeshHeader{
     //Binary members
-    unsigned int nFunctionPointer0;
-        /* 4216656 K1, 4216592 K1 SkinMesh, 4216640 K1 DanglyMesh
+    unsigned int nFunctionPointer0 = 0;
+        /* MagnusII:
+         * 4216656 K1, 4216592 K1 SkinMesh, 4216640 K1 DanglyMesh
          * 4216880 K2, 4216816 K2 SkinMesh, 4216864 K2 DanglyMesh
          */
-    unsigned int nFunctionPointer1;
-        /* 4216672 K1, 4216608 K1 SkinMesh, 4216624 K1 DanglyMesh
+    unsigned int nFunctionPointer1 = 0;
+        /* MagnusII:
+         * 4216672 K1, 4216608 K1 SkinMesh, 4216624 K1 DanglyMesh
          * 4216896 K2, 4216832 K2 SkinMesh, 4216848 K2 DanglyMesh
          */
     ArrayHead FaceArray;
     Vector vBBmin;
     Vector vBBmax;
-    double fRadius;
+    double fRadius = 0.0;
     Vector vAverage;
-    Color fDiffuse; //DiffuseColor
-    Color fAmbient; //AmbientColor
-    unsigned int nShininess; //Tentative!
-        /* 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
+    Color fDiffuse;
+    Color fAmbient;
+    unsigned int nShininess = 0;
+        /* MagnusII:
+         * 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
          * Blend Factor, SamplerStageStates, TextureOperation?
          */
     std::string cTexture1;
@@ -689,92 +725,54 @@ struct MeshHeader{
          * 199..101, 200
          * 399..?
          */
-    int nUnknown3 [3]; // -1, -1, 0
-    char nSaberUnknown1; // 3 for non-saber
-    char nSaberUnknown2; // 0 for non-saber
-    char nSaberUnknown3; // 0 for non-saber
-    char nSaberUnknown4; // 0 for non-saber
-    char nSaberUnknown5; // 0 for non-saber
-    char nSaberUnknown6; // 0 for non-saber
-    char nSaberUnknown7; // 0 for non-saber
-    char nSaberUnknown8; // 0 for non-saber, 17 for sabers
-    int nAnimateUV;  // 0
-    double fUVDirectionX; // These four doubles together might be orientation or rotation (per MagnusII)
-    double fUVDirectionY; // But per ndix UR, these are UV animation control values
-    double fUVJitter; // 0
-    double fUVJitterSpeed;
-        /* 0 for most, 1 for water and clouds and
-         * one piece of the GUI
-         * Maybe some sparkle or reflex effects,
-         * or a specular lighting modifier?
-         */
-    int nMdxDataSize; //MDLOps: Mdx Data Size... uhhh what?
-        /* mostly 24, 32, 40, 76 with a smattering of other values
-         * if textures = 0 almost always 24, except 15 models with -1 and 23 with 60
-         * if textures = 1, almost always 32, with several 64 and 68, and a bunch of 100 and 0
-         * if textures = 2, it's either 40 (mostly) or 76
-         */
-    unsigned int nMdxDataBitmap;
-        /* which data is present in MDX
-         * according to MDXDatabits
-         */
-         // Dastardly & LiliArch: to enable bumpmaps, set the first bit of MdxDataBitmap to 1.
-         // Also: "The MDX bump map UV offset is 16 bytes away from the beginning of the
-         // texture uv offset. While you *could* insert extra UV's into the .mdx file then
-         // fix each node's .mdx offset, this is just not needed. Simply set the bump map's
-         // UV offset equal to the texture UV offset."
-    unsigned int nOffsetToVerticesInMDX; // = 0 for most, -1 for lightsabers or when verticescount = 0
-    unsigned int nOffsetToNormalsInMDX; // = 12
-    unsigned int nOffsetToUnknownInMDX; // = -1, never present
-    unsigned int nOffsetToUVsInMDX; //MDLOps: Loc61
-        // = 24 if present
-    unsigned int nOffsetToUV2sInMDX; //MDLOps: Loc62
-        /* -1, 24, 32
-         * if mdxdatasize = 24 then it's always -1
-         * if mdxdatasize = 32 it's almost always -1 except for 14 models where it's 24
-         * if mdxdatasize = 40 or 76 then it's always 32
-         */
-    unsigned int nOffsetToUV3sInMDX; // = -1, never present
-    unsigned int nOffsetToUV4sInMDX; // = -1, never present
-    unsigned int nOffsetToUnknownStructInMDX; //MDLOps: Loc65
-        /* -1, 24, 32, 40
-        * if mdxdatasize = 24 or 32 or 40 then it's always -1
-        * if mdxdatasize = 76 then it's always 40
-        * this is basically whatever info is in the MDX
-        * after the last texture UV coordinates and
-        * before the bones. It is 36 bytes long.
-        * the last three of these values seem to be some sort of
-        * "weighted normals"... they definitely have something
-        * to do with normals as at least one of these triplets
-        * was equal to the normal in c_hutt --> eye01, and the others
-        * have similar values
-        */
-    unsigned int nOffsetToUnusedMDXStructure1; // -1
-    unsigned int nOffsetToUnusedMDXStructure2; // -1
-    unsigned int nOffsetToUnusedMDXStructure3; // -1
-    short nNumberOfVerts; //MDLOps: VertCoordNumber
-    short nTextureNumber; //MDLOps: Texture Number
-        /*
-         * Some relevant nwmax options DarthParametric gathered and tested:
-         * scale, transparencyhint, alpha, render, shadow, rotatetexture, beaming, inheritcolor, tilefade
-         */
-    char nHasLightmap; //0, 1 (per ndix UR, breaks down into two bytes, the first is for lightmaps, the second might be RotateTexture
-    char nRotateTexture;
-    char nBackgroundGeometry; //Apparently always 0 (per ndix UR needs study - further says: BackgroundGeometry)
-    char nShadow; //MDLOps: Shadow
-    char nBeaming; //Apparently always 0, might correspond to beaming in nwn (per ndix UR)
-    char nRender; //MDLOps: Render
-    char nDirtEnabled; //K2
-    char nUnknown1; //K2
-    short nDirtTexture; //K2
-    short nDirtCoordSpace; //K2
-    char nHideInHolograms; //K2
-    char nUnknown2; //K2
-    short nUnknown4;
-    double fTotalArea;
+    int nUnknown3 [3] = {-1, -1, 0};
+    char nSaberUnknown1 = 0; // 3 for non-saber
+    char nSaberUnknown2 = 0; // 0 for non-saber
+    char nSaberUnknown3 = 0; // 0 for non-saber
+    char nSaberUnknown4 = 0; // 0 for non-saber
+    char nSaberUnknown5 = 0; // 0 for non-saber
+    char nSaberUnknown6 = 0; // 0 for non-saber
+    char nSaberUnknown7 = 0; // 0 for non-saber
+    char nSaberUnknown8 = 0; // 0 for non-saber, 17 for sabers
+    int nAnimateUV = 0;
+    double fUVDirectionX = 0.0;
+    double fUVDirectionY = 0.0;
+    double fUVJitter = 0.0;
+    double fUVJitterSpeed = 0.0;
+
+    unsigned int nMdxDataSize = 0;
+    unsigned int nMdxDataBitmap = 0;
+    int nOffsetToVerticesInMDX = -1;
+    int nOffsetToNormalsInMDX = -1;
+    int nOffsetToUnknownInMDX = -1; //never present
+    int nOffsetToUVsInMDX = -1;
+    int nOffsetToUV2sInMDX = -1;
+    int nOffsetToUV3sInMDX = -1; //never present
+    int nOffsetToUV4sInMDX = -1; //never present
+    int nOffsetToTangentSpaceInMDX  = -1;
+    int nOffsetToTangentSpace2InMDX  = -1; //never present
+    int nOffsetToTangentSpace3InMDX  = -1; //never present
+    int nOffsetToTangentSpace4InMDX  = -1; //never present
+
+    unsigned short nNumberOfVerts = 0;
+    unsigned short nTextureNumber = 0;
+    char nHasLightmap = 0;
+    char nRotateTexture = 0;
+    char nBackgroundGeometry = 0;
+    char nShadow = 0;
+    char nBeaming = 0;
+    char nRender = 0;
+    char nDirtEnabled = 0; //K2
+    char nUnknown1 = 0; //K2
+    short nDirtTexture = 0; //K2
+    short nDirtCoordSpace = 0; //K2
+    char nHideInHolograms = 0; //K2
+    char nUnknown2 = 0; //K2
+    short nUnknown4 = 0;
+    double fTotalArea = 0.0;
     unsigned int nPadding = 0;
-    unsigned int nOffsetIntoMdx;
-    unsigned int nOffsetToVertArray;
+    unsigned int nOffsetIntoMdx = 0;
+    unsigned int nOffsetToVertArray = 0;
 
     /*** ndix UR's knowleadge
     # item offset size (bytes) data type notes
@@ -796,10 +794,9 @@ struct MeshHeader{
     std::vector<VertIndicesStruct> VertIndices;
     std::vector<Vertex> Vertices;
     MDXDataStruct MDXData;
-    double fMdxConstant [100];
-    unsigned int nVertIndicesCount;
-    unsigned int nVertIndicesLocation;
-    unsigned int nMeshInvertedCounter;
+    unsigned int nVertIndicesCount = 0;
+    unsigned int nVertIndicesLocation = 0;
+    unsigned int nMeshInvertedCounter = 0;
     char * GetTexture(int nTex){
         if(nTex == 1) return (char*) cTexture1.c_str();
         if(nTex == 2) return (char*) cTexture2.c_str();
@@ -811,40 +808,30 @@ struct MeshHeader{
 
 // if NODE_HAS_SKIN
 struct SkinHeader{
-    int nUnknown1 = 0;
-    int nUnknown2 = 0;
-    int nUnknown3 = 0;
-    int nPointerToStruct1InMDX;
-    int nPointerToStruct2InMDX;
-    unsigned int nOffsetToBonemap;
-    unsigned int nNumberOfBonemap;
+    ArrayHead UnknownArray; //Always 0
+    int nOffsetToWeightValuesInMDX = -1;
+    int nOffsetToBoneIndexInMDX = -1;
+    unsigned int nOffsetToBonemap = 0;
+    unsigned int nNumberOfBonemap = 0;
     ArrayHead QBoneArray;
     ArrayHead TBoneArray;
-    //I believe that this array is empty.
-    //Test this by erasing it to 00s in some skin, then try the model ingame
-    ArrayHead Array8Array;
-    short nBoneIndexes[18];
+    ArrayHead Array8Array; //empty, data irrelevant
+    short nBoneIndexes[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     std::vector<Bone> Bones;
     std::vector<int> BoneNameIndexes;
-    /**
-    INFO about weights from NWMax.
-    the number after "weights" is the number of vertexes of the skin modifier
-    ...whatever, just check aurora_fn_export.ms
-    /**/
 };
 
 // if NODE_HAS_DANGLY
 struct DanglymeshHeader{
     //Binary members
     ArrayHead ConstraintArray;
-    double fDisplacement;
-    double fTightness;
-    double fPeriod;
-    unsigned int nOffsetToData2;
+    double fDisplacement = 0.0;
+    double fTightness = 0.0;
+    double fPeriod = 0.0;
+    unsigned int nOffsetToData2 = 0;
 
     //Added members
-    int nLength = 28;
     std::vector<double> Constraints;
     std::vector<Vector> Data2;
 };
@@ -852,7 +839,7 @@ struct DanglymeshHeader{
 // if NODE_HAS_AABB
 struct WalkmeshHeader{
     //Binary members
-    unsigned int nOffsetToAabb;
+    unsigned int nOffsetToAabb = 0;
 
     //Added members
     std::vector<Aabb> ArrayOfAabb;
@@ -862,21 +849,21 @@ struct WalkmeshHeader{
 // if NODE_HAS_SABER
 struct SaberHeader{
     //Binary members
-    unsigned int nOffsetToSaberData1;
-    unsigned int nOffsetToSaberData2;
-    unsigned int nOffsetToSaberData3;
-    int nInvCount1;
-    int nInvCount2;
+    unsigned int nOffsetToSaberData1 = 0;
+    unsigned int nOffsetToSaberData2 = 0;
+    unsigned int nOffsetToSaberData3 = 0;
+    int nInvCount1 = 0;
+    int nInvCount2 = 0;
 
     //Added members
-    int nNumberOfSaberData;
+    int nNumberOfSaberData = 0;
     std::vector<SaberDataStruct> SaberData;
 };
 
 struct Node{
-    unsigned int nOffset;
-    unsigned int nSize;
-    int nAnimation;
+    unsigned int nOffset = 0;
+    //unsigned int nSize;
+    int nAnimation = -1;
 
     Header Head;
     LightHeader Light;
@@ -887,7 +874,7 @@ struct Node{
     WalkmeshHeader Walkmesh;
     SaberHeader Saber;
 
-    //Node * Parent = nullptr; //Only to be used during compilation to make life easier
+    std::string & GetName();
     Location GetLocation(){
         Location location;
 
@@ -917,8 +904,7 @@ struct Node{
                                                     Head.ControllerData.at(orictrl.nDataStart + 3));
             }
             else if(orictrl.nColumnCount == 2){
-                location.oOrientation.nCompressed = Head.ControllerData.at(orictrl.nDataStart);
-                location.oOrientation.Decompress();
+                location.oOrientation.Decompress((unsigned int) Head.ControllerData.at(orictrl.nDataStart));
             }
             location.oOrientation.ConvertToAA();
         }
@@ -931,59 +917,55 @@ struct Node{
 
 struct Animation{
     //Binary members
-    //Geoheader part
-    unsigned int nFunctionPointer0;
-    unsigned int nFunctionPointer1;
-    std::string cName;
-    unsigned int nOffsetToRootAnimationNode;
-    unsigned int nNumberOfObjects; //(same as number of names and nodes, why?)
-    int nUnknownEmpty3 [6];
-    int nUnknownEmpty4;
-    unsigned char nModelType; //??
-    unsigned char nPadding [3]; //??
 
-    //Animation-specific part
-    double fLength; //According to ascii, the Length
-    double fTransition; //According to farmboy0, transition //MDLOps :Trans Time
-    std::string cName2; //Name of parent? owner? MDLOps: AnimRoot
+    /// Geoheader part
+    unsigned int nFunctionPointer0 = 0;
+    unsigned int nFunctionPointer1 = 0;
+    std::string sName;
+    unsigned int nOffsetToRootAnimationNode = 0;
+    unsigned int nNumberOfObjects = 0;
+    ArrayHead RuntimeArray1; //Always 0
+    ArrayHead RuntimeArray2; //Always 0
+    unsigned int nRefCount = 0; //Always 0
+    unsigned char nModelType = 5; //1 - geometry, 2 - model, 5 - animation
+    unsigned char nPadding [3] = {0, 0, 0};
+
+    /// Animation-specific part
+    double fLength = 0.0;
+    double fTransition = 0.0;
+    std::string sAnimRoot;
     ArrayHead SoundArray; //MDLOps: events
-    int nUnknownEmpty6;
+    unsigned int nPadding2 = 0; //Always 0
 
     //Added members
-    int nNodeCount;
-    unsigned int nOffset;
-    int nLength = 136; //Header, not the whole thing
-    std::vector<Sound> Sounds;
+    unsigned int nOffset = 0;
     Node RootAnimationNode;
-    //std::vector<Node*> ArrayOfNodePointers;
+    std::vector<Sound> Sounds;
     std::vector<Node> ArrayOfNodes;
 };
 
 struct GeometryHeader{
     //Binary members
-    unsigned int nFunctionPointer0;
-    unsigned int nFunctionPointer1;
-    std::string cName;
-    unsigned int nOffsetToRootNode; //Root Node or AuroraBase
-    //It turns out that the following can sometimes be different than the other node counters. This is the "TotalNodeCount" (MDLOps)
-    unsigned int nTotalNumberOfNodes; // Total number of nodes = Number of nodes in this model + Total number of nodes in supermodel + 1
-    int nUnknownEmpty [6];
-    int nRefCount; //?? is it?
-    unsigned char nModelType; //??
-    unsigned char nPadding [3]; //??
-
-    //Added members
-    int nLength = 80;
+    unsigned int nFunctionPointer0 = 0;
+    unsigned int nFunctionPointer1 = 0;
+    std::string sName;
+    unsigned int nOffsetToRootNode = 0;
+    unsigned int nTotalNumberOfNodes = 0; // Total number of nodes = Number of nodes in this model + Total number of nodes in supermodel + 1
+    ArrayHead RuntimeArray1; //Always 0
+    ArrayHead RuntimeArray2; //Always 0
+    unsigned int nRefCount = 0;  //Always 0
+    unsigned char nModelType = 2; //1 - geometry, 2 - model, 5 - animation
+    unsigned char nPadding[3] = {0, 0, 0};
 };
 
 struct ModelHeader{
     //Binary members
-    char nClassification;
-    char nUnknown1 [3];
-    unsigned int nChildModelCount; //??
+    unsigned char nClassification = 0;
+    unsigned char nUnknown1 [3] = {0, 0, 1};
+    unsigned int nChildModelCount = 0; //Always 0
     ArrayHead AnimationArray;
 
-    unsigned int nUnknown2;
+    unsigned int nSupermodelReference = 0;
     /*Pointer to supermodel?
     Always present when there is a supermodel
     but very variable, models sharing a supermodel
@@ -991,21 +973,20 @@ struct ModelHeader{
     */
     Vector vBBmin;
     Vector vBBmax;
-    double fRadius;
-    double fScale; //MDLOps: Animation Scale
+    double fRadius = 0.0;
+    double fScale = 0.0;
     std::string cSupermodelName;
-    unsigned int nOffsetToHeadRootNode; //This one does not always refer to the root node !!!!!! Check handmaiden's head!
-    int nUnknownEmpty3;
-    unsigned int nMdxLength2;
-    unsigned int nOffsetIntoMdx;
+    unsigned int nOffsetToHeadRootNode;
+    int nUnknown2 = 0; //Always 0
+    unsigned int nMdxLength2 = 0;
+    unsigned int nOffsetIntoMdx = 0; //Always 0
     ArrayHead NameArray;
 
     //Added members
-    int nLength = 116; //Without geometry header and file header
     GeometryHeader GH;
+    Node RootNode;
     std::vector<Animation> Animations;
     std::vector<Name> Names;
-    Node RootNode;
     std::vector<Node> ArrayOfNodes;
     std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
     std::vector<std::vector<Patch>> PatchArrayPointers;
@@ -1013,12 +994,11 @@ struct ModelHeader{
 
 struct FileHeader{
     //Binary members
-    unsigned int nID; //Always 00 00 00 00
-    unsigned int nMdlLength; //Not exact
-    unsigned int nMdxLength; //Not exact
+    unsigned int nZero; //Always 0
+    unsigned int nMdlLength;
+    unsigned int nMdxLength;
 
     //Added members
-    int nLength = 12;
     ModelHeader MH;
 };
 
@@ -1237,7 +1217,7 @@ class MDL: public BinaryFile{
     void FillBinaryFields(Node & NODE, int & nMeshCounter);
 
     //Calculating
-    void CreatePatches();
+    void CreatePatches(int & nNumOfVerts, int & nNumOfTS, bool bPrint);
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
@@ -1257,6 +1237,7 @@ class MDL: public BinaryFile{
   public:
     //Friends
     friend Ascii;
+    friend Node;
     friend void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer);
 
     //Version
@@ -1285,7 +1266,7 @@ class MDL: public BinaryFile{
     bool HeadLinked(){
         for(int n = 0; n < FH[0].MH.ArrayOfNodes.size(); n++){
             if(FH[0].MH.ArrayOfNodes.at(n).nOffset == FH[0].MH.nOffsetToHeadRootNode){
-                if(FH[0].MH.Names.at(FH[0].MH.ArrayOfNodes.at(n).Head.nNameIndex).cName == "neck_g") return true;
+                if(FH[0].MH.Names.at(FH[0].MH.ArrayOfNodes.at(n).Head.nNameIndex).sName == "neck_g") return true;
                 else return false;
             }
         }
@@ -1311,7 +1292,7 @@ class MDL: public BinaryFile{
         if(bLink){
             int nNameIndex = -1;
             for(int n = 0; n < FH[0].MH.Names.size() && nNameIndex == -1; n++){
-                if(FH[0].MH.Names.at(n).cName == "neck_g") nNameIndex = n;
+                if(FH[0].MH.Names.at(n).sName == "neck_g") nNameIndex = n;
             }
             if(nNameIndex != -1){
                 nOffset = GetNodeByNameIndex(nNameIndex).nOffset;

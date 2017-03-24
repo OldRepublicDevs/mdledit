@@ -30,7 +30,7 @@ void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[1] == "Animations")){
         Animation * anim = (Animation*) lParam;
 
-        sName<<"animation "<<anim->cName;
+        sName<<"animation "<<anim->sName;
         ConvertToAscii(CONVERT_ANIMATION, sPrint, (void*) lParam);
 
         DialogWindow ctrldata;
@@ -44,7 +44,7 @@ void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName<<"animated node "<<FH[0].MH.Names[node->Head.nNameIndex].cName;
+        sName<<"animated node "<<FH[0].MH.Names[node->Head.nNameIndex].sName;
         ConvertToAscii(CONVERT_ANIMATION_NODE, sPrint, (void*) lParam);
         ConvertToAscii(CONVERT_ENDNODE, sPrint, (void*) lParam);
 
@@ -59,7 +59,7 @@ void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName<<"node "<<FH[0].MH.Names[node->Head.nNameIndex].cName;
+        sName<<"node "<<FH[0].MH.Names[node->Head.nNameIndex].sName;
         sPrint<<"";
         //sPrint = "";
         ConvertToAscii(CONVERT_HEADER, sPrint, (void*) lParam);
@@ -107,13 +107,13 @@ void MDL::OpenViewer(std::vector<std::string>cItem, LPARAM lParam){
             sLocation = "geometry";
         }
         else{
-            sLocation = "animation '" + std::string(FH[0].MH.Animations[ctrl->nAnimation].cName.c_str()) + "'";
+            sLocation = "animation '" + std::string(FH[0].MH.Animations[ctrl->nAnimation].sName.c_str()) + "'";
         }
         std::string sController = ReturnControllerName(ctrl->nControllerType, GetNodeByNameIndex(ctrl->nNameIndex).Head.nType);
         if(ctrl->nColumnCount & 16) sController+="bezierkey";
         else if(ctrl->nAnimation != -1) sController+="key";
-        sName<<sLocation<<" > node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' > controller '"<<sController<<"'";
-        //sName<<"controller '"<<sController<<"' in node '"<<FH[0].MH.Names[ctrl->nNameIndex].cName<<"' in "<<sLocation;
+        sName<<sLocation<<" > node '"<<FH[0].MH.Names[ctrl->nNameIndex].sName<<"' > controller '"<<sController<<"'";
+        //sName<<"controller '"<<sController<<"' in node '"<<FH[0].MH.Names[ctrl->nNameIndex].sName<<"' in "<<sLocation;
         if(!(cItem[3] == "Geometry")){
             ConvertToAscii(CONVERT_CONTROLLER_KEYED, sPrint, (void*) lParam);
         }

@@ -73,14 +73,10 @@ void BinaryFile::WriteByte(char cByte, int nKnown){
 void MDL::GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes){
     NODE.Head.Children.resize(0); //Reset child array
     NODE.Head.Children.reserve(ArrayOfNodes.size());
-    //std::cout<<"Gathering children...\n";
     for(int n = 0; n < ArrayOfNodes.size(); n++){
-        //std::cout<<"Running loop "<<n<<" of "<<ArrayOfNodes.size()<<", comparing current index "<<NODE.Head.nNameIndex<<" to child's parent index "<<ArrayOfNodes[n].Head.nParentIndex<<".\n";
+        //std::cout<<"comparing current index "<<NODE.Head.nNameIndex<<" to child's parent index "<<ArrayOfNodes[n].Head.nParentIndex<<".\n";
         if(ArrayOfNodes[n].Head.nParentIndex == NODE.Head.nNameIndex){
-            //std::cout<<"Found a child!\n";
-
             //The nodes with this index is a child, adopt it
-
             NODE.Head.Children.push_back(ArrayOfNodes[n]);
             GatherChildren(NODE.Head.Children.back(), ArrayOfNodes);
         }
@@ -88,9 +84,6 @@ void MDL::GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes){
     NODE.Head.Children.shrink_to_fit();
     NODE.Head.ChildrenArray.ResetToSize(NODE.Head.Children.size());
     GetNodeByNameIndex(NODE.Head.nNameIndex, NODE.nAnimation).Head.ChildrenArray.ResetToSize(NODE.Head.Children.size());
-    //std::cout<<"I am adopted node "<<NODE.Head.nNameIndex<<" and my parent is "<<NODE.Head.nParentIndex<<".\n";
-    //std::cout<<"I am adopted node "<<NODE.Head.nNameIndex<<" and my animation is "<<NODE.nAnimation<<".\n";
-    //std::cout<<"Final number of children: "<<NODE.Head.Children.size()<<"\n";
 }
 
 void MDL::FillBinaryFields(Node & NODE, int & nMeshCounter){
@@ -110,7 +103,6 @@ void MDL::FillBinaryFields(Node & NODE, int & nMeshCounter){
         int Quo = nMeshCounter/100;
         int Mod = nMeshCounter%100;
         NODE.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
-        //std::cout<<"Inverted counter: "<<NODE.Mesh.nMeshInvertedCounter<<".\n";
 
 
         if(!(NODE.Head.nType & NODE_HAS_SABER)) NODE.Mesh.IndexCounterArray.ResetToSize(1);
@@ -153,29 +145,29 @@ void MDL::FillBinaryFields(Node & NODE, int & nMeshCounter){
         }
         else NODE.Mesh.nOffsetToUV4sInMDX = -1;
         if(NODE.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-            NODE.Mesh.nOffsetToUnknownStructInMDX = nMDXsize;
+            NODE.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
             nMDXsize += 36;
         }
-        else NODE.Mesh.nOffsetToUnknownStructInMDX = -1;
+        else NODE.Mesh.nOffsetToTangentSpaceInMDX = -1;
         if(NODE.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-            NODE.Mesh.nOffsetToUnusedMDXStructure1 = nMDXsize;
+            NODE.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
             nMDXsize += 36;
         }
-        else NODE.Mesh.nOffsetToUnusedMDXStructure1 = -1;
+        else NODE.Mesh.nOffsetToTangentSpace2InMDX = -1;
         if(NODE.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-            NODE.Mesh.nOffsetToUnusedMDXStructure2 = nMDXsize;
+            NODE.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
             nMDXsize += 36;
         }
-        else NODE.Mesh.nOffsetToUnusedMDXStructure2 = -1;
+        else NODE.Mesh.nOffsetToTangentSpace3InMDX = -1;
         if(NODE.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-            NODE.Mesh.nOffsetToUnusedMDXStructure3 = nMDXsize;
+            NODE.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
             nMDXsize += 36;
         }
-        else NODE.Mesh.nOffsetToUnusedMDXStructure3 = -1;
+        else NODE.Mesh.nOffsetToTangentSpace4InMDX = -1;
         if(NODE.Head.nType & NODE_HAS_SKIN){
-            NODE.Skin.nPointerToStruct1InMDX = nMDXsize;
+            NODE.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
             nMDXsize += 16;
-            NODE.Skin.nPointerToStruct2InMDX = nMDXsize;
+            NODE.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
             nMDXsize += 16;
         }
         NODE.Mesh.nMdxDataSize = nMDXsize;
@@ -421,7 +413,7 @@ void MDL::PrepareForBinary(){
     Data.MH.nUnknown2 = 0;
 
     //This will take a while
-    CreatePatches();
+    //CreatePatches();
 
     int nMeshCounter = 0;
     //Take care of animations and their nodes
@@ -499,8 +491,8 @@ bool MDL::Compile(){
     //GeoHeader
     WriteInt(Data->MH.GH.nFunctionPointer0, 6);
     WriteInt(Data->MH.GH.nFunctionPointer1, 6);
-    Data->MH.GH.cName.resize(32);
-    WriteString(Data->MH.GH.cName, 3);
+    Data->MH.GH.sName.resize(32);
+    WriteString(Data->MH.GH.sName, 3);
 
     int PHnOffsetToRootNode = nPosition;
     WriteInt(0xFFFFFFFF, 6);
@@ -573,7 +565,7 @@ bool MDL::Compile(){
     }
     for(int c = 0; c < Data->MH.Names.size(); c++){
         WriteIntToPH(nPosition - 12, PHnOffsetToName.at(c), Data->MH.Names.at(c).nOffset);
-        WriteString(Data->MH.Names[c].cName.c_str(), 3);
+        WriteString(Data->MH.Names[c].sName.c_str(), 3);
         WriteByte(0, 3);
     }
 
@@ -590,8 +582,8 @@ bool MDL::Compile(){
         WriteIntToPH(nPosition - 12, pnOffsetsToAnimation[c], Data->MH.Animations[c].nOffset);
         WriteInt(anim.nFunctionPointer0, 6);
         WriteInt(anim.nFunctionPointer1, 6);
-        anim.cName.resize(32);
-        WriteString(anim.cName, 3);
+        anim.sName.resize(32);
+        WriteString(anim.sName, 3);
         int PHnOffsetToFirstNode = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(anim.nNumberOfObjects, 1);
@@ -612,8 +604,8 @@ bool MDL::Compile(){
         WriteFloat(anim.fLength, 2);
         WriteFloat(anim.fTransition, 2);
 
-        anim.cName2.resize(32);
-        WriteString(anim.cName2, 3);
+        anim.sAnimRoot.resize(32);
+        WriteString(anim.sAnimRoot, 3);
 
         int PHnOffsetToSoundArray = nPosition;
         WriteInt(0xFFFFFFFF, 6);
@@ -624,8 +616,8 @@ bool MDL::Compile(){
             WriteIntToPH(nPosition - 12, PHnOffsetToSoundArray, Data->MH.Animations[c].SoundArray.nOffset);
             for(int b = 0; b < anim.Sounds.size(); b++){
                 WriteFloat(anim.Sounds[b].fTime, 2);
-                anim.Sounds[b].cName.resize(32);
-                WriteString(anim.Sounds[b].cName, 3);
+                anim.Sounds[b].sName.resize(32);
+                WriteString(anim.Sounds[b].sName, 3);
             }
         }
         else{
@@ -708,10 +700,10 @@ void MDL::WriteNodes(Node & node){
 
     //Write orientation - convert first
     node.Head.oOrient.ConvertToQuaternions();
-    WriteFloat(node.Head.oOrient.qW, 2);
-    WriteFloat(node.Head.oOrient.qX, 2);
-    WriteFloat(node.Head.oOrient.qY, 2);
-    WriteFloat(node.Head.oOrient.qZ, 2);
+    WriteFloat(node.Head.oOrient.Get(QU_W), 2);
+    WriteFloat(node.Head.oOrient.Get(QU_X), 2);
+    WriteFloat(node.Head.oOrient.Get(QU_Y), 2);
+    WriteFloat(node.Head.oOrient.Get(QU_Z), 2);
 
     //Children Array
     int PHnOffsetToChildren = nPosition;
@@ -904,10 +896,10 @@ void MDL::WriteNodes(Node & node){
         WriteInt(node.Mesh.nOffsetToUV2sInMDX, 6);
         WriteInt(node.Mesh.nOffsetToUV3sInMDX, 6);
         WriteInt(node.Mesh.nOffsetToUV4sInMDX, 6);
-        WriteInt(node.Mesh.nOffsetToUnknownStructInMDX, 6);
-        WriteInt(node.Mesh.nOffsetToUnusedMDXStructure1, 6);
-        WriteInt(node.Mesh.nOffsetToUnusedMDXStructure2, 6);
-        WriteInt(node.Mesh.nOffsetToUnusedMDXStructure3, 6);
+        WriteInt(node.Mesh.nOffsetToTangentSpaceInMDX, 6);
+        WriteInt(node.Mesh.nOffsetToTangentSpace2InMDX, 6);
+        WriteInt(node.Mesh.nOffsetToTangentSpace3InMDX, 6);
+        WriteInt(node.Mesh.nOffsetToTangentSpace4InMDX, 6);
 
         WriteInt(node.Mesh.nNumberOfVerts, 1, 2);
         WriteInt(node.Mesh.nTextureNumber, 4, 2);
@@ -943,8 +935,8 @@ void MDL::WriteNodes(Node & node){
         WriteInt(0, 10); //Unknown int32
         WriteInt(0, 10); //Unknown int32
         WriteInt(0, 10); //Unknown int32
-        WriteInt(node.Skin.nPointerToStruct1InMDX, 6);
-        WriteInt(node.Skin.nPointerToStruct2InMDX, 6);
+        WriteInt(node.Skin.nOffsetToWeightValuesInMDX, 6);
+        WriteInt(node.Skin.nOffsetToBoneIndexInMDX, 6);
         PHnOffsetToBonemap = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Skin.nNumberOfBonemap, 1);
@@ -1051,10 +1043,10 @@ void MDL::WriteNodes(Node & node){
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToQBones, GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Skin.QBoneArray.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteFloat(node.Skin.Bones.at(d).QBone.qW, 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.qX, 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.qY, 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.qZ, 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_W), 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_X), 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_Y), 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_Z), 2);
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToTBones, GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Skin.TBoneArray.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
@@ -1145,14 +1137,14 @@ void MDL::WriteNodes(Node & node){
                 Mdx.WriteFloat(vert.MDXData.vTangent4[2].fZ, 2);
             }
             if(node.Head.nType & NODE_HAS_SKIN){
-                Mdx.WriteFloat(vert.MDXData.fSkin1[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin1[1], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin1[2], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin1[3], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin2[0], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin2[1], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin2[2], 2);
-                Mdx.WriteFloat(vert.MDXData.fSkin2[3], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightValue[0], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightValue[1], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightValue[2], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightValue[3], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightIndex[0], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightIndex[1], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightIndex[2], 2);
+                Mdx.WriteFloat(vert.MDXData.fWeightIndex[3], 2);
             }
         }
 
@@ -1272,7 +1264,7 @@ void MDL::WriteNodes(Node & node){
         }
         for(int d = 0; d < node.Light.FlareTextureNames.size(); d++){
             WriteIntToPH(nPosition - 12, PHnTextureNameOffset.at(d), GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Light.FlareTextureNames.at(d).nOffset);
-            WriteString(node.Light.FlareTextureNames.at(d).cName.c_str(), 3);
+            WriteString(node.Light.FlareTextureNames.at(d).sName.c_str(), 3);
             WriteByte(0, 3);
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToFlareSizes, GetNodeByNameIndex(node.Head.nNameIndex, node.nAnimation).Light.FlareSizeArray.nOffset);

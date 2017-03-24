@@ -7,10 +7,24 @@ void File::SetFilePath(std::string & sPath){
     sFile.resize(strlen(sFile.c_str()));
 }
 
+
+std::string & Node::GetName(){
+    return Model.FH.at(0).MH.Names.at(Head.nNameIndex).sName;
+}
+
 /// This file should be a general initializer/implementator of MDL.h
 const std::string MDL::sName = "MDL";
 const std::string MDX::sName = "MDX";
 const std::string WOK::sName = "WOK";
+
+const char QU_X = 0x01;
+const char QU_Y = 0x02;
+const char QU_Z = 0x03;
+const char QU_W = 0x04;
+const char AA_X = 0x05;
+const char AA_Y = 0x06;
+const char AA_Z = 0x07;
+const char AA_A = 0x08;
 
 Vector operator*(Vector v, const Matrix22 & m){
     v *= m;
@@ -68,13 +82,17 @@ double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
     return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
 }
 
-void MDL::CreatePatches(){
+/// This function is to be used both when compiling and decompiling (to determine smoothing groups)
+void MDL::CreatePatches(int & nNumOfVerts, int & nNumOfTS, bool bPrint){//, std::ofstream & file){
+    //if(!file.is_open()) bPrint = false;
     FileHeader & Data = FH[0];
+
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
             Node & node = Data.MH.ArrayOfNodes.at(n);
+
             for(int v = 0; v < node.Mesh.Vertices.size(); v++){
                 //For every vertex of every mesh
 
@@ -161,11 +179,13 @@ void MDL::CheckPeculiarities(){
     std::stringstream ssReturn;
     bool bUpdate = false;
     ssReturn<<"Lucky you! Your model has some rare peculiarities:";
-    for(int n = 0; n < 6; n++){
-        if(Data->MH.GH.nUnknownEmpty[n] != 0){
-            ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the GH has a value!";
-            bUpdate = true;
-        }
+    if(!Data->MH.GH.RuntimeArray1.empty()){
+        ssReturn<<"\r\n - First empty runtime array in the GH has a some nonzero value!";
+        bUpdate = true;
+    }
+    if(!Data->MH.GH.RuntimeArray2.empty()){
+        ssReturn<<"\r\n - Second empty runtime array in the GH has a some nonzero value!";
+        bUpdate = true;
     }
     if(Data->MH.GH.nRefCount != 0){
         ssReturn<<"\r\n - RefCount has a value!";
@@ -183,8 +203,8 @@ void MDL::CheckPeculiarities(){
         ssReturn<<"\r\n - AnimationArray counts differ!";
         bUpdate = true;
     }
-    if(Data->MH.nUnknownEmpty3 != 0){
-        ssReturn<<"\r\n - Unknown int32 after the Root Node Offset 2 in the MH has a value!";
+    if(Data->MH.nUnknown2 != 0){
+        ssReturn<<"\r\n - Unknown int32 after the Root Head Node Offset in the MH has a value!";
         bUpdate = true;
     }
     if(Data->MH.nMdxLength2 != Data->nMdxLength){
@@ -200,26 +220,28 @@ void MDL::CheckPeculiarities(){
         bUpdate = true;
     }
     for(int a = 0; a < Data->MH.AnimationArray.nCount; a++){
-        for(int n = 0; n < 6; n++){
-            if(Data->MH.Animations[a].nUnknownEmpty3[n] != 0){
-                ssReturn<<"\r\n - Int "<<n<<" in the array of 6 zero int32s in the Animation GH has a value!";
-                bUpdate = true;
-            }
+        if(!Data->MH.GH.RuntimeArray1.empty()){
+            ssReturn<<"\r\n   - First empty runtime array in the Animation GH has a some nonzero value!";
+            bUpdate = true;
         }
-        if(Data->MH.Animations[a].nUnknownEmpty4 != 0){
-            ssReturn<<"\r\n - Animation counterpart to RefCount has a value!";
+        if(!Data->MH.GH.RuntimeArray2.empty()){
+            ssReturn<<"\r\n   - Second empty runtime array in the Animation GH has a some nonzero value!";
+            bUpdate = true;
+        }
+        if(Data->MH.Animations[a].nRefCount != 0){
+            ssReturn<<"\r\n   - Animation counterpart to RefCount has a value!";
             bUpdate = true;
         }
         if(Data->MH.Animations[a].SoundArray.GetDoCountsDiffer()){
-            ssReturn<<"\r\n - SoundArray counts differ!";
+            ssReturn<<"\r\n   - SoundArray counts differ!";
             bUpdate = true;
         }
-        if(Data->MH.Animations[a].nUnknownEmpty6 != 0){
-            ssReturn<<"\r\n - Unknown int32 after SoundArrayHead has a value!";
+        if(Data->MH.Animations[a].nPadding2 != 0){
+            ssReturn<<"\r\n   - Unknown int32 after SoundArrayHead has a value!";
             bUpdate = true;
         }
         if(Data->MH.Animations[a].nModelType != 5){
-            ssReturn<<"\r\n - Animation ModelType is not 5!";
+            ssReturn<<"\r\n   - Animation ModelType is not 5!";
             bUpdate = true;
         }
         if(CheckNodes(Data->MH.Animations[a].ArrayOfNodes, ssReturn, a)) bUpdate = true;
@@ -234,174 +256,158 @@ void MDL::CheckPeculiarities(){
 
 bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, int nAnimation){
     bool bMasterUpdate = false;
-for(int b = 0; b < NodeArray.size(); b++){
-    bool bUpdate = false;
-    std::stringstream ssAdd;
-    std::string sCont;
-    if(nAnimation == -1) sCont = "geometry";
-    else sCont = FH[0].MH.Animations.at(nAnimation).cName.c_str();
-    ssAdd<<"\r\n - "<<FH[0].MH.Names[NodeArray[b].Head.nNameIndex].cName<<" ("<<NodeArray[b].Head.nType<<", "<<sCont<<")";
-    if(NodeArray[b].Head.nType & NODE_HAS_HEADER){
-        if(NodeArray[b].Head.nUnknownEmpty1 != 0){
-            ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Head.ChildrenArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - ChildArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Head.ControllerArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - ControllerArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Head.ControllerDataArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - ControllerDataArray counts differ!";
-            bUpdate = true;
-        }
-        for(int c = 0; c < NodeArray[b].Head.Controllers.size(); c++){
-            Controller & ctrl = NodeArray.at(b).Head.Controllers.at(c);
+    for(int b = 0; b < NodeArray.size(); b++){
+        bool bUpdate = false;
+        std::stringstream ssAdd;
+        std::string sCont;
+        if(nAnimation == -1) sCont = "geometry";
+        else sCont = FH[0].MH.Animations.at(nAnimation).sName.c_str();
+        ssAdd<<"\r\n - "<<FH[0].MH.Names[NodeArray[b].Head.nNameIndex].sName<<" ("<<NodeArray[b].Head.nType<<", "<<sCont<<")";
+        if(NodeArray[b].Head.nType & NODE_HAS_HEADER){
+            if(NodeArray[b].Head.nPadding1 != 0){
+                ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Head.ChildrenArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - ChildArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Head.ControllerArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - ControllerArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Head.ControllerDataArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - ControllerDataArray counts differ!";
+                bUpdate = true;
+            }
+            for(int c = 0; c < NodeArray[b].Head.Controllers.size(); c++){
+                Controller & ctrl = NodeArray.at(b).Head.Controllers.at(c);
 
-            /***
-                This if for checking controller "padding" values. These numbers are in no way random.
-                Header and light controllers always have 0, while emitter and mesh controllers have it greater than 0.
-                In keyed controllers, light and emitter seem to group together against header and mesh.
-                Selfillumcolor usually has the same padding values as scale, but they are different
-                in for example: n_admrlsaulkar or 003ebof
-            /**/
-            if(ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
-               ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
-               ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
-                (ctrl.nPadding[0] == 12 &&
-                 ctrl.nPadding[1] == 76 &&
-                 ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION && ctrl.nAnimation == -1 &&
-                     (ctrl.nPadding[0] == -59 &&
-                      ctrl.nPadding[1] == 73 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if(ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
-                     (ctrl.nPadding[0] == 49 &&
-                      ctrl.nPadding[1] == 18 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_LIGHT_COLOR || ctrl.nControllerType==CONTROLLER_LIGHT_MULTIPLIER || ctrl.nControllerType==CONTROLLER_LIGHT_RADIUS ||
-                      ctrl.nControllerType==CONTROLLER_LIGHT_SHADOWRADIUS || ctrl.nControllerType==CONTROLLER_LIGHT_VERTICALDISPLACEMENT) && ctrl.nAnimation == -1 &&
-                     (ctrl.nPadding[0] == -5 &&
-                      ctrl.nPadding[1] == 54 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
-                      ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
-                      ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
-                      GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
-                     (ctrl.nPadding[0] == 50 &&
-                      ctrl.nPadding[1] == 18 &&
-                      ctrl.nPadding[2] == 0   )){}
-            else if(  ctrl.nAnimation != -1 &&
-                     (ctrl.nPadding[0] == 51 &&
-                      ctrl.nPadding[1] == 18 &&
-                      ctrl.nPadding[2] == 0   )){}
-            /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
-            else if( (GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_EMITTER ||
-                      GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
-                      ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
-            else{
-                ssAdd<<"\r\n     - Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
+                /***
+                    This if for checking controller "padding" values. These numbers are in no way random.
+                    Header and light controllers always have 0 for the third number, while emitter and mesh controllers have it greater than 0.
+                    In keyed controllers, light and emitter seem to group together against header and mesh.
+                    Selfillumcolor usually has the same padding values as scale, but they are different
+                    in for example: n_admrlsaulkar or 003ebof
+                /**/
+                if(ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
+                   ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
+                   ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
+                    (ctrl.nPadding[0] == 12 &&
+                     ctrl.nPadding[1] == 76 &&
+                     ctrl.nPadding[2] == 0   )){}
+                else if(ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION && ctrl.nAnimation == -1 &&
+                         (ctrl.nPadding[0] == -59 &&
+                          ctrl.nPadding[1] == 73 &&
+                          ctrl.nPadding[2] == 0   )){}
+                else if(ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
+                         (ctrl.nPadding[0] == 49 &&
+                          ctrl.nPadding[1] == 18 &&
+                          ctrl.nPadding[2] == 0   )){}
+                else if( (ctrl.nControllerType==CONTROLLER_LIGHT_COLOR || ctrl.nControllerType==CONTROLLER_LIGHT_MULTIPLIER || ctrl.nControllerType==CONTROLLER_LIGHT_RADIUS ||
+                          ctrl.nControllerType==CONTROLLER_LIGHT_SHADOWRADIUS || ctrl.nControllerType==CONTROLLER_LIGHT_VERTICALDISPLACEMENT) && ctrl.nAnimation == -1 &&
+                         (ctrl.nPadding[0] == -5 &&
+                          ctrl.nPadding[1] == 54 &&
+                          ctrl.nPadding[2] == 0   )){}
+                else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
+                          ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
+                          ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
+                          GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
+                         (ctrl.nPadding[0] == 50 &&
+                          ctrl.nPadding[1] == 18 &&
+                          ctrl.nPadding[2] == 0   )){}
+                else if(  ctrl.nAnimation != -1 &&
+                         (ctrl.nPadding[0] == 51 &&
+                          ctrl.nPadding[1] == 18 &&
+                          ctrl.nPadding[2] == 0   )){}
+                /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
+                else if( (GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_EMITTER ||
+                          GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
+                          ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
+                else{
+                    ssAdd<<"\r\n     - Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
+                    bUpdate = true;
+                }
+            }
+        }
+        if(NodeArray[b].Head.nType & NODE_HAS_LIGHT){
+            if(NodeArray[b].Light.UnknownArray.nCount != 0){
+                ssAdd<<"\r\n     - Light: Unknown array not empty!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Light.FlareSizeArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - FlareSizeArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Light.FlarePositionArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - FlarePositionArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Light.FlareColorShiftArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - FlareColorShiftArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Light.FlareTextureNameArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - FlareTextureNameArray counts differ!";
                 bUpdate = true;
             }
         }
-    }
-    if(NodeArray[b].Head.nType & NODE_HAS_LIGHT){
-        if(NodeArray[b].Light.UnknownArray.nCount != 0){
-            ssAdd<<"\r\n     - Light: Unknown array not empty!";
-            bUpdate = true;
+        if(NodeArray[b].Head.nType & NODE_HAS_EMITTER){
+            if(NodeArray[b].Emitter.nUnknown1 != 0){
+                ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
+                bUpdate = true;
+            }
         }
-        if(NodeArray[b].Light.FlareSizeArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - FlareSizeArray counts differ!";
-            bUpdate = true;
+        if(NodeArray[b].Head.nType & NODE_HAS_MESH){
+            if(NodeArray[b].Mesh.nUnknown3[0] != -1 || NodeArray[b].Mesh.nUnknown3[1] != -1 || NodeArray[b].Mesh.nUnknown3[2] != 0){
+                ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Mesh.FaceArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - FaceArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Mesh.IndexCounterArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - IndexCounterArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Mesh.IndexLocationArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - IndexLocationArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Mesh.MeshInvertedCounterArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - MeshInvertedCounterArray counts differ!";
+                bUpdate = true;
+            }
         }
-        if(NodeArray[b].Light.FlarePositionArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - FlarePositionArray counts differ!";
-            bUpdate = true;
+        if(NodeArray[b].Head.nType & NODE_HAS_SKIN){
+            if(!NodeArray[b].Skin.UnknownArray.empty()){
+                ssAdd<<"\r\n     - Skin: Unknown empty array has some nonzero value!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Skin.QBoneArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - QBoneArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Skin.TBoneArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - TBoneArray counts differ!";
+                bUpdate = true;
+            }
+            if(NodeArray[b].Skin.Array8Array.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - Array8Array counts differ!";
+                bUpdate = true;
+            }
         }
-        if(NodeArray[b].Light.FlareColorShiftArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - FlareColorShiftArray counts differ!";
-            bUpdate = true;
+        if(NodeArray[b].Head.nType & NODE_HAS_DANGLY){
+            if(NodeArray[b].Dangly.ConstraintArray.GetDoCountsDiffer()){
+                ssAdd<<"\r\n     - ConstraintArray counts differ!";
+                bUpdate = true;
+            }
         }
-        if(NodeArray[b].Light.FlareTextureNameArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - FlareTextureNameArray counts differ!";
-            bUpdate = true;
-        }
-    }
-    if(NodeArray[b].Head.nType & NODE_HAS_EMITTER){
-        if(NodeArray[b].Emitter.nUnknown1 != 0){
-            ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
-            bUpdate = true;
-        }
-    }
-    if(NodeArray[b].Head.nType & NODE_HAS_MESH){
-        if(NodeArray[b].Mesh.nUnknown3[0] != -1 || NodeArray[b].Mesh.nUnknown3[1] != -1 || NodeArray[b].Mesh.nUnknown3[2] != 0){
-            ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
-            bUpdate = true;
-        }/*
-        if(NodeArray[b].Mesh.nUnknown30 != 0){
-            ssAdd<<"\r\n     - Mesh: Unknown30 byte after Render byte has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Mesh.nK2Unknown2 != 0){
-            ssAdd<<"\r\n     - Mesh: K2Unknown2 has a value!";
-            bUpdate = true;
-        }*/
-        if(NodeArray[b].Mesh.FaceArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - FaceArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Mesh.IndexCounterArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - IndexCounterArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Mesh.IndexLocationArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - IndexLocationArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Mesh.MeshInvertedCounterArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - MeshInvertedCounterArray counts differ!";
-            bUpdate = true;
+        if(bUpdate){
+            bMasterUpdate = true;
+            ssReturn<<ssAdd.str();
         }
     }
-    if(NodeArray[b].Head.nType & NODE_HAS_SKIN){
-        if(NodeArray[b].Skin.nUnknown1 != 0){
-            ssAdd<<"\r\n     - Skin: Unknown int 1 has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Skin.nUnknown2 != 0){
-            ssAdd<<"\r\n     - Skin: Unknown int 2 has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Skin.nUnknown3 != 0){
-            ssAdd<<"\r\n     - Skin: Unknown int 3 has a value!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Skin.QBoneArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - QBoneArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Skin.TBoneArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - TBoneArray counts differ!";
-            bUpdate = true;
-        }
-        if(NodeArray[b].Skin.Array8Array.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - Array8Array counts differ!";
-            bUpdate = true;
-        }
-    }
-    if(NodeArray[b].Head.nType & NODE_HAS_DANGLY){
-        if(NodeArray[b].Dangly.ConstraintArray.GetDoCountsDiffer()){
-            ssAdd<<"\r\n     - ConstraintArray counts differ!";
-            bUpdate = true;
-        }
-    }
-    if(bUpdate){
-        bMasterUpdate = true;
-        ssReturn<<ssAdd.str();
-    }
-}
     return bMasterUpdate;
 }

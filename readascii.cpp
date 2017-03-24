@@ -66,7 +66,7 @@ bool Ascii::Read(FileHeader * FH){
             //std::cout<<"Found a node! ("<<sID<<") At nPosition="<<nPosition<<" of "<<nBufferSize<<".\n";
             //Got it! Now to save it the name array.
             Name name; //our new name
-            name.cName = sID;
+            name.sName = sID;
             FH->MH.Names.push_back(name);
         }
     }
@@ -117,20 +117,22 @@ bool Ascii::Read(FileHeader * FH){
                 if(!ReadFloat(fConvert)) bError = true; //First read the timekey, also check that we're valid
 
                 if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                    double fX, fY, fZ, fA;
+                    if(ReadFloat(fConvert)) fX = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fY = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fZ = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fA = fConvert;
+                    else bError = true;
                     Orientation NewOrientKey;
-                    if(ReadFloat(fConvert)) NewOrientKey.fX = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) NewOrientKey.fY = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) NewOrientKey.fZ = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) NewOrientKey.fAngle = fConvert;
-                    else bError = true;
+                    NewOrientKey.AA(fX, fY, fZ, fA);
                     NewOrientKey.ConvertToQuaternions();
-                    node.Head.ControllerData.push_back(NewOrientKey.qX);
-                    node.Head.ControllerData.push_back(NewOrientKey.qY);
-                    node.Head.ControllerData.push_back(NewOrientKey.qZ);
-                    node.Head.ControllerData.push_back(NewOrientKey.qW);
+                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_X));
+                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Y));
+                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
+                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
                 }
                 else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
                     if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
@@ -181,7 +183,7 @@ bool Ascii::Read(FileHeader * FH){
                 else if(sID.size() > 16){
                     Warning("Sound name larger than 16 characters! This may cause problems in the game.");
                 }
-                sound.cName = sID;
+                sound.sName = sID;
                 if(bFound){
                     Animation & anim = FH->MH.Animations.back();
                     anim.Sounds.push_back(sound);
@@ -375,7 +377,7 @@ bool Ascii::Read(FileHeader * FH){
                 //if we found a name, loop through the name array to find our name index
                 for(nNameIndex = 0; nNameIndex < FH->MH.Names.size() && bFound; nNameIndex++){
                     //check if there is a match
-                    if(FH->MH.Names[nNameIndex].cName == sID){
+                    if(FH->MH.Names[nNameIndex].sName == sID){
                         //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
                         //Check if we already have this name indexed in the skin
                         bPresent = false;
@@ -400,7 +402,7 @@ bool Ascii::Read(FileHeader * FH){
                             else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
                         }
                         //By here, we have gotten our nNameIndex and nBoneIndex, and everything is indexed properly
-                        node.Mesh.Vertices[nDataCounter].MDXData.fSkin2[z] = (double) nBoneIndex;
+                        node.Mesh.Vertices[nDataCounter].MDXData.fWeightIndex[z] = (double) nBoneIndex;
 
                         //Since we found the name, we don't need to keep looping anymore
                         nNameIndex = FH->MH.Names.size();
@@ -414,7 +416,7 @@ bool Ascii::Read(FileHeader * FH){
                 }
                 else if(bFound){
                     //We found the name in the name array. We are therefore ready to read the value as well.
-                    if(ReadFloat(fConvert)) node.Mesh.Vertices[nDataCounter].MDXData.fSkin1[z] = fConvert;
+                    if(ReadFloat(fConvert)) node.Mesh.Vertices[nDataCounter].MDXData.fWeightValue[z] = fConvert;
                 }
                 z++;
             }
@@ -455,7 +457,7 @@ bool Ascii::Read(FileHeader * FH){
                     else if(sID.size() > 16){
                         Warning("Model name larger than 16 characters! This may cause problems in the game.");
                     }
-                    if(bFound) FH->MH.GH.cName = sID;
+                    if(bFound) FH->MH.GH.sName = sID;
 
                     //Initialize all header information
                     FH->MH.vBBmin.fX = -5.0;
@@ -564,7 +566,7 @@ bool Ascii::Read(FileHeader * FH){
                     else{
                         /*
                         Name name;
-                        name.cName = sID;
+                        name.sName = sID;
                         FH->MH.Names.push_back(name);
                         */
                         node.Head.nNameIndex = GetNameIndex(sID, FH->MH.Names);
@@ -718,7 +720,7 @@ bool Ascii::Read(FileHeader * FH){
                             bFound = false;
                             while(nNameIndex < FH->MH.Names.size() && !bFound){
                                 //check if there is a match
-                                if(FH->MH.Names[nNameIndex].cName == sID){
+                                if(FH->MH.Names[nNameIndex].sName == sID){
                                     //We have found the name index for the current name
                                     bFound = true;
                                 }
@@ -739,7 +741,7 @@ bool Ascii::Read(FileHeader * FH){
                             bFound = false;
                             while(nNameIndex < FH->MH.Names.size() && !bFound){
                                 //check if there is a match
-                                if(FH->MH.Names[nNameIndex].cName == sID){
+                                if(FH->MH.Names[nNameIndex].sName == sID){
                                     //We have found the name index for the current name
                                     bFound = true;
                                 }
@@ -1342,19 +1344,21 @@ bool Ascii::Read(FileHeader * FH){
 
                     //Now fill values
                     if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
-                        if(ReadFloat(fConvert)) node.Head.oOrient.fX = fConvert;
+                        double fX, fY, fZ, fAngle;
+                        if(ReadFloat(fConvert)) fX = fConvert;
                         else bError = true;
-                        if(ReadFloat(fConvert)) node.Head.oOrient.fY = fConvert;
+                        if(ReadFloat(fConvert)) fY = fConvert;
                         else bError = true;
-                        if(ReadFloat(fConvert)) node.Head.oOrient.fZ = fConvert;
+                        if(ReadFloat(fConvert)) fZ = fConvert;
                         else bError = true;
-                        if(ReadFloat(fConvert)) node.Head.oOrient.fAngle = fConvert;
+                        if(ReadFloat(fConvert)) fAngle = fConvert;
                         else bError = true;
+                        node.Head.oOrient.AA(fX, fY, fZ, fAngle);
                         node.Head.oOrient.ConvertToQuaternions();
-                        node.Head.ControllerData.push_back(node.Head.oOrient.qX);
-                        node.Head.ControllerData.push_back(node.Head.oOrient.qY);
-                        node.Head.ControllerData.push_back(node.Head.oOrient.qZ);
-                        node.Head.ControllerData.push_back(node.Head.oOrient.qW);
+                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_X));
+                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_Y));
+                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_Z));
+                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_W));
                         ctrl.nColumnCount = 4;
                     }
                     else{
@@ -1419,10 +1423,10 @@ bool Ascii::Read(FileHeader * FH){
                         Warning("Animation name larger than 16 characters! This may cause problems in the game.");
                     }
                     Animation anim;
-                    if(bFound) anim.cName = sID;
+                    if(bFound) anim.sName = sID;
 
                     //Initialize animation in case something is left undefined
-                    anim.cName2 = FH->MH.Names.front().cName;
+                    anim.sAnimRoot = FH->MH.Names.front().sName;
                     anim.fLength = 0.0;
                     anim.fTransition = 0.0;
                     anim.SoundArray.nCount = 0;
@@ -1462,7 +1466,7 @@ bool Ascii::Read(FileHeader * FH){
                         Warning("AnimRoot name larger than 16 characters! This may cause problems in the game.");
                     }
                     Animation & anim = FH->MH.Animations.back();
-                    if(bFound) anim.cName2 = sID;
+                    if(bFound) anim.sAnimRoot = sID;
                     SkipLine();
                 }
                 else if(sID == "eventlist" && bAnimation){
@@ -1522,7 +1526,7 @@ bool Ascii::Read(FileHeader * FH){
 int Ascii::GetNameIndex(std::string sName, std::vector<Name> Names){
     int n = 0;
     while(n < Names.size()){
-        if(Names[n].cName == sName) return n;
+        if(Names[n].sName == sName) return n;
         n++;
     }
     return -1;
