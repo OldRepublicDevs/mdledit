@@ -15,6 +15,7 @@ HWND hProgress;
 MDL Model;
 MDX Mdx;
 WOK Walkmesh;
+HANDLE hThread;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
 
@@ -578,12 +579,8 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             //Process the data
             Model.SetFilePath(cFile);
             if(Model.ReadAscii()){
-                HANDLE hThread;
-                DWORD nThreadID;
-                hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, &hFrame, 0, &nThreadID);
                 DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc);
 
-                CloseHandle(hThread);
                 bReturn = true;
             }
             else bReturn = false;        }
@@ -710,13 +707,14 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                             10, 20, rcStatus.right - 20, 18,
                                             hwnd, (HMENU) IDC_STATUSBAR_PROGRESS, NULL, NULL);
             SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
+
+            hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
         }
         break;
-        case WM_QUIT:
+        case 69:
         {
-            std::cout<<"I got a WM_QUIT message, but I'm being a bitch! \n";
-            EndDialog(hwnd, wParam);
-            return TRUE;
+            CloseHandle(hThread);
+            EndDialog(hwnd, NULL);
         }
         break;
         default:
@@ -726,7 +724,6 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 }
 
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
-    HWND hwnd = *((HWND *) lpParam);
     Model.AsciiPostProcess();
     //This should bring us to a state where all the practical data is ready,
     //but not the binary file-specific data, such as offsets, etc..
@@ -741,8 +738,8 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
 
     Edit1.LoadData(); //Loads up the binary file onto the screen
     Model.BuildTree(); //Fills the TreeView control
-    if(GetDlgItem(hwnd, DLG_PROGRESS)==NULL) std::cout<<"Can't get our dialogbox. :(\n";
-    SendMessage(GetDlgItem(hFrame, DLG_PROGRESS), WM_QUIT, NULL, NULL);
+
+    SendMessage((HWND)lpParam, 69, NULL, NULL);
 }
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){

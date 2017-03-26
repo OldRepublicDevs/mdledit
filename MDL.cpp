@@ -125,7 +125,7 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
     if(!file.is_open()) bPrint = false;
     FileHeader & Data = FH[0];
 
-    SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size() - 1));
+    SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size()));
     SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
