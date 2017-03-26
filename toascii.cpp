@@ -242,8 +242,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
         sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
         if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
-        sReturn << string_format("\r\n  verts %i", node->Mesh.nNumberOfVerts);
-        for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
+        sReturn << string_format("\r\n  verts %i", node->Mesh.Vertices.size());
+        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
             if(Mdx.empty()) sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].fX, 0), PrepareFloat(node->Mesh.Vertices[n].fY, 1), PrepareFloat(node->Mesh.Vertices[n].fZ, 2));
             else sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2));
@@ -264,17 +264,39 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     node->Mesh.VertIndices[n].nValues[0], node->Mesh.VertIndices[n].nValues[1], node->Mesh.VertIndices[n].nValues[2],
                     node->Mesh.Faces[n].nMaterialID);
         }
-        if(!Mdx.sBuffer.empty()){
-            sReturn << string_format("\r\n  tverts %i", node->Mesh.nNumberOfVerts);
-            for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
-                sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fX, 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fY, 1));
+        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+            sReturn << "\r\n  tverts "<<node->Mesh.Vertices.size();
+            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+                sReturn << "\r\n   " << PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fX, 0);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fY, 1);
+            }
+        }
+        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+            sReturn << "\r\n  tverts1 "<<node->Mesh.Vertices.size();
+            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+                sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fX, 0);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fY, 1);
+            }
+        }
+        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+            sReturn << "\r\n  tverts2 "<<node->Mesh.Vertices.size();
+            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+                sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fX, 0);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fY, 1);
+            }
+        }
+        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+            sReturn << "\r\n  tverts3 "<<node->Mesh.Vertices.size();
+            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+                sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fX, 0);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fY, 1);
             }
         }
     }
     else if(nDataType == CONVERT_SKIN){
         Node * node = (Node*) Data;
         if(!Mdx.sBuffer.empty()){
-            sReturn << "\r\n  weights "<<node->Mesh.nNumberOfVerts;
+            sReturn << "\r\n  weights "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   ";
                 int i = 0;
@@ -336,8 +358,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         //sReturn << cCat;
         sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
         if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
-        sReturn << string_format("\r\n  verts %i", node->Mesh.nNumberOfVerts);
-        for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
+        sReturn << string_format("\r\n  verts %i", node->Mesh.Vertices.size());
+        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities
             //sReturn << string_format("\r\n    %s %s %s", node->Mesh.Vertices[n].fX, node->Mesh.Vertices[n].fY, node->Mesh.Vertices[n].fZ);
             sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Saber.SaberData[n].vVertex.fX, 0), PrepareFloat(node->Saber.SaberData[n].vVertex.fY, 1), PrepareFloat(node->Saber.SaberData[n].vVertex.fZ, 2));
@@ -350,9 +372,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2]);
                     //node->Mesh.VertIndices[n].nValues[0], node->Mesh.VertIndices[n].nValues[1], node->Mesh.VertIndices[n].nValues[2]);
         }
-        sReturn << string_format("\r\n  tverts %i", node->Mesh.nNumberOfVerts);
-        for(int n = 0; n < node->Mesh.nNumberOfVerts; n++){
-            sReturn << string_format("\r\n    %s %s 0.0", PrepareFloat(node->Saber.SaberData[n].vUV.fX, 0), PrepareFloat(node->Saber.SaberData[n].vUV.fY, 1));
+        sReturn << "\r\n  tverts " << node->Mesh.Vertices.size();
+        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+            sReturn << "\r\n    " << PrepareFloat(node->Saber.SaberData[n].vUV.fX, 0);
+            sReturn << " " << PrepareFloat(node->Saber.SaberData[n].vUV.fY, 1);
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0

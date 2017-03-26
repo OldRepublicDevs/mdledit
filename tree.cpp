@@ -482,7 +482,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("Header\r\nModel Name: %s\r\nModel Type: %i\r\nClassification: %s\r\nSupermodel: %s",
                     FH[0].MH.GH.sName.c_str(), FH[0].MH.GH.nModelType, ReturnClassificationName(FH[0].MH.nClassification).c_str(),
                     FH[0].MH.cSupermodelName.c_str()/*, FH[0].MH.nChildModelCount*/);
-            sPrint << "\r\nUnknown Supermodel uint32?: "<<FH[0].MH.nUnknown2;
+            sPrint << "\r\nSupermodel Reference: "<<FH[0].MH.nSupermodelReference;
             sPrint << "\r\n\r\nPadding? (Model Type): "<<(int)FH[0].MH.GH.nPadding[0]<<" "<<(int)FH[0].MH.GH.nPadding[1]<<" "<<(int)FH[0].MH.GH.nPadding[2];
             sPrint << "\r\nPadding? (Classification): "<<(int)FH[0].MH.nUnknown1[0]<<" "<<(int)FH[0].MH.nUnknown1[1]<<" "<<(int)FH[0].MH.nUnknown1[2];
             sPrint << string_format("\r\n\r\nMDL Length: %i\r\nMDX Length: %i\r\nFunction Pointer 0: %i\r\nFunction Pointer 1: %i",
