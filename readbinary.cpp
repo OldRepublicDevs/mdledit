@@ -247,14 +247,14 @@ void MDL::DecompileModel(){
             //Data.MH.Animations[n].nNodeCount = nNodeCounter;
             //std::cout<<string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfObjects);
             Data.MH.Animations[n].ArrayOfNodes.clear();
-            Data.MH.Animations[n].ArrayOfNodes.reserve(Data.MH.NameArray.GetCount());
+            Data.MH.Animations[n].ArrayOfNodes.reserve(Data.MH.Names.size());
             LinearizeAnimations(Data.MH.Animations[n].RootAnimationNode, Data.MH.Animations[n].ArrayOfNodes);
 
             n++;
         }
     }
     std::cout<<"Animation array read.\n";
-    if(Data.MH.NameArray.GetCount() > 0){
+    if(Data.MH.Names.size() > 0){
         Data.MH.RootNode.nOffset = Data.MH.GH.nOffsetToRootNode;
         Data.MH.RootNode.nAnimation = -1;
         //std::cout<<string_format("Offset to Root Node: %i\n", Data.MH.RootNode.nOffset);
@@ -263,7 +263,7 @@ void MDL::DecompileModel(){
         ParseNode(&(Data.MH.RootNode), &nNodeCounter, vFromRoot);
         //std::cout<<string_format("Node count for the Geometry: %i, compared to the number in the header, %i.\n", nNodeCounter, Data.MH.GH.nNumberOfNodes);
         //Data.MH.ArrayOfNodes.clear();
-        Data.MH.ArrayOfNodes.resize(Data.MH.NameArray.GetCount());
+        Data.MH.ArrayOfNodes.resize(Data.MH.Names.size());
         LinearizeGeometry(Data.MH.RootNode, Data.MH.ArrayOfNodes);
     }
     std::cout<<"Geometry read.\n";
@@ -385,8 +385,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
 
         /// Let's do the transformations/translations here. First orientation, then translation.
         Location loc = NODE->GetLocation();
-        vFromRoot.Rotate(NODE->Head.oOrient);
+        //vFromRoot.Rotate(NODE->Head.oOrient); //Why am I not rotating with loc's orientation??? Let's try it
+        vFromRoot.Rotate(loc.oOrientation);
         vFromRoot+= loc.vPosition;
+
+        NODE->Head.vFromRoot = vFromRoot;
 
         if(NODE->Head.ChildrenArray.nCount > 0){
             //We gots children!
@@ -729,7 +732,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
             NODE->Skin.nBoneIndexes[n] = ReadInt(&nPos, 5, 2);
         }
 
-        if(NODE->Skin.nNumberOfBonemap != FH[0].MH.NameArray.GetCount() || NODE->Skin.nNumberOfBonemap != NODE->Skin.QBoneArray.GetCount() || NODE->Skin.nNumberOfBonemap != NODE->Skin.TBoneArray.GetCount() || NODE->Skin.nNumberOfBonemap != NODE->Skin.Array8Array.GetCount()){
+        if(NODE->Skin.nNumberOfBonemap != FH[0].MH.Names.size() || NODE->Skin.nNumberOfBonemap != NODE->Skin.QBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.TBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.Array8Array.nCount){
             Error("Unexpected Error! The bone numbers do not match up for " + FH[0].MH.Names.at(NODE->Head.nNameIndex).sName + "! I will try to load the data anyway. ");
         }
         if(NODE->Skin.nNumberOfBonemap > 0){
@@ -776,7 +779,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Mesh.Vertices[n].fX = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
-
+                /*
                 Vector vTransform = NODE->Mesh.Vertices[n];
                 Location loc = NODE->GetLocation();
                 vTransform.Rotate(loc.oOrientation);
@@ -785,6 +788,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Mesh.Vertices.at(n).fFromRootX = vTransform.fX;
                 NODE->Mesh.Vertices.at(n).fFromRootY = vTransform.fY;
                 NODE->Mesh.Vertices.at(n).fFromRootZ = vTransform.fZ;
+                */
                 //NODE->Mesh.Vertices.at(n).fFromRootX = vFromRoot.fX + NODE->Mesh.Vertices[n].fX;
                 //NODE->Mesh.Vertices.at(n).fFromRootY = vFromRoot.fY + NODE->Mesh.Vertices[n].fY;
                 //NODE->Mesh.Vertices.at(n).fFromRootZ = vFromRoot.fZ + NODE->Mesh.Vertices[n].fZ;
@@ -858,16 +862,16 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                     if(NODE->Head.nType & NODE_HAS_SKIN){
                         //if(NODE->Skin.nOffsetToWeightValuesInMDX != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToWeightValuesInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fWeightValue[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightValue[1] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightValue[2] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightValue[3] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[0] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[2] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[3] = Mdx.ReadFloat(&nPosData2, 2);
                         //if(NODE->Skin.nOffsetToBoneIndexInMDX != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToBoneIndexInMDX;
-                        NODE->Mesh.Vertices[n].MDXData.fWeightIndex[0] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightIndex[1] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightIndex[2] = Mdx.ReadFloat(&nPosData2, 2);
-                        NODE->Mesh.Vertices[n].MDXData.fWeightIndex[3] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[0] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[1] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[2] = Mdx.ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[3] = Mdx.ReadFloat(&nPosData2, 2);
                     }
                 }
                 n++;
@@ -948,16 +952,16 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 if(NODE->Head.nType & NODE_HAS_SKIN){
                     //if(NODE->Skin.nOffsetToWeightValuesInMDX != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToWeightValuesInMDX;
-                    NODE->Mesh.MDXData.fWeightValue[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightValue[1] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightValue[2] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightValue[3] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightValue[0] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightValue[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightValue[2] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightValue[3] = Mdx.ReadFloat(&nPosData2, 8);
                     //if(NODE->Skin.nOffsetToBoneIndexInMDX != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToBoneIndexInMDX;
-                    NODE->Mesh.MDXData.fWeightIndex[0] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightIndex[1] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightIndex[2] = Mdx.ReadFloat(&nPosData2, 8);
-                    NODE->Mesh.MDXData.fWeightIndex[3] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightIndex[0] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightIndex[1] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightIndex[2] = Mdx.ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.Weights.fWeightIndex[3] = Mdx.ReadFloat(&nPosData2, 8);
                 }
             }
         }
@@ -1103,6 +1107,8 @@ void MDL::DetermineSmoothing(){
         }
     }
 
+    CreatePatches(true, file);
+    /*
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
@@ -1204,6 +1210,7 @@ void MDL::DetermineSmoothing(){
         }
     }
     std::cout<<"Done creating patches!\n";
+    */
 
     std::vector<std::vector<unsigned long int>> nSmoothingGroupNumbers;
     nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
@@ -1322,19 +1329,88 @@ void MDL::DetermineSmoothing(){
             else if(p+1 == nPatchCount) std::cout<<ssVN.str();
 
             //Also check if this patch is enough for tangent space
-        if(GetNodeByNameIndex(patch.nNameIndex).Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-            Vector vCheckT = vTangentBase;
-            Vector vCheckB = vBitangentBase;
-            Vector vCheckN = vTangentNormalBase; //Might be the other way around, not sure
-            vCheckT.Normalize();
-            vCheckB.Normalize();
-            vCheckN.Normalize();
-            file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
-            file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
-            file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
-            std::vector<int> nDummyPatchVector;
-            if(bFound){
-                if(patch.SmoothedPatches.size() == 0){
+            if(GetNodeByNameIndex(patch.nNameIndex).Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
+                Vector vCheckT = vTangentBase;
+                Vector vCheckB = vBitangentBase;
+                Vector vCheckN = vTangentNormalBase; //Might be the other way around, not sure
+                vCheckT.Normalize();
+                vCheckB.Normalize();
+                vCheckN.Normalize();
+                file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
+                file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
+                file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
+                std::vector<int> nDummyPatchVector;
+                if(bFound){
+                    if(patch.SmoothedPatches.size() == 0){
+                        file<<"\n   Correct:";
+                        bool b1 = false;
+                        if(vCheckB.Compare(vBitangent)){
+                            file<<" bitangent";
+                            if(!bBadUV) nNumOfFoundTSB++;
+                            b1 = true;
+                        }
+                        if(vCheckT.Compare(vTangent)){
+                            file<<" tangent";
+                            if(!bBadUV) nNumOfFoundTST++;
+                            b1 = true;
+                        }
+                        if(vCheckN.Compare(vNormalTS)){
+                            file<<" normal";
+                            if(!bBadUV) nNumOfFoundTSN++;
+                            b1 = true;
+                        }
+                        if(!b1) file<<" none";
+                        if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS) && bBadUV) bFoundTS = true;
+                        else file << " (incomplete)";
+                    }
+                    else{
+                        //std::vector<int> nDummyPatchVector;
+                        int nFound = 0; //FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
+
+                        /**/
+                        for(int t = 0; t < patch.SmoothedPatches.size(); t++){
+                            Patch & curpatch = Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(t));
+                            for(int f = 0; f < curpatch.FaceIndices.size(); f++){
+                                Face & face = GetNodeByNameIndex(curpatch.nNameIndex).Mesh.Faces.at(curpatch.FaceIndices.at(f));
+                                vTangentBase += face.vTangent;
+                                vBitangentBase += face.vBitangent;
+                                vTangentNormalBase += (face.vBitangent / face.vTangent);
+                            }
+                        }//Check if this is it
+                        vCheckT = vTangentBase;
+                        vCheckB = vBitangentBase;
+                        vCheckN = vTangentNormalBase;
+                        vCheckT.Normalize();
+                        vCheckB.Normalize();
+                        vCheckN.Normalize();
+                        file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
+                        file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
+                        file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to proposed ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
+                        if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
+                            file<<"\n   Correct:";
+                            if(vCheckB.Compare(vBitangent)){
+                                file<<" bitangent";
+                                nFound = nFound | 1;
+                            }
+                            if(vCheckT.Compare(vTangent)){
+                                file<<" tangent";
+                                nFound = nFound | 2;
+                            }
+                            if(vCheckN.Compare(vNormalTS)){
+                                file<<" normal";
+                                nFound = nFound | 4;
+                            }
+                            if(nFound != 7) file << " (incomplete)";
+                        }
+                        /**/
+
+                        if(nFound == 7 && !bBadUV) bFoundTS = true;
+                        if(nFound & 1 && !bBadUV) nNumOfFoundTSB++;
+                        if(nFound & 2 && !bBadUV) nNumOfFoundTST++;
+                        if(nFound & 4 && !bBadUV) nNumOfFoundTSN++;
+                    }
+                }
+                else if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
                     file<<"\n   Correct:";
                     bool b1 = false;
                     if(vCheckB.Compare(vBitangent)){
@@ -1353,101 +1429,32 @@ void MDL::DetermineSmoothing(){
                         b1 = true;
                     }
                     if(!b1) file<<" none";
-                    if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS) && bBadUV) bFoundTS = true;
+                    if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS) && !bBadUV) bFoundTS = true;
                     else file << " (incomplete)";
                 }
                 else{
-                    //std::vector<int> nDummyPatchVector;
-                    int nFound = 0; //FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
-
-                    /**/
-                    for(int t = 0; t < patch.SmoothedPatches.size(); t++){
-                        Patch & curpatch = Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(t));
-                        for(int f = 0; f < curpatch.FaceIndices.size(); f++){
-                            Face & face = GetNodeByNameIndex(curpatch.nNameIndex).Mesh.Faces.at(curpatch.FaceIndices.at(f));
-                            vTangentBase += face.vTangent;
-                            vBitangentBase += face.vBitangent;
-                            vTangentNormalBase += (face.vBitangent / face.vTangent);
-                        }
-                    }//Check if this is it
-                    vCheckT = vTangentBase;
-                    vCheckB = vBitangentBase;
-                    vCheckN = vTangentNormalBase;
-                    vCheckT.Normalize();
-                    vCheckB.Normalize();
-                    vCheckN.Normalize();
-                    file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
-                    file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
-                    file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to proposed ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
-                    if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
-                        file<<"\n   Correct:";
-                        if(vCheckB.Compare(vBitangent)){
-                            file<<" bitangent";
-                            nFound = nFound | 1;
-                        }
-                        if(vCheckT.Compare(vTangent)){
-                            file<<" tangent";
-                            nFound = nFound | 2;
-                        }
-                        if(vCheckN.Compare(vNormalTS)){
-                            file<<" normal";
-                            nFound = nFound | 4;
-                        }
-                        if(nFound != 7) file << " (incomplete)";
-                    }
-                    /**/
+                    std::vector<int> nDummyPatchVector;
+                    int nFound = FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
 
                     if(nFound == 7 && !bBadUV) bFoundTS = true;
                     if(nFound & 1 && !bBadUV) nNumOfFoundTSB++;
                     if(nFound & 2 && !bBadUV) nNumOfFoundTST++;
                     if(nFound & 4 && !bBadUV) nNumOfFoundTSN++;
                 }
-            }
-            else if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
-                file<<"\n   Correct:";
-                bool b1 = false;
-                if(vCheckB.Compare(vBitangent)){
-                    file<<" bitangent";
-                    if(!bBadUV) nNumOfFoundTSB++;
-                    b1 = true;
+                if(bFoundTS){
+                    file<<"\n:)    MATCH FOUND!\n";
+                    nNumOfFoundTS++;
                 }
-                if(vCheckT.Compare(vTangent)){
-                    file<<" tangent";
-                    if(!bBadUV) nNumOfFoundTST++;
-                    b1 = true;
+                else if(bBadUV){
+                    std::cout<<"Bad UV in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
+                    file<<"\n:/    BAD UV!\n";
+                    nNumOfTS--;
                 }
-                if(vCheckN.Compare(vNormalTS)){
-                    file<<" normal";
-                    if(!bBadUV) nNumOfFoundTSN++;
-                    b1 = true;
+                else{
+                    std::cout<<"No match for tangent space in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
+                    file<<"\n:(    NO MATCH FOUND!\n";
                 }
-                if(!b1) file<<" none";
-                if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS) && !bBadUV) bFoundTS = true;
-                else file << " (incomplete)";
             }
-            else{
-                std::vector<int> nDummyPatchVector;
-                int nFound = FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
-
-                if(nFound == 7 && !bBadUV) bFoundTS = true;
-                if(nFound & 1 && !bBadUV) nNumOfFoundTSB++;
-                if(nFound & 2 && !bBadUV) nNumOfFoundTST++;
-                if(nFound & 4 && !bBadUV) nNumOfFoundTSN++;
-            }
-            if(bFoundTS){
-                file<<"\n:)    MATCH FOUND!\n";
-                nNumOfFoundTS++;
-            }
-            else if(bBadUV){
-                std::cout<<"Bad UV in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
-                file<<"\n:/    BAD UV!\n";
-                nNumOfTS--;
-            }
-            else{
-                std::cout<<"No match for tangent space in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
-                file<<"\n:(    NO MATCH FOUND!\n";
-            }
-        }
         }
         //std::cout<<"Done comparing normals for patch group "<<pg<<"!\n";
         //When we get here all the data in the patch group has been worked over.

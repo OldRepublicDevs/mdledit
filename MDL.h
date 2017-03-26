@@ -94,15 +94,15 @@ extern const char AA_Z;
 extern const char AA_A;
 class Orientation{
     //unsigned int nCompressed = 0; //Since it is compressed, best to get it in a neutral type
-    double qX = 0.0;
-    double qY = 0.0;
-    double qZ = 0.0;
-    double qW = 0.0;
-    double fX = 0.0;
-    double fY = 0.0;
-    double fZ = 0.0;
-    double fAngle = 0.0;
-    bool bQuaternion = false, bAA = false;
+    double qX;
+    double qY;
+    double qZ;
+    double qW;
+    double fX;
+    double fY;
+    double fZ;
+    double fAngle;
+    bool bQuaternion, bAA;
 
   public:
     Orientation(){
@@ -112,6 +112,7 @@ class Orientation{
         qW = 1.0;
         bQuaternion = true;
         bAA = false;
+        ConvertToAA();
     }
     Orientation(const double & f1, const double & f2, const double & f3, const double & f4){
         qX = f1;
@@ -120,6 +121,7 @@ class Orientation{
         qW = f4;
         bQuaternion = true;
         bAA = false;
+        ConvertToAA();
     }
     void Quaternion(const double & f1, const double & f2, const double & f3, const double & f4){
         qX = f1;
@@ -128,6 +130,7 @@ class Orientation{
         qW = f4;
         bQuaternion = true;
         bAA = false;
+        ConvertToAA();
     }
     void AA(const double & f1, const double & f2, const double & f3, const double & f4){
         fX = f1;
@@ -136,6 +139,7 @@ class Orientation{
         fAngle = f4;
         bQuaternion = false;
         bAA = true;
+        ConvertToQuaternions();
     }
     void ConvertToQuaternions(){
         if(!bAA) std::cout<<"Orientation::ConvertToQuaternions(): Calculating with invalid AA values\n";
@@ -166,7 +170,7 @@ class Orientation{
             fY = qY / s;
             fZ = qZ / s;
         }
-        bQuaternion = true;
+        bAA = true;
     }
     void Decompress(unsigned int nCompressed){
         //Special compressed quaternion - from MDLOps
@@ -205,6 +209,7 @@ class Orientation{
         }
         bQuaternion = true;
         bAA = false;
+        ConvertToAA();
     }
     void Compress(){
 
@@ -241,7 +246,7 @@ class Orientation{
             return 0.0;
         }
         else if(cID <= QU_W && !bQuaternion){
-            std::cout<<"Orientation::Get(): trying to get quaternion value when it's not set!\n";
+            std::cout<<"Orientation::Get(): trying to get quaternion value ("<<(int)cID<<") when it's not set!\n";
             return 0.0;
         }
         else if(cID == QU_X) return qX;
@@ -249,7 +254,7 @@ class Orientation{
         else if(cID == QU_Z) return qZ;
         else if(cID == QU_W) return qW;
         else if(cID <= AA_A && !bAA){
-            std::cout<<"Orientation::Get(): trying to get quaternion value when it's not set!\n";
+            std::cout<<"Orientation::Get(): trying to get AA value ("<<(int)cID<<") when it's not set!\n";
             return 0.0;
         }
         else if(cID == AA_X) return fX;
@@ -423,6 +428,11 @@ struct Face{
     short nIndexVertex[3] = {-1, -1, -1};
 
     //Added members
+    short nIndexTvert[3] = {-1, -1, -1};
+    short nIndexTvert1[3] = {-1, -1, -1};
+    short nIndexTvert2[3] = {-1, -1, -1};
+    short nIndexTvert3[3] = {-1, -1, -1};
+    bool bProcessed[3] = {false, false, false};
     int nSmoothingGroup = 1;
     double fArea = 0.0;
     double fAreaUV = 0.0;
@@ -435,16 +445,10 @@ struct Aabb{
     //binary members
     Vector vBBmin;
     Vector vBBmax;
-    unsigned int nChild1 = 0;
-    unsigned int nChild2 = 0;
+    unsigned int nChild1 = 0; //Offset (in the mdl) or Index (in the wok)
+    unsigned int nChild2 = 0; //Offset (in the mdl) or Index (in the wok)
     int nID = -1; //An index to the face of the walkmesh
-    int nProperty = 0;
-    // 0x01 = Positive X //from nwntool
-    // 0x02 = Positive Y
-    // 0x04 = Positive Z
-    // 0x08 = Negative X
-    // 0x10 = Negative Y
-    // 0x20 = Negative Z
+    int nProperty = 0; //AABB_* constants, most significant plane for Child 2
 
     //Added members
     unsigned int nOffset = 0;
@@ -455,13 +459,13 @@ struct Aabb{
 
 struct Controller{
     //Binary members
-    int nControllerType = 0; // MDLOps: Controller type
+    int nControllerType = 0;
     short nUnknown2 = -1;
-    unsigned short nValueCount = 0; // MDLOps: rows of data
-    unsigned short nTimekeyStart = 0; // MDLOps: Time start offset
-    unsigned short nDataStart = 0;  // MDLOps: Data start offset
-    char nColumnCount = 0; // MDLOps: columns of data
-    char nPadding [3] = {0, 0, 0};  // MDLOps: unknown values
+    unsigned short nValueCount = 0;
+    unsigned short nTimekeyStart = 0;
+    unsigned short nDataStart = 0;
+    char nColumnCount = 0;
+    char nPadding [3] = {0, 0, 0};
 
     //Added members
     int nNameIndex = -1;
@@ -488,6 +492,11 @@ struct VertIndicesStruct{
     short nValues[3] = {-1, -1, -1};
 };
 
+struct Weight{
+    double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
+    double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
+};
+
 struct MDXDataStruct{
     //Binary members
     Vector vVertex;
@@ -500,13 +509,15 @@ struct MDXDataStruct{
     Vector vTangent2[3];
     Vector vTangent3[3];
     Vector vTangent4[3];
-    double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
-    double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
+    Weight Weights;
+    //double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
+    //double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
 
     //Added members
     int nNameIndex = -1;
 };
 
+// ArrayHeads should only be relevant during (de)compilation. Otherwise, use vector lengths.
 struct ArrayHead{
     unsigned int nOffset = 0;
     unsigned int nCount = 0;
@@ -516,9 +527,9 @@ struct ArrayHead{
         if(nCount == nCount2) return false;
         else return true; //We sure don't expect that!
     }
-    int GetCount(){
-        return nCount;
-    }
+    //int GetCount(){
+    //    return nCount;
+    //}
     void ResetToSize(int nSize){
         nOffset = 0;
         nCount = nSize;
@@ -554,11 +565,17 @@ struct Patch{
 };
 
 struct Vertex: public Vector{
-    float fFromRootX = 0.0;
-    float fFromRootY = 0.0;
-    float fFromRootZ = 0.0;
+    //float fFromRootX = 0.0;
+    //float fFromRootY = 0.0;
+    //float fFromRootZ = 0.0;
     MDXDataStruct MDXData;
     int nLinkedFacesIndex = -1;
+    Vertex assign(const Vector & v){
+        fX = v.fX;
+        fY = v.fY;
+        fZ = v.fZ;
+        return *this;
+    }
 };
 
 struct Color{
@@ -597,7 +614,7 @@ struct Header{
     short nID1 = -1;
     short nNameIndex = -1;
     unsigned short nPadding1 = 0;
-    unsigned int nOffsetToRoot = 0; // ???
+    unsigned int nOffsetToRoot = 0;
     unsigned int nOffsetToParent = 0;
     Vector vPos;
     Orientation oOrient;
@@ -609,7 +626,9 @@ struct Header{
     std::vector<Node> Children;
     std::vector<Controller> Controllers;
     std::vector<double> ControllerData;
+    std::vector<int> ChildIndices;
     int nParentIndex = -1;
+    Vector vFromRoot;
 };
 
 // if NODE_HAS_LIGHT
@@ -717,7 +736,7 @@ struct MeshHeader{
     ArrayHead IndexCounterArray;
     ArrayHead IndexLocationArray;
     ArrayHead MeshInvertedCounterArray;
-        /*
+        /* MagnusII:
          * = 1, always one UInt32
          * sequence goes like this: first
          * trimesh node is 98, then:
@@ -793,6 +812,11 @@ struct MeshHeader{
     std::vector<Face> Faces;
     std::vector<VertIndicesStruct> VertIndices;
     std::vector<Vertex> Vertices;
+    std::vector<Vector> TempVerts;
+    std::vector<Vector> TempTverts;
+    std::vector<Vector> TempTverts1;
+    std::vector<Vector> TempTverts2;
+    std::vector<Vector> TempTverts3;
     MDXDataStruct MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;
@@ -820,6 +844,7 @@ struct SkinHeader{
 
     std::vector<Bone> Bones;
     std::vector<int> BoneNameIndexes;
+    std::vector<Weight> TempWeights;
 };
 
 // if NODE_HAS_DANGLY
@@ -833,6 +858,7 @@ struct DanglymeshHeader{
 
     //Added members
     std::vector<double> Constraints;
+    std::vector<double> TempConstraints;
     std::vector<Vector> Data2;
 };
 
@@ -875,42 +901,7 @@ struct Node{
     SaberHeader Saber;
 
     std::string & GetName();
-    Location GetLocation(){
-        Location location;
-
-        int nCtrlPos = -1;
-        int nCtrlOri = -1;
-        for(int c = 0; c < Head.Controllers.size(); c++){
-            if(Head.Controllers.at(c).nControllerType == CONTROLLER_HEADER_POSITION){
-                nCtrlPos = c;
-            }
-            if(Head.Controllers.at(c).nControllerType == CONTROLLER_HEADER_ORIENTATION){
-                nCtrlOri = c;
-            }
-        }
-
-        if(nCtrlPos != -1){
-            Controller & posctrl = Head.Controllers.at(nCtrlPos);
-            location.vPosition = Vector(Head.ControllerData.at(posctrl.nDataStart + 0),
-                                        Head.ControllerData.at(posctrl.nDataStart + 1),
-                                        Head.ControllerData.at(posctrl.nDataStart + 2));
-        }
-        if(nCtrlOri != -1){
-            Controller & orictrl = Head.Controllers.at(nCtrlOri);
-            if(orictrl.nColumnCount == 4){
-                location.oOrientation = Orientation(Head.ControllerData.at(orictrl.nDataStart + 0),
-                                                    Head.ControllerData.at(orictrl.nDataStart + 1),
-                                                    Head.ControllerData.at(orictrl.nDataStart + 2),
-                                                    Head.ControllerData.at(orictrl.nDataStart + 3));
-            }
-            else if(orictrl.nColumnCount == 2){
-                location.oOrientation.Decompress((unsigned int) Head.ControllerData.at(orictrl.nDataStart));
-            }
-            location.oOrientation.ConvertToAA();
-        }
-
-        return location;
-    }
+    Location GetLocation();
 };
 
 /**** HIGHER ELEMENTS ****/
@@ -983,6 +974,11 @@ struct ModelHeader{
     ArrayHead NameArray;
 
     //Added members
+    int nTotalVertCount = 0;
+    int nTotalTangent1Count = 0;
+    int nTotalTangent2Count = 0;
+    int nTotalTangent3Count = 0;
+    int nTotalTangent4Count = 0;
     GeometryHeader GH;
     Node RootNode;
     std::vector<Animation> Animations;
@@ -1116,6 +1112,7 @@ class MDX: public BinaryFile{
 
     //Friends
     friend class MDL;
+    //We need this so that MDL::functions can call protected members inherited from BinaryFile
 };
 
 class WOK: public BinaryFile{
@@ -1213,11 +1210,11 @@ class MDL: public BinaryFile{
     //Writing
     void WriteNodes(Node & node);
     void WriteAabb(Aabb & aabb);
-    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes);
-    void FillBinaryFields(Node & NODE, int & nMeshCounter);
+    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
+    void DoCalculations(Node & NODE, int & nMeshCounter);
 
     //Calculating
-    void CreatePatches(int & nNumOfVerts, int & nNumOfTS, bool bPrint);
+    void CreatePatches(bool bPrint, std::ofstream & file);
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
@@ -1277,7 +1274,7 @@ class MDL: public BinaryFile{
     //Loaders
     bool Compile();
     void DecompileModel();
-    void PrepareForBinary();
+    void AsciiPostProcess();
     void CleanupAfterCompilation(){}
     void CheckPeculiarities();
     void BuildTree();

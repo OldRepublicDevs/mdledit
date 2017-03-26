@@ -271,11 +271,11 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             HTREEITEM Mesh = Append("Mesh", (LPARAM) &node.Mesh, Prev);
             //Append("Mesh Inverted Counters Array", (LPARAM) &node.Mesh, Mesh);
             HTREEITEM Vertices = Append("Vertices", (LPARAM) &node.Mesh, Mesh);
-            if(node.Mesh.nNumberOfVerts > 0){
+            if(node.Mesh.Vertices.size() > 0){
                 Append("MDX Data Pointers", (LPARAM) &node.Mesh, Vertices);
                 char cVert [255];
                 HTREEITEM Vert;
-                for(int n = 0; n < node.Mesh.nNumberOfVerts; n++){
+                for(int n = 0; n < node.Mesh.Vertices.size(); n++){
                     sprintf(cVert, "Vertex %i", n);
                     Vert = Append(cVert, (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
                     //if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
@@ -288,7 +288,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
                 //Append("Location of Vertex Indices 2 Array", (LPARAM) &node.Mesh, Faces);
                 char cFace [255];
                 HTREEITEM Face;
-                for(int n = 0; n < node.Mesh.FaceArray.nCount; n++){
+                for(int n = 0; n < node.Mesh.Faces.size(); n++){
                     sprintf(cFace, "Face %i", n);
                     Face = Append(cFace, (LPARAM) &(node.Mesh.Faces[n]), Faces);
                     if(node.Mesh.IndexLocationArray.nCount > 0) Append("Vertex Indices 2", (LPARAM) &(node.Mesh.VertIndices[n]), Face);
@@ -669,7 +669,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Mesh\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u",
                 mesh->nFunctionPointer0, mesh->nFunctionPointer1);
-        sPrint << "\r\n\r\nInverted Counter: "<<mesh->nMeshInvertedCounter<<"\r\n(Offset: "<<mesh->MeshInvertedCounterArray.nOffset<<", Count: "<<mesh->MeshInvertedCounterArray.GetCount()<<")";
+        sPrint << "\r\n\r\nInverted Counter: "<<mesh->nMeshInvertedCounter<<"\r\n(Offset: "<<mesh->MeshInvertedCounterArray.nOffset<<", Count: "<<mesh->MeshInvertedCounterArray.nCount<<")";
     }
     else if((cItem[0] == "Mesh Inverted Counters Array")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
@@ -746,8 +746,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
         }
         if(node.Head.nType & NODE_HAS_SKIN){
-            sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightValue[0], mdx->fWeightValue[1], mdx->fWeightValue[2], mdx->fWeightValue[3]);
-            sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightIndex[0], mdx->fWeightIndex[1], mdx->fWeightIndex[2], mdx->fWeightIndex[3]);
+            sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightValue[0], mdx->Weights.fWeightValue[1], mdx->Weights.fWeightValue[2], mdx->Weights.fWeightValue[3]);
+            sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightIndex[0], mdx->Weights.fWeightIndex[1], mdx->Weights.fWeightIndex[2], mdx->Weights.fWeightIndex[3]);
         }
     }
     else if((cItem[1] == "Vertices")){
@@ -801,16 +801,16 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
             }
             if(node.Head.nType & NODE_HAS_SKIN){
-                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightValue[0], mdx->fWeightValue[1], mdx->fWeightValue[2], mdx->fWeightValue[3]);
-                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->fWeightIndex[0], mdx->fWeightIndex[1], mdx->fWeightIndex[2], mdx->fWeightIndex[3]);
+                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightValue[0], mdx->Weights.fWeightValue[1], mdx->Weights.fWeightValue[2], mdx->Weights.fWeightValue[3]);
+                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightIndex[0], mdx->Weights.fWeightIndex[1], mdx->Weights.fWeightIndex[2], mdx->Weights.fWeightIndex[3]);
             }
         }
     }
     else if((cItem[0] == "Faces") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Faces\r\nOffset: %u\r\nCount: %u", mesh->FaceArray.nOffset, mesh->FaceArray.nCount);
-        sPrint << "\r\n\r\nIndexes Count: "<<mesh->nVertIndicesCount<<"\r\n(Offset: "<<mesh->IndexCounterArray.nOffset<<", Count: "<<mesh->IndexCounterArray.GetCount()<<")";
-        sPrint << "\r\nIndexes Offset: "<<mesh->nVertIndicesLocation<<"\r\n(Offset: "<<mesh->IndexLocationArray.nOffset<<", Count: "<<mesh->IndexLocationArray.GetCount()<<")";
+        sPrint << "\r\n\r\nIndexes Count: "<<mesh->nVertIndicesCount<<"\r\n(Offset: "<<mesh->IndexCounterArray.nOffset<<")";
+        sPrint << "\r\nIndexes Offset: "<<mesh->nVertIndicesLocation<<"\r\n(Offset: "<<mesh->IndexLocationArray.nOffset<<")";
     }
     else if((cItem[1] == "Faces")){
         Face * face = (Face * ) lParam;

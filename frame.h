@@ -27,5 +27,6 @@ class Frame{
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 #endif // FRAME_H_INCLUDED

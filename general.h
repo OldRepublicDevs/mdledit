@@ -65,6 +65,7 @@ extern HWND hFrame;
 extern HWND hStatusBar;
 extern HWND hTree;
 extern HWND hTabs;
+extern HWND hProgress;
 extern HWND hDisplayEdit;
 bool BVstrcmp(TCHAR string1[], TCHAR string2[], bool bDebug = false);
 void BVright(TCHAR * string1, int n);

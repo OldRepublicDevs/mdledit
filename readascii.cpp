@@ -24,7 +24,9 @@ bool Ascii::Read(FileHeader * FH){
     bool bVerts = false;
     bool bFaces = false;
     bool bTverts = false;
-    bool bLightmapTverts = false;
+    bool bTverts1 = false;
+    bool bTverts2 = false;
+    bool bTverts3 = false;
     bool bWeights = false;
     bool bAabb = false;
     bool bConstraints = false;
@@ -73,7 +75,6 @@ bool Ascii::Read(FileHeader * FH){
     std::cout<<"Done indexing names ("<<FH->MH.Names.size()<<").\n";
 
     nPosition = 0;
-    std::vector<int> nWeightIndexes;
     ///Loops for every row
     while(nPosition < nBufferSize && !bEnd && !bError){
         //First, check if we have a blank line, we'll just skip it here.
@@ -233,39 +234,20 @@ bool Ascii::Read(FileHeader * FH){
             //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data"<<""<<".\n";
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
-            Vertex vert; //New vert
-            vert.MDXData.nNameIndex = node.Head.nNameIndex;
-            SaberDataStruct saberdata; //New saberdata
+            Vector vert;
             if(ReadFloat(fConvert)) vert.fX = fConvert;
             else bFound = false;
             if(ReadFloat(fConvert)) vert.fY = fConvert;
             else bFound = false;
             if(ReadFloat(fConvert)) vert.fZ = fConvert;
             else bFound = false;
-            if(nNode & NODE_HAS_SABER){
-                SaberDataStruct saberdata;
-                saberdata.vVertex.fX = vert.fX;
-                saberdata.vVertex.fY = vert.fY;
-                saberdata.vVertex.fZ = vert.fZ;
-            }
-            else{
-                vert.MDXData.vVertex.fX = vert.fX;
-                vert.MDXData.vVertex.fY = vert.fY;
-                vert.MDXData.vVertex.fZ = vert.fZ;
-            }
-
             if(bFound){
-                if(nNode & NODE_HAS_DANGLY){
-                    node.Dangly.Data2.push_back(Vector(vert.fX, vert.fY, vert.fZ));
-                }
-                node.Mesh.Vertices.push_back(std::move(vert));
-                if(nNode & NODE_HAS_SABER) node.Saber.SaberData.push_back(std::move(saberdata));
+                node.Mesh.TempVerts.push_back(std::move(vert));
             }
             else bError = true;
             nDataCounter++;
             if(nDataCounter >= nDataMax){
                 bVerts = false;
-                //node.Mesh.nNumberOfVerts = node.Mesh.Vertices.size();
             }
             SkipLine();
         }
@@ -274,10 +256,8 @@ bool Ascii::Read(FileHeader * FH){
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
             Face face;
-            face.nAdjacentFaces[0] = -1;
-            face.nAdjacentFaces[1] = -1;
-            face.nAdjacentFaces[2] = -1;
-            VertIndicesStruct vertindex;
+
+            //Currently we read the regular NWMax version with only a single set of tvert indices
             if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
             else bFound = false;
             if(ReadInt(nConvert)) face.nIndexVertex[1] = nConvert;
@@ -286,18 +266,16 @@ bool Ascii::Read(FileHeader * FH){
             else bFound = false;
             if(ReadInt(nConvert)) face.nSmoothingGroup = nConvert;
             else bFound = false;
-            ReadFloat(fConvert); //Skipping
-            ReadFloat(fConvert); //Skipping
-            ReadFloat(fConvert); //Skipping
+            if(ReadInt(nConvert)) face.nIndexTvert[0] = nConvert;
+            else bFound = false;
+            if(ReadInt(nConvert)) face.nIndexTvert[1] = nConvert;
+            else bFound = false;
+            if(ReadInt(nConvert)) face.nIndexTvert[2] = nConvert;
+            else bFound = false;
             if(ReadInt(nConvert)) face.nMaterialID = nConvert;
             else bFound = false;
 
-            vertindex.nValues[0] = face.nIndexVertex[0];
-            vertindex.nValues[1] = face.nIndexVertex[1];
-            vertindex.nValues[2] = face.nIndexVertex[2];
-
             if(bFound){
-                node.Mesh.VertIndices.push_back(vertindex);
                 node.Mesh.Faces.push_back(face);
             }
             else bError = true;
@@ -311,42 +289,71 @@ bool Ascii::Read(FileHeader * FH){
             //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
-            if(nNode & NODE_HAS_SABER){
-                SaberDataStruct saberdata = node.Saber.SaberData.back();
-                if(ReadFloat(fConvert)) saberdata.vUV.fX = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) saberdata.vUV.fY = fConvert;
-                else bFound = false;
-            }
-            else{
-                Vertex & vert = node.Mesh.Vertices.back();
-                if(ReadFloat(fConvert)) vert.MDXData.vUV1.fX = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) vert.MDXData.vUV1.fY = fConvert;
-                else bFound = false;
-            }
+            Vector vUV;
+            if(ReadFloat(fConvert)) vUV.fX = fConvert;
+            else bFound = false;
+            if(ReadFloat(fConvert)) vUV.fY = fConvert;
+            else bFound = false;
 
-            if(!bFound) bError = true;
+            if(bFound) node.Mesh.TempTverts.push_back(vUV);
+            else bError = true;
             nDataCounter++;
             if(nDataCounter >= nDataMax){
                 bTverts = false;
             }
             SkipLine();
         }
-        else if(bLightmapTverts){
+        else if(bTverts1){
             //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
-            Vertex & vert = node.Mesh.Vertices.back();
-            if(ReadFloat(fConvert)) vert.MDXData.vUV2.fX = fConvert;
+            Vector vUV;
+            if(ReadFloat(fConvert)) vUV.fX = fConvert;
             else bFound = false;
-            if(ReadFloat(fConvert)) vert.MDXData.vUV2.fY = fConvert;
+            if(ReadFloat(fConvert)) vUV.fY = fConvert;
             else bFound = false;
 
-            if(!bFound) bError = true;
+            if(bFound) node.Mesh.TempTverts1.push_back(vUV);
+            else bError = true;
             nDataCounter++;
             if(nDataCounter >= nDataMax){
-                bLightmapTverts = false;
+                bTverts1 = false;
+            }
+            SkipLine();
+        }
+        else if(bTverts2){
+            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+            bFound = true;
+            Vector vUV;
+            if(ReadFloat(fConvert)) vUV.fX = fConvert;
+            else bFound = false;
+            if(ReadFloat(fConvert)) vUV.fY = fConvert;
+            else bFound = false;
+
+            if(bFound) node.Mesh.TempTverts2.push_back(vUV);
+            else bError = true;
+            nDataCounter++;
+            if(nDataCounter >= nDataMax){
+                bTverts2 = false;
+            }
+            SkipLine();
+        }
+        else if(bTverts3){
+            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+            bFound = true;
+            Vector vUV;
+            if(ReadFloat(fConvert)) vUV.fX = fConvert;
+            else bFound = false;
+            if(ReadFloat(fConvert)) vUV.fY = fConvert;
+            else bFound = false;
+
+            if(bFound) node.Mesh.TempTverts3.push_back(vUV);
+            else bError = true;
+            nDataCounter++;
+            if(nDataCounter >= nDataMax){
+                bTverts3 = false;
             }
             SkipLine();
         }
@@ -354,7 +361,7 @@ bool Ascii::Read(FileHeader * FH){
             //if(DEBUG_LEVEL > 3) std::cout<<"Reading constraints data"<<""<<".\n";
             Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
             bFound = true;
-            if(ReadFloat(fConvert)) node.Dangly.Constraints.push_back(fConvert);
+            if(ReadFloat(fConvert)) node.Dangly.TempConstraints.push_back(fConvert);
             else bError = true;
 
             nDataCounter++;
@@ -371,6 +378,8 @@ bool Ascii::Read(FileHeader * FH){
             int z = 0;
             int nBoneIndex = 0;
             int nNameIndex = 0;
+            Weight weight;
+            std::vector<int> & nWeightIndexes = node.Skin.BoneNameIndexes;
             while(bFound && z < 4){
                 //Get first name
                 bFound = ReadUntilText(sID, false, true);
@@ -402,7 +411,7 @@ bool Ascii::Read(FileHeader * FH){
                             else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
                         }
                         //By here, we have gotten our nNameIndex and nBoneIndex, and everything is indexed properly
-                        node.Mesh.Vertices[nDataCounter].MDXData.fWeightIndex[z] = (double) nBoneIndex;
+                        weight.fWeightIndex[z] = (double) nBoneIndex;
 
                         //Since we found the name, we don't need to keep looping anymore
                         nNameIndex = FH->MH.Names.size();
@@ -416,7 +425,7 @@ bool Ascii::Read(FileHeader * FH){
                 }
                 else if(bFound){
                     //We found the name in the name array. We are therefore ready to read the value as well.
-                    if(ReadFloat(fConvert)) node.Mesh.Vertices[nDataCounter].MDXData.fWeightValue[z] = fConvert;
+                    if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
                 }
                 z++;
             }
@@ -425,6 +434,10 @@ bool Ascii::Read(FileHeader * FH){
                 std::cout<<"Didn't even find one name"<<""<<".\n";
                 std::cout<<"DataCounter: "<<nDataCounter<<". DataMax: "<<nDataMax<<".\n";
                 bError = true;
+            }
+            else{
+                /// Here we assume that everything went fine, so we add the weight to our list
+                node.Skin.TempWeights.push_back(std::move(weight));
             }
             nDataCounter++;
             if(nDataCounter >= nDataMax){
@@ -451,7 +464,7 @@ bool Ascii::Read(FileHeader * FH){
                         bError = true;
                     }
                     else if(sID.size() > 32){
-                        Error("Model name larger than 32 characters! Will truncate and continue.");
+                        Error("Model name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
@@ -481,7 +494,7 @@ bool Ascii::Read(FileHeader * FH){
                         std::cout<<"ReadUntilText() Supermodel name is missing!\n";
                     }
                     else if(sID.size() > 32){
-                        Error("Supermodel name larger than 32 characters! Will truncate and continue.");
+                        Error("Supermodel name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
@@ -515,7 +528,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bGeometry = true;
                     SkipLine();
-
                 }
                 else if(sID == "bmin" && bGeometry && nNode == 0){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
@@ -555,7 +567,10 @@ bool Ascii::Read(FileHeader * FH){
                     else if(sID == "danglymesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_DANGLY;
                     else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
                     else if(sID == "saber") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SABER;
-                    else if(bFound) std::cout<<"ReadUntilText() has found some text (type?) that we cannot interpret: "<<sID<<"\n";
+                    else if(bFound){
+                        std::cout<<"ReadUntilText() has found some text (type?) that we cannot interpret: "<<sID<<"\n";
+                        bError = true;
+                    }
                     if(bFound) node.Head.nType = nType;
 
                     //Read name
@@ -564,132 +579,28 @@ bool Ascii::Read(FileHeader * FH){
                         std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
                     }
                     else{
-                        /*
-                        Name name;
-                        name.sName = sID;
-                        FH->MH.Names.push_back(name);
-                        */
                         node.Head.nNameIndex = GetNameIndex(sID, FH->MH.Names);
                         node.Head.nID1 = node.Head.nNameIndex;
-                        /// need to find the name index here
                     }
 
                     //Get animation number (automatically -1 if geo)
                     node.nAnimation = nAnimation;
 
-                    //Initialize node, so we don't leave stuff undefined if it's not present in the ascii
+                    //Initialize node <-- This is now mostly taken care of in the struct definitions, so no need for anything but the default values here.
                     if(nType & NODE_HAS_HEADER){
                         node.Head.vPos.Set(0.0, 0.0, 0.0);
                         node.Head.oOrient.Quaternion(0.0, 0.0, 0.0, 1.0);
-                        node.Head.oOrient.ConvertToAA(); //Just in case we use this info
+                        //node.Head.oOrient.ConvertToAA(); //Just in case we use this info
                         //node.Head.nID1 = nNodeCounter;
                         //node.Head.nNameIndex = nNodeCounter;
                     }
-                    if(nType & NODE_HAS_LIGHT){
-                        node.Light.fFlareRadius = 0.0;
-                        node.Light.nLightPriority = 0;
-                        node.Light.nAffectDynamic = 0;
-                        node.Light.nAmbientOnly = 0;
-                        node.Light.nDynamicType = 0;
-                        node.Light.nFadingLight = 0;
-                        node.Light.nFlare = 0;
-                        node.Light.nShadow = 0;
-                    }
                     if(nType & NODE_HAS_EMITTER){
-                        node.Emitter.fDeadSpace = 0.0;
-                        node.Emitter.fBlastLength = 0.0;
-                        node.Emitter.fBlastRadius = 0.0;
-                        node.Emitter.nBranchCount = 0;
-                        node.Emitter.fControlPointSmoothing = 0.0;
-                        node.Emitter.nxGrid = 0;
-                        node.Emitter.nyGrid = 0;
-                        node.Emitter.nSpawnType = 0;
-                        node.Emitter.nTwosidedTex = 0;
-                        node.Emitter.nLoop = 0;
-                        //node.Emitter.nRenderOrder = 0;
-                        node.Emitter.cUpdate = "";
-                        node.Emitter.cRender = "";
-                        node.Emitter.cBlend = "";
-                        node.Emitter.cTexture = "";
-                        node.Emitter.cChunkName = "";
                         node.Emitter.cDepthTextureName = "NULL";
-                        node.Emitter.nUnknown1 = 0;
-                        node.Emitter.nUnknown2 = 0;
-                        node.Emitter.nFlags = 0;
                     }
                     if(nType & NODE_HAS_MESH){
-                        node.Mesh.cTexture1 = "";
-                        node.Mesh.cTexture2 = "";
-                        node.Mesh.cTexture3 = "";
-                        node.Mesh.cTexture4 = "";
-                        node.Mesh.vAverage.fX = 0.0;
-                        node.Mesh.vAverage.fY = 0.0;
-                        node.Mesh.vAverage.fZ = 0.0;
-                        node.Mesh.fAmbient.fR = 0.0;
-                        node.Mesh.fAmbient.fG = 0.0;
-                        node.Mesh.fAmbient.fB = 0.0;
-                        node.Mesh.fDiffuse.fR = 0.0;
-                        node.Mesh.fDiffuse.fG = 0.0;
-                        node.Mesh.fDiffuse.fB = 0.0;
-                        node.Mesh.vBBmin.fX = 0.0;
-                        node.Mesh.vBBmin.fY = 0.0;
-                        node.Mesh.vBBmin.fZ = 0.0;
-                        node.Mesh.vBBmax.fX = 0.0;
-                        node.Mesh.vBBmax.fY = 0.0;
-                        node.Mesh.vBBmax.fZ = 0.0;
-                        node.Mesh.fRadius = 0.0;
-                        node.Mesh.nUnknown3[0] = -1;
-                        node.Mesh.nUnknown3[1] = -1;
-                        node.Mesh.nUnknown3[2] = 0;
-                        node.Mesh.fUVDirectionX = 0.0;
-                        node.Mesh.fUVDirectionY = 0.0;
-                        node.Mesh.fUVJitter = 0.0;
-                        node.Mesh.fUVJitterSpeed = 0.0;
-                        node.Mesh.nAnimateUV = 0;
-                        node.Mesh.nBackgroundGeometry = 0;
-                        node.Mesh.nBeaming = 0;
-                        node.Mesh.nShadow = 0;
-                        node.Mesh.nRotateTexture = 0;
-                        node.Mesh.nHasLightmap = 0;
-                        node.Mesh.nShininess = 0;
                         node.Mesh.nTextureNumber = 1;
-                        node.Mesh.nRender = 0;
-                        node.Mesh.nDirtEnabled = 0;
-                        node.Mesh.nUnknown1 = 0;
-                        node.Mesh.nDirtTexture = 0;
-                        node.Mesh.nDirtCoordSpace = 0;
-                        node.Mesh.nHideInHolograms = 0;
-                        node.Mesh.nUnknown2 = 0;
-                        node.Mesh.nUnknown4 = 0;
-                        node.Mesh.fTotalArea = 0.0;
                         node.Mesh.nSaberUnknown1 = 3;
-                        node.Mesh.nSaberUnknown2 = 0;
-                        node.Mesh.nSaberUnknown3 = 0;
-                        node.Mesh.nSaberUnknown4 = 0;
-                        node.Mesh.nSaberUnknown5 = 0;
-                        node.Mesh.nSaberUnknown6 = 0;
-                        node.Mesh.nSaberUnknown7 = 0;
-                        node.Mesh.nSaberUnknown8 = 0;
-                        node.Mesh.Faces.resize(0);
-                        node.Mesh.Vertices.resize(0);
-                        node.Mesh.nMeshInvertedCounter = 0; //For now
                         node.Mesh.nMdxDataBitmap = MDX_FLAG_VERTEX | MDX_FLAG_HAS_NORMAL;
-                    }
-                    if(nType & NODE_HAS_SKIN){
-                        node.Skin.Bones.resize(0);
-                    }
-                    if(nType & NODE_HAS_DANGLY){
-                        node.Dangly.fDisplacement = 0.0;
-                        node.Dangly.fTightness = 0.0;
-                        node.Dangly.fPeriod = 0.0;
-                        node.Dangly.Constraints.resize(0);
-                    }
-                    if(nType & NODE_HAS_AABB){
-                        node.Walkmesh.ArrayOfAabb.resize(0);
-                    }
-                    if(nType & NODE_HAS_SABER){
-                        node.Saber.nInvCount1 = 0; //For now
-                        node.Saber.nInvCount2 = 0; //For now
                     }
 
                     //Finish up
@@ -760,56 +671,48 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nLightPriority = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "shadow" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nShadow = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "affectdynamic" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nAffectDynamic = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "ndynamictype" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nDynamicType = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "ambientonly" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nAmbientOnly = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "fadinglight" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nFadingLight = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if((sID == "lensflares" || sID == "flare") && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nFlare = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "flareradius" && nNode & NODE_HAS_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Light.fFlareRadius = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 /// For EMITTER
@@ -817,103 +720,134 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fDeadSpace = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "blastlength" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fBlastLength = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "blastradius" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fBlastRadius = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "xgrid" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nxGrid = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "ygrid" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nyGrid = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "spawntype" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nSpawnType = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "twosidedtex" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nTwosidedTex = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "loop" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nLoop = nConvert;
-                    else bError = true;
                     SkipLine();
                 }/* Have to take this out until we figure out where it is
                 else if(sID == "renderorder" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nRenderOrder = nConvert;
-                    else bError = true;
                     SkipLine();
                 }*/
                 else if(sID == "update" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Emitter.cUpdate = sID;
-                    else node.Emitter.cUpdate = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Update name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Update name (Emitter) larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Emitter.cUpdate = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "render" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Emitter.cRender = sID;
-                    else node.Emitter.cRender = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Render name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Render name (Emitter) larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Emitter.cRender = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "blend" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Emitter.cBlend = sID;
-                    else node.Emitter.cBlend = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Blend name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Blend name (Emitter) larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Emitter.cBlend = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "texture" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Emitter.cTexture = sID;
-                    else node.Emitter.cTexture = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Texture name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Texture name (Emitter) larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Emitter.cTexture = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "chunkname" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Emitter.cChunkName = sID;
-                    else node.Emitter.cChunkName = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("ChunkName larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("ChunkName larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Emitter.cChunkName = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "p2p" && nNode & NODE_HAS_EMITTER){
@@ -922,7 +856,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_P2P;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "p2p_sel" && nNode & NODE_HAS_EMITTER){
@@ -931,7 +864,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_P2P_SEL;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "affectedbywind" && nNode & NODE_HAS_EMITTER){
@@ -940,7 +872,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_AFFECTED_WIND;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "m_istinted" && nNode & NODE_HAS_EMITTER){
@@ -949,7 +880,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_TINTED;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "bounce" && nNode & NODE_HAS_EMITTER){
@@ -958,7 +888,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_BOUNCE;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "random" && nNode & NODE_HAS_EMITTER){
@@ -967,7 +896,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_RANDOM;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "inherit" && nNode & NODE_HAS_EMITTER){
@@ -976,7 +904,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_INHERIT;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "inheritvel" && nNode & NODE_HAS_EMITTER){
@@ -985,7 +912,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_INHERIT_VEL;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "inherit_local" && nNode & NODE_HAS_EMITTER){
@@ -994,7 +920,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_INHERIT_LOCAL;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "splat" && nNode & NODE_HAS_EMITTER){
@@ -1003,7 +928,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_SPLAT;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "inherit_part" && nNode & NODE_HAS_EMITTER){
@@ -1012,7 +936,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_INHERIT_PART;
                     }
-                    else bError = true;
                     SkipLine();
                 }
                 /// For MESH
@@ -1020,8 +943,58 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
-                    if(bFound) node.Mesh.cTexture1 = sID;
-                    else node.Mesh.cTexture1 = "";
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Bitmap name larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Bitmap name larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Mesh.cTexture1 = sID;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "bitmap2" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Bitmap2 name larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Bitmap2 name larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Mesh.cTexture2 = sID;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "texture0" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound){
+                        if(sID.size() > 16){
+                            Error("Texture0 name larger than the limit, 16 characters! Will truncate and continue.");
+                            sID.resize(16);
+                        }
+                        node.Mesh.cTexture3 = sID;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "texture1" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound){
+                        if(sID.size() > 16){
+                            Error("Texture1 name larger than the limit, 16 characters! Will truncate and continue.");
+                            sID.resize(16);
+                        }
+                        node.Mesh.cTexture4 = sID;
+                    }
                     SkipLine();
                 }
                 else if(sID == "lightmap" && nNode & NODE_HAS_MESH){
@@ -1029,11 +1002,16 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
+                        if(sID.size() > 32){
+                            Error("Lightmap name larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Lightmap name larger than 16 characters! This may cause problems in the game.");
+                        }
                         node.Mesh.cTexture2 = sID;
-                        node.Mesh.nHasLightmap = 1;
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV2;
+                        node.Mesh.nHasLightmap = 1; //Do this if we're using magnusII's version, cuz we won't have it separately
                     }
-                    else node.Mesh.cTexture2 = "";
                     SkipLine();
                 }
                 else if(sID == "diffuse" && nNode & NODE_HAS_MESH){
@@ -1058,74 +1036,70 @@ bool Ascii::Read(FileHeader * FH){
                     else bError = true;
                     SkipLine();
                 }
+                else if(sID == "lightmapped" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nHasLightmap = nConvert;
+                    SkipLine();
+                }
                 else if(sID == "rotatetexture" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nRotateTexture = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "beaming" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nBeaming = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "render" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nRender = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "shadow" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nShadow = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "shininess" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nShininess = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "animateuv" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nAnimateUV = nConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "uvdirectionx" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVDirectionX = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "uvdirectiony" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVDirectionY = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "uvjitter" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVJitter = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "uvjitterspeed" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVJitterSpeed = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 /// For DANGLY
@@ -1133,21 +1107,18 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fDisplacement = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "tightness" && nNode & NODE_HAS_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fTightness = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 else if(sID == "period" && nNode & NODE_HAS_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fPeriod = fConvert;
-                    else bError = true;
                     SkipLine();
                 }
                 /// Next we have the data lists
@@ -1177,11 +1148,31 @@ bool Ascii::Read(FileHeader * FH){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "lightmaptverts" && nNode & NODE_HAS_MESH){
+                else if(sID == "lightmaptverts" && nNode & NODE_HAS_MESH || sID == "tverts1" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
-                    bLightmapTverts = true;
+                    bTverts1 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV2;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else bError = true;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "tverts2" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTverts2 = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV3;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else bError = true;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "tverts3" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTverts3 = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV4;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else bError = true;
                     nDataCounter = 0;
@@ -1192,9 +1183,7 @@ bool Ascii::Read(FileHeader * FH){
                     bWeights = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Skin.Bones.resize(FH->MH.Names.size());
-                    node.Skin.nNumberOfBonemap = FH->MH.Names.size();
-                    nWeightIndexes.resize(0);
-                    for(int i = 0; i < 18; i++ ) node.Skin.nBoneIndexes[i] = 0;
+                    //node.Skin.nNumberOfBonemap = FH->MH.Names.size();
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else bError = true;
                     nDataCounter = 0;

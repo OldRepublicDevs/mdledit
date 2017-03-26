@@ -735,36 +735,36 @@ void Edits::UpdateStatusPositionModel(){
             bool bFound = false;
             while(!bFound){
                 if(nPos < FH->MH.Animations[n].nOffset + 12) bFound = true;
-                else if(n + 1 == FH->MH.AnimationArray.nCount2){
+                else if(n + 1 == FH->MH.Animations.size()){
                     bFound = true;
                     n++;
                 }
-                else if(n == FH->MH.AnimationArray.nCount2){
+                else if(n == FH->MH.Animations.size()){
                     bFound = true;
                 }
                 else n++;
             }
             int nAnimation = n - 1;
-            nMin = FH->MH.Animations[nAnimation].nOffset + 12;
+            nMin = FH->MH.Animations.at(nAnimation).nOffset + 12;
             if(nPos < nMin + ANIM_OFFSET){
-                sprintf(cPrint, "Animations > %s > Header", FH->MH.Animations[nAnimation].sName.c_str());
+                sprintf(cPrint, "Animations > %s > Header", FH->MH.Animations.at(nAnimation).sName.c_str());
             }
             else{
                 Node * NODE = nullptr;
                 for(int b = 0; b < FH->MH.Animations[nAnimation].ArrayOfNodes.size() && NODE==nullptr; b++){
                     Node & node = FH->MH.Animations[nAnimation].ArrayOfNodes[b];
                     if(nPos >= node.nOffset+12 &&
-                       nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.ChildrenArray.GetCount()){
+                       nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.Children.size()){
                         NODE = &node;
                     }
-                    else if(node.Head.ControllerArray.GetCount() > 0 &&
+                    else if(node.Head.Controllers.size() > 0 &&
                             nPos >= node.Head.ControllerArray.nOffset+12 &&
-                            nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.ControllerArray.GetCount()){
+                            nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.Controllers.size()){
                         NODE = &node;
                     }
-                    else if(node.Head.ControllerDataArray.GetCount() > 0 &&
+                    else if(node.Head.ControllerData.size() > 0 &&
                             nPos >= node.Head.ControllerDataArray.nOffset+12 &&
-                            nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerDataArray.GetCount()){
+                            nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerData.size()){
                         NODE = &node;
                     }
                 }
@@ -804,17 +804,17 @@ void Edits::UpdateStatusPositionModel(){
         for(int b = 0; b < FH->MH.ArrayOfNodes.size() && NODE==nullptr; b++){
             Node & node = FH->MH.ArrayOfNodes[b];
             if(nPos >= node.nOffset+12 &&
-               nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.ChildrenArray.GetCount()){
+               nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.Children.size()){
                 NODE = &node;
             }
-            else if(node.Head.ControllerArray.GetCount() > 0 &&
+            else if(node.Head.Controllers.size() > 0 &&
                     nPos >= node.Head.ControllerArray.nOffset+12 &&
-                    nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.ControllerArray.GetCount()){
+                    nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.Controllers.size()){
                 NODE = &node;
             }
-            else if(node.Head.ControllerDataArray.GetCount() > 0 &&
+            else if(node.Head.ControllerData.size() > 0 &&
                     nPos >= node.Head.ControllerDataArray.nOffset+12 &&
-                    nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerDataArray.GetCount()){
+                    nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerData.size()){
                 NODE = &node;
             }
         }
@@ -892,13 +892,15 @@ void Edits::UpdateStatusPositionModel(){
                     }
                 }
                 if(nType & NODE_HAS_LIGHT && !bFound){
+                    /// MISSING, ADD LIGHT DATA
                 }
                 if(nType & NODE_HAS_EMITTER && !bFound){
+                    //Emitters have no data
                 }
                 if(nType & NODE_HAS_MESH && !bFound){
                     if(nPos >= NODE->Mesh.nVertIndicesLocation + 12 && NODE->Mesh.IndexLocationArray.nCount > 0){
                         nMin = NODE->Mesh.nVertIndicesLocation + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Vert Indexes > Face %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/6);
+                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Vert Indices > Face %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/6);
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.MeshInvertedCounterArray.nOffset + 12){
@@ -906,7 +908,7 @@ void Edits::UpdateStatusPositionModel(){
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.IndexLocationArray.nOffset + 12){
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Pointer to Vert Indexes", FH->MH.Names[nNode].sName.c_str());
+                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Pointer to Vert Indices", FH->MH.Names[nNode].sName.c_str());
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.nOffsetToVertArray + 12){
@@ -926,42 +928,41 @@ void Edits::UpdateStatusPositionModel(){
                 }
                 if(nType & NODE_HAS_SKIN && !bFound){
                     if(nPos >= NODE->Skin.Array8Array.nOffset + 12){
-                        nMin = NODE->Skin.Array8Array.nOffset + 12;
                         sprintf(cPrint, "Geometry > %s > Data > Skin > Array8 (unused)", FH->MH.Names[nNode].sName.c_str());
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.TBoneArray.nOffset + 12){
                         nMin = NODE->Skin.TBoneArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > T-Bones > %i", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
+                        sprintf(cPrint, "Geometry > %s > Data > Skin > T-Bones > %s", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.QBoneArray.nOffset + 12){
                         nMin = NODE->Skin.QBoneArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > Q-Bones > %i", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
+                        sprintf(cPrint, "Geometry > %s > Data > Skin > Q-Bones > %s", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.nOffsetToBonemap + 12){
                         nMin = NODE->Skin.nOffsetToBonemap + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > Bonemap > %i", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
+                        sprintf(cPrint, "Geometry > %s > Data > Skin > Bonemap > %s", FH->MH.Names[nNode].sName.c_str(), FH->MH.Names[(nPos - nMin)/4].sName.c_str());
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_DANGLY && !bFound){
                     if(nPos >= NODE->Dangly.nOffsetToData2 + 12){
                         nMin = NODE->Dangly.nOffsetToData2 + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Data2 > Member %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
+                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Data2 > Vertex %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
                         bFound = true;
                     }
                     else if(nPos >= NODE->Dangly.ConstraintArray.nOffset + 12){
                         nMin = NODE->Dangly.ConstraintArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Constraints > Float %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Constraints > Constraint %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_AABB && !bFound){
                     if(nPos >= NODE->Walkmesh.nOffsetToAabb + 12){
                         nMin = NODE->Walkmesh.nOffsetToAabb + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Walkmesh > AABB > Member %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/40);
+                        sprintf(cPrint, "Geometry > %s > Data > Walkmesh > AABB Tree > Aabb %i", FH->MH.Names[nNode].sName.c_str(), (nPos - nMin)/40);
                         bFound = true;
                     }
                 }

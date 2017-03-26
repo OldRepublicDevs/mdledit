@@ -100,12 +100,12 @@
 //#define MDX_FLAG_4000                0x8000
 
 #define AABB_NO_CHILDREN    0x00
-#define AABB_POSITIVE X     0x01
-#define AABB_POSITIVE Y     0x02
-#define AABB_POSITIVE Z     0x04
-#define AABB_NEGATIVE X     0x08
-#define AABB_NEGATIVE Y     0x10
-#define AABB_NEGATIVE Z     0x20
+#define AABB_POSITIVE_X     0x01
+#define AABB_POSITIVE_Y     0x02
+#define AABB_POSITIVE_Z     0x04
+#define AABB_NEGATIVE_X     0x08
+#define AABB_NEGATIVE_Y     0x10
+#define AABB_NEGATIVE_Z     0x20
 //#define AABB_40           0x40
 //#define AABB_80           0x80
 

@@ -11,10 +11,12 @@ HWND hTree;
 HWND hStatusBar;
 HWND hDisplayEdit;
 HWND hTabs;
+HWND hProgress;
 MDL Model;
 MDX Mdx;
 WOK Walkmesh;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
+DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
 
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
@@ -576,12 +578,12 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             //Process the data
             Model.SetFilePath(cFile);
             if(Model.ReadAscii()){
-                Model.PrepareForBinary();
-                Model.Compile();
-                Model.CleanupAfterCompilation();
-                Edit1.LoadData();
-                Model.BuildTree();
+                HANDLE hThread;
+                DWORD nThreadID;
+                hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, &hFrame, 0, &nThreadID);
+                DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc);
 
+                CloseHandle(hThread);
                 bReturn = true;
             }
             else bReturn = false;        }
@@ -692,6 +694,55 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";    }
     return bReturn;
+}
+
+INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
+
+    switch(message){
+        case WM_INITDIALOG:
+        {
+            if(GetParent(hwnd) == hFrame) std::cout<<"hFrame is my parent.\n";
+            else  std::cout<<"hFrame ain't my parent.\n";
+            std::cout<<"My ID: "<<GetDlgCtrlID(hwnd)<<".\n";
+            RECT rcStatus;
+            GetClientRect(hwnd, &rcStatus);
+            hProgress = CreateWindowEx(NULL, PROGRESS_CLASS, "", WS_VISIBLE | WS_CHILD,
+                                            10, 20, rcStatus.right - 20, 18,
+                                            hwnd, (HMENU) IDC_STATUSBAR_PROGRESS, NULL, NULL);
+            SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
+        }
+        break;
+        case WM_QUIT:
+        {
+            std::cout<<"I got a WM_QUIT message, but I'm being a bitch! \n";
+            EndDialog(hwnd, wParam);
+            return TRUE;
+        }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
+}
+
+DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
+    HWND hwnd = *((HWND *) lpParam);
+    Model.AsciiPostProcess();
+    //This should bring us to a state where all the practical data is ready,
+    //but not the binary file-specific data, such as offsets, etc..
+
+    Model.Compile();
+    //This should bring us to a state where all data is ready,
+    //even the binary file-specific data
+
+    Model.CleanupAfterCompilation();
+    //This should bring us to a state where all data is ready
+    //and all the unnecessary calculation data structures are deleted
+
+    Edit1.LoadData(); //Loads up the binary file onto the screen
+    Model.BuildTree(); //Fills the TreeView control
+    if(GetDlgItem(hwnd, DLG_PROGRESS)==NULL) std::cout<<"Can't get our dialogbox. :(\n";
+    SendMessage(GetDlgItem(hFrame, DLG_PROGRESS), WM_QUIT, NULL, NULL);
 }
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){

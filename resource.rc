@@ -18,6 +18,11 @@ BEGIN
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
 END
 
+DLG_PROGRESS DIALOGEX  0, 0, 200, 30
+STYLE WS_POPUP | WS_BORDER | DS_CENTER
+BEGIN
+END
+
 IDM_MAIN MENU DISCARDABLE
 BEGIN
     POPUP " &File "

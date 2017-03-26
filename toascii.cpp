@@ -276,12 +276,15 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   ";
                 int i = 0;
-                int nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fWeightIndex[i]);
-                while(nBoneCount != -1 && i < 4){
-                    int nNameIndex = node->Skin.BoneNameIndexes[nBoneCount];
-                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.fWeightValue[i], 0);
+                int nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
+                //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndexes.size()<<"\n";
+                while(nBoneNumber != -1 && i < 4){
+                    //std::cout<<"Reading bone number "<<nBoneNumber;
+                    //std::cout<<", representing bone "<<FH[0].MH.Names.at(node->Skin.BoneNameIndexes.at(nBoneNumber)).sName.c_str()<<".\n";
+                    int nNameIndex = node->Skin.BoneNameIndexes.at(nBoneNumber);
+                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
                     i++;
-                    nBoneCount = (int) round(node->Mesh.Vertices.at(n).MDXData.fWeightIndex[i]);
+                    nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
                 }
                 if(i == 0){
                     sReturn << " root 1.0";

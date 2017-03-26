@@ -33,7 +33,6 @@
 #define IDM_SETTINGS        124
 
 //GUI controls
-#define IDC_STATUSBAR    200
 #define IDC_MAIN_EDIT    201
 #define IDC_TABS         202
 
@@ -52,6 +51,9 @@
 #define IDC_SBS_SBV      231
 #define IDC_SBS_SBC      232
 
+#define IDC_STATUSBAR           251
+#define IDC_STATUSBAR_PROGRESS  252
+
 #define IDPM_TV_FOLD                301
 #define IDPM_TV_EXPAND              302
 #define IDPM_TV_FOLD_CHILDREN       303
@@ -59,13 +61,14 @@
 #define IDPM_OPEN_CONTROLLER_DATA   305
 #define IDPM_OPEN_GEO_VIEWER        306
 
-#define DLG_SETTINGS     401
-#define DLG_ID_AREA_WEIGHT 402
-#define DLG_ID_ANGLE_WEIGHT 403
-#define DLG_ID_STATIC 404
+#define DLG_SETTINGS         401
+#define DLG_ID_AREA_WEIGHT   402
+#define DLG_ID_ANGLE_WEIGHT  403
+#define DLG_ID_STATIC        404
+#define DLG_PROGRESS         405
 
 #define IDDB_EDIT                   500
 
-#define IDDB_DIALOG_TYPE_1        1200
+#define IDDB_DIALOG_TYPE_1          1200
 
 #endif // RESOURCE_H_INCLUDED
