@@ -18,6 +18,7 @@ WOK Walkmesh;
 HANDLE hThread;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
+DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
 
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
@@ -579,7 +580,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             //Process the data
             Model.SetFilePath(cFile);
             if(Model.ReadAscii()){
-                DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc);
+                DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1);
 
                 bReturn = true;
             }
@@ -678,23 +679,14 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             }
 
             //Process the data
-            Model.DecompileModel();
-            if(!Walkmesh.empty()) Walkmesh.ProcessWalkmesh();
+            DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2);
 
-            //Load the data
-            SetWindowText(hDisplayEdit, "");
-            Edit1.LoadData();
-            Model.BuildTree();
-            if(!Walkmesh.empty()) Walkmesh.BuildTree();
-            std::cout<<string_format("Data loaded!\n");
-            Model.CheckPeculiarities(); //Finally, check for peculiarities
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";    }
     return bReturn;
 }
 
 INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-
     switch(message){
         case WM_INITDIALOG:
         {
@@ -705,7 +697,9 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                             hwnd, (HMENU) IDC_STATUSBAR_PROGRESS, NULL, NULL);
             SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
 
-            hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
+            if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
+            else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessBinary, hwnd, 0, NULL);
+            else EndDialog(hwnd, NULL);
         }
         break;
         case 69:
@@ -735,6 +729,22 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
 
     Edit1.LoadData(); //Loads up the binary file onto the screen
     Model.BuildTree(); //Fills the TreeView control
+
+    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
+}
+
+DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
+    Model.DecompileModel();
+    if(!Walkmesh.empty()) Walkmesh.ProcessWalkmesh();
+
+    //Load the data
+    SetWindowText(hDisplayEdit, "");
+    Edit1.LoadData();
+    Model.BuildTree();
+    if(!Walkmesh.empty()) Walkmesh.BuildTree();
+    std::cout<<string_format("Data loaded!\n");
+
+    Model.CheckPeculiarities(); //Finally, check for peculiarities
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }

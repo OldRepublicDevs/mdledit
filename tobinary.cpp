@@ -277,8 +277,6 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
                 2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
                 3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
                 4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
-
-                Pretty much the only one relevant to us is the first case.
                 /**/
 
                 //ndix UR's magic factor
@@ -414,12 +412,9 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
         node.Mesh.vAverage.fY = fSumY / node.Mesh.Vertices.size();
         node.Mesh.vAverage.fZ = fSumZ / node.Mesh.Vertices.size();
         node.Mesh.fRadius = fLargestRadius;
-        node.Mesh.FaceArray.ResetToSize(node.Mesh.Faces.size());
     }
 }
 
-//Since we need the hierarchy to easily compute transformations for the root, which we then need for some calculations,
-//I will first put everything in the hierarchical order, perform the calculations, then copy back to linear order.
 void MDL::AsciiPostProcess(){
     FileHeader & Data = FH[0];
 
@@ -555,7 +550,7 @@ void MDL::AsciiPostProcess(){
 
     /// PART 3 ///
     /// Create patches through linked faces
-    //This will take a while
+    //This will take a while - this needs to be optimized for speed, anything that can be taken out of it, should be
     std::ofstream Dummy;
     CreatePatches(false, Dummy);
 
@@ -564,6 +559,54 @@ void MDL::AsciiPostProcess(){
     int nMeshCounter = 0;
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         DoCalculations(Data.MH.ArrayOfNodes.at(n), nMeshCounter);
+    }
+
+    /// PART 5 ///
+    /// Calculate vertex normals and vertex tangent space vectors
+    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+        int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
+        for(int p = 0; p < nPatchCount; p++){
+            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+            Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
+
+            for(int p2 = 0; p2 < nPatchCount; p2++){
+                Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(p2);
+                if(patch2.nSmoothingGroups & patch.nSmoothingGroups){
+                    for(int f = 0; f < patch2.FaceIndices.size(); f++){
+                        Face & face = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Faces.at(patch2.FaceIndices.at(f));
+                        Vertex & v1 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[0]);
+                        Vertex & v2 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[1]);
+                        Vertex & v3 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[2]);
+                        Vector Edge1 = v2 - v1;
+                        Vector Edge2 = v3 - v1;
+                        Vector Edge3 = v3 - v2;
+
+                        Vector vAdd = face.vNormal;
+                        if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                        if(bSmoothAngleWeighting){
+                            if(patch.nVertex == face.nIndexVertex[0]){
+                                vAdd *= Angle(Edge1, Edge2);
+                            }
+                            else if(patch.nVertex == face.nIndexVertex[1]){
+                                vAdd *= Angle(Edge1, Edge3);
+                            }
+                            else if(patch.nVertex == face.nIndexVertex[2]){
+                                vAdd *= Angle(Edge2, Edge3);
+                            }
+                        }
+
+                        vert.MDXData.vNormal += vAdd;
+                        vert.MDXData.vTangent1[0] += face.vBitangent;
+                        vert.MDXData.vTangent1[1] += face.vTangent;
+                        vert.MDXData.vTangent1[2] += (face.vBitangent / face.vTangent);
+                    }
+                }
+            }
+            vert.MDXData.vNormal.Normalize();
+            vert.MDXData.vTangent1[0].Normalize();
+            vert.MDXData.vTangent1[1].Normalize();
+            vert.MDXData.vTangent1[2].Normalize();
+        }
     }
 
     /// DONE ///
@@ -918,24 +961,25 @@ void MDL::WriteNodes(Node & node){
     if(node.Head.nType & NODE_HAS_MESH){
         //Write function pointers
         if(node.Head.nType & NODE_HAS_DANGLY){
-            if(bK2) WriteInt(4216864, 9);
-            else WriteInt(4216640, 9);
-            if(bK2) WriteInt(4216848, 9);
-            else WriteInt(4216624, 9);
+            if(bK2) node.Mesh.nFunctionPointer0 = 4216864;
+            else node.Mesh.nFunctionPointer0 = 4216640;
+            if(bK2) node.Mesh.nFunctionPointer1 = 4216848;
+            else node.Mesh.nFunctionPointer1 = 4216624;
         }
         else if(node.Head.nType & NODE_HAS_SKIN){
-            if(bK2) WriteInt(4216816, 9);
-            else WriteInt(4216592, 9);
-            if(bK2) WriteInt(4216832, 9);
-            else WriteInt(4216608, 9);
+            if(bK2) node.Mesh.nFunctionPointer0 = 4216816;
+            else node.Mesh.nFunctionPointer0 = 4216592;
+            if(bK2) node.Mesh.nFunctionPointer1 = 4216832;
+            else node.Mesh.nFunctionPointer1 = 4216608;
         }
         else{
-            if(bK2) WriteInt(4216880, 9);
-            else WriteInt(4216656, 9);
-            if(bK2) WriteInt(4216896, 9);
-            else WriteInt(4216672, 9);
+            if(bK2) node.Mesh.nFunctionPointer0 = 4216880;
+            else node.Mesh.nFunctionPointer0 = 4216656;
+            if(bK2) node.Mesh.nFunctionPointer1 = 4216896;
+            else node.Mesh.nFunctionPointer1 = 4216672;
         }
-
+        WriteInt(node.Mesh.nFunctionPointer0, 9);
+        WriteInt(node.Mesh.nFunctionPointer1, 9);
         PHnOffsetToFaces = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Mesh.Faces.size(), 1);
@@ -1278,64 +1322,113 @@ void MDL::WriteNodes(Node & node){
         }
 
         /// Also write the extra empty vert data
+        node.Mesh.MDXData.nNameIndex = node.Head.nNameIndex;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-            if(node.Head.nType & NODE_HAS_SKIN) Mdx.WriteFloat(1000000.0, 8);
-            else Mdx.WriteFloat(10000000.0, 8);
-            if(node.Head.nType & NODE_HAS_SKIN) Mdx.WriteFloat(1000000.0, 8);
-            else Mdx.WriteFloat(10000000.0, 8);
-            if(node.Head.nType & NODE_HAS_SKIN) Mdx.WriteFloat(1000000.0, 8);
-            else Mdx.WriteFloat(10000000.0, 8);
+            if(node.Head.nType & NODE_HAS_SKIN) node.Mesh.MDXData.vVertex.Set(1000000.0, 1000000.0, 1000000.0);
+            else node.Mesh.MDXData.vVertex.Set(10000000.0, 10000000.0, 10000000.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vVertex.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vVertex.fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vVertex.fZ, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vNormal.Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vNormal.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vNormal.fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vNormal.fZ, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vUV1.Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV1.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV1.fY, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vUV2.Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV2.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV2.fY, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vUV3.Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV3.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV3.fY, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vUV4.Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV4.fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vUV4.fY, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vTangent1[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent1[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent1[2].Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[0].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[0].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[0].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[1].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[1].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[1].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[2].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[2].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent1[2].fZ, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vTangent2[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent2[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent2[2].Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[0].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[0].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[0].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[1].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[1].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[1].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[2].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[2].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent2[2].fZ, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vTangent3[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent3[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent3[2].Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[0].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[0].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[0].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[1].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[1].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[1].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[2].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[2].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent3[2].fZ, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.vTangent4[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent4[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent4[2].Set(0.0, 0.0, 0.0);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[0].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[0].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[0].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[1].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[1].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[1].fZ, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[2].fX, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[2].fY, 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.vTangent4[2].fZ, 8);
         }
         if(node.Head.nType & NODE_HAS_SKIN){
-            Mdx.WriteFloat(1.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
-            Mdx.WriteFloat(0.0, 8);
+            node.Mesh.MDXData.Weights.fWeightValue[0] = 1.0;
+            node.Mesh.MDXData.Weights.fWeightValue[1] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightValue[2] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightValue[3] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightIndex[0] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightIndex[1] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightIndex[2] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightIndex[3] = 0.0;
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[0], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[1], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[2], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[3], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[0], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[1], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[2], 8);
+            Mdx.WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[3], 8);
         }
     }
 

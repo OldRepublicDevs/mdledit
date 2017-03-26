@@ -539,14 +539,20 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
             else sPrint << "unknown - file likely faulty!";
             sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
-            sPrint << string_format("\r\nOffset: %i\r\nOffset to Root: %i\r\nOffset to Parent: %i\r\nID: %i", node->nOffset, node->Head.nOffsetToRoot, node->Head.nOffsetToParent, node->Head.nID1);
-            sPrint << "\r\nPosition: "<<PrepareFloat(node->Head.vPos.fX, 0);
-            sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fY, 0);
-            sPrint << "\r\n          "<<PrepareFloat(node->Head.vPos.fZ, 0);
-            sPrint << "\r\nOrientation: "<<PrepareFloat(node->Head.oOrient.Get(QU_X), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_X), 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_Y), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Y), 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
-            sPrint << "\r\n             "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
+            sPrint << "\r\nOffset: "<<node->nOffset;
+            sPrint << "\r\nOffset to Root: "<<node->Head.nOffsetToRoot;
+            sPrint << "\r\nOffset to Parent: "<<node->Head.nOffsetToParent;
+            sPrint << "\r\nName Index: "<<node->Head.nNameIndex;
+            sPrint << "\r\nID: "<<node->Head.nID1;
+            sPrint << "\r\nPosition:";
+            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.vPos.fX, 0);
+            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.vPos.fY, 0);
+            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.vPos.fZ, 0);
+            sPrint << "\r\nOrientation:";
+            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.oOrient.Get(QU_X), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_X), 1)<<")";
+            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.Get(QU_Y), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Y), 1)<<")";
+            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
+            sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
     }/*
     else if((cItem[0] == "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if((cItem[0] == "Orientation")){

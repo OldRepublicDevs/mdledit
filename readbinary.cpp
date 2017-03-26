@@ -779,19 +779,10 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                 NODE->Mesh.Vertices[n].fX = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
-                /*
-                Vector vTransform = NODE->Mesh.Vertices[n];
-                Location loc = NODE->GetLocation();
-                vTransform.Rotate(loc.oOrientation);
-                vTransform += vFromRoot;
 
-                NODE->Mesh.Vertices.at(n).fFromRootX = vTransform.fX;
-                NODE->Mesh.Vertices.at(n).fFromRootY = vTransform.fY;
-                NODE->Mesh.Vertices.at(n).fFromRootZ = vTransform.fZ;
-                */
-                //NODE->Mesh.Vertices.at(n).fFromRootX = vFromRoot.fX + NODE->Mesh.Vertices[n].fX;
-                //NODE->Mesh.Vertices.at(n).fFromRootY = vFromRoot.fY + NODE->Mesh.Vertices[n].fY;
-                //NODE->Mesh.Vertices.at(n).fFromRootZ = vFromRoot.fZ + NODE->Mesh.Vertices[n].fZ;
+                NODE->Mesh.Vertices[n].vFromRoot = NODE->Mesh.Vertices[n];
+                NODE->Mesh.Vertices[n].vFromRoot.Rotate(NODE->GetLocation().oOrientation);
+                NODE->Mesh.Vertices[n].vFromRoot += vFromRoot;
 
                 if(NODE->Mesh.nMdxDataSize > 0 && !Mdx.empty()){
                     NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;
@@ -860,13 +851,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
                         }
                     }
                     if(NODE->Head.nType & NODE_HAS_SKIN){
-                        //if(NODE->Skin.nOffsetToWeightValuesInMDX != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToWeightValuesInMDX;
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[0] = Mdx.ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[1] = Mdx.ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[2] = Mdx.ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[3] = Mdx.ReadFloat(&nPosData2, 2);
-                        //if(NODE->Skin.nOffsetToBoneIndexInMDX != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH[0].MH.Names[NODE->Head.nNameIndex].sName.c_str());
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToBoneIndexInMDX;
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[0] = Mdx.ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightIndex[1] = Mdx.ReadFloat(&nPosData2, 2);
@@ -1014,21 +1003,20 @@ void MDL::DetermineSmoothing(){
     //std::cout<<"Calculating smoothing groups...\n";
     FileHeader & Data = FH[0];
 
-            //Create file
-            std::string sDir = Model.sFullPath;
-            sDir.reserve(MAX_PATH);
-            PathRemoveFileSpec(&sDir[0]);
-            sDir.resize(strlen(sDir.c_str()));
-            sDir += "\\debug.txt";
-            std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
-            std::ofstream file(sDir.c_str());
+    //Create file
+    std::string sDir = Model.sFullPath;
+    sDir.reserve(MAX_PATH);
+    PathRemoveFileSpec(&sDir[0]);
+    sDir.resize(strlen(sDir.c_str()));
+    sDir += "\\debug.txt";
+    std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
+    std::ofstream file(sDir.c_str());
 
-            if(!file.is_open()){
-                std::cout<<"debug.txt does not exist. No debug will be written.\n";
-            }
-    int nNumOfVerts = 0;
+    if(!file.is_open()){
+        std::cout<<"debug.txt does not exist. No debug will be written.\n";
+    }
+
     int nNumOfFoundNormals = 0;
-    int nNumOfTS = 0;
     int nNumOfFoundTS = 0;
     int nNumOfFoundTSB = 0;
     int nNumOfFoundTST = 0;
@@ -1316,7 +1304,6 @@ void MDL::DetermineSmoothing(){
             else if(fTotalArea == 0.0){
                 //file<<"Patch area's 0 for vertex normal, patch "<<p<<" in group "<<pg<<", vertex "<<patch.nVertex<<" in "<<Data.MH.Names.at(patch.nNameIndex).sName<<" :( \n";
                 file<<"\n:/    BAD GEOMETRY - NO MATCH FOUND!\n";
-                nNumOfVerts--;
                 ssVN<<"Bad geometry for vertex normal in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
             }
             else{
@@ -1448,7 +1435,6 @@ void MDL::DetermineSmoothing(){
                 else if(bBadUV){
                     std::cout<<"Bad UV in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
                     file<<"\n:/    BAD UV!\n";
-                    nNumOfTS--;
                 }
                 else{
                     std::cout<<"No match for tangent space in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")\n";
@@ -1585,20 +1571,19 @@ void MDL::DetermineSmoothing(){
     }
     */
 
+    double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
+    std::cout<<"Done calculating smoothing groups! Found normals: "<<nNumOfFoundNormals<<"/"<<Data.MH.nTotalVertCount<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
+    fPercentage = ((double)nNumOfFoundTS / (double)Data.MH.nTotalTangent1Count) * 100.0;
+    std::cout<<"Found tangent spaces: "<<nNumOfFoundTS<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
+    fPercentage = ((double)nNumOfFoundTSB / (double)Data.MH.nTotalTangent1Count) * 100.0;
+    std::cout<<"  Found bitangents: "<<nNumOfFoundTSB<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
+    fPercentage = ((double)nNumOfFoundTST / (double)Data.MH.nTotalTangent1Count) * 100.0;
+    std::cout<<"  Found tangents: "<<nNumOfFoundTST<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
+    fPercentage = ((double)nNumOfFoundTSN / (double)Data.MH.nTotalTangent1Count) * 100.0;
+    std::cout<<"  Found normals: "<<nNumOfFoundTSN<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
 
-    double fPercentage = ((double)nNumOfFoundNormals / (double)nNumOfVerts) * 100.0;
-    std::cout<<"Done calculating smoothing groups! Found normals: "<<nNumOfFoundNormals<<"/"<<nNumOfVerts<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-    fPercentage = ((double)nNumOfFoundTS / (double)nNumOfTS) * 100.0;
-    std::cout<<"Found tangent spaces: "<<nNumOfFoundTS<<"/"<<nNumOfTS<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-    fPercentage = ((double)nNumOfFoundTSB / (double)nNumOfTS) * 100.0;
-    std::cout<<"  Found bitangents: "<<nNumOfFoundTSB<<"/"<<nNumOfTS<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-    fPercentage = ((double)nNumOfFoundTST / (double)nNumOfTS) * 100.0;
-    std::cout<<"  Found tangents: "<<nNumOfFoundTST<<"/"<<nNumOfTS<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-    fPercentage = ((double)nNumOfFoundTSN / (double)nNumOfTS) * 100.0;
-    std::cout<<"  Found normals: "<<nNumOfFoundTSN<<"/"<<nNumOfTS<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-
-            //Close file
-            file.close();
+    //Close file
+    file.close();
 }
 
 void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothingGroupNumbers, const int & nSmoothingGroupCounter, const int & pg){

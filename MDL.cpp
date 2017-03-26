@@ -150,9 +150,6 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                     std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
 
                     Vector & vCoords = vert.vFromRoot;
-                    //Location loc = node.GetLocation();
-                    //vCoords.Rotate(loc.oOrientation);
-                    //vCoords += node.Head.vFromRoot;
 
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
                     for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
@@ -168,9 +165,6 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                                 for(int i = 0; i < 3; i++){
                                     //Check if vertices are equal (enough)
                                     Vector & vCoords2 = node2.Mesh.Vertices.at(face.nIndexVertex[i]).vFromRoot;
-                                    //Location loc2 = node2.GetLocation();
-                                    //vCoords2.Rotate(loc2.oOrientation);
-                                    //vCoords2 += node2.Head.vFromRoot;
                                     if(vCoords.Compare(vCoords2)){
 
                                         //If they are equal, regardless of weldedness, add the face to the linked faces array
@@ -204,10 +198,7 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
         int ngroup = Data.MH.PatchArrayPointers.size() - 1;
         Node & node = GetNodeByNameIndex(LinkedFaceVector.at(0).nNameIndex);
         Vertex & vert = node.Mesh.Vertices.at(LinkedFaceVector.at(0).nVertex);
-        Vector vCoords = vert;
-        Location loc = node.GetLocation();
-        vCoords.Rotate(loc.oOrientation);
-        vCoords += node.Head.vFromRoot;
+        Vector & vCoords = vert.vFromRoot;
         file<<"Group "<<ngroup<<" "<<vCoords.Print()<<"\n";
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){

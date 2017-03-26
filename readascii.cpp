@@ -1027,6 +1027,14 @@ bool Ascii::Read(FileHeader * FH){
                     else bError = true;
                     SkipLine();
                 }
+                else if(sID == "tangentspace" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)){
+                        if(nConvert != 0) node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT1;
+                    }
+                    SkipLine();
+                }
                 else if(sID == "lightmapped" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);

@@ -73,7 +73,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         sReturn << string_format("\r\nendmodelgeom %s\r\n", mh->GH.sName.c_str());
 
-        for(int n = 0; n < mh->AnimationArray.nCount; n++){
+        for(int n = 0; n < mh->Animations.size(); n++){
             ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
         }
         sReturn << string_format("\r\ndonemodel %s\r\n", mh->GH.sName.c_str());
@@ -115,8 +115,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             sReturn << "\r\n  parent NULL";
         }
-        if(node->Head.ControllerArray.nCount > 0){
-            for(int n = 0; n < node->Head.ControllerArray.nCount; n++){
+        if(node->Head.Controllers.size() > 0){
+            for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
             }
         }
@@ -138,7 +138,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             sReturn << string_format("\r\n  parent NULL");
         }
-        if(node->Head.ControllerArray.nCount > 0){
+        if(node->Head.Controllers.size() > 0){
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
                 sReturn << string_format("\r\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
                 if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_ORIENTATION){
@@ -148,7 +148,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else if(node->Head.Controllers[1].nControllerType != CONTROLLER_HEADER_ORIENTATION){
                 sReturn << string_format("\r\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
             }*/
-            for(int n = 0; n < node->Head.ControllerArray.nCount; n++){
+            for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers[n]));
             }
         }/*
@@ -170,20 +170,20 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << string_format("\r\n  lensflares %i", node->Light.nFlare);
         sReturn << string_format("\r\n  fadinglight %i", node->Light.nFadingLight);
         sReturn << string_format("\r\n  flareradius %s", PrepareFloat(node->Light.fFlareRadius, 0)); //NWmax reads this as an int
-        sReturn << string_format("\r\n  texturenames %i", node->Light.FlareTextureNameArray.nCount);
-        for(int n = 0; n < node->Light.FlareTextureNameArray.nCount; n++){
+        sReturn << string_format("\r\n  texturenames %i", node->Light.FlareTextureNames.size());
+        for(int n = 0; n < node->Light.FlareTextureNames.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareTextureNames[n].sName;
         }
-        sReturn << string_format("\r\n  flaresizes %i", node->Light.FlareSizeArray.nCount);
-        for(int n = 0; n < node->Light.FlareSizeArray.nCount; n++){
+        sReturn << string_format("\r\n  flaresizes %i", node->Light.FlareSizes.size());
+        for(int n = 0; n < node->Light.FlareSizes.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareSizes[n];
         }
-        sReturn << string_format("\r\n  flarepositions %i", node->Light.FlarePositionArray.nCount);
-        for(int n = 0; n < node->Light.FlarePositionArray.nCount; n++){
+        sReturn << string_format("\r\n  flarepositions %i", node->Light.FlarePositions.size());
+        for(int n = 0; n < node->Light.FlarePositions.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlarePositions[n];
         }
-        sReturn << string_format("\r\n  flarecolorshifts %i", node->Light.FlareColorShiftArray.nCount);
-        for(int n = 0; n < node->Light.FlareColorShiftArray.nCount; n++){
+        sReturn << string_format("\r\n  flarecolorshifts %i", node->Light.FlareColorShifts.size());
+        for(int n = 0; n < node->Light.FlareColorShifts.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareColorShifts[n].fR<<" "<<node->Light.FlareColorShifts[n].fG<<" "<<node->Light.FlareColorShifts[n].fB;
         }
     }
@@ -237,6 +237,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "\r\n  uvjitter 0.0";
             sReturn << "\r\n  uvjitterspeed 0.0";
         }
+        if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) sReturn << "\r\n  tangentspace 1";
+        else sReturn << "\r\n  tangentspace 0";
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
         sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
         if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
@@ -246,8 +248,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             if(Mdx.empty()) sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].fX, 0), PrepareFloat(node->Mesh.Vertices[n].fY, 1), PrepareFloat(node->Mesh.Vertices[n].fZ, 2));
             else sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2));
         }
-        sReturn << string_format("\r\n  faces %i", node->Mesh.FaceArray.nCount);
-        for(int n = 0; n < node->Mesh.FaceArray.nCount; n++){
+        sReturn << string_format("\r\n  faces %i", node->Mesh.Faces.size());
+        for(int n = 0; n < node->Mesh.Faces.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
             if(Mdx.empty())
                 sReturn << string_format("\r\n    %i %i %i %i %i %i %i %i",
@@ -297,8 +299,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << string_format("\r\n  displacement %s", PrepareFloat(node->Dangly.fDisplacement, 0));
         sReturn << string_format("\r\n  tightness %s", PrepareFloat(node->Dangly.fTightness, 0));
         sReturn << string_format("\r\n  period %s", PrepareFloat(node->Dangly.fPeriod, 0));
-        sReturn << string_format("\r\n  constraints %i", node->Dangly.ConstraintArray.nCount);
-        for(int n = 0; n < node->Dangly.ConstraintArray.nCount; n++){
+        sReturn << string_format("\r\n  constraints %i", node->Dangly.Constraints.size());
+        for(int n = 0; n < node->Dangly.Constraints.size(); n++){
             sReturn << "\r\n    "<<PrepareFloat(node->Dangly.Constraints[n], 0);
         }
     }
@@ -340,8 +342,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             //sReturn << string_format("\r\n    %s %s %s", node->Mesh.Vertices[n].fX, node->Mesh.Vertices[n].fY, node->Mesh.Vertices[n].fZ);
             sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Saber.SaberData[n].vVertex.fX, 0), PrepareFloat(node->Saber.SaberData[n].vVertex.fY, 1), PrepareFloat(node->Saber.SaberData[n].vVertex.fZ, 2));
         }
-        sReturn << string_format("\r\n  faces %i", node->Mesh.FaceArray.nCount);
-        for(int n = 0; n < node->Mesh.FaceArray.nCount; n++){
+        sReturn << string_format("\r\n  faces %i", node->Mesh.Faces.size());
+        for(int n = 0; n < node->Mesh.Faces.size(); n++){
             sReturn << string_format("\r\n    %i %i %i %i %i %i %i 1",
                     node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2],
                     pown(2, node->Mesh.Faces[n].nMaterialID - 1),
