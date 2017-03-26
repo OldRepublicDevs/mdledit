@@ -376,12 +376,12 @@ void MDL::BuildTree(){
 
     HTREEITEM Animations = Append("Animations", NULL, Root);
     HTREEITEM Nodes, Animation, Sounds, CurrentNode;
-    for(int n = 0; n < Data.MH.AnimationArray.nCount; n++){
+    for(int n = 0; n < Data.MH.Animations.size(); n++){
         Animation = Append(Data.MH.Animations[n].sName, (LPARAM) &(Data.MH.Animations[n]), Animations);
         Append("Length", (LPARAM) &(Data.MH.Animations[n].fLength), Animation);
         Append("Transition", (LPARAM) &(Data.MH.Animations[n].fTransition));
         Sounds = Append("Sounds", (LPARAM) &(Data.MH.Animations[n]));
-        for(int i = 0; i < Data.MH.Animations[n].SoundArray.nCount; i++){
+        for(int i = 0; i < Data.MH.Animations[n].Sounds.size(); i++){
             Append(Data.MH.Animations[n].Sounds[i].sName.c_str(), (LPARAM) &(Data.MH.Animations[n].Sounds[i]), Sounds);
         }
         Nodes = Append("Animated Nodes", NULL, Animation);

@@ -779,9 +779,6 @@ bool Ascii::Read(FileHeader * FH){
                             Error("Update name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
                         }
-                        else if(sID.size() > 16){
-                            Warning("Update name (Emitter) larger than 16 characters! This may cause problems in the game.");
-                        }
                         node.Emitter.cUpdate = sID;
                     }
                     SkipLine();
@@ -795,9 +792,6 @@ bool Ascii::Read(FileHeader * FH){
                             Error("Render name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
                         }
-                        else if(sID.size() > 16){
-                            Warning("Render name (Emitter) larger than 16 characters! This may cause problems in the game.");
-                        }
                         node.Emitter.cRender = sID;
                     }
                     SkipLine();
@@ -810,9 +804,6 @@ bool Ascii::Read(FileHeader * FH){
                         if(sID.size() > 32){
                             Error("Blend name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
-                        }
-                        else if(sID.size() > 16){
-                            Warning("Blend name (Emitter) larger than 16 characters! This may cause problems in the game.");
                         }
                         node.Emitter.cBlend = sID;
                     }
@@ -1405,7 +1396,7 @@ bool Ascii::Read(FileHeader * FH){
                         bError = true;
                     }
                     else if(sID.size() > 32){
-                        Error("Animation name larger than 32 characters! Will truncate and continue.");
+                        Error("Animation name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
@@ -1448,7 +1439,7 @@ bool Ascii::Read(FileHeader * FH){
                         std::cout<<"ReadUntilText() ERROR: an animation's AnimRoot name is missing.\n";
                     }
                     else if(sID.size() > 32){
-                        Error("AnimRoot name larger than 32 characters! Will truncate and continue.");
+                        Error("AnimRoot name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){

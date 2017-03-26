@@ -129,7 +129,7 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
     SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
+        //std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
         //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
             Node & node = Data.MH.ArrayOfNodes.at(n);
@@ -149,10 +149,10 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                     Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); //Create new vector
                     std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
 
-                    Vector vCoords = vert;
-                    Location loc = node.GetLocation();
-                    vCoords.Rotate(loc.oOrientation);
-                    vCoords += node.Head.vFromRoot;
+                    Vector & vCoords = vert.vFromRoot;
+                    //Location loc = node.GetLocation();
+                    //vCoords.Rotate(loc.oOrientation);
+                    //vCoords += node.Head.vFromRoot;
 
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
                     for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
@@ -167,10 +167,10 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                                 //We are now checking the three vertices
                                 for(int i = 0; i < 3; i++){
                                     //Check if vertices are equal (enough)
-                                    Vector vCoords2 = node2.Mesh.Vertices.at(face.nIndexVertex[i]);
-                                    Location loc2 = node2.GetLocation();
-                                    vCoords2.Rotate(loc2.oOrientation);
-                                    vCoords2 += node2.Head.vFromRoot;
+                                    Vector & vCoords2 = node2.Mesh.Vertices.at(face.nIndexVertex[i]).vFromRoot;
+                                    //Location loc2 = node2.GetLocation();
+                                    //vCoords2.Rotate(loc2.oOrientation);
+                                    //vCoords2 += node2.Head.vFromRoot;
                                     if(vCoords.Compare(vCoords2)){
 
                                         //If they are equal, regardless of weldedness, add the face to the linked faces array

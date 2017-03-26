@@ -576,6 +576,7 @@ struct Vertex: public Vector{
         fZ = v.fZ;
         return *this;
     }
+    Vector vFromRoot;
 };
 
 struct Color{

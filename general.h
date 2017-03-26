@@ -32,7 +32,7 @@
 #define ME_DATA_LABEL_OFFSET_X      10
 #define ME_DATA_EDIT_OFFSET_X       2
 #define ME_DATA_NEXT_ROW            22
-#define ME_BASIC_OFFSET_Y           20
+#define ME_BASIC_OFFSET_Y           5
 #define ME_DATA_LABEL_SIZE_X        50
 #define ME_DATA_LABEL_SIZE_Y        15
 #define ME_DATA_EDIT_SIZE_X         280
@@ -49,8 +49,8 @@
 #define ME_TREE_SIZE_DIFF_Y         10
 #define ME_TREE_OFFSET_X            620
 #define ME_TREE_OFFSET_Y            280
-#define ME_DISPLAY_OFFSET_Y         100
-#define ME_DISPLAY_SIZE_Y           176
+#define ME_DISPLAY_OFFSET_Y         71
+#define ME_DISPLAY_SIZE_Y           205
 
 #define DEBUG_LEVEL 0
 

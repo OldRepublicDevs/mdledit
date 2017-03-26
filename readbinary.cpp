@@ -97,8 +97,8 @@ void MDL::DecompileModel(){
     Data.MH.GH.nFunctionPointer1 = ReadInt(&nPos, 9);
 
     //Get game
-    if(Data.MH.GH.nFunctionPointer0 == K2_FUNCTION_POINTER_0) bK2 = true;
-    else bK2 = false;
+    if(Data.MH.GH.nFunctionPointer0 == K1_FUNCTION_POINTER_0) bK2 = false;
+    else bK2 = true;
 
     ReadString(Data.MH.GH.sName, &nPos, 3, 32);
     Data.MH.GH.nOffsetToRootNode = ReadInt(&nPos, 6);

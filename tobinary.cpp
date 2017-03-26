@@ -464,6 +464,10 @@ void MDL::AsciiPostProcess(){
                             bIgnoreVert = false;
                             vert.assign(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
 
+                            vert.vFromRoot = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
+                            vert.vFromRoot.Rotate(node.GetLocation().oOrientation);
+                            vert.vFromRoot+=node.Head.vFromRoot;
+
                             if(node.Head.nType & NODE_HAS_SABER) saberdata.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
                             else vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
 
@@ -589,8 +593,8 @@ bool MDL::Compile(){
         Data->MH.GH.nFunctionPointer0 = K1_FUNCTION_POINTER_0;
         Data->MH.GH.nFunctionPointer1 = K1_FUNCTION_POINTER_1;
     }
-    WriteInt(Data->MH.GH.nFunctionPointer0, 6);
-    WriteInt(Data->MH.GH.nFunctionPointer1, 6);
+    WriteInt(Data->MH.GH.nFunctionPointer0, 9);
+    WriteInt(Data->MH.GH.nFunctionPointer1, 9);
     Data->MH.GH.sName.resize(32);
     WriteString(Data->MH.GH.sName, 3);
 
@@ -688,9 +692,11 @@ bool MDL::Compile(){
         }
         else{
             /// ABSOLUTELY NEED K1 VERSIONS OF THE FUNCTION POINTERS!
+            anim.nFunctionPointer0 = 0xFFFFFFFF;
+            anim.nFunctionPointer1 = 0xFFFFFFFF;
         }
-        WriteInt(anim.nFunctionPointer0, 6);
-        WriteInt(anim.nFunctionPointer1, 6);
+        WriteInt(anim.nFunctionPointer0, 9);
+        WriteInt(anim.nFunctionPointer1, 9);
         anim.sName.resize(32);
         WriteString(anim.sName, 3);
         int PHnOffsetToFirstNode = nPosition;
@@ -752,6 +758,7 @@ bool MDL::Compile(){
 }
 
 void MDL::WriteAabb(Aabb & aabb){
+    aabb.nOffset = nPosition - 12;
     WriteFloat(aabb.vBBmin.fX, 2);
     WriteFloat(aabb.vBBmin.fY, 2);
     WriteFloat(aabb.vBBmin.fZ, 2);
@@ -911,22 +918,22 @@ void MDL::WriteNodes(Node & node){
     if(node.Head.nType & NODE_HAS_MESH){
         //Write function pointers
         if(node.Head.nType & NODE_HAS_DANGLY){
-            if(bK2) WriteInt(4216864, 6);
-            else WriteInt(4216640, 6);
-            if(bK2) WriteInt(4216848, 6);
-            else WriteInt(4216624, 6);
+            if(bK2) WriteInt(4216864, 9);
+            else WriteInt(4216640, 9);
+            if(bK2) WriteInt(4216848, 9);
+            else WriteInt(4216624, 9);
         }
         else if(node.Head.nType & NODE_HAS_SKIN){
-            if(bK2) WriteInt(4216816, 6);
-            else WriteInt(4216592, 6);
-            if(bK2) WriteInt(4216832, 6);
-            else WriteInt(4216608, 6);
+            if(bK2) WriteInt(4216816, 9);
+            else WriteInt(4216592, 9);
+            if(bK2) WriteInt(4216832, 9);
+            else WriteInt(4216608, 9);
         }
         else{
-            if(bK2) WriteInt(4216880, 6);
-            else WriteInt(4216656, 6);
-            if(bK2) WriteInt(4216896, 6);
-            else WriteInt(4216672, 6);
+            if(bK2) WriteInt(4216880, 9);
+            else WriteInt(4216656, 9);
+            if(bK2) WriteInt(4216896, 9);
+            else WriteInt(4216672, 9);
         }
 
         PHnOffsetToFaces = nPosition;
@@ -1014,7 +1021,7 @@ void MDL::WriteNodes(Node & node){
 
         node.Mesh.nNumberOfVerts = node.Mesh.Vertices.size();
         WriteInt(node.Mesh.nNumberOfVerts, 1, 2);
-        WriteInt(node.Mesh.nTextureNumber, 4, 2);
+        WriteInt(node.Mesh.nTextureNumber, 5, 2);
 
         WriteByte(node.Mesh.nHasLightmap, 7);
         WriteByte(node.Mesh.nRotateTexture, 7);
