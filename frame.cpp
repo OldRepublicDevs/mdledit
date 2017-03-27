@@ -746,6 +746,18 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
 
     Model.CheckPeculiarities(); //Finally, check for peculiarities
 
+    //Create file
+    std::string sSuperDebug = Model.GetFullPath() + "_super.txt";
+    std::ofstream file(sSuperDebug, std::fstream::out);
+    if(file.is_open()){
+        FileHeader & Data = *Model.GetFileData();
+        for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+            Node & node = Data.MH.ArrayOfNodes.at(n);
+            file<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1<<"\r\n";
+        }
+    }
+    file.close();
+
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }
 
