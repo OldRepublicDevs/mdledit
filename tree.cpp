@@ -280,7 +280,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
                     Vert = Append(cVert, (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
                     //if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
                 }
-                if(node.Mesh.nMdxDataSize > 0 && !Mdx.empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
+                if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
             }
             HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
             if(node.Mesh.Faces.size() > 0){
@@ -762,7 +762,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
                 cItem[0].c_str(), vert->fX, vert->fY, vert->fZ);
         MDXDataStruct * mdx = &vert->MDXData;
         Node & node = GetNodeByNameIndex(mdx->nNameIndex);
-        if(node.Mesh.nMdxDataSize > 0 && !Mdx.empty()){
+        if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()){
             sPrint << "\r\n\r\nMDX Data";
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                 sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);

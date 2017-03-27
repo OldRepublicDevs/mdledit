@@ -13,7 +13,7 @@ HWND hDisplayEdit;
 HWND hTabs;
 HWND hProgress;
 MDL Model;
-MDX Mdx;
+//MDX Mdx;
 WOK Walkmesh;
 HANDLE hThread;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
@@ -317,7 +317,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_ASCII_SAVE:
                 {
                     int nReturn = IDOK;
-                    if(Mdx.empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
+                    if(Model.Mdx.empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
                     if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
                 }
                 break;
@@ -518,7 +518,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             file.open(cMdx, std::ios::binary | std::fstream::out);
 
             sBinaryExport.clear();
-            Mdx.Export(sBinaryExport);
+            Model.Mdx.Export(sBinaryExport);
 
             //Write and close file
             file<<sBinaryExport;
@@ -566,7 +566,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 Model.FlushData();
                 Model.FlushAscii();
                 Model.FlushAll();
-                Mdx.FlushAll();
+                Model.Mdx.FlushAll();
                 Walkmesh.FlushAll();
             }
 
@@ -622,7 +622,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 Model.FlushData();
                 Model.FlushAscii();
                 Model.FlushAll();
-                Mdx.FlushAll();
+                Model.Mdx.FlushAll();
                 Walkmesh.FlushAll();
             }
 
@@ -649,10 +649,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     file.seekg(0, std::ios::end);
                     std::streampos length = file.tellg();
                     file.seekg(0,std::ios::beg);
-                    std::vector<char> & sBufferRef = Mdx.CreateBuffer(length);
+                    std::vector<char> & sBufferRef = Model.Mdx.CreateBuffer(length);
                     file.read(&sBufferRef[0], length);
                     file.close();
-                    Mdx.SetFilePath(cMdx);
+                    Model.Mdx.SetFilePath(cMdx);
                 }
             }
 
@@ -727,6 +727,7 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     //This should bring us to a state where all data is ready
     //and all the unnecessary calculation data structures are deleted
 
+    SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
     Model.BuildTree(); //Fills the TreeView control
 

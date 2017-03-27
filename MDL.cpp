@@ -120,6 +120,52 @@ double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
     return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
 }
 
+void MDL::LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels){
+    std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName;
+    sSMname.resize(strlen(sSMname.c_str()));
+    if(sSMname != "NULL"){
+        MDL newmdl;
+        std::string sNewMdl = curmdl.sFullPath;
+        sNewMdl.reserve(MAX_PATH);
+        PathRemoveFileSpec(&sNewMdl[0]);
+        sNewMdl.resize(strlen(sNewMdl.c_str()));
+        sNewMdl += "\\";
+        sNewMdl += curmdl.GetFileData()->MH.cSupermodelName.c_str();
+        sNewMdl += ".mdl";
+
+        //Create file
+        std::ifstream file(sNewMdl, std::ios::binary);
+
+        //Check for problems
+        bool bOpen = true;
+        if(!file.is_open()) bOpen = false;
+        file.seekg(0, std::ios::beg);
+        char cBinary [4];
+        file.read(cBinary, 4);
+        //Make sure that what we've read is a binary .mdl as far as we can tell
+        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
+        //If we pass, then the file is definitely ready to be read.
+        if(bOpen){
+            file.seekg(0, std::ios::end);
+            std::streampos length = file.tellg();
+            file.seekg(0, std::ios::beg);
+            std::vector<char> & sBufferRef = newmdl.CreateBuffer(length);
+            file.read(&sBufferRef[0], length);
+            newmdl.SetFilePath(sNewMdl);
+            file.close();
+
+            Supermodels.push_back(std::move(newmdl));
+            Supermodels.back().DecompileModel();
+
+            LoadSupermodels(Supermodels.back(), Supermodels); //Go recursive
+        }
+        else{
+            file.close();
+            Warning("Could not find supermodel " + curmdl.GetFileData()->MH.cSupermodelName + " in the directory! The supernodes might receive wrong values!");
+        }
+    }
+}
+
 /// This function is to be used both when compiling and decompiling (to determine smoothing groups)
 void MDL::CreatePatches(bool bPrint, std::ofstream & file){
     if(!file.is_open()) bPrint = false;

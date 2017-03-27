@@ -557,9 +557,80 @@ void MDL::AsciiPostProcess(){
     /// PART 4 ///
     /// Do the necessary calculations for the nodes in geometry
     int nMeshCounter = 0;
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        DoCalculations(Data.MH.ArrayOfNodes.at(n), nMeshCounter);
+    std::vector<MDL> Supermodels;
+    LoadSupermodels(Model, Supermodels);
+    //First, update the TotalNodeCount
+    int nTotalSupermodelNodes = Supermodels.front().GetFileData()->MH.GH.nTotalNumberOfNodes;
+    std::cout<<"Total Supermodel Nodes: "<<nTotalSupermodelNodes<<"\n";
+    if(nTotalSupermodelNodes > 0)
+        Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size() + 1 + nTotalSupermodelNodes;
+
+    //Next we need the largest supernode number.
+    short nMaxSupernode = 0;
+    for(int n = 0; n < Supermodels.front().GetFileData()->MH.ArrayOfNodes.size(); n++){
+        nMaxSupernode = std::max(nMaxSupernode, Supermodels.front().GetFileData()->MH.ArrayOfNodes.at(n).Head.nID1);
     }
+    short nCurrentSupernode = nMaxSupernode + 1;
+
+    //Update the supernode number for every node
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+        /// 1. Get supernodes
+        //If Name Index is 0, then supernode is zero. But this is the default situation, so we just need to exclude that case.
+        if(node.Head.nNameIndex != 0){
+            std::string & sNodeName = Data.MH.Names.at(node.Head.nNameIndex).sName;
+            std::string & sParentName = Data.MH.Names.at(node.Head.nParentIndex).sName;
+            bool bFound = false;
+            for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                MDL & supermdl = Supermodels.at(m);
+                FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                    if(Data2.MH.Names.at(s).sName == sNodeName){
+                        if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                            //Both the name and the parent name are equal. We really are dealing with the matching node. Get its supernode.
+                            node.Head.nID1 = supermdl.GetNodeByNameIndex(s).Head.nID1;
+                            bFound = true;
+                        }
+                    }
+                }
+            }
+            if(!bFound){
+                //I'm reusing the variable, but we're looking for the parent now
+                bFound = false;
+                if(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex != 0){
+                    std::string & sNodeName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex).sName;
+                    std::string & sParentName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nParentIndex).sName;
+                    for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                        MDL & supermdl = Supermodels.at(m);
+                        FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                        for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                            if(Data2.MH.Names.at(s).sName == sNodeName2){
+                                if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName2 || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                                    //Both the name and the parent name are equal. We really are dealing with the matching node.
+                                    bFound = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                else bFound = true;
+                if(bFound){
+                    //This means that the parent is also present in the supermodel. In this case, we just give it the next supernode number.
+                    node.Head.nID1 = nCurrentSupernode;
+                    nCurrentSupernode++;
+                }
+                else{
+                    //If we couldn't find the parent, it must be new. So, we have a different algorithm for the ID.
+                    node.Head.nID1 += nTotalSupermodelNodes + 1;
+                }
+            }
+        }
+
+        /// 2. Do other calculations
+        DoCalculations(node, nMeshCounter);
+    }
+    Supermodels.clear();
+    Supermodels.shrink_to_fit();
 
     /// PART 5 ///
     /// Calculate vertex normals and vertex tangent space vectors
@@ -643,7 +714,9 @@ bool MDL::Compile(){
 
     int PHnOffsetToRootNode = nPosition;
     WriteInt(0xFFFFFFFF, 6);
-    Data->MH.GH.nTotalNumberOfNodes = Data->MH.ArrayOfNodes.size(); //This number is sometimes greater, possibly including supermodel nodes?
+
+    //Don't overwrite, we've already got this value.
+    //Data->MH.GH.nTotalNumberOfNodes = Data->MH.ArrayOfNodes.size(); //This number is sometimes greater, possibly including supermodel nodes?
     WriteInt(Data->MH.GH.nTotalNumberOfNodes, 1);
 
     //Unknown empty bytes

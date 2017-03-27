@@ -1153,7 +1153,7 @@ class WOK: public BinaryFile{
     void BuildTree();
 };
 
-extern MDX Mdx;
+//extern MDX Mdx;
 extern WOK Walkmesh;
 
 class Ascii: public File{
@@ -1194,6 +1194,7 @@ class MDL: public BinaryFile{
             LinearizeAnimations(node.Head.Children[n], ArrayOfNodes);
         }
     }
+    void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels);
 
     //Display
     void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
@@ -1240,6 +1241,8 @@ class MDL: public BinaryFile{
 
     //Version
     bool bK2 = true;
+
+    MDX Mdx;
 
     //Getters
     FileHeader * GetFileData(){

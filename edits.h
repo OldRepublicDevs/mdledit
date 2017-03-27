@@ -46,9 +46,9 @@ class Edits{
             nBufferSize = Model.GetBufferLength();
         }
         else if(nSel == 1){
-            nKnownArray = &Mdx.GetKnownData();
-            sBuffer = &Mdx.GetBuffer();
-            nBufferSize = Mdx.GetBufferLength();
+            nKnownArray = &Model.Mdx.GetKnownData();
+            sBuffer = &Model.Mdx.GetBuffer();
+            nBufferSize = Model.Mdx.GetBufferLength();
         }
         else if(nSel == 2){
             nKnownArray = &Walkmesh.GetKnownData();
