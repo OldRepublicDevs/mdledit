@@ -755,7 +755,7 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     LoadSupermodels(Model, Supermodels);
     for(int m = Supermodels.size() - 1; m >= 0; m--){
         FileHeader & Data = *Supermodels.at(m).GetFileData();
-        filedebug<<Data.MH.GH.sName<<"\r\n";
+        filedebug<<Data.MH.GH.sName.c_str()<<"\r\n";
         for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
             Node & node = Data.MH.ArrayOfNodes.at(n);
             filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;

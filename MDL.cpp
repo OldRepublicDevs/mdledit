@@ -247,7 +247,7 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
         Node & node = GetNodeByNameIndex(LinkedFaceVector.at(0).nNameIndex);
         Vertex & vert = node.Mesh.Vertices.at(LinkedFaceVector.at(0).nVertex);
         Vector & vCoords = vert.vFromRoot;
-        file<<"Group "<<ngroup<<" "<<vCoords.Print()<<"\n";
+        //file<<"Group "<<ngroup<<" "<<vCoords.Print()<<"\n";
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){
@@ -256,10 +256,10 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                 newpatch.nNameIndex = patchhead.nNameIndex;
                 newpatch.nVertex = patchhead.nVertex;
                 patchhead.bAssignedToPatch = true;
-                std::stringstream ssReport;
+                //std::stringstream ssReport;
                 newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNameIndex).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
                 newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
-                ssReport << patchhead.nFace << " ";
+                //ssReport << patchhead.nFace << " ";
 
                 for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
                     if(!LinkedFaceVector.at(plf).bAssignedToPatch){
@@ -272,11 +272,11 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                             linked.bAssignedToPatch = true;
                             newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(linked.nNameIndex).Mesh.Faces.at(linked.nFace).nSmoothingGroup;
                             newpatch.FaceIndices.push_back(linked.nFace); //Assign linked face index to the patch
-                            ssReport << linked.nFace << " ";
+                            //ssReport << linked.nFace << " ";
                         }
                     }
                 }
-                file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNameIndex).sName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
+                //file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNameIndex).sName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
                 PatchVector.push_back(std::move(newpatch));
             }
         }

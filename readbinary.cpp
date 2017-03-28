@@ -998,6 +998,9 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot){
     }
 }
 
+//Helper
+void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
+
 /// This function will become the main binary decompilation post-processing function
 void MDL::DetermineSmoothing(){
     //std::cout<<"Calculating smoothing groups...\n";
@@ -1069,7 +1072,7 @@ void MDL::DetermineSmoothing(){
                 //Handedness
                 Vector vCross = (face.vNormal / face.vTangent);
                 double fDot = vCross * face.vBitangent;
-                file<<Data.MH.ArrayOfNodes.at(n).GetName()<<" > face "<<f<<" > vNormal×vTangent="<<vCross.Print()<<", (vNormal×vTangent)*vBitangent="<<fDot<<", Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<"\n";
+                //file<<Data.MH.ArrayOfNodes.at(n).GetName()<<" > face "<<f<<" > vNormal×vTangent="<<vCross.Print()<<", (vNormal×vTangent)*vBitangent="<<fDot<<", Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<"\n";
                 if(fDot > 0.0000000001){
                     face.vTangent *= -1.0;
                 }
@@ -1207,7 +1210,8 @@ void MDL::DetermineSmoothing(){
     nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
-        //std::cout<<"Checking "<<nPatchCount<<" patches...\n";
+        Vertex & vert = GetNodeByNameIndex(Data.MH.PatchArrayPointers.at(pg).front().nNameIndex).Mesh.Vertices.at(Data.MH.PatchArrayPointers.at(pg).front().nVertex);
+        Vector & vCoords = vert.vFromRoot;
         bool bSingleNormal = true;
         if(nPatchCount<2) bSingleNormal = false;
         Vector FirstNormal = GetNodeByNameIndex(Data.MH.PatchArrayPointers.at(pg).at(0).nNameIndex).Mesh.Vertices.at(Data.MH.PatchArrayPointers.at(pg).at(0).nVertex).MDXData.vNormal;
@@ -1216,15 +1220,16 @@ void MDL::DetermineSmoothing(){
                 bSingleNormal = false;
             }
         }
-        if(bSingleNormal){
-            //std::cout<<"All normals equal for patch group "<<pg<<". Expecting errors for the next "<<nPatchCount<<" patches.\n";
-            file<<"All normals equal for patch group "<<pg<<". Expecting errors for the next "<<nPatchCount<<" patches.\n";
-        }
         int nFailedNormals = 0;
         std::stringstream ssVN;
         bool bCombined = false;
         for(int nj = 0; nj < nPatchCount; nj++){
             if(Data.MH.PatchArrayPointers.at(pg).at(0).nNameIndex != Data.MH.PatchArrayPointers.at(pg).at(nj).nNameIndex) bCombined = true;
+        }
+        file<<"\r\n"<<(bCombined?"Combined group ":"Group ")<<pg<<" "<<vCoords.Print()<<" - "<<nPatchCount<<" patches.\n";
+        if(bSingleNormal){
+            //std::cout<<"All normals equal for patch group "<<pg<<". Expecting errors for the next "<<nPatchCount<<" patches.\n";
+            file<<"     All normals equal. Expecting errors.\n";
         }
         for(int p = 0; p < nPatchCount; p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
@@ -1239,9 +1244,11 @@ void MDL::DetermineSmoothing(){
             Vector vTangentNormalBase;
             patch.SmoothedPatches.reserve(nPatchCount);
             patch.SmoothedPatches.clear();
-            file<<"Calculating for "<<(bCombined?"combined ":"")<<"group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<")";
+            file<<"->Calculating for patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<", faces";
+            for(int f = 0; f < patch.FaceIndices.size(); f++) file<<" "<<patch.FaceIndices.at(f);
+            file<<")";
             if(GetNodeByNameIndex(patch.nNameIndex).Head.nType & NODE_HAS_DANGLY && GetNodeByNameIndex(patch.nNameIndex).Dangly.Constraints.at(patch.nVertex) == 0.0){
-                file<<"\r\nThis is in a danglymesh and the constraint is 0, expecting errors.";
+                file<<"\r\n     This is in a danglymesh and the constraint is 0, expecting errors.";
             }
             //First add this patch's face normals
             double fTotalArea = 0.0;
@@ -1285,7 +1292,9 @@ void MDL::DetermineSmoothing(){
             //First check if this patch's normal is enough
             Vector vCheck = vNormalBase;
             vCheck.Normalize();
-            file<<"\n   Comparing normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to base ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").";
+            file<<"\r\n    Looking for normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<")";
+            file<<"\r\n    Comparing to base ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").";
+
             if(vCheck.Compare(vNormal)){
                 bFound = true;
             }
@@ -1323,7 +1332,7 @@ void MDL::DetermineSmoothing(){
             if(nFailedNormals == nPatchCount) std::cout<<"No matching vertex normals in "<<(bCombined?"combined ":"")<<"patch group "<<pg<<""<<(bCombined?"":" (")<<(bCombined?"":Data.MH.Names.at(patch.nNameIndex).sName)<<(bCombined?"":")")<<".\n";
             else if(p+1 == nPatchCount) std::cout<<ssVN.str();
 
-            //Also check if this patch is enough for tangent space
+            //Do tangent space calculation
             if(GetNodeByNameIndex(patch.nNameIndex).Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
                 Vector vCheckT = vTangentBase;
                 Vector vCheckB = vBitangentBase;
@@ -1341,22 +1350,22 @@ void MDL::DetermineSmoothing(){
                         file<<"\n   Correct:";
                         bool b1 = false;
                         if(vCheckB.Compare(vBitangent)){
+                            nNumOfFoundTSB++;
                             file<<" bitangent";
                             b1 = true;
                         }
                         if(vCheckT.Compare(vTangent)){
+                            nNumOfFoundTST++;
                             file<<" tangent";
                             b1 = true;
                         }
                         if(vCheckN.Compare(vNormalTS)){
+                            nNumOfFoundTSN++;
                             file<<" normal";
                             b1 = true;
                         }
                         if(!b1) file<<" none";
                         if(vCheckB.Compare(vBitangent) && vCheckT.Compare(vTangent) && vCheckN.Compare(vNormalTS)){
-                            nNumOfFoundTSB++;
-                            nNumOfFoundTST++;
-                            nNumOfFoundTSN++;
                             nTangentPerfect++; //Increment this. This is when we have the vertex normal matching with tangent space vectors, the perfect match
                             bFoundTS = true;
                             file << " (perfect match)";
@@ -1365,8 +1374,7 @@ void MDL::DetermineSmoothing(){
                         else file << " (incomplete)";
                     }
                     else{
-                        //std::vector<int> nDummyPatchVector;
-                        int nFound = 0; //FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
+                        int nFound = 0;
 
                         /**/
                         Vector vWorkBitangent = vBitangentBase;
@@ -1387,20 +1395,23 @@ void MDL::DetermineSmoothing(){
                         vCheckT2.Normalize();
                         vCheckB2.Normalize();
                         vCheckN2.Normalize();
-                        file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB2.fX<<", "<<vCheckB2.fY<<", "<<vCheckB2.fZ<<").";
+                        file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB2.fX<<", "<<vCheckB2.fY<<", "<<vCheckB2.fZ<<").";
                         file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT2.fX<<", "<<vCheckT2.fY<<", "<<vCheckT2.fZ<<").";
                         file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to proposed ("<<vCheckN2.fX<<", "<<vCheckN2.fY<<", "<<vCheckN2.fZ<<").";
                         if(vCheckB2.Compare(vBitangent) || vCheckT2.Compare(vTangent) || vCheckN2.Compare(vNormalTS)){
                             file<<"\n   Correct:";
                             if(vCheckB2.Compare(vBitangent)){
+                                nNumOfFoundTSB++;
                                 file<<" bitangent";
                                 nFound = nFound | 1;
                             }
                             if(vCheckT2.Compare(vTangent)){
+                                nNumOfFoundTST++;
                                 file<<" tangent";
                                 nFound = nFound | 2;
                             }
                             if(vCheckN2.Compare(vNormalTS)){
+                                nNumOfFoundTSN++;
                                 file<<" normal";
                                 nFound = nFound | 4;
                             }
@@ -1410,9 +1421,6 @@ void MDL::DetermineSmoothing(){
                         /**/
 
                         if(nFound == 7){
-                            nNumOfFoundTSB++;
-                            nNumOfFoundTST++;
-                            nNumOfFoundTSN++;
                             nTangentPerfect++; //Increment this. This is when we have the vertex normal matching with tangent space vectors, the perfect match
                             bFoundTS = true;
                             file << " (perfect match)";
@@ -1420,7 +1428,7 @@ void MDL::DetermineSmoothing(){
                     }
                 }
                 else{
-                    file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
+                    file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
                     file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
                     file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
                     if(vCheckB.Compare(vBitangent) || vCheckT.Compare(vTangent) || vCheckN.Compare(vNormalTS)){
@@ -1487,29 +1495,34 @@ void MDL::DetermineSmoothing(){
         }
 
         int nSmoothingGroupCounter = 0;
+       file<<"Getting vertex smoothing groups.\n";
         for(int p = 0; p < nPatchCount; p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            //std::cout<<"Patch "<<p<<" smooths to "<< patch.SmoothedPatches.size()<<" patches...\n";
+            file<<"  Patch "<<p<<" smooths to "<< patch.SmoothedPatches.size()<<" patches...\n";
             for(int i = 0; i < patch.SmoothedPatches.size(); i++){
                 if(patch.SmoothedPatches.at(i) > p){
                     //So now we have patch p smoothing over to the patch in the array.at(i)
                     //update them to include a common smoothing number, then elevate the counter
-                    std::vector<int> SmoothingGroup;
-                    SmoothingGroup.push_back(p);
-                    SmoothingGroup.push_back(patch.SmoothedPatches.at(i));
+                    std::vector<int> SmoothedPatchesGroup;
+                    SmoothedPatchesGroup.push_back(p);
+                    SmoothedPatchesGroup.push_back(patch.SmoothedPatches.at(i));
                     patch.SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                     Data.MH.PatchArrayPointers.at(pg).at(patch.SmoothedPatches.at(i)).SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
 
-                    GenerateSmoothingNumber(SmoothingGroup, nSmoothingGroupNumbers.at(pg), nSmoothingGroupCounter, pg);
+                    GenerateSmoothingNumber(SmoothedPatchesGroup, nSmoothingGroupNumbers.at(pg), nSmoothingGroupCounter, pg);
 
+                    file<<"  Added smoothing group "<<nSmoothingGroupCounter+1<<" for patches:";
+                    for(int spg = 0; spg < SmoothedPatchesGroup.size(); spg++){
+                        file<<" "<<SmoothedPatchesGroup.at(spg);
+                    }
+                    file<<"\n";
                     nSmoothingGroupCounter++;
-                    //std::cout<<"Added smoothing groups for at least patch "<<patch.SmoothedPatches.at(i)<<" and patch "<<p<<"...\n";
                 }
             }
             //Once we get here, we have checked (for patch p) all the patches we smooth over to and added their indexes
             //In case the patch doesn't smooth to any other patch, store an additional identity smoothing group for it
             if(patch.SmoothingGroupNumbers.size() == 0){
-                //std::cout<<"Patch "<<p<<" in patch group "<<pg<<" has no smoothing group, create one at "<<nSmoothingGroupCounter<<".\n";
+                file<<"  Patch "<<p<<" in patch group has no smoothing group, setting it to "<<nSmoothingGroupCounter+1<<".\n";
                 patch.SmoothingGroupNumbers.push_back((unsigned long int*) &(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                 nSmoothingGroupCounter++;
             }
@@ -1538,7 +1551,7 @@ void MDL::DetermineSmoothing(){
                 }
             }
         }*/
-        /**/
+        /**
         //std::cout<<"Last loop!\n";
         for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
@@ -1554,57 +1567,29 @@ void MDL::DetermineSmoothing(){
         /**/
         //std::cout<<"Done updating face smoothing groups!\n";
     }
-    /*
+    /**/
     /// Here we finally apply the smoothing groups to the faces in a principled way.
+    std::vector<bool> DoneGroups(Data.MH.PatchArrayPointers.size(), false);
+    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+        ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DoneGroups);
+    }
+    /// And finally finally, we merge the numbers for every face and get rid of the patch array.
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            if(pg == 0 && p == 0){
-                /// We have to start somewhere, so this is our starting point, we just fill it with values one to sgn
-                for(int sgn = 0; sgn < patch.SmoothingGroupNumbers; sgn++){
-                    *patch.SmoothingGroupNumbers.at(sgn) = pown(2, sgn);
-                }
+            unsigned long int nExistingSG = 0;
+            for(int i = 0; i < patch.SmoothingGroupNumbers.size(); i++){
+                nExistingSG = nExistingSG | *patch.SmoothingGroupNumbers.at(i);
             }
-            /// Now go through all the faces in the patch
+            patch.nSmoothingGroups = (unsigned int) nExistingSG;
             for(int f = 0; f < patch.FaceIndices.size(); f++){
-                Node & node = GetNodeByNameIndex(patch.nNameIndex);
-                Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
-                /// Now we need to make sure that all three patches (one for every vert) have exactly one slot
-                /// If they do, then we first copy  the number from our vert (this vert just by convention) to
-                /// all the patches where the number is 0, under the condition that our current number is unused in the patch.
-                /// Otherwise, start from 1 going up and find an unused one in the patch, and apply that one instead.
-                /// Then we bitOR all three numbers together into the smoothing number.
-
-                /** Alternative algorithm
-                The first thing we do is fill out all our 0 numbers. I will be traveling between patch groups that have been filled before
-                so this should happen rarely, and it shouldn't endanger our already written data. Now we proceed from patch group to patch group,
-                go through the patches and through every face, if the face does not have a double number in any corner, then we copy our number to those
-                slots, provided that that number is not used already in the patch group. If it is, then we probably need to generate a new number to replace it.
-                The way I see it now (which is not very clearly), it should work out more or less fine if we only process ever face once.
-                /**
-
-
-                if(face.nSmoothingGroup == 0){
-                    for(int v = 0; v < 3; v++){
-                        Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
-                        std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
-                        bool bFound = false;
-                        for(int p2 = 0; !bFound; ){
-                            if(PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
-                                bFound = true;
-                            }
-                            else p2++;
-                        }
-                        Patch & vertpatch = PatchVector.at(p2);
-                    }
-                }
-                else{
-
-                }
+                GetNodeByNameIndex(patch.nNameIndex).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup = nExistingSG;
             }
         }
     }
-    */
+    Data.MH.PatchArrayPointers.clear();
+    Data.MH.PatchArrayPointers.shrink_to_fit();
+    /**/
 
     double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
     double fPercentage2 = ((double)nNumOfFoundNormals / (double)(Data.MH.nTotalVertCount - nBadGeo)) * 100.0;
@@ -1634,28 +1619,112 @@ void MDL::DetermineSmoothing(){
     file.close();
 }
 
-void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothingGroupNumbers, const int & nSmoothingGroupCounter, const int & pg){
+void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups){
+    FileHeader & Data = *Model.GetFileData();
+    /** Alternative algorithm
+    1. Go through all of the patches in the patch group.
+    2. If number is not single, skip it. Else if there is no assigned number for the patch
+    make the next number in sequence on the patch.
+    3. Go through all the faces and assign the same
+    number to all the other single corners, then mark the face as processed.
+    4. now we go through the processed faces and apply the same algorithm
+    /**/
+    for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
+        Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
+        if(patch.SmoothingGroupNumbers.size() == 1){
+            if(*patch.SmoothingGroupNumbers.front() == 0){
+                unsigned long int nBitflag = 0;
+                //First get all the used numbers
+                for(int num = 0; num < Numbers.at(nPatchGroup).size(); num++){
+                    nBitflag = nBitflag | Numbers.at(nPatchGroup).at(num);
+                }
+                //Now find the first unused one and use it.
+                for(int n = 0; *patch.SmoothingGroupNumbers.front() == 0; n++){
+                    if(!(nBitflag & pown(2, n))) *patch.SmoothingGroupNumbers.front() = pown(2, n);
+                }
+            }
+            for(int f = 0; f < patch.FaceIndices.size(); f++){
+                Node & node = Data.MH.ArrayOfNodes.at(patch.nNameIndex);
+                Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
+                //Skip if processed
+                if(!face.bProcessedSG){
+                    //Okay, we've got one corner, now we need to check the other two corners if they're single
+                    for(int v = 0; v < 3; v++){
+                        if(face.nIndexVertex[v] != patch.nVertex){ //Don't process yourself
+                            Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
+                            //We get every vert's patch group
+                            std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
+                            bool bFound = false;
+                            int p2 = 0;
+                            while(!bFound){
+                                //Find the patch with the same vert index as stored with the face
+                                if(node.Head.nNameIndex == PatchVector.at(p2).nNameIndex && PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
+                                    bFound = true;
+                                }
+                                else p2++;
+                            }
+                            //We get the patch that contains the current vert
+                            Patch & vertpatch = PatchVector.at(p2);
+                            if(vertpatch.SmoothingGroupNumbers.size() == 1){
+                                //Finally, copy the number to a single corner
+                                *vertpatch.SmoothingGroupNumbers.front() = *patch.SmoothingGroupNumbers.front();
+                            }
+                        }
+                    }
+                    face.bProcessedSG = true;
+                }
+            }
+        }
+    }
+    DoneGroups.at(nPatchGroup) = true;
+    for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
+        Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
+        for(int f = 0; f < patch.FaceIndices.size(); f++){
+            Node & node = Data.MH.ArrayOfNodes.at(patch.nNameIndex);
+            Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
+            if(face.bProcessedSG){
+                for(int v = 0; v < 3; v++){
+                    if(face.nIndexVertex[v] != patch.nVertex){ //Don't process yourself
+                        Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
+
+                        //AND NOW... DO RECURSION!!!
+                        if(!DoneGroups.at(vert.nLinkedFacesIndex)) ConsolidateSmoothingGroups(vert.nLinkedFacesIndex, Numbers, DoneGroups);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothedPatchesGroup, const std::vector<unsigned long int> & nSmoothingGroupNumbers, const int & nSmoothingGroupCounter, const int & pg){
     FileHeader & Data = FH[0];
     bool bExists = false;
 
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
-        for(int sp = 0; sp < SmoothingGroup.size() && !bExists; sp++){
-            if(SmoothingGroup.at(sp) == p) bExists = true;
+        //Check if patch p already exists in the smoothed patches group, if so skip it
+        for(int sp = 0; sp < SmoothedPatchesGroup.size() && !bExists; sp++){
+            if(SmoothedPatchesGroup.at(sp) == p) bExists = true;
         }
         if(!bExists){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
             bool bFound = true;
-            for(int sp = 0; sp < SmoothingGroup.size() && bFound; sp++){
+            //Go through the smoothed patches group; check that all patches in
+            //the smoothed patch group are linked in this patch's smoothed patches as well
+            for(int sp = 0; sp < SmoothedPatchesGroup.size() && bFound; sp++){
                 bFound = false;
+                //Go through the current patche's smoothed patches
                 for(int i = 0; i < patch.SmoothedPatches.size() && !bFound; i++){
-                    if(patch.SmoothedPatches.at(i) == SmoothingGroup.at(sp)){
+                    //If the patch smooths over to a patch in the smoothed patches group
+                    if(patch.SmoothedPatches.at(i) == SmoothedPatchesGroup.at(sp)){
                         bFound = true;
                     }
                 }
             }
             if(bFound){
-                SmoothingGroup.push_back(p);
-                Data.MH.PatchArrayPointers.at(pg).at(p).SmoothingGroupNumbers.push_back((long unsigned int*)&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
+                //Add the patch to the smoothed patches group
+                SmoothedPatchesGroup.push_back(p);
+                //Add the same smoothing group number to the smoothing group numbers of the current patch.
+                patch.SmoothingGroupNumbers.push_back((long unsigned int*)&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
             }
         }
     }
@@ -1704,7 +1773,7 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
             //Check if this is it
             Vector vCheck = vWorking;
             vCheck.Normalize();
-            file<<"\n   Comparing normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to proposed ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<"). Included patches:";
+            file<<"\n    Comparing to proposed ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<"). Included patches:";
             for(int g = 0; g < OurSmoothedPatches.size(); g++){
                 file<<" "<<OurSmoothedPatches.at(g);
             }
@@ -1760,7 +1829,7 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
             vCheckT.Normalize();
             vCheckB.Normalize();
             vCheckN.Normalize();
-            file<<"\n   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
+            file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
             file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
             file<<"\n   Comparing TS normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to proposed ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
             file<<"\n   Included patches:";

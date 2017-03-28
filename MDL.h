@@ -433,6 +433,7 @@ struct Face{
     short nIndexTvert2[3] = {-1, -1, -1};
     short nIndexTvert3[3] = {-1, -1, -1};
     bool bProcessed[3] = {false, false, false};
+    bool bProcessedSG;
     int nSmoothingGroup = 1;
     double fArea = 0.0;
     double fAreaUV = 0.0;
