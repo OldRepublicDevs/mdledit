@@ -1027,7 +1027,7 @@ class File{
         return sFile;
     }
     const std::string & GetFullPath(){
-        return sFile;
+        return sFullPath;
     }
     virtual const std::string GetName(){
         return "";
@@ -1194,7 +1194,6 @@ class MDL: public BinaryFile{
             LinearizeAnimations(node.Head.Children[n], ArrayOfNodes);
         }
     }
-    void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels);
 
     //Display
     void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
@@ -1287,6 +1286,7 @@ class MDL: public BinaryFile{
         FH.clear();
     }
 
+
     //Setters/general
     bool LinkHead(bool bLink){
         unsigned int nOffset;
@@ -1327,6 +1327,8 @@ class MDL: public BinaryFile{
         return bReturn;
     }
 };
+
+void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels);
 
 extern MDL Model;
 

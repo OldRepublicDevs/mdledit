@@ -747,17 +747,37 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
 
     Model.CheckPeculiarities(); //Finally, check for peculiarities
 
-    //Create file
-    std::string sSuperDebug = Model.GetFullPath() + "_super.txt";
-    std::ofstream file(sSuperDebug, std::fstream::out);
-    if(file.is_open()){
-        FileHeader & Data = *Model.GetFileData();
+    //Create filedebug
+    std::string sSuperDebug = Model.GetFullPath().c_str();
+    sSuperDebug += "_super.txt";
+    std::stringstream filedebug;
+    std::vector<MDL> Supermodels;
+    LoadSupermodels(Model, Supermodels);
+    for(int m = Supermodels.size() - 1; m >= 0; m--){
+        FileHeader & Data = *Supermodels.at(m).GetFileData();
+        filedebug<<Data.MH.GH.sName<<"\r\n";
         for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
             Node & node = Data.MH.ArrayOfNodes.at(n);
-            file<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1<<"\r\n";
+            filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
+            if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
+            filedebug<<"\r\n";
         }
     }
-    file.close();
+    FileHeader & Data = *Model.GetFileData();
+    filedebug<<Data.MH.GH.sName<<"\r\n";
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+        filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
+        if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
+        filedebug<<"\r\n";
+    }
+    Supermodels.clear();
+    Supermodels.shrink_to_fit();
+    std::ofstream filedebugwrite(sSuperDebug, std::fstream::out);
+    if(filedebugwrite.is_open()){
+        filedebugwrite<<filedebug.str();
+    }
+    filedebugwrite.close();
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }

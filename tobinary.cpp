@@ -361,41 +361,6 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
         for(int v = 0; v < node.Mesh.Vertices.size(); v++){
             Vertex & vert = node.Mesh.Vertices.at(v);
 
-            /*
-            //Vertex normals
-            vert.MDXData.vNormal = Vector(0.0, 0.0, 0.0); //Start with null vector
-            unsigned int nSmoothing = 0;
-
-            //First, get the welded patch smoothing group
-            int nPatchVectorMax = FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).size();
-            for(int p = 0; p < nPatchVectorMax; p++){
-                if(FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).at(p).nNameIndex == node.Head.nNameIndex &&
-                   FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).at(p).nVertex == v){
-                    //We have found the welded patch. Save its smoothing groups (we will add the normals later on)
-                    nSmoothing = FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).at(p).nSmoothingGroups;
-                    p = nPatchVectorMax;
-                }
-            }
-            for(int p = 0; p < FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).size(); p++){
-                Patch & patch = FH[0].MH.PatchArrayPointers.at(vert.nLinkedFacesIndex).at(p);
-
-                //check the smoothing groups. If we are compatible, then we may take this patch of faces into account
-                if( patch.nSmoothingGroups & nSmoothing ){
-                    //If the smoothing group of the unwelded face patch matches any smoothing group of the welded faces,
-                    //then add this patch to the vertex normal calculation
-                    for(int f = 0; f < patch.FaceIndices.size(); f++){
-                        Face & face = GetNodeByNameIndex(patch.nNameIndex).Mesh.Faces.at(patch.FaceIndices.at(f));
-
-                        //Add face normal to vertex normal calculation
-                        vert.MDXData.vNormal += face.vNormal * face.fArea;
-                    }
-                }
-                //Otherwise skip
-            }
-            vert.MDXData.vNormal.Normalize();
-            //done with vertex normal
-            */
-
             //Bounding Box, Radius and Average calculations
             node.Mesh.vBBmin.fX = std::min(node.Mesh.vBBmin.fX, vert.fX);
             node.Mesh.vBBmin.fY = std::min(node.Mesh.vBBmin.fY, vert.fY);
