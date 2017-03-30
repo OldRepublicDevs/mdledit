@@ -76,8 +76,8 @@
 #define EMITTER_FLAG_INHERIT_LOCAL      0x0100
 #define EMITTER_FLAG_SPLAT              0x0200
 #define EMITTER_FLAG_INHERIT_PART       0x0400
-//#define EMITTER_FLAG_0800             0x0800
-//#define EMITTER_FLAG_1000             0x1000
+#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //ndix UR
+#define EMITTER_FLAG_RENDER_ORDER       0x1000 //ndix UR
 //#define EMITTER_FLAG_2000             0x2000
 //#define EMITTER_FLAG_3000             0x4000
 //#define EMITTER_FLAG_4000             0x8000

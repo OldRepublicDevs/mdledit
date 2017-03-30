@@ -120,7 +120,7 @@ double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
     return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
 }
 
-void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels){
+void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
     std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName;
     sSMname.resize(strlen(sSMname.c_str()));
     if(sSMname != "NULL"){
@@ -146,7 +146,7 @@ void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels){
         if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
         //If we pass, then the file is definitely ready to be read.
         if(bOpen){
-            std::cout<<"Reading "<<sNewMdl<<"\n";
+            std::cout<<"Reading supermodel: \n"<<sNewMdl<<"\n";
             file.seekg(0, std::ios::end);
             std::streampos length = file.tellg();
             file.seekg(0, std::ios::beg);
@@ -156,9 +156,9 @@ void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels){
             file.close();
 
             Supermodels.push_back(std::move(newmdl));
-            Supermodels.back().DecompileModel();
+            Supermodels.back().DecompileModel(true);
 
-            LoadSupermodels(Supermodels.back(), Supermodels); //Go recursive
+            LoadSupermodel(Supermodels.back(), Supermodels); //Go recursive
         }
         else{
             file.close();
@@ -169,8 +169,7 @@ void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels){
 
 /// This function is to be used both when compiling and decompiling (to determine smoothing groups)
 /// It is very expensive, so modify with care to keep it efficient. Any calculations that can be performed outside, should be.
-void MDL::CreatePatches(bool bPrint, std::ofstream & file){
-    if(!file.is_open()) bPrint = false;
+void MDL::CreatePatches(){
     FileHeader & Data = FH[0];
 
     SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size()));
@@ -193,9 +192,9 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                 //Proceed only if this vertex group hasn't been processed yet
                 if(node.Mesh.Vertices.at(v).nLinkedFacesIndex == -1){
                     Vertex & vert = node.Mesh.Vertices.at(v); // Make life easier
-                    vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); //Update reference to new vector that is about to be created
-                    Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); //Create new vector
-                    std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); //Get reference to the new vector
+                    vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); // Update reference to new vector that is about to be created
+                    Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); // Create new vector
+                    std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); // Get reference to the new vector
 
                     Vector & vCoords = vert.vFromRoot;
 
@@ -235,19 +234,15 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
         SendMessage(hProgress, PBM_STEPIT, (WPARAM) NULL, (LPARAM) NULL);
     }
     std::cout<<"Done building LinkedFaces array!\n";
+    for(int dbg = 0; dbg < Data.MH.LinkedFacesPointers.size(); dbg++){
+        if(Data.MH.LinkedFacesPointers.at(dbg).size() == 0) Warning("A linked face group is empty. This is gonna cause a crash in a bit...");
+    }
     std::cout<<"Creating patches... \n";
     for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
         //For every vector of linked faces, create a vector of patches
         std::vector<LinkedFace> & LinkedFaceVector = Data.MH.LinkedFacesPointers.at(v);
         Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
         std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
-
-        //Write it down
-        int ngroup = Data.MH.PatchArrayPointers.size() - 1;
-        Node & node = GetNodeByNameIndex(LinkedFaceVector.at(0).nNameIndex);
-        Vertex & vert = node.Mesh.Vertices.at(LinkedFaceVector.at(0).nVertex);
-        Vector & vCoords = vert.vFromRoot;
-        //file<<"Group "<<ngroup<<" "<<vCoords.Print()<<"\n";
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){
@@ -256,10 +251,8 @@ void MDL::CreatePatches(bool bPrint, std::ofstream & file){
                 newpatch.nNameIndex = patchhead.nNameIndex;
                 newpatch.nVertex = patchhead.nVertex;
                 patchhead.bAssignedToPatch = true;
-                //std::stringstream ssReport;
                 newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNameIndex).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
                 newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
-                //ssReport << patchhead.nFace << " ";
 
                 for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
                     if(!LinkedFaceVector.at(plf).bAssignedToPatch){

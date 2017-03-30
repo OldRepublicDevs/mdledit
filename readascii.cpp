@@ -31,6 +31,10 @@ bool Ascii::Read(FileHeader * FH){
     bool bAabb = false;
     bool bConstraints = false;
     bool bKeys = false;
+    bool bTextureNames = false;
+    bool bFlarePositions = false;
+    bool bFlareSizes = false;
+    bool bFlareColorShifts = false;
     unsigned int nNodeCounter = 0;
     Node * PreviousNode;
     unsigned int nDataMax;
@@ -76,374 +80,396 @@ bool Ascii::Read(FileHeader * FH){
 
     nPosition = 0;
     ///Loops for every row
+    bool * lpbList = nullptr;
     while(nPosition < nBufferSize && !bEnd && !bError){
+        //First set our current list
+        if(bKeys) lpbList = &bKeys;
+        else if(bWeights) lpbList = &bWeights;
+        else if(bEventlist) lpbList = &bEventlist;
+        else if(bAabb) lpbList = &bAabb;
+        else if(bVerts) lpbList = &bVerts;
+        else if(bFaces) lpbList = &bFaces;
+        else if(bTverts) lpbList = &bTverts;
+        else if(bTverts1) lpbList = &bTverts1;
+        else if(bTverts2) lpbList = &bTverts2;
+        else if(bTverts3) lpbList = &bTverts3;
+        else if(bConstraints) lpbList = &bConstraints;
+        else if(bFlarePositions) lpbList = &bFlarePositions;
+        else if(bFlareSizes) lpbList = &bFlareSizes;
+        else if(bFlareColorShifts) lpbList = &bFlareColorShifts;
+        else if(bTextureNames) lpbList = &bTextureNames;
+        else lpbList = nullptr;
+
         //First, check if we have a blank line, we'll just skip it here.
         if(EmptyRow()){
             SkipLine();
         }
         //Second, check if we are in some list of data. We should not look for a keyword then.
-        else if(bKeys){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading keys data"<<""<<".\n";
-            //This is keyed controller data
+        else if(lpbList != nullptr){
             //First, check if we're done. Save your position, cuz we'll need to revert if we're not done
             int nSavePos = nPosition;
             ReadUntilText(sID);
-            if(sID == "endlist"){
-                bKeys = false;
+            if(sID == "endlist" || sID == "endnode" || nDataMax == 0){
+                *lpbList = false;
+                if(sID == "endnode") nNode = 0;
                 SkipLine();
             }
             else{
                 //Revert back to old position
                 nPosition = nSavePos;
 
-                //We've already read the timekeys, we're left with the values
-                Animation & anim = FH->MH.Animations.back();
-                Node & node = anim.ArrayOfNodes.back();
-                Node & geonode = Model.GetNodeByNameIndex(node.Head.nNameIndex);
-                Location loc = geonode.GetLocation();
-                //Node & geonode = GetNodeByNameIndex(*FH, node.Head.nNameIndex);
-                /*
-                int nCtrl = 0;
-                for(int c = 0; c < geonode.Head.Controllers.size(); ){
-                    if(geonode.Head.Controllers.at(c).nControllerType == CONTROLLER_HEADER_POSITION){
-                        nCtrl = c;
-                        c = geonode.Head.Controllers.size();
-                    }
-                    else c++;
-                }
-                Controller & posctrl = geonode.Head.Controllers.at(nCtrl);
-                */
-                Controller & ctrl = node.Head.Controllers.back();
-
-                if(!ReadFloat(fConvert)) bError = true; //First read the timekey, also check that we're valid
-
-                if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
-                    double fX, fY, fZ, fA;
-                    if(ReadFloat(fConvert)) fX = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) fY = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) fZ = fConvert;
-                    else bError = true;
-                    if(ReadFloat(fConvert)) fA = fConvert;
-                    else bError = true;
-                    Orientation NewOrientKey;
-                    NewOrientKey.AA(fX, fY, fZ, fA);
-                    NewOrientKey.ConvertToQuaternions();
-                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_X));
-                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Y));
-                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
-                    node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
-                }
-                else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
-                    if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
-                    else bError = true;
-                    if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fY);
-                    else bError = true;
-                    if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fZ);
-                    else bError = true;
-                }
-                else{
-                    bFound = true;
-                    while(bFound){
-                        if(ReadFloat(fConvert)){
-                            //std::cout<<"Reading non-position keys...\n";
-                            node.Head.ControllerData.push_back(fConvert);
-                        }
-                        else bFound = false;
-                    }
-                }
-
-                SkipLine();
-            }
-        }
-        else if(bEventlist){
-            //First, check if we're done. Save your position, cuz we'll need to revert if we're not done
-            int nSavePos = nPosition;
-            ReadUntilText(sID);
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading sounds data("<<sID<<").\n";
-            if(sID == "endlist"){
-                bEventlist = false;
-                SkipLine();
-            }
-            else{
-                //Revert back to old position
-                nPosition = nSavePos;
-                Sound sound; //New sound
-                if(ReadFloat(fConvert)) sound.fTime = fConvert;
-                else bError = true;
-                bFound = ReadUntilText(sID, false);
-                if(!bFound){
-                    std::cout<<"ReadUntilText() Sound name is missing!\n";
-                    bError = true;
-                }
-                else if(sID.size() > 32){
-                    Error("Sound name larger than 32 characters! Will truncate and continue.");
-                    sID.resize(32);
-                }
-                else if(sID.size() > 16){
-                    Warning("Sound name larger than 16 characters! This may cause problems in the game.");
-                }
-                sound.sName = sID;
-                if(bFound){
+                /// Read the data
+                if(bKeys){
+                    //We've already read the timekeys, we're left with the values
                     Animation & anim = FH->MH.Animations.back();
-                    anim.Sounds.push_back(sound);
-                }
-                SkipLine();
-            }
-        }
-        else if(bAabb){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading aabb data"<<""<<".\n";
-            //First, check if we're done. Save your position, cuz we'll need to revert if we're not done
-            int nSavePos = nPosition;
-            ReadUntilText(sID);
-            if(sID == "endnode"){
-                bAabb = false;
-                nNode = 0; //aabb is special in that it goes on until the end of the node
-                SkipLine();
-            }
-            else{
-                //Revert back to old position
-                nPosition = nSavePos;
-                Aabb aabb; //New aabb
-                bFound = true;
-                if(ReadFloat(fConvert)) aabb.vBBmin.fX = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) aabb.vBBmin.fY = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) aabb.vBBmin.fZ = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) aabb.vBBmax.fX = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) aabb.vBBmax.fY = fConvert;
-                else bFound = false;
-                if(ReadFloat(fConvert)) aabb.vBBmax.fZ = fConvert;
-                else bFound = false;
-                if(ReadInt(nConvert)) aabb.nID = nConvert;
-                else bFound = false;
+                    Node & node = anim.ArrayOfNodes.back();
+                    Node & geonode = Model.GetNodeByNameIndex(node.Head.nNameIndex);
+                    Location loc = geonode.GetLocation();
+                    Controller & ctrl = node.Head.Controllers.back();
 
-                if(bFound){
-                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                    node.Walkmesh.ArrayOfAabb.push_back(aabb);
-                }
-                else bError = true;
-                SkipLine();
-            }
-        }
-        else if(bVerts){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Vector vert;
-            if(ReadFloat(fConvert)) vert.fX = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vert.fY = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vert.fZ = fConvert;
-            else bFound = false;
-            if(bFound){
-                node.Mesh.TempVerts.push_back(std::move(vert));
-            }
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bVerts = false;
-            }
-            SkipLine();
-        }
-        else if(bFaces){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Face face;
+                    if(!ReadFloat(fConvert)) bError = true; //First read the timekey, also check that we're valid
 
-            //Currently we read the regular NWMax version with only a single set of tvert indices
-            if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nIndexVertex[1] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nIndexVertex[2] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nSmoothingGroup = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nIndexTvert[0] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nIndexTvert[1] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nIndexTvert[2] = nConvert;
-            else bFound = false;
-            if(ReadInt(nConvert)) face.nMaterialID = nConvert;
-            else bFound = false;
-
-            if(bFound){
-                node.Mesh.Faces.push_back(face);
-            }
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bFaces = false;
-            }
-            SkipLine();
-        }
-        else if(bTverts){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Vector vUV;
-            if(ReadFloat(fConvert)) vUV.fX = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vUV.fY = fConvert;
-            else bFound = false;
-
-            if(bFound) node.Mesh.TempTverts.push_back(vUV);
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bTverts = false;
-            }
-            SkipLine();
-        }
-        else if(bTverts1){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Vector vUV;
-            if(ReadFloat(fConvert)) vUV.fX = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vUV.fY = fConvert;
-            else bFound = false;
-
-            if(bFound) node.Mesh.TempTverts1.push_back(vUV);
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bTverts1 = false;
-            }
-            SkipLine();
-        }
-        else if(bTverts2){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Vector vUV;
-            if(ReadFloat(fConvert)) vUV.fX = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vUV.fY = fConvert;
-            else bFound = false;
-
-            if(bFound) node.Mesh.TempTverts2.push_back(vUV);
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bTverts2 = false;
-            }
-            SkipLine();
-        }
-        else if(bTverts3){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            Vector vUV;
-            if(ReadFloat(fConvert)) vUV.fX = fConvert;
-            else bFound = false;
-            if(ReadFloat(fConvert)) vUV.fY = fConvert;
-            else bFound = false;
-
-            if(bFound) node.Mesh.TempTverts3.push_back(vUV);
-            else bError = true;
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bTverts3 = false;
-            }
-            SkipLine();
-        }
-        else if(bConstraints){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading constraints data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            if(ReadFloat(fConvert)) node.Dangly.TempConstraints.push_back(fConvert);
-            else bError = true;
-
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bConstraints = false;
-            }
-            SkipLine();
-        }
-        else if(bWeights){
-            //if(DEBUG_LEVEL > 3) std::cout<<"Reading weights data"<<""<<".\n";
-            Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-            bFound = true;
-            bool bPresent = false;
-            int z = 0;
-            int nBoneIndex = 0;
-            int nNameIndex = 0;
-            Weight weight;
-            std::vector<int> & nWeightIndexes = node.Skin.BoneNameIndexes;
-            while(bFound && z < 4){
-                //Get first name
-                bFound = ReadUntilText(sID, false, true);
-                //if we found a name, loop through the name array to find our name index
-                for(nNameIndex = 0; nNameIndex < FH->MH.Names.size() && bFound; nNameIndex++){
-                    //check if there is a match
-                    if(FH->MH.Names[nNameIndex].sName == sID){
-                        //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
-                        //Check if we already have this name indexed in the skin
-                        bPresent = false;
-                        for(nBoneIndex = 0; nBoneIndex < nWeightIndexes.size() && !bPresent; ){
-                            if(nWeightIndexes[nBoneIndex] == nNameIndex){
-                                bPresent = true;
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                        double fX, fY, fZ, fA;
+                        if(ReadFloat(fConvert)) fX = fConvert;
+                        else bError = true;
+                        if(ReadFloat(fConvert)) fY = fConvert;
+                        else bError = true;
+                        if(ReadFloat(fConvert)) fZ = fConvert;
+                        else bError = true;
+                        if(ReadFloat(fConvert)) fA = fConvert;
+                        else bError = true;
+                        Orientation NewOrientKey;
+                        NewOrientKey.AA(fX, fY, fZ, fA);
+                        NewOrientKey.ConvertToQuaternions();
+                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_X));
+                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Y));
+                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
+                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
+                    }
+                    else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
+                        if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
+                        else bError = true;
+                        if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fY);
+                        else bError = true;
+                        if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fZ);
+                        else bError = true;
+                    }
+                    else{
+                        bFound = true;
+                        while(bFound){
+                            if(ReadFloat(fConvert)){
+                                //std::cout<<"Reading non-position keys...\n";
+                                node.Head.ControllerData.push_back(fConvert);
                             }
-                            else nBoneIndex++;
+                            else bFound = false;
                         }
-                        if(!bPresent){
-                            //This is a new name index, so we need to add it to the skin's index list
-                            nWeightIndexes.push_back(nNameIndex);
-                            nBoneIndex = nWeightIndexes.size() - 1; //Update nBoneIndex so it always points to the correct bone
-
-                            //We also add it to the bonemap.
-                            node.Skin.Bones[nNameIndex].fBonemap = (double) nBoneIndex;
-
-                            //We can just add it into the mdl's bone index list as well, what the heck
-                            if(nBoneIndex < 18){
-                                node.Skin.nBoneIndexes[nBoneIndex] = nNameIndex;
-                            }
-                            else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
-                        }
-                        //By here, we have gotten our nNameIndex and nBoneIndex, and everything is indexed properly
-                        weight.fWeightIndex[z] = (double) nBoneIndex;
-
-                        //Since we found the name, we don't need to keep looping anymore
-                        nNameIndex = FH->MH.Names.size();
                     }
                 }
-                if(nNameIndex == FH->MH.Names.size() && bFound){
-                    //we failed to find the name in the name array. This data is broken.
-                    std::cout<<"Reading weights data: failed to find name in name array! Name: "<<sID<<".\n";
-                    bFound = false;
-                    bError = true;
+                else if(bEventlist){
+                    Sound sound; //New sound
+                    if(ReadFloat(fConvert)) sound.fTime = fConvert;
+                    else bError = true;
+                    bFound = ReadUntilText(sID, false);
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() Sound name is missing!\n";
+                        bError = true;
+                    }
+                    else if(sID.size() > 32){
+                        Error("Sound name larger than the limit, 32 characters! Will truncate and continue.");
+                        sID.resize(32);
+                    }
+                    else if(sID.size() > 16){
+                        Warning("Sound name larger than 16 characters! This may cause problems in the game.");
+                    }
+                    sound.sName = sID;
+                    if(bFound){
+                        Animation & anim = FH->MH.Animations.back();
+                        anim.Sounds.push_back(sound);
+                    }
+                    else bError = true;
                 }
-                else if(bFound){
-                    //We found the name in the name array. We are therefore ready to read the value as well.
-                    if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
+                else if(bAabb){
+                    Aabb aabb; //New aabb
+                    bFound = true;
+                    if(ReadFloat(fConvert)) aabb.vBBmin.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) aabb.vBBmin.fY = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) aabb.vBBmin.fZ = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) aabb.vBBmax.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) aabb.vBBmax.fY = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) aabb.vBBmax.fZ = fConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) aabb.nID = nConvert;
+                    else bFound = false;
+
+                    if(bFound){
+                        Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                        node.Walkmesh.ArrayOfAabb.push_back(aabb);
+                    }
+                    else bError = true;
                 }
-                z++;
+                else if(bVerts){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Vector vert;
+                    if(ReadFloat(fConvert)) vert.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fY = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fZ = fConvert;
+                    else bFound = false;
+                    if(bFound){
+                        node.Mesh.TempVerts.push_back(std::move(vert));
+                    }
+                    else bError = true;
+                }
+                else if(bFaces){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Face face;
+
+                    //Currently we read the regular NWMax version with only a single set of tvert indices
+                    if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[1] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[2] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nSmoothingGroup = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexTvert[0] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexTvert[1] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexTvert[2] = nConvert;
+                    else bFound = false;
+                    face.nTextureCount++;
+                    if(ReadInt(nConvert)) face.nMaterialID = nConvert;
+                    else bFound = false;
+
+                    int ntv1ind1, ntv1ind2, ntv1ind3;
+                    //bitmap2
+                    bool bTry = true;
+                    if(ReadInt(nConvert)) ntv1ind1 = nConvert;
+                    else bTry = false;
+                    if(ReadInt(nConvert)) ntv1ind2 = nConvert;
+                    else bTry = false;
+                    if(ReadInt(nConvert)) ntv1ind3 = nConvert;
+                    else bTry = false;
+                    if(bTry){
+                        face.nIndexTvert1[0] = ntv1ind1;
+                        face.nIndexTvert1[1] = ntv1ind2;
+                        face.nIndexTvert1[2] = ntv1ind3;
+                        face.nTextureCount++;
+
+                        //texture0
+                        if(ReadInt(nConvert)) ntv1ind1 = nConvert;
+                        else bTry = false;
+                        if(ReadInt(nConvert)) ntv1ind2 = nConvert;
+                        else bTry = false;
+                        if(ReadInt(nConvert)) ntv1ind3 = nConvert;
+                        else bTry = false;
+                        if(bTry){
+                            face.nIndexTvert2[0] = ntv1ind1;
+                            face.nIndexTvert2[1] = ntv1ind2;
+                            face.nIndexTvert2[2] = ntv1ind3;
+                            face.nTextureCount++;
+
+                            //texture1
+                            if(ReadInt(nConvert)) ntv1ind1 = nConvert;
+                            else bTry = false;
+                            if(ReadInt(nConvert)) ntv1ind2 = nConvert;
+                            else bTry = false;
+                            if(ReadInt(nConvert)) ntv1ind3 = nConvert;
+                            else bTry = false;
+                            if(bTry){
+                                face.nIndexTvert3[0] = ntv1ind1;
+                                face.nIndexTvert3[1] = ntv1ind2;
+                                face.nIndexTvert3[2] = ntv1ind3;
+                                face.nTextureCount++;
+                            }
+                        }
+                    }
+
+                    if(bFound){
+                        node.Mesh.Faces.push_back(face);
+                    }
+                    else bError = true;
+                }
+                else if(bTverts){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Vector vUV;
+                    if(ReadFloat(fConvert)) vUV.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vUV.fY = fConvert;
+                    else bFound = false;
+
+                    if(bFound) node.Mesh.TempTverts.push_back(vUV);
+                    else bError = true;
+                }
+                else if(bTverts1){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Vector vUV;
+                    if(ReadFloat(fConvert)) vUV.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vUV.fY = fConvert;
+                    else bFound = false;
+
+                    if(bFound) node.Mesh.TempTverts1.push_back(vUV);
+                    else bError = true;
+                }
+                else if(bTverts2){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Vector vUV;
+                    if(ReadFloat(fConvert)) vUV.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vUV.fY = fConvert;
+                    else bFound = false;
+
+                    if(bFound) node.Mesh.TempTverts2.push_back(vUV);
+                    else bError = true;
+                }
+                else if(bTverts3){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Vector vUV;
+                    if(ReadFloat(fConvert)) vUV.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vUV.fY = fConvert;
+                    else bFound = false;
+
+                    if(bFound) node.Mesh.TempTverts3.push_back(vUV);
+                    else bError = true;
+                }
+                else if(bConstraints){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading constraints data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadFloat(fConvert)) node.Dangly.TempConstraints.push_back(fConvert);
+                    else bError = true;
+                }
+                else if(bWeights){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading weights data"<<""<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    bool bPresent = false;
+                    int z = 0;
+                    int nBoneIndex = 0;
+                    int nNameIndex = 0;
+                    Weight weight;
+                    std::vector<int> & nWeightIndexes = node.Skin.BoneNameIndexes;
+                    while(bFound && z < 4){
+                        //Get first name
+                        bFound = ReadUntilText(sID, false, true);
+                        //if we found a name, loop through the name array to find our name index
+                        for(nNameIndex = 0; nNameIndex < FH->MH.Names.size() && bFound; nNameIndex++){
+                            //check if there is a match
+                            if(FH->MH.Names[nNameIndex].sName == sID){
+                                //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
+                                //Check if we already have this name indexed in the skin
+                                bPresent = false;
+                                for(nBoneIndex = 0; nBoneIndex < nWeightIndexes.size() && !bPresent; ){
+                                    if(nWeightIndexes[nBoneIndex] == nNameIndex){
+                                        bPresent = true;
+                                    }
+                                    else nBoneIndex++;
+                                }
+                                if(!bPresent){
+                                    //This is a new name index, so we need to add it to the skin's index list
+                                    nWeightIndexes.push_back(nNameIndex);
+                                    nBoneIndex = nWeightIndexes.size() - 1; //Update nBoneIndex so it always points to the correct bone
+
+                                    //We also add it to the bonemap.
+                                    node.Skin.Bones[nNameIndex].fBonemap = (double) nBoneIndex;
+
+                                    //We can just add it into the mdl's bone index list as well, what the heck
+                                    if(nBoneIndex < 18){
+                                        node.Skin.nBoneIndexes[nBoneIndex] = nNameIndex;
+                                    }
+                                    else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
+                                }
+                                //By here, we have gotten our nNameIndex and nBoneIndex, and everything is indexed properly
+                                weight.fWeightIndex[z] = (double) nBoneIndex;
+
+                                //Since we found the name, we don't need to keep looping anymore
+                                nNameIndex = FH->MH.Names.size();
+                            }
+                        }
+                        if(nNameIndex == FH->MH.Names.size() && bFound){
+                            //we failed to find the name in the name array. This data is broken.
+                            std::cout<<"Reading weights data: failed to find name in name array! Name: "<<sID<<".\n";
+                            bFound = false;
+                            bError = true;
+                        }
+                        else if(bFound){
+                            //We found the name in the name array. We are therefore ready to read the value as well.
+                            if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
+                        }
+                        z++;
+                    }
+                    if(z==1){
+                        //This means we exited before writing a single piece of data
+                        std::cout<<"Didn't even find one name"<<""<<".\n";
+                        std::cout<<"DataCounter: "<<nDataCounter<<". DataMax: "<<nDataMax<<".\n";
+                        bError = true;
+                    }
+                    else if(!bError){
+                        /// Here we assume that everything went fine, so we add the weight to our list
+                        node.Skin.TempWeights.push_back(std::move(weight));
+                    }
+                }
+                else if(bTextureNames){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false, true);
+                    if(bFound){
+                        Name name;
+                        name.sName = sID;
+                        node.Light.FlareTextureNames.push_back(name);
+                    }
+                    else bError = true;
+                }
+                else if(bFlareSizes){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadFloat(fConvert)) node.Light.FlareSizes.push_back(fConvert);
+                    else bError = true;
+                }
+                else if(bFlarePositions){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadFloat(fConvert)) node.Light.FlarePositions.push_back(fConvert);
+                    else bError = true;
+                }
+                else if(bFlareColorShifts){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    float f1, f2, f3;
+                    bFound = true;
+                    if(ReadFloat(fConvert)) f1 = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) f2 = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) f3 = fConvert;
+                    else bFound = false;
+                    if(bFound) node.Light.FlareColorShifts.push_back(Color(f1, f2, f3));
+                    else bError = true;
+                }
+                nDataCounter++;
+                if(nDataCounter >= nDataMax && nDataMax != -1){
+                    *lpbList = false;
+                }
+                SkipLine();
             }
-            if(z==1){
-                //This means we exited before writing a single piece of data
-                std::cout<<"Didn't even find one name"<<""<<".\n";
-                std::cout<<"DataCounter: "<<nDataCounter<<". DataMax: "<<nDataMax<<".\n";
-                bError = true;
-            }
-            else{
-                /// Here we assume that everything went fine, so we add the weight to our list
-                node.Skin.TempWeights.push_back(std::move(weight));
-            }
-            nDataCounter++;
-            if(nDataCounter >= nDataMax){
-                bWeights = false;
-            }
-            SkipLine();
         }
         //So no data. Find the next keyword then.
         else{
@@ -566,7 +592,7 @@ bool Ascii::Read(FileHeader * FH){
                     else if(sID == "skin") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SKIN;
                     else if(sID == "danglymesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_DANGLY;
                     else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
-                    else if(sID == "saber") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SABER;
+                    else if(sID == "lightsaber") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SABER;
                     else if(bFound){
                         std::cout<<"ReadUntilText() has found some text (type?) that we cannot interpret: "<<sID<<"\n";
                         bError = true;
@@ -579,8 +605,14 @@ bool Ascii::Read(FileHeader * FH){
                         std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
                     }
                     else{
+                        bool bErase = false;
+                        if(sID.substr(0, 6) == "2081__"){
+                            node.Head.nType = node.Head.nType | NODE_HAS_SABER;
+                            bErase = true;
+                        }
                         node.Head.nNameIndex = GetNameIndex(sID, FH->MH.Names);
                         node.Head.nID1 = node.Head.nNameIndex;
+                        if(bErase) FH->MH.Names.at(node.Head.nNameIndex).sName = FH->MH.Names.at(node.Head.nNameIndex).sName.substr(6);
                     }
 
                     //Get animation number (automatically -1 if geo)
@@ -590,9 +622,6 @@ bool Ascii::Read(FileHeader * FH){
                     if(nType & NODE_HAS_HEADER){
                         node.Head.vPos.Set(0.0, 0.0, 0.0);
                         node.Head.oOrient.Quaternion(0.0, 0.0, 0.0, 1.0);
-                        //node.Head.oOrient.ConvertToAA(); //Just in case we use this info
-                        //node.Head.nID1 = nNodeCounter;
-                        //node.Head.nNameIndex = nNodeCounter;
                     }
                     if(nType & NODE_HAS_EMITTER){
                         node.Emitter.cDepthTextureName = "NULL";
@@ -734,6 +763,18 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadFloat(fConvert)) node.Emitter.fBlastRadius = fConvert;
                     SkipLine();
                 }
+                else if(sID == "numbranches" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Emitter.nBranchCount = nConvert;
+                    SkipLine();
+                }
+                else if(sID == "controlptsmoothing" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadFloat(fConvert)) node.Emitter.fControlPointSmoothing = fConvert;
+                    SkipLine();
+                }
                 else if(sID == "xgrid" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -763,13 +804,26 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nLoop = nConvert;
                     SkipLine();
-                }/* Have to take this out until we figure out where it is
-                else if(sID == "renderorder" && nNode & NODE_HAS_EMITTER){
+                }
+                else if(sID == "m_bframeblending" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                    if(ReadInt(nConvert)) node.Emitter.nRenderOrder = nConvert;
+                    if(ReadInt(nConvert)) node.Emitter.nFrameBlending = nConvert;
                     SkipLine();
-                }*/
+                }
+                else if(sID == "m_sdepthtexture" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Depth texture name (Emitter) larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        node.Emitter.cDepthTextureName = sID;
+                    }
+                    SkipLine();
+                }
                 else if(sID == "update" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -830,12 +884,9 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
-                        if(sID.size() > 32){
-                            Error("ChunkName larger than the limit, 32 characters! Will truncate and continue.");
-                            sID.resize(32);
-                        }
-                        else if(sID.size() > 16){
-                            Warning("ChunkName larger than 16 characters! This may cause problems in the game.");
+                        if(sID.size() > 16){
+                            Error("ChunkName larger than the limit, 16 characters! Will truncate and continue.");
+                            sID.resize(16);
                         }
                         node.Emitter.cChunkName = sID;
                     }
@@ -926,6 +977,22 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
                         if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_INHERIT_PART;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "depth_texture" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)){
+                        if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_DEPTH_TEXTURE;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "renderorder" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)){
+                        if(nConvert) node.Emitter.nFlags = node.Emitter.nFlags | EMITTER_FLAG_RENDER_ORDER;
                     }
                     SkipLine();
                 }
@@ -1047,6 +1114,36 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)) node.Mesh.nRotateTexture = nConvert;
                     SkipLine();
                 }
+                else if(sID == "m_blsbackgroundgeometry" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nBackgroundGeometry = nConvert;
+                    SkipLine();
+                }
+                else if(sID == "dirt_enabled" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nDirtEnabled = nConvert;
+                    SkipLine();
+                }
+                else if(sID == "dirt_texture" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nDirtTexture = nConvert;
+                    SkipLine();
+                }
+                else if(sID == "dirt_worldspace" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nDirtCoordSpace = nConvert;
+                    SkipLine();
+                }
+                else if(sID == "hologram_donotdraw" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Mesh.nHideInHolograms = nConvert;
+                    SkipLine();
+                }
                 else if(sID == "beaming" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1120,12 +1217,12 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadFloat(fConvert)) node.Dangly.fPeriod = fConvert;
                     SkipLine();
                 }
-                /// Next we have the data lists
+                /// Next we have the DATA LISTS
                 else if(sID == "verts" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bVerts = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1133,7 +1230,7 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFaces = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1143,7 +1240,7 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV1;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1153,7 +1250,7 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV2;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1163,7 +1260,7 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV3;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1173,7 +1270,7 @@ bool Ascii::Read(FileHeader * FH){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV4;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1182,9 +1279,8 @@ bool Ascii::Read(FileHeader * FH){
                     bWeights = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Skin.Bones.resize(FH->MH.Names.size());
-                    //node.Skin.nNumberOfBonemap = FH->MH.Names.size();
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1192,6 +1288,8 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bAabb = true;
                     int nSavePos = nPosition; //Save position
+                    nDataMax = -1;
+                    nDataCounter = 0;
                     if(ReadFloat(fConvert)) nPosition = nSavePos; //The data starts in this line, revert position
                     else SkipLine(); //if not, then data starts next line, so it is okay to skip
                 }
@@ -1199,7 +1297,39 @@ bool Ascii::Read(FileHeader * FH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bConstraints = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
-                    else bError = true;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "texturenames" && nNode & NODE_HAS_LIGHT){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTextureNames = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "flaresizes" && nNode & NODE_HAS_LIGHT){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFlareSizes = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "flarepositions" && nNode & NODE_HAS_LIGHT){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFlarePositions = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "flarecolorshifts" && nNode & NODE_HAS_LIGHT){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFlareColorShifts = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
@@ -1280,10 +1410,12 @@ bool Ascii::Read(FileHeader * FH){
 
                     //We now have all the data, append the controller, reset the position and prepare for actually reading the keys.
                     nPosition = nSavePos;
-                    nDataCounter = 0;
                     if(!bError){
                         node.Head.Controllers.push_back(ctrl);
                     }
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
                     bKeys = true;
                     SkipLine();
                 }
@@ -1451,7 +1583,7 @@ bool Ascii::Read(FileHeader * FH){
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
-                        Warning("AnimRoot name larger than 16 characters! This may cause problems in the game.");
+                        Warning("AnimRoot name larger than 16 characters! This may or may not cause problems in the game.");
                     }
                     Animation & anim = FH->MH.Animations.back();
                     if(bFound) anim.sAnimRoot = sID;
@@ -1476,7 +1608,6 @@ bool Ascii::Read(FileHeader * FH){
                 else if(sID == "filedependancy") SkipLine();
                 else if(sID == "specular") SkipLine();
                 else if(sID == "wirecolor") SkipLine();
-                else if(sID == "shininess") SkipLine();
                 else{
                     std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
                     SkipLine();
@@ -1489,7 +1620,6 @@ bool Ascii::Read(FileHeader * FH){
         Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
         return false;
     }
-    //All the data has now been read. Now what remains if to fill in all the data that derives from this data and rearrange some data.
 
     //Seems best to take care of aabb first
     for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
@@ -1501,13 +1631,6 @@ bool Ascii::Read(FileHeader * FH){
         }
     }
 
-    /// TODO: face normals, vertex normals, bones
-
-    std::cout<<"Done processing data, checking for errors...\n";
-    if(bError){
-        Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
-        return false;
-    }
     return true;
 }
 
@@ -1541,16 +1664,16 @@ void Ascii::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCount
 bool Ascii::ReadFloat(double & fNew, bool bPrint){
     std::string sCheck;
     //First skip all spaces
-    if(sBuffer[nPosition] == '#' &&
-       sBuffer[nPosition] == 0x0D &&
+    if(sBuffer[nPosition] == '#' ||
+       sBuffer[nPosition] == 0x0D ||
        sBuffer[nPosition] == 0x0A)
     {
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
         nPosition++;
-        if(sBuffer[nPosition] == '#' &&
-           sBuffer[nPosition] == 0x0D &&
+        if(sBuffer[nPosition] == '#' ||
+           sBuffer[nPosition] == 0x0D ||
            sBuffer[nPosition] == 0x0A)
         {
             return false;
@@ -1584,16 +1707,16 @@ bool Ascii::ReadFloat(double & fNew, bool bPrint){
 bool Ascii::ReadInt(int & nNew, bool bPrint){
     std::string sCheck;
     //First skip all spaces
-    if(sBuffer[nPosition] == '#' &&
-       sBuffer[nPosition] == 0x0D &&
+    if(sBuffer[nPosition] == '#' ||
+       sBuffer[nPosition] == 0x0D ||
        sBuffer[nPosition] == 0x0A)
     {
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
         nPosition++;
-        if(sBuffer[nPosition] == '#' &&
-           sBuffer[nPosition] == 0x0D &&
+        if(sBuffer[nPosition] == '#' ||
+           sBuffer[nPosition] == 0x0D ||
            sBuffer[nPosition] == 0x0A)
         {
             return false;
@@ -1705,19 +1828,4 @@ bool Ascii::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrict
     }
     //Go back and tell them you're done
     return false;
-}
-
-Node & Ascii::GetNodeByNameIndex(FileHeader & Data, int nIndex, int nAnimation){
-    if(nAnimation == -1){/*
-        aNode & Array = Data.MH.ArrayOfNodes;
-        for(int n = 0; n < Array.size(); n++){
-            if(Array[n].Head.nNameIndex == nIndex) return Array[n];
-        }*/
-    }
-    else{
-        std::vector<Node> & Array = Data.MH.Animations[nAnimation].ArrayOfNodes;
-        for(int n = 0; n < Array.size(); n++){
-            if(Array[n].Head.nNameIndex == nIndex) return Array[n];
-        }
-    }
 }

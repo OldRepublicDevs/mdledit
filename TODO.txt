@@ -14,11 +14,3 @@
  5. inverted counter - I can create the correct values, but I cannot figure out how to count them
 
 
-
- Supernode sequence.
- 1. If there is no supermodel, supernode# is the same as node#.
- else:
-    2. For every matching node name, copy the supernode#.
-    3. For every node that does not match, continue the numbering from the largest supernode#.
-
-

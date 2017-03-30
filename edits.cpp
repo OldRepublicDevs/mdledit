@@ -317,7 +317,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         if(!(Edit->sBuffer == nullptr)){
         if(!Edit->sBuffer->empty()){
 
-            HPEN hPenLine = CreatePen(PS_SOLID, 1, RGB(80, 80, 80));
+            HPEN hPenLine = CreatePen(PS_SOLID, 1, RGB(120, 120, 120));
             SelectObject(hdc, hPenLine);
             MoveToEx(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, 0, NULL);
             LineTo(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, Edit->rcClient.bottom);

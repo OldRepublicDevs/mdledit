@@ -173,6 +173,12 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
                 std::cout<<string_format("Major error, creation of Edit1 window failed.\n");
             }
+
+            MENUITEMINFO mii;
+            mii.cbSize = sizeof(MENUITEMINFO);
+            mii.fMask = MIIM_STATE;
+            mii.fState = MFS_DISABLED;
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
         }
         break;
         case WM_NOTIFY:
@@ -290,7 +296,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         mii.cbSize = sizeof(MENUITEMINFO);
                         mii.fMask = MIIM_STATE;
                         bool bLinkHead = Model.HeadLinked();
-                        if(bLinkHead) mii.fState = MFS_CHECKED;
+                        if(!Model.NodeExists("neck_g")) mii.fState = MFS_DISABLED;
+                        else if(bLinkHead) mii.fState = MFS_CHECKED;
                         else mii.fState = MFS_UNCHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
                     }
@@ -309,7 +316,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         MENUITEMINFO mii;
                         mii.cbSize = sizeof(MENUITEMINFO);
                         mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_UNCHECKED;
+                        if(!Model.NodeExists("neck_g")) mii.fState = MFS_DISABLED;
+                        else mii.fState = MFS_UNCHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
                     }
                 }
@@ -335,7 +343,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
                             Edit1.UpdateEdit();
                             HTREEITEM hSel = TreeView_GetSelection(hTree);
-                            ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
+                            if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                         }
                         else std::cout<<"neck_g was not found!\n";
                     }
@@ -655,6 +663,9 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     Model.Mdx.SetFilePath(cMdx);
                 }
             }
+            else{                PathStripPath(&cMdx.front());
+                Warning("Could not find "+cMdx+" in the same directory. Will load the without the MDX data.");
+            }
 
             //Open and process .wok if it exists
             std::string cWok;
@@ -752,7 +763,7 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     sSuperDebug += "_super.txt";
     std::stringstream filedebug;
     std::vector<MDL> Supermodels;
-    LoadSupermodels(Model, Supermodels);
+    LoadSupermodel(Model, Supermodels);
     for(int m = Supermodels.size() - 1; m >= 0; m--){
         FileHeader & Data = *Supermodels.at(m).GetFileData();
         filedebug<<Data.MH.GH.sName.c_str()<<"\r\n";

@@ -229,7 +229,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
         if(node.Head.nType & NODE_HAS_LIGHT){
             HTREEITEM Light = Append("Light", (LPARAM) &node.Light, Prev);
             Append("Flare Radius", (LPARAM) &node.Light.fFlareRadius, Light);
-            Append("Unknown Array", (LPARAM) &node.Light);
+            //Append("Unknown Array", (LPARAM) &node.Light);
             Append("Flare Sizes", (LPARAM) &node.Light);
             Append("Flare Positions", (LPARAM) &node.Light);
             Append("Flare Color Shifts", (LPARAM) &node.Light);
@@ -490,8 +490,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
     else if((cItem[0] == "Bounding Box Min")) sPrint << "Bounding Box Min:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
     else if((cItem[0] == "Bounding Box Max")) sPrint << "Bounding Box Max:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
-    else if((cItem[0] == "Radius")) sPrint << string_format("Radius:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Scale")) sPrint << string_format("Scale:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Radius")) sPrint << "Radius:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Scale")) sPrint << "Scale:\r\n" << *((double*) lParam);
 
     /// Animations ///
     else if((cItem[0] == "Animations")){
@@ -507,8 +507,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << string_format("\r\n\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u\r\n",
                 anim->nFunctionPointer0, anim->nFunctionPointer1);
     }
-    else if((cItem[0] == "Length")) sPrint << string_format("Length:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Transition")) sPrint << string_format("Transition:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Length")) sPrint << "Length:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Transition")) sPrint << "Transition:\r\n" << *((double*) lParam);
     else if((cItem[0] == "Sounds")){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Sounds\r\nOffset: %u\r\nCount: %u", anim->SoundArray.nOffset, anim->SoundArray.nCount);
@@ -590,7 +590,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
 
     /// Light ///
-    else if((cItem[0] == "Flare Radius")) sPrint << string_format("Flare Radius:\r\n%f", *((float*) lParam));
+    else if((cItem[0] == "Flare Radius")) sPrint << "Flare Radius:\r\n" << *((float*) lParam);
     else if((cItem[0] == "Unknown Array")){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Unknown Array\r\nOffset: %u\r\nCount: %u", light->UnknownArray.nOffset, light->UnknownArray.nCount);
@@ -635,35 +635,35 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Light Priority")) sPrint << string_format("Light Priority:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Ambient Only")) sPrint << string_format("Ambient Only:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Dynamic Type")) sPrint << string_format("Dynamic Type:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Affect Dynamic")) sPrint << string_format("Affect Dynamic:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Shadow")) sPrint << string_format("Shadow:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Flare")) sPrint << string_format("Flare:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Fading Light")) sPrint << string_format("Fading Light:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Light Priority")) sPrint << "Light Priority:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Ambient Only")) sPrint << "Ambient Only:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Dynamic Type")) sPrint << "Dynamic Type:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Affect Dynamic")) sPrint << "Affect Dynamic:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Shadow")) sPrint << "Shadow:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Flare")) sPrint << "Flare:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Fading Light")) sPrint << "Fading Light:\r\n" << *((int*) lParam);
 
     /// Emitter ///
-    else if((cItem[0] == "Dead Space")) sPrint << string_format("Dead Space:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Blast Radius")) sPrint << string_format("Blast Radius:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Blast Length")) sPrint << string_format("Blast Length:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Branch Count")) sPrint << string_format("Branch Count:\r\n%u", *((unsigned int*) lParam));
-    else if((cItem[0] == "Control Point Smoothing")) sPrint << string_format("Control Point Smoothing:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "X Grid")) sPrint << string_format("X Grid:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Y Grid")) sPrint << string_format("Y Grid:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Spawn Type")) sPrint << string_format("Spawn Type:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Update")) sPrint << string_format("Update:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Render")) sPrint << string_format("Render:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Blend")) sPrint << string_format("Blend:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Texture")) sPrint << string_format("Texture:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Chunk Name")) sPrint << string_format("Chunk Name:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Twosided Texture")) sPrint << string_format("Twosided Texture:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Loop")) sPrint << string_format("Loop:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Unknown Int16 1")) sPrint << string_format("Unknown Int16 1:\r\n%u", *((short*) lParam));
+    else if((cItem[0] == "Dead Space")) sPrint << "Dead Space:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Blast Radius")) sPrint << "Blast Radius:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Blast Length")) sPrint << "Blast Length:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Branch Count")) sPrint << "Branch Count:\r\n" << *((unsigned int*) lParam);
+    else if((cItem[0] == "Control Point Smoothing")) sPrint << "Control Point Smoothing:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "X Grid")) sPrint << "X Grid:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Y Grid")) sPrint << "Y Grid:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Spawn Type")) sPrint << "Spawn Type:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Update")) sPrint << "Update:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Render")) sPrint << "Render:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Blend")) sPrint << "Blend:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Texture")) sPrint << "Texture:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Chunk Name")) sPrint << "Chunk Name:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Twosided Texture")) sPrint << "Twosided Texture:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Loop")) sPrint << "Loop:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Unknown Int16 1")) sPrint << "Unknown Int16 1:\r\n" << *((short*) lParam);
     //else if((cItem[0] == "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
-    else if((cItem[0] == "Frame Blending")) sPrint << string_format("Frame Blending:\r\n%u", *((unsigned char*) lParam));
-    else if((cItem[0] == "Depth Texture Name")) sPrint << string_format("Depth Texture Name:\r\n%s", ((char*) lParam));
-    else if((cItem[0] == "Unknown Byte 1")) sPrint << string_format("Unknown Byte 1:\r\n%u", *((unsigned char*) lParam));
+    else if((cItem[0] == "Frame Blending")) sPrint << "Frame Blending:\r\n" << *((unsigned char*) lParam);
+    else if((cItem[0] == "Depth Texture Name")) sPrint << "Depth Texture Name:\r\n" << ((char*) lParam);
+    else if((cItem[0] == "Unknown Byte 1")) sPrint << "Unknown Byte 1:\r\n" << *((unsigned char*) lParam);
     else if((cItem[0] == "Emitter Flags?"))
         sPrint << string_format("Emitter Flags??\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
                 *((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0,
@@ -682,7 +682,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << string_format("Mesh Inverted Counters Array\r\nOffset: %u\r\nCount: %u",
                 mesh->MeshInvertedCounterArray.nOffset, mesh->MeshInvertedCounterArray.nCount, mesh->nMeshInvertedCounter);
         if(mesh->MeshInvertedCounterArray.nCount > 0){
-            sPrint << string_format("\r\nValues: %i", mesh->nMeshInvertedCounter);
+            sPrint << "\r\nValues: " << mesh->nMeshInvertedCounter;
         }
     }
     else if((cItem[0] == "MDX Data Pointers") && (cItem[2] == "Mesh")){
@@ -703,7 +703,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
     else if((cItem[0] == "Vertices") && !bWok){
         MeshHeader * mesh = (MeshHeader * ) lParam;
-        sPrint << string_format("Vertices\r\nOffset: %u\r\nCount: %u", mesh->nOffsetToVertArray, mesh->nNumberOfVerts);
+        sPrint << "Vertices\r\nOffset: "<<mesh->nOffsetToVertArray;
+        sPrint<<"\r\nCount: "<<mesh->nNumberOfVerts;
     }
     else if((cItem[0] == "Extra MDX Data")){
         MDXDataStruct * mdx = (MDXDataStruct * ) lParam;
@@ -760,55 +761,58 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         Vertex * vert = (Vertex * ) lParam;
         sPrint << string_format("%s\r\nx: %f\r\ny: %f\r\nz: %f",
                 cItem[0].c_str(), vert->fX, vert->fY, vert->fZ);
+
         MDXDataStruct * mdx = &vert->MDXData;
         Node & node = GetNodeByNameIndex(mdx->nNameIndex);
-        if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()){
-            sPrint << "\r\n\r\nMDX Data";
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-                sPrint << string_format("\r\n\r\nNormal: %f\r\n        %f\r\n        %f", mdx->vNormal.fX, mdx->vNormal.fY, mdx->vNormal.fZ);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->vUV1.fX, mdx->vUV1.fY);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->vUV2.fX, mdx->vUV2.fY);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->vUV3.fX, mdx->vUV3.fY);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->vUV4.fX, mdx->vUV4.fY);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-                sPrint << string_format("\r\n\r\nTangent Space 1");
-                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent1[0].fX, mdx->vTangent1[0].fY, mdx->vTangent1[0].fZ);
-                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent1[1].fX, mdx->vTangent1[1].fY, mdx->vTangent1[1].fZ);
-                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent1[2].fX, mdx->vTangent1[2].fY, mdx->vTangent1[2].fZ);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-                sPrint << string_format("\r\n\r\nTangent Space 2");
-                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent2[0].fX, mdx->vTangent2[0].fY, mdx->vTangent2[0].fZ);
-                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent2[1].fX, mdx->vTangent2[1].fY, mdx->vTangent2[1].fZ);
-                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent2[2].fX, mdx->vTangent2[2].fY, mdx->vTangent2[2].fZ);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-                sPrint << string_format("\r\n\r\nTangent Space 3");
-                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent3[0].fX, mdx->vTangent3[0].fY, mdx->vTangent3[0].fZ);
-                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent3[1].fX, mdx->vTangent3[1].fY, mdx->vTangent3[1].fZ);
-                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent3[2].fX, mdx->vTangent3[2].fY, mdx->vTangent3[2].fZ);
-            }
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-                sPrint << string_format("\r\n\r\nTangent Space 4");
-                sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent4[0].fX, mdx->vTangent4[0].fY, mdx->vTangent4[0].fZ);
-                sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent4[1].fX, mdx->vTangent4[1].fY, mdx->vTangent4[1].fZ);
-                sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
-            }
-            if(node.Head.nType & NODE_HAS_SKIN){
-                sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightValue[0], mdx->Weights.fWeightValue[1], mdx->Weights.fWeightValue[2], mdx->Weights.fWeightValue[3]);
-                sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightIndex[0], mdx->Weights.fWeightIndex[1], mdx->Weights.fWeightIndex[2], mdx->Weights.fWeightIndex[3]);
+        if(!(node.Head.nType & NODE_HAS_SABER)){
+            if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()){
+                sPrint << "\r\n\r\nMDX Data";
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+                    sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
+                    sPrint << string_format("\r\n\r\nNormal: %f\r\n        %f\r\n        %f", mdx->vNormal.fX, mdx->vNormal.fY, mdx->vNormal.fZ);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+                    sPrint << string_format("\r\n\r\nUV1:    %f\r\n        %f", mdx->vUV1.fX, mdx->vUV1.fY);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+                    sPrint << string_format("\r\n\r\nUV2:    %f\r\n        %f", mdx->vUV2.fX, mdx->vUV2.fY);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+                    sPrint << string_format("\r\n\r\nUV3:    %f\r\n        %f", mdx->vUV3.fX, mdx->vUV3.fY);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+                    sPrint << string_format("\r\n\r\nUV4:    %f\r\n        %f", mdx->vUV4.fX, mdx->vUV4.fY);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
+                    sPrint << string_format("\r\n\r\nTangent Space 1");
+                    sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent1[0].fX, mdx->vTangent1[0].fY, mdx->vTangent1[0].fZ);
+                    sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent1[1].fX, mdx->vTangent1[1].fY, mdx->vTangent1[1].fZ);
+                    sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent1[2].fX, mdx->vTangent1[2].fY, mdx->vTangent1[2].fZ);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
+                    sPrint << string_format("\r\n\r\nTangent Space 2");
+                    sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent2[0].fX, mdx->vTangent2[0].fY, mdx->vTangent2[0].fZ);
+                    sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent2[1].fX, mdx->vTangent2[1].fY, mdx->vTangent2[1].fZ);
+                    sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent2[2].fX, mdx->vTangent2[2].fY, mdx->vTangent2[2].fZ);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
+                    sPrint << string_format("\r\n\r\nTangent Space 3");
+                    sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent3[0].fX, mdx->vTangent3[0].fY, mdx->vTangent3[0].fZ);
+                    sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent3[1].fX, mdx->vTangent3[1].fY, mdx->vTangent3[1].fZ);
+                    sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent3[2].fX, mdx->vTangent3[2].fY, mdx->vTangent3[2].fZ);
+                }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
+                    sPrint << string_format("\r\n\r\nTangent Space 4");
+                    sPrint << string_format("\r\nTangent:   %f\r\n           %f\r\n           %f", mdx->vTangent4[0].fX, mdx->vTangent4[0].fY, mdx->vTangent4[0].fZ);
+                    sPrint << string_format("\r\nBitangent: %f\r\n           %f\r\n           %f", mdx->vTangent4[1].fX, mdx->vTangent4[1].fY, mdx->vTangent4[1].fZ);
+                    sPrint << string_format("\r\nNormal:    %f\r\n           %f\r\n           %f", mdx->vTangent4[2].fX, mdx->vTangent4[2].fY, mdx->vTangent4[2].fZ);
+                }
+                if(node.Head.nType & NODE_HAS_SKIN){
+                    sPrint << string_format("\r\n\r\nWeight Value: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightValue[0], mdx->Weights.fWeightValue[1], mdx->Weights.fWeightValue[2], mdx->Weights.fWeightValue[3]);
+                    sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightIndex[0], mdx->Weights.fWeightIndex[1], mdx->Weights.fWeightIndex[2], mdx->Weights.fWeightIndex[3]);
+                }
             }
         }
     }
@@ -836,7 +840,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     else if((cItem[0] == "Average")) sPrint << string_format("Average: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if((cItem[0] == "Ambient Color")) sPrint << string_format("Ambient Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if((cItem[0] == "Diffuse Color")) sPrint << string_format("Diffuse Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Shininess")) sPrint << string_format("Shininess:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Shininess")) sPrint << "Shininess:\r\n" << *((int*) lParam);
     else if((cItem[0] == "Textures")){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Textures\r\nTexture Count: %u\r\nTexture 1: %s\r\nTexture 2: %s\r\nTexture 3: %s\r\nTexture 4: %s",
@@ -859,8 +863,8 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << "Dirt Texture: " << mesh->nDirtTexture;
         sPrint << "\r\nDirt Coord Space: " << mesh->nDirtCoordSpace;
     }
-    else if((cItem[0] == "Total Area")) sPrint << string_format("Total Area:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Padding")) sPrint << string_format("Padding:\r\n%i", *((int*) lParam));
+    else if((cItem[0] == "Total Area")) sPrint << "Total Area:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Padding")) sPrint << "Padding:\r\n" << *((int*) lParam);
 
     /// Skin ///
     else if((cItem[0] == "Bones")){
@@ -911,9 +915,9 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Displacement")) sPrint << string_format("Displacement:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Tightness")) sPrint << string_format("Tightness:\r\n%f", *((double*) lParam));
-    else if((cItem[0] == "Period")) sPrint << string_format("Period:\r\n%f", *((double*) lParam));
+    else if((cItem[0] == "Displacement")) sPrint << "Displacement:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Tightness")) sPrint << "Tightness:\r\n" << *((double*) lParam);
+    else if((cItem[0] == "Period")) sPrint << "Period:\r\n" << *((double*) lParam);
     else if((cItem[0] == "Data2")){
         DanglymeshHeader * dangly = (DanglymeshHeader * ) lParam;
         sPrint << string_format("Data2\r\nOffset: %u\r\nCount: %u", dangly->nOffsetToData2, dangly->ConstraintArray.nCount);
@@ -962,13 +966,13 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
     else if((cItem[1] == "Saber Data")){
         SaberDataStruct * saber = (SaberDataStruct *) lParam;
-        sPrint << string_format("%s", cItem[0].c_str());
+        sPrint << cItem[0].c_str();
         sPrint << string_format("\r\n1. Vertex Coordinates:\r\n   %f\r\n   %f\r\n   %f", saber->vVertex.fX, saber->vVertex.fY, saber->vVertex.fZ);
         sPrint << string_format("\r\n\r\n2. UV:\r\n   %f\r\n   %f", saber->vUV.fX, saber->vUV.fY);
         sPrint << string_format("\r\n\r\n3. Normal?:\r\n   %f\r\n   %f\r\n   %f", saber->vNormal.fX, saber->vNormal.fY, saber->vNormal.fZ);
     }
-    else if((cItem[0] == "Mesh Inverted Counter 1")) sPrint << string_format("Mesh Inverted Counter 1:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Mesh Inverted Counter 2")) sPrint << string_format("Mesh Inverted Counter 2:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Mesh Inverted Counter 1")) sPrint << "Mesh Inverted Counter 1:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Mesh Inverted Counter 2")) sPrint << "Mesh Inverted Counter 2:\r\n" << *((int*) lParam);
 
     /// WOK ///
     else if((cItem[1] == "Aabb")){
@@ -1001,13 +1005,13 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     else if((cItem[1] == "Array 2")){
         sPrint << string_format("Values:\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2);
     }
-    else if((cItem[1] == "Array 3")) sPrint << string_format("Value:\r\n%i", *((int*) lParam));
+    else if((cItem[1] == "Array 3")) sPrint << "Value:\r\n" << *((int*) lParam);
 
     /// Unknowns ///
-    else if((cItem[0] == "Unknown Int32 1")) sPrint << string_format("Unknown Int32 1:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Unknown Int32 2")) sPrint << string_format("Unknown Int32 2:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Unknown Int32 3")) sPrint << string_format("Unknown Int32 3:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Unknown Int32 4")) sPrint << string_format("Unknown Int32 4:\r\n%u", *((int*) lParam));
-    else if((cItem[0] == "Unknown Int32 5")) sPrint << string_format("Unknown Int32 5:\r\n%u", *((int*) lParam));
+    else if((cItem[0] == "Unknown Int32 1")) sPrint << "Unknown Int32 1:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Unknown Int32 2")) sPrint << "Unknown Int32 2:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Unknown Int32 3")) sPrint << "Unknown Int32 3:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Unknown Int32 4")) sPrint << "Unknown Int32 4:\r\n" << *((int*) lParam);
+    else if((cItem[0] == "Unknown Int32 5")) sPrint << "Unknown Int32 5:\r\n" << *((int*) lParam);
     else sPrint.flush();
 }

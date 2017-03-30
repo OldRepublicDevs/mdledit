@@ -16,6 +16,18 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
     }
 }
 
+std::string MakeUniqueName(int nNameIndex){
+    std::vector<Name> & Names = Model.GetFileData()->MH.Names;
+    std::string sReturn = Names.at(nNameIndex).sName.c_str();
+    int nDupl = 0;
+    for(int n = 0; n < nNameIndex; n++){
+        if(std::string(Names.at(n).sName.c_str()) == sReturn) nDupl++;
+    }
+    if(nDupl > 0)
+        sReturn += "__dpl" + std::to_string(nDupl);
+    return sReturn;
+}
+
 char cReturn[4][255];
 char * PrepareFloat(double fFloat, unsigned int n){
     sprintf(cReturn[n], "%#.7f", RoundDec(fFloat, 8));
@@ -28,15 +40,15 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
         sReturn << string_format("# MDLedit from KOTOR binary source");
-        sReturn << string_format("\r\n# model %s", mh->GH.sName.c_str());
-        sReturn << string_format("\r\nnewmodel %s", mh->GH.sName.c_str());
+        sReturn << "\r\n# model " << mh->GH.sName.c_str();
+        sReturn << "\r\nnewmodel " << mh->GH.sName.c_str();
         sReturn << string_format("\r\nsetsupermodel %s %s", mh->GH.sName.c_str(), mh->cSupermodelName.c_str());
-        sReturn << string_format("\r\nclassification %s", ReturnClassificationName(mh->nClassification).c_str());
-        sReturn << string_format("\r\nsetanimationscale %s", PrepareFloat(mh->fScale, 0));
-        sReturn << string_format("\r\n\r\nbeginmodelgeom %s", mh->GH.sName.c_str());
+        sReturn << "\r\nclassification " << ReturnClassificationName(mh->nClassification).c_str();
+        sReturn << "\r\nsetanimationscale " << PrepareFloat(mh->fScale, 0);
+        sReturn << "\r\n\r\nbeginmodelgeom " << mh->GH.sName.c_str();
         sReturn << string_format("\r\n  bmin %s %s %s", PrepareFloat(mh->vBBmin.fX, 0), PrepareFloat(mh->vBBmin.fY, 1), PrepareFloat(mh->vBBmin.fZ, 2));
         sReturn << string_format("\r\n  bmax %s %s %s", PrepareFloat(mh->vBBmax.fX, 0), PrepareFloat(mh->vBBmax.fY, 1), PrepareFloat(mh->vBBmax.fZ, 2));
-        sReturn << string_format("\r\n  radius %s", PrepareFloat(mh->fRadius, 0));
+        sReturn << "\r\n  radius " << PrepareFloat(mh->fRadius, 0);
         for(int n = 0; n < mh->ArrayOfNodes.size(); n++){
             Node & node = mh->ArrayOfNodes.at(n);
             if(node.Head.nType & NODE_HAS_HEADER){
@@ -80,16 +92,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
-        sReturn << string_format("\r\nnewanim %s %s", anim->sName.c_str(), FH[0].MH.GH.sName.c_str());
-        sReturn << string_format("\r\n  length %s", PrepareFloat(anim->fLength, 0));
-        sReturn << string_format("\r\n  transtime %s", PrepareFloat(anim->fTransition, 0));
-        sReturn << string_format("\r\n  animroot %s", anim->sAnimRoot.c_str());
+        sReturn << "\r\nnewanim " << anim->sName.c_str() <<" "<< FH[0].MH.GH.sName.c_str();
+        sReturn << "\r\n  length " << PrepareFloat(anim->fLength, 0);
+        sReturn << "\r\n  transtime " << PrepareFloat(anim->fTransition, 0);
+        sReturn << "\r\n  animroot " << anim->sAnimRoot.c_str();
         if(anim->Sounds.size() > 0){
-            sReturn << string_format("\r\n  eventlist %s", anim->sAnimRoot.c_str());
+            sReturn << "\r\n  eventlist " << anim->sName.c_str();
             for(int s = 0; s < anim->Sounds.size(); s++){
                 sReturn << "\r\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
             }
-            sReturn << string_format("\r\n  endlist %s", anim->sAnimRoot.c_str());
+            sReturn << "\r\n  endlist " << anim->sName.c_str();
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
@@ -100,21 +112,17 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
-        char cType [255];
-        if(node->Head.nType & NODE_HAS_AABB) sprintf(cType, "aabb");
-        else if(node->Head.nType & NODE_HAS_DANGLY) sprintf(cType, "danglymesh");
-        else if(node->Head.nType & NODE_HAS_SKIN) sprintf(cType, "skin");
-        else if(node->Head.nType & NODE_HAS_MESH) sprintf(cType, "trimesh");
-        else if(node->Head.nType & NODE_HAS_EMITTER) sprintf(cType, "emitter");
-        else if(node->Head.nType & NODE_HAS_LIGHT) sprintf(cType, "light");
-        else if(node->Head.nType & NODE_HAS_HEADER) sprintf(cType, "dummy");
-        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].sName.c_str());
-        if(node->Head.nParentIndex != -1){
-            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].sName.c_str());
-        }
-        else{
-            sReturn << "\r\n  parent NULL";
-        }
+        sReturn << "\r\nnode ";
+        if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
+        else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
+        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << "skin ";
+        else if(node->Head.nType & NODE_HAS_SABER) sReturn << "trimesh 2081__"; /// Official keyword: lightsaber
+        else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh ";
+        else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
+        else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
+        else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
+        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
@@ -123,21 +131,19 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_HEADER){
         Node * node = (Node*) Data;
-        char cType [255];
-        if(node->Head.nType & NODE_HAS_AABB) sprintf(cType, "aabb");
-        else if(node->Head.nType & NODE_HAS_DANGLY) sprintf(cType, "danglymesh");
-        else if(node->Head.nType & NODE_HAS_SKIN) sprintf(cType, "skin");
-        else if(node->Head.nType & NODE_HAS_MESH) sprintf(cType, "trimesh");
-        else if(node->Head.nType & NODE_HAS_EMITTER) sprintf(cType, "emitter");
-        else if(node->Head.nType & NODE_HAS_LIGHT) sprintf(cType, "light");
-        else if(node->Head.nType & NODE_HAS_HEADER) sprintf(cType, "dummy");
-        sReturn << string_format("\r\nnode %s %s", cType, FH[0].MH.Names[node->Head.nNameIndex].sName.c_str());
-        if(node->Head.nParentIndex != -1){
-            sReturn << string_format("\r\n  parent %s", FH[0].MH.Names[node->Head.nParentIndex].sName.c_str());
-        }
-        else{
-            sReturn << string_format("\r\n  parent NULL");
-        }
+        sReturn << "\r\nnode ";
+        if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
+        else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
+        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << "skin ";
+        else if(node->Head.nType & NODE_HAS_SABER) sReturn << "trimesh 2081__"; /// Official keyword: lightsaber
+        else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh ";
+        else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
+        else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
+        else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
+        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        //sReturn << FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
+        //sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
                 sReturn << string_format("\r\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
@@ -162,107 +168,119 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_LIGHT){
         Node * node = (Node*) Data;
-        sReturn << string_format("\r\n  lightpriority %i", node->Light.nLightPriority);
-        sReturn << string_format("\r\n  ndynamictype %i", node->Light.nDynamicType);
-        sReturn << string_format("\r\n  ambientonly %i", node->Light.nAmbientOnly);
-        sReturn << string_format("\r\n  affectdynamic %i", node->Light.nAffectDynamic);
-        sReturn << string_format("\r\n  shadow %i", node->Light.nShadow);
-        sReturn << string_format("\r\n  lensflares %i", node->Light.nFlare);
-        sReturn << string_format("\r\n  fadinglight %i", node->Light.nFadingLight);
-        sReturn << string_format("\r\n  flareradius %s", PrepareFloat(node->Light.fFlareRadius, 0)); //NWmax reads this as an int
-        sReturn << string_format("\r\n  texturenames %i", node->Light.FlareTextureNames.size());
+        sReturn << "\r\n  lightpriority " << node->Light.nLightPriority;
+        sReturn << "\r\n  ndynamictype " << node->Light.nDynamicType;
+        sReturn << "\r\n  ambientonly " << node->Light.nAmbientOnly;
+        sReturn << "\r\n  affectdynamic " << node->Light.nAffectDynamic;
+        sReturn << "\r\n  shadow " << node->Light.nShadow;
+        sReturn << "\r\n  flare " << node->Light.nFlare; /// !!! Make sure that NWMax isn't expecting lensflares
+        sReturn << "\r\n  fadinglight " << node->Light.nFadingLight;
+        sReturn << "\r\n  flareradius " << PrepareFloat(node->Light.fFlareRadius, 0); //NWmax reads this as an int
+        sReturn << "\r\n  texturenames " << node->Light.FlareTextureNames.size();
         for(int n = 0; n < node->Light.FlareTextureNames.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareTextureNames[n].sName;
         }
-        sReturn << string_format("\r\n  flaresizes %i", node->Light.FlareSizes.size());
+        sReturn << "\r\n  flaresizes " << node->Light.FlareSizes.size();
         for(int n = 0; n < node->Light.FlareSizes.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareSizes[n];
         }
-        sReturn << string_format("\r\n  flarepositions %i", node->Light.FlarePositions.size());
+        sReturn << "\r\n  flarepositions " << node->Light.FlarePositions.size();
         for(int n = 0; n < node->Light.FlarePositions.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlarePositions[n];
         }
-        sReturn << string_format("\r\n  flarecolorshifts %i", node->Light.FlareColorShifts.size());
+        sReturn << "\r\n  flarecolorshifts " << node->Light.FlareColorShifts.size();
         for(int n = 0; n < node->Light.FlareColorShifts.size(); n++){
             sReturn<<"\r\n    "<<node->Light.FlareColorShifts[n].fR<<" "<<node->Light.FlareColorShifts[n].fG<<" "<<node->Light.FlareColorShifts[n].fB;
         }
     }
     else if(nDataType == CONVERT_EMITTER){
         Node * node = (Node*) Data;
-        sReturn << string_format("\r\n  deadspace %s", PrepareFloat(node->Emitter.fDeadSpace, 0));
-        sReturn << string_format("\r\n  blastradius %s", PrepareFloat(node->Emitter.fBlastRadius, 0));
-        sReturn << string_format("\r\n  blastlength %s", PrepareFloat(node->Emitter.fBlastLength, 0));
-        sReturn << string_format("\r\n  xgrid %i", node->Emitter.nxGrid);
-        sReturn << string_format("\r\n  ygrid %i", node->Emitter.nyGrid);
-        sReturn << string_format("\r\n  spawntype %i", node->Emitter.nSpawnType);
-        sReturn << string_format("\r\n  update %s", node->Emitter.cUpdate.c_str());
-        sReturn << string_format("\r\n  render %s", node->Emitter.cRender.c_str());
-        sReturn << string_format("\r\n  blend %s", node->Emitter.cBlend.c_str());
-        sReturn << string_format("\r\n  texture %s", node->Emitter.cTexture.c_str());
-        sReturn << string_format("\r\n  chunkname %s", node->Emitter.cChunkName.c_str());
-        sReturn << string_format("\r\n  twosidedtex %i", node->Emitter.nTwosidedTex);
-        sReturn << string_format("\r\n  loop %i", node->Emitter.nLoop);
-        //sReturn << string_format("\r\n  renderorder %i", node->Emitter.nRenderOrder);
-        sReturn << string_format("\r\n  p2p %i", node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  p2p_sel %i", node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  affectedByWind %i", node->Emitter.nFlags & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  m_isTinted %i", node->Emitter.nFlags & EMITTER_FLAG_TINTED ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  bounce %i", node->Emitter.nFlags & EMITTER_FLAG_BOUNCE ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  random %i", node->Emitter.nFlags & EMITTER_FLAG_RANDOM ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  inherit %i", node->Emitter.nFlags & EMITTER_FLAG_INHERIT ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  inheritvel %i", node->Emitter.nFlags & EMITTER_FLAG_INHERIT_VEL ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  inherit_local %i", node->Emitter.nFlags & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  splat %i", node->Emitter.nFlags & EMITTER_FLAG_SPLAT ? 1 : 0 ? 1 : 0);
-        sReturn << string_format("\r\n  inherit_part %i", node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0 ? 1 : 0);
+        sReturn << "\r\n  deadspace " << PrepareFloat(node->Emitter.fDeadSpace, 0);
+        sReturn << "\r\n  blastRadius " << PrepareFloat(node->Emitter.fBlastRadius, 0);
+        sReturn << "\r\n  blastLength " << PrepareFloat(node->Emitter.fBlastLength, 0);
+        sReturn << "\r\n  numBranches " << node->Emitter.nBranchCount;
+        sReturn << "\r\n  controlptsmoothing " << node->Emitter.fControlPointSmoothing;
+        sReturn << "\r\n  xgrid " << node->Emitter.nxGrid;
+        sReturn << "\r\n  ygrid " << node->Emitter.nyGrid;
+        sReturn << "\r\n  spawntype " << node->Emitter.nSpawnType;
+        sReturn << "\r\n  update " << node->Emitter.cUpdate.c_str();
+        sReturn << "\r\n  render " << node->Emitter.cRender.c_str();
+        sReturn << "\r\n  blend " << node->Emitter.cBlend.c_str();
+        sReturn << "\r\n  texture " << node->Emitter.cTexture.c_str();
+        sReturn << "\r\n  chunkname " << node->Emitter.cChunkName.c_str();
+        sReturn << "\r\n  twosidedtex " << node->Emitter.nTwosidedTex;
+        sReturn << "\r\n  loop " << node->Emitter.nLoop;
+        sReturn << "\r\n  m_bFrameBlending " << node->Emitter.nFrameBlending;
+        sReturn << "\r\n  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
+
+        sReturn << "\r\n  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);
+        sReturn << "\r\n  p2p_sel " << (node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0);
+        sReturn << "\r\n  affectedByWind " << (node->Emitter.nFlags & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0);
+        sReturn << "\r\n  m_isTinted " << (node->Emitter.nFlags & EMITTER_FLAG_TINTED ? 1 : 0);
+        sReturn << "\r\n  bounce " << (node->Emitter.nFlags & EMITTER_FLAG_BOUNCE ? 1 : 0);
+        sReturn << "\r\n  random " << (node->Emitter.nFlags & EMITTER_FLAG_RANDOM ? 1 : 0);
+        sReturn << "\r\n  inherit " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT ? 1 : 0);
+        sReturn << "\r\n  inheritvel " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_VEL ? 1 : 0);
+        sReturn << "\r\n  inherit_local " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0);
+        sReturn << "\r\n  splat " << (node->Emitter.nFlags & EMITTER_FLAG_SPLAT ? 1 : 0);
+        sReturn << "\r\n  inherit_part " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
+        sReturn << "\r\n  depth_texture " << (node->Emitter.nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
+        sReturn << "\r\n  renderorder " << (node->Emitter.nFlags & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
     }
     else if(nDataType == CONVERT_MESH){
         Node * node = (Node*) Data;
-        sReturn << string_format("\r\n  diffuse %s %s %s", PrepareFloat(node->Mesh.fDiffuse.fR, 0), PrepareFloat(node->Mesh.fDiffuse.fG, 1), PrepareFloat(node->Mesh.fDiffuse.fB, 2));
-        sReturn << string_format("\r\n  ambient %s %s %s", PrepareFloat(node->Mesh.fAmbient.fR, 0), PrepareFloat(node->Mesh.fAmbient.fG, 1), PrepareFloat(node->Mesh.fAmbient.fB, 2));
-        sReturn << string_format("\r\n  rotatetexture %i", node->Mesh.nRotateTexture);
-        sReturn << string_format("\r\n  shadow %i", node->Mesh.nShadow);
-        sReturn << string_format("\r\n  render %i", node->Mesh.nRender);
-        //sReturn << string_format("\r\n  specular 0.0 0.0 0.0", node->Mesh.nRender);
-        sReturn << string_format("\r\n  shininess %i", node->Mesh.nShininess);
-        sReturn << string_format("\r\n  animateuv %i", node->Mesh.nAnimateUV);
-        if(node->Mesh.nAnimateUV){
-            sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
-            sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
-            sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
-            sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
-        }
+        sReturn << "\r\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR, 0) << " " << PrepareFloat(node->Mesh.fDiffuse.fG, 1) <<" "<< PrepareFloat(node->Mesh.fDiffuse.fB, 2);
+        sReturn << "\r\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR, 0) << " " << PrepareFloat(node->Mesh.fAmbient.fG, 1) <<" "<< PrepareFloat(node->Mesh.fAmbient.fB, 2);
+        sReturn << "\r\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
+        sReturn << "\r\n  shadow " << (int) node->Mesh.nShadow;
+        sReturn << "\r\n  render " << (int) node->Mesh.nRender;
+        sReturn << "\r\n  beaming " << (int) node->Mesh.nBeaming;
+        sReturn << "\r\n  lightmapped " << (int) node->Mesh.nHasLightmap;
+        sReturn << "\r\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
+        /// transparencyhint
+        sReturn << "\r\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
+        sReturn << "\r\n  dirt_texture " << node->Mesh.nDirtTexture;
+        sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
+        sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
+        //sReturn << "\r\n  specular 0.0 0.0 0.0";
+        sReturn << "\r\n  shininess " << node->Mesh.nShininess;
+        sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
+        //if(node->Mesh.nAnimateUV){
+            sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
+            sReturn << "\r\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY, 0);
+            sReturn << "\r\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter, 0);
+            sReturn << "\r\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed, 0);
+        /*}
         else{
             sReturn << "\r\n  uvdirectionx 0.0";
             sReturn << "\r\n  uvdirectiony 0.0";
             sReturn << "\r\n  uvjitter 0.0";
             sReturn << "\r\n  uvjitterspeed 0.0";
-        }
-        if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) sReturn << "\r\n  tangentspace 1";
-        else sReturn << "\r\n  tangentspace 0";
+        }*/
+        sReturn << "\r\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0);
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
-        sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
-        if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
-        sReturn << string_format("\r\n  verts %i", node->Mesh.Vertices.size());
+        if(node->Mesh.cTexture1 != "" && node->Mesh.nTextureNumber >= 1) sReturn << "\r\n  bitmap " << node->Mesh.GetTexture(1);
+        if(node->Mesh.cTexture2 != "" && node->Mesh.nTextureNumber >= 2) sReturn << "\r\n  bitmap2 " << node->Mesh.GetTexture(2);
+        if(node->Mesh.cTexture3 != "" && node->Mesh.nTextureNumber >= 3) sReturn << "\r\n  texture0 " << node->Mesh.GetTexture(3);
+        if(node->Mesh.cTexture4 != "" && node->Mesh.nTextureNumber >= 4) sReturn << "\r\n  texture1 " << node->Mesh.GetTexture(4);
+        //if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
+        sReturn << "\r\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(Mdx.empty()) sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].fX, 0), PrepareFloat(node->Mesh.Vertices[n].fY, 1), PrepareFloat(node->Mesh.Vertices[n].fZ, 2));
-            else sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1), PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2));
+            if(Mdx.empty()) sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ, 2);
+            else sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2);
         }
-        sReturn << string_format("\r\n  faces %i", node->Mesh.Faces.size());
+        sReturn << "\r\n  faces " << node->Mesh.Faces.size();
         for(int n = 0; n < node->Mesh.Faces.size(); n++){
-            //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(Mdx.empty())
-                sReturn << string_format("\r\n    %i %i %i %i %i %i %i %i",
-                    node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2],
-                    pown(2, node->Mesh.Faces[n].nSmoothingGroup - 1),
-                    node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2],
-                    node->Mesh.Faces[n].nMaterialID);
-            else
-                sReturn << string_format("\r\n    %i %i %i %i %i %i %i %i",
-                    node->Mesh.VertIndices[n].nValues[0], node->Mesh.VertIndices[n].nValues[1], node->Mesh.VertIndices[n].nValues[2],
-                    pown(2, node->Mesh.Faces[n].nSmoothingGroup - 1),
-                    node->Mesh.VertIndices[n].nValues[0], node->Mesh.VertIndices[n].nValues[1], node->Mesh.VertIndices[n].nValues[2],
-                    node->Mesh.Faces[n].nMaterialID);
+            sReturn << "\r\n    ";
+            sReturn << node->Mesh.Faces[n].nIndexVertex[0];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            sReturn << " " << node->Mesh.Faces[n].nSmoothingGroup;
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[0];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            sReturn << " " << node->Mesh.Faces[n].nMaterialID;
         }
         if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
             sReturn << "\r\n  tverts "<<node->Mesh.Vertices.size();
@@ -306,7 +324,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     //std::cout<<"Reading bone number "<<nBoneNumber;
                     //std::cout<<", representing bone "<<FH[0].MH.Names.at(node->Skin.BoneNameIndexes.at(nBoneNumber)).sName.c_str()<<".\n";
                     int nNameIndex = node->Skin.BoneNameIndexes.at(nBoneNumber);
-                    sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
+                    //sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
+                    sReturn << " "<<MakeUniqueName(nNameIndex)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
                     i++;
                     nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
                 }
@@ -318,10 +337,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_DANGLY){
         Node * node = (Node*) Data;
-        sReturn << string_format("\r\n  displacement %s", PrepareFloat(node->Dangly.fDisplacement, 0));
-        sReturn << string_format("\r\n  tightness %s", PrepareFloat(node->Dangly.fTightness, 0));
-        sReturn << string_format("\r\n  period %s", PrepareFloat(node->Dangly.fPeriod, 0));
-        sReturn << string_format("\r\n  constraints %i", node->Dangly.Constraints.size());
+        sReturn << "\r\n  displacement " << PrepareFloat(node->Dangly.fDisplacement, 0);
+        sReturn << "\r\n  tightness " << PrepareFloat(node->Dangly.fTightness, 0);
+        sReturn << "\r\n  period " << PrepareFloat(node->Dangly.fPeriod, 0);
+        sReturn << "\r\n  constraints " << node->Dangly.Constraints.size();
         for(int n = 0; n < node->Dangly.Constraints.size(); n++){
             sReturn << "\r\n    "<<PrepareFloat(node->Dangly.Constraints[n], 0);
         }
@@ -333,44 +352,52 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_SABER){
         Node * node = (Node*) Data;
-        sReturn << string_format("\r\n  diffuse %s %s %s", PrepareFloat(node->Mesh.fDiffuse.fR, 0), PrepareFloat(node->Mesh.fDiffuse.fG, 1), PrepareFloat(node->Mesh.fDiffuse.fB, 2));
-        sReturn << string_format("\r\n  ambient %s %s %s", PrepareFloat(node->Mesh.fAmbient.fR, 0), PrepareFloat(node->Mesh.fAmbient.fG, 1), PrepareFloat(node->Mesh.fAmbient.fB, 2));
-        sReturn << string_format("\r\n  rotatetexture %i", node->Mesh.nRotateTexture);
-        sReturn << string_format("\r\n  shadow %i", node->Mesh.nShadow);
-        sReturn << string_format("\r\n  render %i", node->Mesh.nRender);
-        //sReturn << string_format("\r\n  specular 0.0 0.0 0.0", node->Mesh.nRender);
-        //sReturn << cCat;
-        sReturn << string_format("\r\n  shininess %i", node->Mesh.nShininess);
-        sReturn << string_format("\r\n  animateuv %i", node->Mesh.nAnimateUV);
-        if(node->Mesh.nAnimateUV){
-            sReturn << string_format("\r\n  uvdirectionx %s", PrepareFloat(node->Mesh.fUVDirectionX, 0));
-            sReturn << string_format("\r\n  uvdirectiony %s", PrepareFloat(node->Mesh.fUVDirectionY, 0));
-            sReturn << string_format("\r\n  uvjitter %s", PrepareFloat(node->Mesh.fUVJitter, 0));
-            sReturn << string_format("\r\n  uvjitterspeed %s", PrepareFloat(node->Mesh.fUVJitterSpeed, 0));
-        }
+        sReturn << "\r\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR, 0) << " " << PrepareFloat(node->Mesh.fDiffuse.fG, 1) <<" "<< PrepareFloat(node->Mesh.fDiffuse.fB, 2);
+        sReturn << "\r\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR, 0) << " " << PrepareFloat(node->Mesh.fAmbient.fG, 1) <<" "<< PrepareFloat(node->Mesh.fAmbient.fB, 2);
+        sReturn << "\r\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
+        sReturn << "\r\n  shadow " << (int) node->Mesh.nShadow;
+        sReturn << "\r\n  render " << (int) node->Mesh.nRender;
+        sReturn << "\r\n  beaming " << (int) node->Mesh.nBeaming;
+        sReturn << "\r\n  lightmapped " << (int) node->Mesh.nHasLightmap;
+        sReturn << "\r\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
+        /// transparencyhint
+        sReturn << "\r\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
+        sReturn << "\r\n  dirt_texture " << node->Mesh.nDirtTexture;
+        sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
+        sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
+        //sReturn << "\r\n  specular 0.0 0.0 0.0";
+        sReturn << "\r\n  shininess " << node->Mesh.nShininess;
+        sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
+        //if(node->Mesh.nAnimateUV){
+            sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
+            sReturn << "\r\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY, 0);
+            sReturn << "\r\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter, 0);
+            sReturn << "\r\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed, 0);
+        /*}
         else{
             sReturn << "\r\n  uvdirectionx 0.0";
             sReturn << "\r\n  uvdirectiony 0.0";
             sReturn << "\r\n  uvjitter 0.0";
             sReturn << "\r\n  uvjitterspeed 0.0";
-        }
+        }*/
         //sReturn << string_format("\r\n  wirecolor 1 1 1");
-        //sReturn << cCat;
-        sReturn << string_format("\r\n  bitmap %s", node->Mesh.GetTexture(1));
-        if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\r\n  lightmap %s", node->Mesh.GetTexture(2));
-        sReturn << string_format("\r\n  verts %i", node->Mesh.Vertices.size());
+        if(node->Mesh.cTexture1 != "" && node->Mesh.nTextureNumber >= 1) sReturn << "\r\n  bitmap " << node->Mesh.GetTexture(1);
+
+        sReturn << "\r\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-            //Two possibilities
-            //sReturn << string_format("\r\n    %s %s %s", node->Mesh.Vertices[n].fX, node->Mesh.Vertices[n].fY, node->Mesh.Vertices[n].fZ);
-            sReturn << string_format("\r\n    %s %s %s", PrepareFloat(node->Saber.SaberData[n].vVertex.fX, 0), PrepareFloat(node->Saber.SaberData[n].vVertex.fY, 1), PrepareFloat(node->Saber.SaberData[n].vVertex.fZ, 2));
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fZ, 2);
         }
-        sReturn << string_format("\r\n  faces %i", node->Mesh.Faces.size());
+        sReturn << "\r\n  faces " << node->Mesh.Faces.size();
         for(int n = 0; n < node->Mesh.Faces.size(); n++){
-            sReturn << string_format("\r\n    %i %i %i %i %i %i %i 1",
-                    node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2],
-                    pown(2, node->Mesh.Faces[n].nMaterialID - 1),
-                    node->Mesh.Faces[n].nIndexVertex[0], node->Mesh.Faces[n].nIndexVertex[1], node->Mesh.Faces[n].nIndexVertex[2]);
-                    //node->Mesh.VertIndices[n].nValues[0], node->Mesh.VertIndices[n].nValues[1], node->Mesh.VertIndices[n].nValues[2]);
+            sReturn << "\r\n    ";
+            sReturn << node->Mesh.Faces[n].nIndexVertex[0];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            sReturn << " " << node->Mesh.Faces[n].nSmoothingGroup;
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[0];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            sReturn << " " << node->Mesh.Faces[n].nMaterialID;
         }
         sReturn << "\r\n  tverts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){

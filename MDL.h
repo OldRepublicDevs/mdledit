@@ -433,7 +433,8 @@ struct Face{
     short nIndexTvert2[3] = {-1, -1, -1};
     short nIndexTvert3[3] = {-1, -1, -1};
     bool bProcessed[3] = {false, false, false};
-    bool bProcessedSG;
+    bool bProcessedSG = false;
+    int nTextureCount = 0;
     int nSmoothingGroup = 1;
     double fArea = 0.0;
     double fAreaUV = 0.0;
@@ -563,6 +564,7 @@ struct Patch{
     std::vector<unsigned int> FaceIndices;
     std::vector<int> SmoothedPatches;
     std::vector<unsigned long int*> SmoothingGroupNumbers;
+    bool bUniform = false;
 };
 
 struct Vertex: public Vector{
@@ -1168,7 +1170,6 @@ class Ascii: public File{
 
     //Getters
     int GetNameIndex(std::string sName, std::vector<Name> Names);
-    Node & GetNodeByNameIndex(FileHeader & Data, int nNameIndex, int nAnimation = -1);
 
   public:
     bool Read(FileHeader * FH);
@@ -1180,7 +1181,7 @@ class MDL: public BinaryFile{
     Ascii AsciiReader;
 
     //Reading
-    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot);
+    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMinimal = false);
     void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
     void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
         for(int n = 0; n < NODE.Head.Children.size(); n++){
@@ -1216,17 +1217,17 @@ class MDL: public BinaryFile{
     void DoCalculations(Node & NODE, int & nMeshCounter);
 
     //Calculating
-    void CreatePatches(bool bPrint, std::ofstream & file);
+    void CreatePatches();
     void DetermineSmoothing();
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;
-    void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg);
-    bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
+    void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg, std::stringstream & file);
+    bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     int FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
                            const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
-                           std::vector<int> & CurrentlySmoothedPatches, std::ofstream & file);
+                           std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
 
     //Getters
     const std::string GetName(){
@@ -1241,6 +1242,7 @@ class MDL: public BinaryFile{
 
     //Version
     bool bK2 = true;
+    bool bDebug = true;
 
     MDX Mdx;
 
@@ -1273,11 +1275,18 @@ class MDL: public BinaryFile{
         }
         return false;
     }
+    bool NodeExists(const std::string & sNodeName){
+        FileHeader & Data = FH[0];
+        for(int n = 0; n < Data.MH.Names.size(); n++){
+            if(Data.MH.Names.at(n).sName == sNodeName) return true;
+        }
+        return false;
+    }
 
 
     //Loaders
     bool Compile();
-    void DecompileModel();
+    void DecompileModel(bool bMinimal = false);
     void AsciiPostProcess();
     void CleanupAfterCompilation(){}
     void CheckPeculiarities();
@@ -1329,7 +1338,7 @@ class MDL: public BinaryFile{
     }
 };
 
-void LoadSupermodels(MDL & curmdl, std::vector<MDL> & Supermodels);
+void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
 
 extern MDL Model;
 
