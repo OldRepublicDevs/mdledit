@@ -358,7 +358,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             n = Edit->yCurrentScroll / ME_EDIT_NEXT_ROW;
             int nMaxRowsInScreen = (Edit->rcClient.bottom) / ME_EDIT_NEXT_ROW + 2;
             int nMax = n + nMaxRowsInScreen; //Edit->Model->GetHexRowCount();
-            nMax = std::min(nMax, Edit->nBufferSize/16 + 1);
+            nMax = std::min(nMax, (int) Edit->sBuffer->size()/16 + 1);
             int nStrlen;
             char cIntPrint [255];
             int i = 0;
@@ -367,7 +367,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             char cHexText [50];
             while(n < nMax){
                 CharsToHex(cHexText, *Edit->sBuffer, n * 16, 16);
-                nStrlen = std::min((Edit->nBufferSize - (n * 16))*3, (int) strlen(cHexText));
+                nStrlen = std::min(((int) Edit->sBuffer->size() - (n * 16))*3, (int) strlen(cHexText));
                 i = 0;
                 while(i < nStrlen){
                     SetTextColor(hdc, RGB(50, 50, 50));
@@ -660,7 +660,7 @@ void Edits::UpdateStatusPositionMdx(){
                NODE = &node;
            }
     }
-    if(nPos >= Model.GetBufferLength()){
+    if(nPos >= Model.GetBuffer().size()){
         sprintf(cPrint, "");
     }
     else if(NODE != nullptr){
@@ -691,7 +691,7 @@ void Edits::UpdateStatusPositionModel(){
     int nPos = ptHover.y * 16 + (ptHover.x) / 3;
     int nMin;
 
-    if(nPos >= Model.GetBufferLength()){
+    if(nPos >= Model.GetBuffer().size()){
         sprintf(cPrint, "");
     }
     else if(nPos < 208){

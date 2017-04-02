@@ -811,8 +811,6 @@ bool MDL::Compile(){
     WriteIntToPH(nPosition - 12, PHnMdlLength, Data->nMdlLength);
     WriteIntToPH(Mdx->nPosition, PHnMdxLength, Data->nMdxLength);
     WriteIntToPH(Mdx->nPosition, PHnMdxLength2, Data->MH.nMdxLength2);
-    nBufferSize = sBuffer.size();
-    Mdx->nBufferSize = Mdx->sBuffer.size();
 
     bLoaded = true;
     Mdx->bLoaded = true;

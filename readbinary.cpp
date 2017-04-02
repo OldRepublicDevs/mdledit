@@ -16,7 +16,7 @@
 /**/
 
 void MDL::DecompileModel(bool bMinimal){
-    if(sBuffer.empty() || nBufferSize == 0) return;
+    if(sBuffer.empty()) return;
 
     int nNodeCounter;
     unsigned int nPos = 0;

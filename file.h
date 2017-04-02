@@ -30,12 +30,10 @@ class File{
     std::string sFile;
     std::string sFullPath;
     std::vector<char> sBuffer;
-    unsigned int nBufferSize;
     unsigned int nPosition;
   public:
     //Getters
     std::vector<char> & GetBuffer(){ return sBuffer; }
-    unsigned int GetBufferLength(){ return nBufferSize; }
     const std::string & GetFilename(){ return sFile; }
     const std::string & GetFullPath(){ return sFullPath; }
     virtual const std::string GetName(){ return ""; }
@@ -49,15 +47,13 @@ class File{
 
     //Loaders/Unloaders
     virtual std::vector<char> & CreateBuffer(int nSize){
-        nBufferSize = nSize;
         bLoaded = true;
-        sBuffer.resize(nSize, '\0');
+        sBuffer.resize(nSize, 0);
         return sBuffer;
     }
     virtual void FlushAll(){
         sBuffer.clear();
         sBuffer.shrink_to_fit();
-        nBufferSize = 0;
         bLoaded = false;
     }
 
@@ -88,9 +84,8 @@ class BinaryFile: public File{
 
     //Loaders/Unloaders
     std::vector<char> & CreateBuffer(int nSize){
-        nBufferSize = nSize;
         bLoaded = true;
-        sBuffer.resize(nSize, '\0');
+        sBuffer.resize(nSize, 0);
         bKnown.resize(nSize, 0);
         return sBuffer;
     }
@@ -98,7 +93,6 @@ class BinaryFile: public File{
         sBuffer.clear();
         bKnown.clear();
         bLoaded = false;
-        nBufferSize = 0;
     }
 };
 

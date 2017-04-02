@@ -2,7 +2,7 @@
 
 //This is the WOK counterpart to MDL's DecompileModel().
 void WOK::ProcessWalkmesh(){
-    if(sBuffer.empty() || nBufferSize == 0) return;
+    if(sBuffer.empty()) return;
     unsigned int nPos = 0;
 
     //Mark version info

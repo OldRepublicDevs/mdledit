@@ -30,7 +30,6 @@ class Edits{
     bool bSelection;
     std::vector<int> * nKnownArray;
     std::vector<char> * sBuffer;
-    int nBufferSize;
 
     public:
     static HWND hIntEdit;
@@ -46,21 +45,18 @@ class Edits{
         if(nSel == 0){
             nKnownArray = &Model.GetKnownData();
             sBuffer = &Model.GetBuffer();
-            nBufferSize = Model.GetBufferLength();
         }
         else if(nSel == 1){
             nKnownArray = &Model.Mdx->GetKnownData();
             sBuffer = &Model.Mdx->GetBuffer();
-            nBufferSize = Model.Mdx->GetBufferLength();
         }
         else if(nSel == 2){
             nKnownArray = &Walkmesh.GetKnownData();
             sBuffer = &Walkmesh.GetBuffer();
-            nBufferSize = Walkmesh.GetBufferLength();
         }
         else Error("Trying to select a tab that does not exist! (Don't ask me how that's possible)");
 
-        if(nBufferSize == 0 || sBuffer->empty()) ShowWindow(hScrollVert, false);
+        if(sBuffer->empty()) ShowWindow(hScrollVert, false);
         else ShowWindow(hScrollVert, true);
 
         SetClassLongPtr(hMe, GCLP_HCURSOR, (LONG_PTR) LoadCursor(NULL, IDC_ARROW));
@@ -75,7 +71,7 @@ class Edits{
         nSelectStart = -1;
         nSelectEnd = -1;
         bSelection = false;
-        yMaxScroll = ((nBufferSize - 1)/16 + 2) * ME_EDIT_NEXT_ROW;
+        yMaxScroll = ((sBuffer->size() - 1)/16 + 2) * ME_EDIT_NEXT_ROW;
         yCurrentScroll = 0;
         UpdateEdit();
         UpdateStatusBar();
@@ -134,8 +130,8 @@ class Edits{
             nSelectStart = -1;
             nSelectEnd = -1;
         }
-        nSelectEnd = std::min(nSelectEnd, nBufferSize - 1);
-        nSelectStart = std::min(nSelectStart, nBufferSize - 1);
+        nSelectEnd = std::min(nSelectEnd, (int) sBuffer->size() - 1);
+        nSelectStart = std::min(nSelectStart, (int) sBuffer->size() - 1);
         if(DEBUG_LEVEL > 100) std::cout<<string_format("Current selection from byte %i to byte %i.\n", nSelectStart, nSelectEnd);
     }
     void UpdateStatusBar(bool bCheck = true){

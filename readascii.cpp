@@ -59,23 +59,23 @@ bool ASCII::Read(MDL & Mdl){
     sID = "";
     nPosition = 0;
     bool bStop = false;
-    while(nPosition < nBufferSize && !bStop){
+    while(nPosition < sBuffer.size() && !bStop){
         //std::cout<<"The name indexing while(), nPosition="<<nPosition<<".\n";
         ReadUntilText(sID);
-        while(sID != "node" && nPosition < nBufferSize && !bStop){
+        while(sID != "node" && nPosition < sBuffer.size() && !bStop){
             //std::cout<<"The node checking while(), nPosition="<<nPosition<<".\n";
-            //std::cout<<"Not a node, skipping line, nPosition="<<nPosition<<" of "<<nBufferSize<<".\n";
+            //std::cout<<"Not a node, skipping line, nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             SkipLine();
-            //std::cout<<"No throw in SkipLine(), nPosition="<<nPosition<<" of "<<nBufferSize<<".\n";
+            //std::cout<<"No throw in SkipLine(), nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             ReadUntilText(sID);
-            //std::cout<<"No throw in ReadUntilText(), nPosition="<<nPosition<<" of "<<nBufferSize<<".\n";
+            //std::cout<<"No throw in ReadUntilText(), nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             if(sID == "endmodelgeom") bStop = true;
         }
-        if(nPosition < nBufferSize && !bStop){
+        if(nPosition < sBuffer.size() && !bStop){
             //Once we get here, we have found a node. The name is only a keyword's strlen away!
             ReadUntilText(sID); //Get keyword
             ReadUntilText(sID, false); //Get name
-            //std::cout<<"Found a node! ("<<sID<<") At nPosition="<<nPosition<<" of "<<nBufferSize<<".\n";
+            //std::cout<<"Found a node! ("<<sID<<") At nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             //Got it! Now to save it the name array.
             Name name; //our new name
             name.sName = sID;
@@ -87,7 +87,7 @@ bool ASCII::Read(MDL & Mdl){
     nPosition = 0;
     ///Loops for every row
     bool * lpbList = nullptr;
-    while(nPosition < nBufferSize && !bEnd && !bError){
+    while(nPosition < sBuffer.size() && !bEnd && !bError){
         //First set our current list
         if(bKeys) lpbList = &bKeys;
         else if(bWeights) lpbList = &bWeights;

@@ -10,7 +10,7 @@ BB8 ByteBlock8;
 
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
     //std::cout<<string_format("ReadInt() at position %i.\n", *nCurPos);
-    if(*nCurPos+nBytes > nBufferSize){
+    if(*nCurPos+nBytes > sBuffer.size()){
         std::cout<<"ReadInt(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.\n";
         return -1;
     }
@@ -46,7 +46,7 @@ int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
 
 float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
     //std::cout<<string_format("ReadFloat() at position %i.\n", *nCurPos);
-    if(*nCurPos+nBytes > nBufferSize){
+    if(*nCurPos+nBytes > sBuffer.size()){
         std::cout<<"ReadFloat(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.0.\n";
         return -1.0;
     }
@@ -61,7 +61,7 @@ float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
 }
 
 void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int nMarking, int nNumber){
-    if(*nCurPos+nNumber > nBufferSize){
+    if(*nCurPos+nNumber > sBuffer.size()){
         std::cout<<"ReadString(): Reading past buffer size in "<<GetName()<<", aborting.\n";
         return;
     }
@@ -74,7 +74,7 @@ void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int n
 void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
     int n = 0;
     //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
-    while(n < nLength && n < nBufferSize){
+    while(n < nLength && n < sBuffer.size()){
         if(bKnown[nOffset + n] != 0) std::cout<<"MarkBytes(): Warning! Data already interpreted as "<<bKnown[nOffset + n]<<" at offset "<<nOffset + n<<" in "<<GetName()<<"!\n";
         bKnown[nOffset + n] = nClass;
         n++;
@@ -291,7 +291,7 @@ void TextFile::SkipLine(){
         return;
     }
     bool bStop = false;
-    while(nPosition + 1 < nBufferSize && !bStop){
+    while(nPosition + 1 < sBuffer.size() && !bStop){
         if(sBuffer[nPosition] != 0x0D && sBuffer[nPosition+1] != 0x0A) nPosition++;
         else bStop = true;
     }
@@ -302,7 +302,7 @@ bool TextFile::EmptyRow(){
     int n = nPosition; //Do not use the iterator
     while(sBuffer[n] != 0x0D &&
         sBuffer[n+1] != 0x0A &&
-                n+1 < nBufferSize)
+                n+1 < sBuffer.size())
     {
         if(sBuffer[n] != 0x20 || (sBuffer[n+1] != 0x20 && sBuffer[n+1] != 0x0D)) return false;
         n++;
@@ -312,24 +312,24 @@ bool TextFile::EmptyRow(){
 
 bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrictNoNewLine){
     sHandle = ""; //Make sure the handle is cleared
-    while(nPosition < nBufferSize){
+    while(nPosition < sBuffer.size()){
         //std::cout<<"Looping in ReadUntilText main while(), nPosition="<<nPosition<<".\n";
         if(sBuffer[nPosition] == 0x20){
             //Skip space
             nPosition++;
-            if(nPosition >= nBufferSize) return false;
+            if(nPosition >= sBuffer.size()) return false;
         }
         else if(sBuffer[nPosition] == 0x0A){
             if(bStrictNoNewLine) return false;
             nPosition++;
-            if(nPosition >= nBufferSize) return false;
+            if(nPosition >= sBuffer.size()) return false;
         }
         else if(sBuffer[nPosition] == '#'){
             //Return because end of line and nothing was found
             return false;
         }
         else{
-            if(nPosition + 1 < nBufferSize){
+            if(nPosition + 1 < sBuffer.size()){
                 if(sBuffer[nPosition] == 0x0D &&
                  sBuffer[nPosition+1] == 0x0A)
                 {
@@ -348,7 +348,7 @@ bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStr
                   sBuffer[nPosition] != '#' &&
                   sBuffer[nPosition] != 0x0D &&
                   sBuffer[nPosition] != 0x0A &&
-                  nPosition < nBufferSize);
+                  nPosition < sBuffer.size());
 
             //Report
             //if(sHandle != "") std::cout<<"ReadUntilText() found the following string: "<<sHandle<<".\n";
