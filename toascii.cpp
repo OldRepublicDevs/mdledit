@@ -1,5 +1,13 @@
 #include "MDL.h"
 
+/**
+    Functions:
+    MDL::ExportAscii()
+    RecursiveAabb() //Helper
+    PrepareFloat() //Helper
+    MDL::ConvertToAscii()
+/**/
+
 void MDL::ExportAscii(std::string &sExport){
     std::stringstream ss;
     ConvertToAscii(CONVERT_MODEL, ss, (void*) &FH->MH);
@@ -14,18 +22,6 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
     if(AABB->nChild2 > 0){
         RecursiveAabb(&AABB->Child2[0], str);
     }
-}
-
-std::string MDL::MakeUniqueName(int nNameIndex){
-    std::vector<Name> & Names = FH->MH.Names;
-    std::string sReturn = Names.at(nNameIndex).sName.c_str();
-    int nDupl = 0;
-    for(int n = 0; n < nNameIndex; n++){
-        if(std::string(Names.at(n).sName.c_str()) == sReturn) nDupl++;
-    }
-    if(nDupl > 0)
-        sReturn += "__dpl" + std::to_string(nDupl);
-    return sReturn;
 }
 
 char cReturn[4][255];
@@ -267,7 +263,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(Mdx->empty()) sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ, 2);
+            if(!Mdx) sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ, 2);
             else sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2);
         }
         sReturn << "\r\n  faces " << node->Mesh.Faces.size();
@@ -364,44 +360,89 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  dirt_texture " << node->Mesh.nDirtTexture;
         sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
         sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
-        //sReturn << "\r\n  specular 0.0 0.0 0.0";
         sReturn << "\r\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
-        //if(node->Mesh.nAnimateUV){
-            sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
-            sReturn << "\r\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY, 0);
-            sReturn << "\r\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter, 0);
-            sReturn << "\r\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed, 0);
-        /*}
-        else{
-            sReturn << "\r\n  uvdirectionx 0.0";
-            sReturn << "\r\n  uvdirectiony 0.0";
-            sReturn << "\r\n  uvjitter 0.0";
-            sReturn << "\r\n  uvjitterspeed 0.0";
-        }*/
-        //sReturn << string_format("\r\n  wirecolor 1 1 1");
+        sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
+        sReturn << "\r\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY, 0);
+        sReturn << "\r\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter, 0);
+        sReturn << "\r\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed, 0);
+        //sReturn << "\r\n  specular 0.0 0.0 0.0";
+        //sReturn << "\r\n  wirecolor 1 1 1";
         if(node->Mesh.cTexture1 != "" && node->Mesh.nTextureNumber >= 1) sReturn << "\r\n  bitmap " << node->Mesh.GetTexture(1);
 
-        sReturn << "\r\n  verts " << node->Mesh.Vertices.size();
-        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData[n].vVertex.fZ, 2);
-        }
-        sReturn << "\r\n  faces " << node->Mesh.Faces.size();
-        for(int n = 0; n < node->Mesh.Faces.size(); n++){
-            sReturn << "\r\n    ";
-            sReturn << node->Mesh.Faces[n].nIndexVertex[0];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
-            sReturn << " " << node->Mesh.Faces[n].nSmoothingGroup;
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[0];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
-            sReturn << " " << node->Mesh.Faces[n].nMaterialID;
-        }
-        sReturn << "\r\n  tverts " << node->Mesh.Vertices.size();
-        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-            sReturn << "\r\n    " << PrepareFloat(node->Saber.SaberData[n].vUV.fX, 0);
-            sReturn << " " << PrepareFloat(node->Saber.SaberData[n].vUV.fY, 1);
+        if(node->Saber.SaberData.size() == 176){
+            Vector vDiff;
+            Vector vOut;
+            vDiff = node->Saber.SaberData.at(4).vVertex - node->Saber.SaberData.at(0).vVertex;
+
+            sReturn << "\r\n  verts 16";
+            vOut = node->Saber.SaberData.at(0).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(1).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(2).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(3).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+
+            vOut = node->Saber.SaberData.at(0).vVertex + vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(1).vVertex + vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(2).vVertex + vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(3).vVertex + vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+
+            vOut = node->Saber.SaberData.at(88).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(89).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(90).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(91).vVertex;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+
+            vOut = node->Saber.SaberData.at(88).vVertex - vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(89).vVertex - vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(90).vVertex - vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+            vOut = node->Saber.SaberData.at(91).vVertex - vDiff;
+            sReturn << "\r\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
+
+            sReturn << "\r\n  faces 12";
+            sReturn << "\r\n    5 4 0 1 5 4 0 0";
+            sReturn << "\r\n    0 1 5 1 0 1 5 0";
+            sReturn << "\r\n    13 8 12 1 13 8 12 0";
+            sReturn << "\r\n    8 13 9 1 8 13 9 0";
+            sReturn << "\r\n    6 5 1 1 6 5 1 0";
+            sReturn << "\r\n    1 2 6 1 1 2 6 0";
+            sReturn << "\r\n    10 9 13 1 10 9 13 0";
+            sReturn << "\r\n    13 14 10 1 13 14 10 0";
+            sReturn << "\r\n    3 6 2 1 3 6 2 0";
+            sReturn << "\r\n    6 3 7 1 6 3 7 0";
+            sReturn << "\r\n    15 11 14 1 15 11 14 0";
+            sReturn << "\r\n    10 14 11 1 10 14 11 0";
+
+            sReturn << "\r\n  tverts 16";
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(1).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(1).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(1).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(2).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(2).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(2).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(3).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(3).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(3).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(4).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(4).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(4).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(5).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(5).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(5).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(6).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(6).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(6).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(7).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(7).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(7).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(88).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(88).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(88).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(89).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(89).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(89).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(90).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(90).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(90).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(91).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(91).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(91).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(92).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(92).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(92).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(93).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(93).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(93).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(94).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(94).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(94).vUV.fZ, 2);
+            sReturn << "\r\n    "<<PrepareFloat(node->Saber.SaberData.at(95).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(95).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(95).vUV.fZ, 2);
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0

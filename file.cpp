@@ -1,8 +1,199 @@
+#include "general.h"
 #include "file.h"
 #include <iostream>
 #include <algorithm>
-//#include "general.h"
 #define DEBUG_LEVEL 0
+
+BB2 ByteBlock2;
+BB4 ByteBlock4;
+BB8 ByteBlock8;
+
+int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
+    //std::cout<<string_format("ReadInt() at position %i.\n", *nCurPos);
+    if(*nCurPos+nBytes > nBufferSize){
+        std::cout<<"ReadInt(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.\n";
+        return -1;
+    }
+    if(nBytes == 4){
+        int n = 0;
+        while(n < 4){
+            ByteBlock4.bytes[n] = sBuffer[*nCurPos + n];
+            n++;
+        }
+        MarkBytes(*nCurPos, 4, nMarking);
+        *nCurPos += 4;
+        //std::cout<<"ReadInt() return: "<<ByteBlock4.i<<"\n";
+        return ByteBlock4.i;
+    }
+    else if(nBytes ==2){
+        int n = 0;
+        while(n < 2){
+            ByteBlock2.bytes[n] = sBuffer[*nCurPos + n];
+            n++;
+        }
+        MarkBytes(*nCurPos, 2, nMarking);
+        *nCurPos += 2;
+        return ByteBlock2.i;
+    }
+    else if(nBytes == 1){
+        int nReturn = (int) sBuffer[*nCurPos];
+        MarkBytes(*nCurPos, 1, nMarking);
+        *nCurPos += 1;
+        return nReturn;
+    }
+    else return -1;
+}
+
+float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
+    //std::cout<<string_format("ReadFloat() at position %i.\n", *nCurPos);
+    if(*nCurPos+nBytes > nBufferSize){
+        std::cout<<"ReadFloat(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.0.\n";
+        return -1.0;
+    }
+    int n = 0;
+    while(n < 4){
+        ByteBlock4.bytes[n] = sBuffer[*nCurPos + n];
+        n++;
+    }
+    MarkBytes(*nCurPos, 4, nMarking);
+    *nCurPos += 4;
+    return ByteBlock4.f;
+}
+
+void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int nMarking, int nNumber){
+    if(*nCurPos+nNumber > nBufferSize){
+        std::cout<<"ReadString(): Reading past buffer size in "<<GetName()<<", aborting.\n";
+        return;
+    }
+    sArray1.assign(&sBuffer[*nCurPos], nNumber);
+    //std::cout<<"ReadString(): "<<sArray1<<"\n";
+    MarkBytes(*nCurPos, nNumber, nMarking);
+    *nCurPos += nNumber;
+}
+
+void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
+    int n = 0;
+    //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
+    while(n < nLength && n < nBufferSize){
+        if(bKnown[nOffset + n] != 0) std::cout<<"MarkBytes(): Warning! Data already interpreted as "<<bKnown[nOffset + n]<<" at offset "<<nOffset + n<<" in "<<GetName()<<"!\n";
+        bKnown[nOffset + n] = nClass;
+        n++;
+    }
+}
+
+void BinaryFile::WriteIntToPH(int nInt, int nPH, unsigned int & nContainer){
+    ByteBlock4.i = nInt;
+    int n = 0;
+    for(n = 0; n < 4; n++){
+        sBuffer[nPH+n] = (ByteBlock4.bytes[n]);
+    }
+    nContainer = nInt;
+}
+
+void BinaryFile::WriteInt(int nInt, int nKnown, int nBytes){
+    if(nBytes == 1){
+        sBuffer.push_back((char) nInt);
+        bKnown.push_back(nKnown);
+        nPosition++;
+    }
+    else if(nBytes == 2){
+        ByteBlock2.i = nInt;
+        int n = 0;
+        for(n = 0; n < 2; n++){
+            sBuffer.push_back(ByteBlock2.bytes[n]);
+            bKnown.push_back(nKnown);
+        }
+        nPosition+=n;
+    }
+    else if(nBytes == 4){
+        ByteBlock4.i = nInt;
+        int n = 0;
+        for(n = 0; n < 4; n++){
+            sBuffer.push_back(ByteBlock4.bytes[n]);
+            bKnown.push_back(nKnown);
+        }
+        nPosition+=n;
+    }
+    else if(nBytes == 8){
+        ByteBlock8.i = nInt;
+        int n = 0;
+        for(n = 0; n < 8; n++){
+            sBuffer.push_back(ByteBlock8.bytes[n]);
+            bKnown.push_back(nKnown);
+        }
+        nPosition+=n;
+    }
+    else Error("Cannot convert an integer to anything but 1, 2, 4 and 8 byte representations!");
+}
+
+void BinaryFile::WriteFloat(float fFloat, int nKnown, int nBytes){
+    ByteBlock4.f = fFloat;
+    int n = 0;
+    for(n = 0; n < 4; n++){
+        sBuffer.push_back(ByteBlock4.bytes[n]);
+        bKnown.push_back(nKnown);
+    }
+    nPosition+=n;
+}
+
+void BinaryFile::WriteString(std::string sString, int nKnown){
+    int n = 0;
+    for(n = 0; n < sString.length(); n++){
+        sBuffer.push_back(sString.at(n));
+        bKnown.push_back(nKnown);
+    }
+    nPosition+=n;
+}
+
+void BinaryFile::WriteByte(char cByte, int nKnown){
+    sBuffer.push_back(cByte);
+    bKnown.push_back(nKnown);
+    nPosition++;
+}
+
+bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
+    std::string sCheck;
+    //First skip all spaces
+    if(sBuffer[nPosition] == '#' ||
+       sBuffer[nPosition] == 0x0D ||
+       sBuffer[nPosition] == 0x0A)
+    {
+        return false;
+    }
+    while(sBuffer[nPosition] == 0x20){
+        nPosition++;
+        if(sBuffer[nPosition] == '#' ||
+           sBuffer[nPosition] == 0x0D ||
+           sBuffer[nPosition] == 0x0A)
+        {
+            return false;
+        }
+    }
+    while(sBuffer[nPosition] != 0x20 &&
+            sBuffer[nPosition] != '#' &&
+            sBuffer[nPosition] != 0x0D &&
+            sBuffer[nPosition] != 0x0A)
+    {
+        sCheck.push_back(sBuffer[nPosition]);
+        nPosition++;
+    }
+    if(sCheck.length() == 0) return false;
+
+    //Report
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"EditorDlgWindow::ReadFloat(): Reading: "<<sCheck<<". ";
+
+    try{
+        fNew = std::stof(sCheck, (size_t*) NULL);
+        sGetFloat = sCheck;
+    }
+    catch(std::invalid_argument){
+        std::cout<<"EditorDlgWindow::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
+        fNew = 0.0;
+        return false;
+    }
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
+    return true;
+}
 
 bool TextFile::ReadFloat(double & fNew, bool bPrint){
     std::string sCheck;

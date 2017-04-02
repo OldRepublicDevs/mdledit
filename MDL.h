@@ -283,11 +283,6 @@ struct GeometryHeader;
 struct ModelHeader;
 struct FileHeader;
 
-//Convert unions
-extern ByteBlock2 ByteBlock2;
-extern ByteBlock4 ByteBlock4;
-extern ByteBlock8 ByteBlock8;
-
 //File structs
 class File;
 class BinaryFile;
@@ -296,7 +291,7 @@ class MDX;
 class WOK;
 class Ascii;
 
-void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
+bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
 
 
 /**** DATA STRUCTS ****/

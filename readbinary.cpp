@@ -3,78 +3,17 @@
 #include <iomanip>
 #include <Shlwapi.h>
 
-int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
-    //std::cout<<string_format("ReadInt() at position %i.\n", *nCurPos);
-    if(*nCurPos+nBytes > nBufferSize){
-        std::cout<<string_format("ReadInt(): Reading past buffer size in %s, aborting and returning -1.\n", GetName());
-        return -1;
-    }
-    if(nBytes == 4){
-        int n = 0;
-        while(n < 4){
-            ByteBlock4.bytes[n] = sBuffer[*nCurPos + n];
-            n++;
-        }
-        MarkBytes(*nCurPos, 4, nMarking);
-        *nCurPos += 4;
-        //std::cout<<"ReadInt() return: "<<ByteBlock4.i<<"\n";
-        return ByteBlock4.i;
-    }
-    else if(nBytes ==2){
-        int n = 0;
-        while(n < 2){
-            ByteBlock2.bytes[n] = sBuffer[*nCurPos + n];
-            n++;
-        }
-        MarkBytes(*nCurPos, 2, nMarking);
-        *nCurPos += 2;
-        return ByteBlock2.i;
-    }
-    else if(nBytes == 1){
-        int nReturn = (int) sBuffer[*nCurPos];
-        MarkBytes(*nCurPos, 1, nMarking);
-        *nCurPos += 1;
-        return nReturn;
-    }
-    else return -1;
-}
-
-float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
-    //std::cout<<string_format("ReadFloat() at position %i.\n", *nCurPos);
-    if(*nCurPos+nBytes > nBufferSize){
-        std::cout<<string_format("ReadFloat(): Reading past buffer size in %s, aborting and returning -1.0.\n", GetName());
-        return -1.0;
-    }
-    int n = 0;
-    while(n < 4){
-        ByteBlock4.bytes[n] = sBuffer[*nCurPos + n];
-        n++;
-    }
-    MarkBytes(*nCurPos, 4, nMarking);
-    *nCurPos += 4;
-    return ByteBlock4.f;
-}
-
-void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int nMarking, int nNumber){
-    if(*nCurPos+nNumber > nBufferSize){
-        std::cout<<string_format("ReadInt(): Reading past buffer size in %s, aborting.\n", GetName());
-        return;
-    }
-    sArray1.assign(&sBuffer[*nCurPos], nNumber);
-    //std::cout<<"ReadString(): "<<sArray1<<"\n";
-    MarkBytes(*nCurPos, nNumber, nMarking);
-    *nCurPos += nNumber;
-}
-
-void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
-    int n = 0;
-    //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
-    while(n < nLength && n < nBufferSize){
-        if(bKnown[nOffset + n] != 0) std::cout<<string_format("MarkBytes(): Warning! Data already interpreted as %i at offset %i in %s!\n", bKnown[nOffset + n], nOffset + n, GetName());
-        bKnown[nOffset + n] = nClass;
-        n++;
-    }
-}
+/**
+    Functions:
+    MDL::DecompileModel()
+    MDL::ParseAabb()
+    MDL::ParseNode()
+    MDL::DetermineSmoothing()
+    MDL::ConsolidateSmoothingGroups()
+    MDL::GenerateSmoothingNumber()
+    MDL::FindNormal()
+    MDL::FindTangentSpace()
+/**/
 
 void MDL::DecompileModel(bool bMinimal){
     if(sBuffer.empty() || nBufferSize == 0) return;
@@ -268,7 +207,7 @@ void MDL::DecompileModel(bool bMinimal){
     }
     if(!bMinimal) std::cout<<"Geometry read.\n";
     if(!bMinimal) std::cout<<"Done decompiling!\n";
-    //if(bDetermineSmoothing && !Mdx->empty() && !bMinimal) DetermineSmoothing();
+    if(bDetermineSmoothing && Mdx && !bMinimal) DetermineSmoothing();
 }
 
 void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
@@ -795,7 +734,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Mesh.Vertices[n].vFromRoot += vFromRoot;
 
                 NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;
-                if(NODE->Mesh.nMdxDataSize > 0 && !Mdx->empty()){
+                if(NODE->Mesh.nMdxDataSize > 0 && Mdx){
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToVerticesInMDX;
                         NODE->Mesh.Vertices[n].MDXData.vVertex.fX = Mdx->ReadFloat(&nPosData2, 2);
@@ -1011,9 +950,6 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
     }
 }
 
-//Helper
-void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
-
 /// This function will become the main binary decompilation post-processing function
 void MDL::DetermineSmoothing(){
     FileHeader & Data = *FH;
@@ -1024,7 +960,7 @@ void MDL::DetermineSmoothing(){
     ///I will first do it the inefficient way, but a clear way, so I can merge stuff later if need be.
     // The point is twofold - calculate area and calculate tangent space vectors
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
+        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
             for(int f = 0; f < Data.MH.ArrayOfNodes.at(n).Mesh.Faces.size(); f++){
                 Face & face = Data.MH.ArrayOfNodes.at(n).Mesh.Faces.at(f);
                 Vertex & v1 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[0]);

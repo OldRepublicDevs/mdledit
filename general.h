@@ -98,25 +98,6 @@ double RoundDec(double fNumber, int nDecPlaces);
 double RoundDec(float fNumber, int nDecPlaces);
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset);
 
-union ByteBlock2{
-    short int i;
-    unsigned short int ui;
-    char bytes [2];
-};
-
-union ByteBlock4{
-    float f;
-    int i;
-    unsigned int ui;
-    char bytes [4];
-};
-
-union ByteBlock8{
-    double d;
-    long int i;
-    unsigned long int ui;
-    char bytes [8];
-};
 struct MenuLineAdder{
     HMENU hMenu;
     int nIndex;

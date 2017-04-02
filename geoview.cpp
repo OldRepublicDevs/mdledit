@@ -328,3 +328,21 @@ LRESULT CALLBACK GeoViewProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     }
     return 0;
 }
+
+std::vector<GeoView> GeoViews;
+
+void OpenGeoViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
+    //Probably only nodes will ever be able to fire this function.
+    //Still I should make sure I'm only running stuff on appropriate nodes
+    if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
+        Node* node = (Node*) lParam;
+        if(node->Head.nType & NODE_HAS_MESH){
+            //Now we're ready to create the GeoView
+            GeoViews.push_back(GeoView());
+            GeoViews.back().SetData(*node);
+            if(!(GeoViews.back().Run())){
+                std::cout<<string_format("GeoView window creation failed!\n");
+            }
+        }
+    }
+}

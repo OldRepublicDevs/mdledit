@@ -173,7 +173,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             TabCtrl_InsertItem(hTabs, 2, &tcAdd);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
-                std::cout<<string_format("Major error, creation of Edit1 window failed.\n");
+                std::cout<<"Major error, creation of Edit1 window failed.\n";
             }
 
             MENUITEMINFO mii;
@@ -181,6 +181,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             mii.fMask = MIIM_STATE;
             mii.fState = MFS_DISABLED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+            mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+            mii.fState = MFS_CHECKED;
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
         }
         break;
         case WM_NOTIFY:
@@ -327,7 +331,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_ASCII_SAVE:
                 {
                     int nReturn = IDOK;
-                    if(Model.Mdx->empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
+                    if(!Model.Mdx) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
                     if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
                 }
                 break;
@@ -348,6 +352,54 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                         }
                         else std::cout<<"neck_g was not found!\n";
+                    }
+                }
+                break;
+                case IDM_GAME_K1:
+                {
+                    if(Model.bK2){
+                        if(Model.GetFileData()){
+                            int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
+                            if(nResult == MB_OK){
+                                Model.bK2 = false;
+                            }
+                        }
+                        else{
+                            Model.bK2 = false;
+                        }
+                        if(!Model.bK2){
+                            MENUITEMINFO mii;
+                            mii.cbSize = sizeof(MENUITEMINFO);
+                            mii.fMask = MIIM_STATE;
+                            mii.fState = MFS_CHECKED;
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+                            mii.fState = MFS_UNCHECKED;
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
+                        }
+                    }
+                }
+                break;
+                case IDM_GAME_K2:
+                {
+                    if(!Model.bK2){
+                        if(Model.GetFileData()){
+                            int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
+                            if(nResult == MB_OK){
+                                Model.bK2 = true;
+                            }
+                        }
+                        else{
+                            Model.bK2 = true;
+                        }
+                        if(Model.bK2){
+                            MENUITEMINFO mii;
+                            mii.cbSize = sizeof(MENUITEMINFO);
+                            mii.fMask = MIIM_STATE;
+                            mii.fState = MFS_UNCHECKED;
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+                            mii.fState = MFS_CHECKED;
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
+                        }
                     }
                 }
                 break;
@@ -500,7 +552,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -610,7 +662,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             else bReturn = false;        }
         else std::cout<<"Selecting file failed. :( \n";
     */    }
-    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -654,6 +706,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0,std::ios::beg);
+                Model.Ascii.reset(new ASCII());
                 std::vector<char> & sBufferRef = Model.CreateAsciiBuffer(length);
                 file.read(&sBufferRef[0], length);
                 file.close();

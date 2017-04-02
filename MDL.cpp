@@ -34,6 +34,15 @@ std::unique_ptr<FileHeader> & MDL::GetFileData(){
     return FH;
 }
 
+std::string MDL::MakeUniqueName(int nNameIndex){
+    std::vector<Name> & Names = FH->MH.Names;
+    std::string sReturn = Names.at(nNameIndex).sName.c_str();
+    for(int n = 0; n < nNameIndex; n++){
+        if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNameIndex);
+    }
+    return sReturn;
+}
+
 std::vector<char> & MDL::GetAsciiBuffer(){
     return Ascii->GetBuffer();
 }
@@ -68,6 +77,9 @@ bool MDL::NodeExists(const std::string & sNodeName){
 
 void MDL::FlushData(){
     FH.reset();
+    Ascii.reset();
+    Mdx.reset();
+    sBuffer.clear();
 }
 
 //Setters/general
@@ -231,7 +243,7 @@ double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
     return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
 }
 
-void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
+bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
     std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName;
     sSMname.resize(strlen(sSMname.c_str()));
     if(sSMname != "NULL"){
@@ -249,13 +261,25 @@ void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
 
         //Check for problems
         bool bOpen = true;
+        bool bWrongGame = false;
         if(!file.is_open()) bOpen = false;
-        file.seekg(0, std::ios::beg);
-        char cBinary [4];
-        file.read(cBinary, 4);
-        //Make sure that what we've read is a binary .mdl as far as we can tell
-        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
-        //If we pass, then the file is definitely ready to be read.
+        if(bOpen){
+            file.seekg(0, std::ios::beg);
+            char cBinary [4];
+            file.read(cBinary, 4);
+            //Make sure that what we've read is a binary .mdl as far as we can tell
+            if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
+            //If we pass, then the file is definitely ready to be read.
+        }
+        if(bOpen){
+            file.seekg(12);
+            file.read(ByteBlock4.bytes, 4);
+            if(ByteBlock4.ui != curmdl.GetFileData()->MH.GH.nFunctionPointer0){
+                bOpen = false;
+                bWrongGame = true;
+            }
+        }
+        bool bReturn = true;
         if(bOpen){
             std::cout<<"Reading supermodel: \n"<<sNewMdl<<"\n";
             file.seekg(0, std::ios::end);
@@ -269,13 +293,17 @@ void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
             Supermodels.push_back(std::move(newmdl));
             Supermodels.back().DecompileModel(true);
 
-            LoadSupermodel(Supermodels.back(), Supermodels); //Go recursive
+            bReturn = LoadSupermodel(Supermodels.back(), Supermodels); //Go recursive
         }
         else{
             file.close();
-            Warning("Could not find supermodel " + sNewMdl + " in the directory! The supernodes might receive wrong values!");
+            if(bWrongGame) Warning("Binary supermodel " + std::string(sNewMdl.c_str()) + " belongs to the wrong game and couldn't be read! The supernode numbers will be wrong!");
+            else Warning("Could not find binary supermodel " + std::string(sNewMdl.c_str()) + " in the directory! The supernodes numbers will be wrong!");
+            return false;
         }
+        return bReturn;
     }
+    else return true;
 }
 
 /// This function is to be used both when compiling and decompiling (to determine smoothing groups)
@@ -284,12 +312,12 @@ void MDL::CreatePatches(){
     FileHeader & Data = *FH;
 
     SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size()));
-    SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
+    //SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
         //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
-        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH){
+        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
             Node & node = Data.MH.ArrayOfNodes.at(n);
             Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
@@ -312,7 +340,7 @@ void MDL::CreatePatches(){
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
                     for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
 
-                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_HAS_MESH){
+                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_HAS_SABER)){
                             Node & node2 = Data.MH.ArrayOfNodes.at(n2);
 
                             //Loop through all the faces in the mesh and look for matching vertices - theoretically there is no way to optimize this part
@@ -341,10 +369,11 @@ void MDL::CreatePatches(){
                     }
                 }
             }
+            SendMessage(hProgress, PBM_SETPOS, (WPARAM) n, (LPARAM) NULL);
         }
-        SendMessage(hProgress, PBM_STEPIT, (WPARAM) NULL, (LPARAM) NULL);
     }
     std::cout<<"Done building LinkedFaces array!\n";
+    SendMessage(hProgress, PBM_SETPOS, (WPARAM) Data.MH.ArrayOfNodes.size(), (LPARAM) NULL);
     for(int dbg = 0; dbg < Data.MH.LinkedFacesPointers.size(); dbg++){
         if(Data.MH.LinkedFacesPointers.at(dbg).size() == 0) Warning("A linked face group is empty. This is gonna cause a crash in a bit...");
     }

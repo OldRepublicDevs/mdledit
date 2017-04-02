@@ -4,6 +4,26 @@
 #include <string>
 #include <vector>
 
+union BB2{
+    short int i;
+    unsigned short int ui;
+    char bytes [2];
+};
+
+union BB4{
+    float f;
+    int i;
+    unsigned int ui;
+    char bytes [4];
+};
+
+union BB8{
+    double d;
+    long int i;
+    unsigned long int ui;
+    char bytes [8];
+};
+
 class File{
   protected:
     bool bLoaded = false;
@@ -85,10 +105,16 @@ class BinaryFile: public File{
 class TextFile: public File{
   protected:
     bool ReadFloat(double & fNew, bool bPrint = false);
+    bool ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint = false);
     bool ReadInt(int & nNew, bool bPrint = false);
     bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
     void SkipLine();
     bool EmptyRow();
 };
+
+//Convert unions
+extern BB2 ByteBlock2;
+extern BB4 ByteBlock4;
+extern BB8 ByteBlock8;
 
 #endif // FILE_H_INCLUDED

@@ -1,5 +1,15 @@
 #include "MDL.h"
 
+/**
+    Functions:
+    AddMenuLines() //frame.h
+    Append() //Helper
+    AppendAabb() //Helper
+    AppendChildren() //Helper
+    BuildTree() //frame.h
+    DetermineDisplayText //frame.h
+/**/
+
 void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla){
     bool bVertex = false;
     if(cItem[0].length() > 6){
@@ -142,7 +152,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
                     Vert = Append(cVert, (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
                     //if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
                 }
-                if(node.Mesh.nMdxDataSize > 0 && !Mdl.Mdx->empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
+                if(node.Mesh.nMdxDataSize > 0 && Mdl.Mdx) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
             }
             HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
             if(node.Mesh.Faces.size() > 0){
@@ -628,7 +638,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         MDXDataStruct * mdx = &vert->MDXData;
         Node & node = Model.GetNodeByNameIndex(mdx->nNameIndex);
         if(!(node.Head.nType & NODE_HAS_SABER)){
-            if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx->empty()){
+            if(node.Mesh.nMdxDataSize > 0 && Model.Mdx){
                 sPrint << "\r\n\r\nMDX Data";
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                     sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);

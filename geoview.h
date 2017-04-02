@@ -6,7 +6,6 @@
 #include <gdiplus.h>
 #include "MDL.h"
 
-
 class GeoView{
     WNDCLASSEX WindowClass;
     static char cClassName [];

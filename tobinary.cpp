@@ -1,75 +1,15 @@
 #include "MDL.h"
-#include <fstream>
+//#include <fstream>
 
-void BinaryFile::WriteIntToPH(int nInt, int nPH, unsigned int & nContainer){
-    ByteBlock4.i = nInt;
-    int n = 0;
-    for(n = 0; n < 4; n++){
-        sBuffer[nPH+n] = (ByteBlock4.bytes[n]);
-    }
-    nContainer = nInt;
-}
-
-void BinaryFile::WriteInt(int nInt, int nKnown, int nBytes){
-    if(nBytes == 1){
-        sBuffer.push_back((char) nInt);
-        bKnown.push_back(nKnown);
-        nPosition++;
-    }
-    else if(nBytes == 2){
-        ByteBlock2.i = nInt;
-        int n = 0;
-        for(n = 0; n < 2; n++){
-            sBuffer.push_back(ByteBlock2.bytes[n]);
-            bKnown.push_back(nKnown);
-        }
-        nPosition+=n;
-    }
-    else if(nBytes == 4){
-        ByteBlock4.i = nInt;
-        int n = 0;
-        for(n = 0; n < 4; n++){
-            sBuffer.push_back(ByteBlock4.bytes[n]);
-            bKnown.push_back(nKnown);
-        }
-        nPosition+=n;
-    }
-    else if(nBytes == 8){
-        ByteBlock8.i = nInt;
-        int n = 0;
-        for(n = 0; n < 8; n++){
-            sBuffer.push_back(ByteBlock8.bytes[n]);
-            bKnown.push_back(nKnown);
-        }
-        nPosition+=n;
-    }
-    else Error("Cannot convert an integer to anything but 1, 2, 4 and 8 byte representations!");
-}
-
-void BinaryFile::WriteFloat(float fFloat, int nKnown, int nBytes){
-    ByteBlock4.f = fFloat;
-    int n = 0;
-    for(n = 0; n < 4; n++){
-        sBuffer.push_back(ByteBlock4.bytes[n]);
-        bKnown.push_back(nKnown);
-    }
-    nPosition+=n;
-}
-
-void BinaryFile::WriteString(std::string sString, int nKnown){
-    int n = 0;
-    for(n = 0; n < sString.length(); n++){
-        sBuffer.push_back(sString.at(n));
-        bKnown.push_back(nKnown);
-    }
-    nPosition+=n;
-}
-
-void BinaryFile::WriteByte(char cByte, int nKnown){
-    sBuffer.push_back(cByte);
-    bKnown.push_back(nKnown);
-    nPosition++;
-}
+/**
+    Functions:
+    MDL::GatherChildren()
+    MDL::DoCalculations()
+    MDL::AsciiPostProcess()
+    MDL::Compile()
+    MDL::WriteAabb()
+    MDL::WriteNodes()
+/**/
 
 void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector vFromRoot){
     node.Head.ChildIndices.resize(0); //Reset child array
@@ -403,72 +343,77 @@ void MDL::AsciiPostProcess(){
 
     /// PART 1 ///
     /// Do supernodes
-    if(Data.MH.cSupermodelName != "NULL"){
+    /// This loads up all the supermodels and calculates the supernode numbers
+    if(Data.MH.cSupermodelName == "NULL") Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size();
+    else{
         std::vector<MDL> Supermodels;
-        LoadSupermodel(*this, Supermodels);
+        bool bFoundAll = LoadSupermodel(*this, Supermodels);
         //First, update the TotalNodeCount
-        int nTotalSupermodelNodes = Supermodels.front().GetFileData()->MH.GH.nTotalNumberOfNodes;
-        std::cout<<"Total Supermodel Nodes: "<<nTotalSupermodelNodes<<"\n";
-        if(nTotalSupermodelNodes > 0)
-            Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size() + 1 + nTotalSupermodelNodes;
+        if(Supermodels.size() == 0 || !bFoundAll) Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size();
+        else{
+            int nTotalSupermodelNodes = Supermodels.front().GetFileData()->MH.GH.nTotalNumberOfNodes;
+            std::cout<<"Total Supermodel Nodes: "<<nTotalSupermodelNodes<<"\n";
+            if(nTotalSupermodelNodes > 0)
+                Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size() + 1 + nTotalSupermodelNodes;
 
-        //Next we need the largest supernode number.
-        short nMaxSupernode = 0;
-        for(int n = 0; n < Supermodels.front().GetFileData()->MH.ArrayOfNodes.size(); n++){
-            nMaxSupernode = std::max(nMaxSupernode, Supermodels.front().GetFileData()->MH.ArrayOfNodes.at(n).Head.nID1);
-        }
-        short nCurrentSupernode = nMaxSupernode + 1;
+            //Next we need the largest supernode number. The largest is definitely in the first supermodel, right? right?!
+            short nMaxSupernode = 0;
+            for(int n = 0; n < Supermodels.front().GetFileData()->MH.ArrayOfNodes.size(); n++){
+                nMaxSupernode = std::max(nMaxSupernode, Supermodels.front().GetFileData()->MH.ArrayOfNodes.at(n).Head.nID1);
+            }
+            short nCurrentSupernode = nMaxSupernode + 1;
 
-        //Update the supernode number for every node
-        for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-            Node & node = Data.MH.ArrayOfNodes.at(n);
-            /// 1. Get supernodes
-            //If Name Index is 0, then supernode is zero. But this is the default situation, so we just need to exclude that case.
-            if(node.Head.nNameIndex != 0){
-                std::string & sNodeName = Data.MH.Names.at(node.Head.nNameIndex).sName;
-                std::string & sParentName = Data.MH.Names.at(node.Head.nParentIndex).sName;
-                bool bFound = false;
-                for(int m = 0; m < Supermodels.size() && !bFound; m++){
-                    MDL & supermdl = Supermodels.at(m);
-                    FileHeader & Data2 = *Supermodels.at(m).GetFileData();
-                    for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
-                        if(Data2.MH.Names.at(s).sName == sNodeName){
-                            if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
-                                //Both the name and the parent name are equal. We really are dealing with the matching node. Get its supernode.
-                                node.Head.nID1 = supermdl.GetNodeByNameIndex(s).Head.nID1;
-                                bFound = true;
-                            }
-                        }
-                    }
-                }
-                if(!bFound){
-                    //I'm reusing the variable, but we're looking for the parent now
-                    bFound = false;
-                    if(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex != 0){
-                        std::string & sNodeName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex).sName;
-                        std::string & sParentName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nParentIndex).sName;
-                        for(int m = 0; m < Supermodels.size() && !bFound; m++){
-                            MDL & supermdl = Supermodels.at(m);
-                            FileHeader & Data2 = *Supermodels.at(m).GetFileData();
-                            for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
-                                if(Data2.MH.Names.at(s).sName == sNodeName2){
-                                    if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName2 || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
-                                        //Both the name and the parent name are equal. We really are dealing with the matching node.
-                                        bFound = true;
-                                    }
+            //Update the supernode number for every node
+            for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+                Node & node = Data.MH.ArrayOfNodes.at(n);
+                /// 1. Get supernodes
+                //If Name Index is 0, then supernode is zero. But this is the default situation, so we just need to exclude that case.
+                if(node.Head.nNameIndex != 0){
+                    std::string & sNodeName = Data.MH.Names.at(node.Head.nNameIndex).sName;
+                    std::string & sParentName = Data.MH.Names.at(node.Head.nParentIndex).sName;
+                    bool bFound = false;
+                    for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                        MDL & supermdl = Supermodels.at(m);
+                        FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                        for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                            if(Data2.MH.Names.at(s).sName == sNodeName){
+                                if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                                    //Both the name and the parent name are equal. We really are dealing with the matching node. Get its supernode.
+                                    node.Head.nID1 = supermdl.GetNodeByNameIndex(s).Head.nID1;
+                                    bFound = true;
                                 }
                             }
                         }
                     }
-                    else bFound = true;
-                    if(bFound){
-                        //This means that the parent is also present in the supermodel. In this case, we just give it the next supernode number.
-                        node.Head.nID1 = nCurrentSupernode;
-                        nCurrentSupernode++;
-                    }
-                    else{
-                        //If we couldn't find the parent, it must be new. So, we have a different algorithm for the ID.
-                        node.Head.nID1 += nTotalSupermodelNodes + 1;
+                    if(!bFound){
+                        //I'm reusing the variable, but we're looking for the parent now
+                        bFound = false;
+                        if(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex != 0){
+                            std::string & sNodeName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex).sName;
+                            std::string & sParentName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nParentIndex).sName;
+                            for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                                MDL & supermdl = Supermodels.at(m);
+                                FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                                for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                                    if(Data2.MH.Names.at(s).sName == sNodeName2){
+                                        if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName2 || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                                            //Both the name and the parent name are equal. We really are dealing with the matching node.
+                                            bFound = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else bFound = true;
+                        if(bFound){
+                            //This means that the parent is also present in the supermodel. In this case, we just give it the next supernode number.
+                            node.Head.nID1 = nCurrentSupernode;
+                            nCurrentSupernode++;
+                        }
+                        else{
+                            //If we couldn't find the parent, it must be new. So, we have a different algorithm for the ID.
+                            node.Head.nID1 += nTotalSupermodelNodes + 1;
+                        }
                     }
                 }
             }
@@ -476,12 +421,10 @@ void MDL::AsciiPostProcess(){
         Supermodels.clear();
         Supermodels.shrink_to_fit();
     }
-    else{
-        Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size();
-    }
 
     /// PART 2 ///
     /// Gather all the children (the indices!!!)
+    /// This part means going from every node only specifying its parent to everyone node also specifying its children
     // 1. Gather children for animations
     for(int i = 0; i < Data.MH.Animations.size(); i++){
         Animation & anim = Data.MH.Animations[i];
@@ -503,11 +446,12 @@ void MDL::AsciiPostProcess(){
     }
 
     /// PART 3 ///
+    /// Interpret ascii data
     /// This constructs the Mesh.Vertices, Mesh.VertIndices, Dangly.Data2, Dangly.Constraints and Saber.SaberData structures.
-    //An absolutely necessary parse for every mesh.
+    /// And not to forget the weights.
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
-        if(node.Head.nType & NODE_HAS_MESH){
+        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
                 for(int i = 0; i < 3; i++){
@@ -525,8 +469,7 @@ void MDL::AsciiPostProcess(){
                             vert.vFromRoot.Rotate(node.GetLocation().oOrientation);
                             vert.vFromRoot+=node.Head.vFromRoot;
 
-                            if(node.Head.nType & NODE_HAS_SABER) saberdata.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
-                            else vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
+                            vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
 
                             if(node.Head.nType & NODE_HAS_DANGLY){
                                 node.Dangly.Data2.push_back(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
@@ -539,19 +482,18 @@ void MDL::AsciiPostProcess(){
                         }
                         if(node.Mesh.TempTverts.size() > 0 && face.nTextureCount >= 1){
                             bIgnoreTvert = false;
-                            if(node.Head.nType & NODE_HAS_SABER) saberdata.vUV = node.Mesh.TempTverts.at(face.nIndexTvert[i]);
-                            else vert.MDXData.vUV1 = node.Mesh.TempTverts.at(face.nIndexTvert[i]);
+                            vert.MDXData.vUV1 = node.Mesh.TempTverts.at(face.nIndexTvert[i]);
                         }
                         //We simply ignore the other three UVs if this is a saber
-                        if(node.Mesh.TempTverts1.size() > 0 && face.nTextureCount >= 2 && !(node.Head.nType & NODE_HAS_SABER)){
+                        if(node.Mesh.TempTverts1.size() > 0 && face.nTextureCount >= 2){
                             bIgnoreTvert1 = false;
                             vert.MDXData.vUV2 = node.Mesh.TempTverts1.at(face.nIndexTvert1[i]);
                         }
-                        if(node.Mesh.TempTverts2.size() > 0 && face.nTextureCount >= 3 && !(node.Head.nType & NODE_HAS_SABER)){
+                        if(node.Mesh.TempTverts2.size() > 0 && face.nTextureCount >= 3){
                             bIgnoreTvert2 = false;
                             vert.MDXData.vUV3 = node.Mesh.TempTverts2.at(face.nIndexTvert2[i]);
                         }
-                        if(node.Mesh.TempTverts3.size() > 0 && face.nTextureCount >= 4 && !(node.Head.nType & NODE_HAS_SABER)){
+                        if(node.Mesh.TempTverts3.size() > 0 && face.nTextureCount >= 4){
                             bIgnoreTvert3 = false;
                             vert.MDXData.vUV4 = node.Mesh.TempTverts3.at(face.nIndexTvert3[i]);
                         }
@@ -584,7 +526,6 @@ void MDL::AsciiPostProcess(){
 
                         //Put the new vert into the array
                         node.Mesh.Vertices.push_back(std::move(vert));
-                        if(node.Head.nType & NODE_HAS_SABER) node.Saber.SaberData.push_back(std::move(saberdata));
                     }
                 }
                 VertIndicesStruct vertindex;
@@ -608,15 +549,23 @@ void MDL::AsciiPostProcess(){
             node.Dangly.TempConstraints.shrink_to_fit();
             node.Skin.TempWeights.shrink_to_fit();
         }
+        else if(node.Head.nType & NODE_HAS_SABER){
+
+            ///Saber interpretation goes here.
+
+        }
     }
 
     /// PART 4 ///
     /// Create patches through linked faces
-    //This will take a while - this needs to be optimized for speed, anything that can be taken out of it, should be
+    //This will take a while and needs to be optimized for speed, anything that can be taken out of it, should be
     CreatePatches();
 
     /// PART 5 ///
-    /// Do the necessary calculations for the nodes in geometry
+    /// Do the necessary mesh calculations
+    /// Mesh: average, bbox, radius, inverted counter, MDX data offsets, face vectors (normal, distance, tangent, bitangent),
+    /// adjacent faces, total area
+    /// Skin: MDX data offsets, T-bones, Q-bones
     int nMeshCounter = 0;
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
@@ -670,6 +619,10 @@ void MDL::AsciiPostProcess(){
             vert.MDXData.vTangent1[2].Normalize();
         }
     }
+
+    /// No need for the patches anymore, get rid of them
+    Data.MH.PatchArrayPointers.clear();
+    Data.MH.PatchArrayPointers.shrink_to_fit();
 
     /// DONE ///
     std::cout<<"Done post-processing ascii...\n";

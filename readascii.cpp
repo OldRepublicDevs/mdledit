@@ -1,5 +1,11 @@
 #include "MDL.h"
 
+/**
+    Functions:
+    ASCII::Read()
+    ASCII::BuildAabb()
+/**/
+
 bool ASCII::Read(MDL & Mdl){
     std::cout<<"We made it into ASCII::Read.\n";
 

@@ -38,8 +38,8 @@ BEGIN
     MENUITEM "&Load...", IDM_MDL_OPEN
     POPUP "Export"
         BEGIN
-        MENUITEM "&Export MDL...", IDM_BIN_SAVE
-        MENUITEM "&Export ASCII...", IDM_ASCII_SAVE
+        MENUITEM "&Binary...", IDM_BIN_SAVE
+        MENUITEM "&ASCII...", IDM_ASCII_SAVE
         END
     MENUITEM SEPARATOR
     MENUITEM "E&xit", IDM_FILE_EXIT

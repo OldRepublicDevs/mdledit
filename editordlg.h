@@ -4,23 +4,17 @@
 #include "general.h"
 #include "MDL.h"
 
-class EditorDlgWindow{
+class EditorDlgWindow: public TextFile{
     WNDCLASSEX WindowClass;
     static char cClassName [];
     static bool bRegistered;
-    std::string sBuffer;
-    unsigned int nPosition = 0;
+    //std::string sBuffer;
+    //unsigned int nPosition = 0;
     unsigned int nDataType = 0;
     LPVOID lpData = nullptr;
     MDL * MdlPtr = nullptr;
 
     bool SaveData();
-    bool ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint = false);
-    bool ReadInt(int & nNew, bool bPrint = false);
-    void SkipLine();
-    bool EmptyRow();
-    bool ReadUntilText(std::string & sHandle, bool bToLowercase = false, bool bStrictNoNewLine = false);
-
 
 public:
     HWND hMe;

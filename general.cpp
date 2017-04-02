@@ -66,27 +66,6 @@ double deg(double rad){
 double rad(double deg){
     return deg * 3.141592653589793 / 180.0;
 }
-/*
-float acosf(float fVal){
-    return (float) acos((double) fVal);
-}
-
-float cosf(float fVal){
-    return (float) cos((double) fVal);
-}
-
-float sinf(float fVal){
-    return (float) sin((double) fVal);
-}
-
-float tanf(float fVal){
-    return (float) tan((double) fVal);
-}
-
-float sqrtf(float fVal){
-    return (float) sqrt((double) fVal);
-}
-*/
 
 void QuaternionToAA(float * fQuaternion, float * fAA){
     if(fQuaternion[3] > 1.0){
@@ -359,7 +338,3 @@ bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     }
     else return false;
 }
-
-ByteBlock2 ByteBlock2;
-ByteBlock4 ByteBlock4;
-ByteBlock8 ByteBlock8;

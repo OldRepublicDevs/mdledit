@@ -99,7 +99,7 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     if(editdlg == nullptr) Error("Internal error. Cannot get window data.");
                     else{
                         int nTextLength = GetWindowTextLength(hEdit);
-                        std::string  & sBuffer = editdlg->sBuffer;
+                        std::vector<char> & sBuffer = editdlg->sBuffer;
                         sBuffer.resize(nTextLength, 0);
                         if(GetWindowText(hEdit, &sBuffer.front(), sBuffer.size()) != 0){
                             ///Passed all the error checks, time to get to business
@@ -107,6 +107,7 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                                 SendMessage(hFrame, WM_COMMAND, MAKEWPARAM(IDD_EDITOR_DLG, IDP_DISPLAY_UPDATE), (LPARAM) hwnd);
                                 DestroyWindow(hwnd);
                             }
+                            SendMessage(hFrame, WM_COMMAND, MAKEWPARAM(IDD_EDITOR_DLG, IDP_DISPLAY_UPDATE), (LPARAM) hwnd);
                         }
                         else Error("An unknown error occurred! Could not save data!");
                     }
@@ -118,7 +119,6 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
         case WM_SIZE:
         {
             SetWindowPos(hEdit, NULL, rcClient.left+3, rcClient.top, rcClient.right-3, rcClient.bottom, NULL);
-            //InvalidateRect(hwnd, &rcClient, false);
         }
         break;
         case WM_DESTROY:
@@ -328,16 +328,18 @@ bool EditorDlgWindow::SaveData(){
                 ssCompare.str(std::string());
                 if(EmptyRow()) SkipLine();
                 else{
-                    bool bFound = ReadUntilText(sID);
+                    bool bFound = ReadUntilText(sID, false);
                     if(!bFound) SkipLine();
                     else if(sID == "vert_x"){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vVertex.fX;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vVertex.fX = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetVertex);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -346,10 +348,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vVertex.fY;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vVertex.fY = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetVertex + 4);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -358,10 +362,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vVertex.fZ;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vVertex.fZ = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetVertex + 8);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -370,10 +376,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vNormal.fX;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vNormal.fX = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetNormal);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -382,10 +390,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vNormal.fY;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vNormal.fY = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetNormal + 4);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -394,10 +404,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vNormal.fZ;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vNormal.fZ = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetNormal + 8);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -406,10 +418,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vUV.fX;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vUV.fX = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -418,10 +432,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << saberdata->vUV.fY;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 saberdata->vUV.fY = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV + 4);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -446,10 +462,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << vert->fX;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 vert->fX = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, vert->nOffset);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -458,10 +476,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << vert->fY;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 vert->fY = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, vert->nOffset + 4);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -470,10 +490,12 @@ bool EditorDlgWindow::SaveData(){
                         if(ReadFloat(fConvert, sGet)){
                             ssCompare << vert->fZ;
                             if(ssCompare.str() != sGet){
+                                std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
                                 vert->fZ = fConvert;
                                 ByteBlock4.f = fConvert;
                                 Mdl.WriteUintToPlaceholder(ByteBlock4.ui, vert->nOffset + 8);
                             }
+                            else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
                         else bError = true;
                         SkipLine();
@@ -490,7 +512,7 @@ bool EditorDlgWindow::SaveData(){
     else return true;
     return false;
 }
-
+/*
 bool EditorDlgWindow::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
     std::string sCheck;
     //First skip all spaces
@@ -660,4 +682,4 @@ bool EditorDlgWindow::ReadUntilText(std::string & sHandle, bool bToLowercase, bo
     //Go back and tell them you're done
     return false;
 }
-
+*/

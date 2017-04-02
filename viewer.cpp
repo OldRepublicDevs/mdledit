@@ -1,3 +1,4 @@
+/*
 #include "MDL.h"
 #include "dialog.h"
 #include "geoview.h"
@@ -129,4 +130,4 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     else return;
-}
+}*/
