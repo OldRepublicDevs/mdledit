@@ -1,10 +1,10 @@
-#include <algorithm>
 #include "MDL.h"
 
-bool Ascii::Read(FileHeader * FH){
-    std::string sID;
+bool ASCII::Read(MDL & Mdl){
+    std::cout<<"We made it into ASCII::Read.\n";
 
-    std::cout<<"We made it into Ascii::Read.\n";
+    std::unique_ptr<FileHeader> & FH = Mdl.GetFileData();
+    std::string sID;
 
     //Set stuff to zero
     nPosition = 0;
@@ -123,7 +123,7 @@ bool Ascii::Read(FileHeader * FH){
                     //We've already read the timekeys, we're left with the values
                     Animation & anim = FH->MH.Animations.back();
                     Node & node = anim.ArrayOfNodes.back();
-                    Node & geonode = Model.GetNodeByNameIndex(node.Head.nNameIndex);
+                    Node & geonode = Mdl.GetNodeByNameIndex(node.Head.nNameIndex);
                     Location loc = geonode.GetLocation();
                     Controller & ctrl = node.Head.Controllers.back();
 
@@ -610,7 +610,7 @@ bool Ascii::Read(FileHeader * FH){
                             node.Head.nType = node.Head.nType | NODE_HAS_SABER;
                             bErase = true;
                         }
-                        node.Head.nNameIndex = GetNameIndex(sID, FH->MH.Names);
+                        node.Head.nNameIndex = Mdl.GetNameIndex(sID);
                         node.Head.nID1 = node.Head.nNameIndex;
                         if(bErase) FH->MH.Names.at(node.Head.nNameIndex).sName = FH->MH.Names.at(node.Head.nNameIndex).sName.substr(6);
                     }
@@ -1162,10 +1162,10 @@ bool Ascii::Read(FileHeader * FH){
                     if(ReadInt(nConvert)) node.Mesh.nShadow = nConvert;
                     SkipLine();
                 }
-                else if(sID == "shininess" && nNode & NODE_HAS_MESH){
+                else if(sID == "transparencyhint" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                    if(ReadInt(nConvert)) node.Mesh.nShininess = nConvert;
+                    if(ReadInt(nConvert)) node.Mesh.nTransparencyHint = nConvert;
                     SkipLine();
                 }
                 else if(sID == "animateuv" && nNode & NODE_HAS_MESH){
@@ -1347,7 +1347,7 @@ bool Ascii::Read(FileHeader * FH){
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
-                       Model.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
+                       Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
                         //For non-emitter and non-light controllers
                         ctrl.nPadding[0] = 50;
                         ctrl.nPadding[1] = 18;
@@ -1447,7 +1447,7 @@ bool Ascii::Read(FileHeader * FH){
                         ctrl.nPadding[1] = 18;
                         ctrl.nPadding[2] = 0;
                     }
-                    else if(Model.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_LIGHT){
+                    else if(Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_LIGHT){
                         ctrl.nPadding[0] = -5;
                         ctrl.nPadding[1] = 54;
                         ctrl.nPadding[2] = 0;
@@ -1634,16 +1634,7 @@ bool Ascii::Read(FileHeader * FH){
     return true;
 }
 
-int Ascii::GetNameIndex(std::string sName, std::vector<Name> Names){
-    int n = 0;
-    while(n < Names.size()){
-        if(Names[n].sName == sName) return n;
-        n++;
-    }
-    return -1;
-}
-
-void Ascii::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter){
+void ASCII::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter){
     if(AABB.nID == -1){
         if(nCounter >= ArrayOfAabb.size()) return;
         AABB.nChild1 = 1;
@@ -1659,173 +1650,4 @@ void Ascii::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCount
         AABB.nChild1 = 0;
         AABB.nChild2 = 0;
     }
-}
-
-bool Ascii::ReadFloat(double & fNew, bool bPrint){
-    std::string sCheck;
-    //First skip all spaces
-    if(sBuffer[nPosition] == '#' ||
-       sBuffer[nPosition] == 0x0D ||
-       sBuffer[nPosition] == 0x0A)
-    {
-        return false;
-    }
-    while(sBuffer[nPosition] == 0x20){
-        nPosition++;
-        if(sBuffer[nPosition] == '#' ||
-           sBuffer[nPosition] == 0x0D ||
-           sBuffer[nPosition] == 0x0A)
-        {
-            return false;
-        }
-    }
-    while(sBuffer[nPosition] != 0x20 &&
-            sBuffer[nPosition] != '#' &&
-            sBuffer[nPosition] != 0x0D &&
-            sBuffer[nPosition] != 0x0A)
-    {
-        sCheck.push_back(sBuffer[nPosition]);
-        nPosition++;
-    }
-    if(sCheck.length() == 0) return false;
-
-    //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Ascii::ReadFloat(): Reading: "<<sCheck<<". ";
-
-    try{
-        fNew = std::stof(sCheck, (size_t*) NULL);
-    }
-    catch(std::invalid_argument){
-        std::cout<<"Ascii::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
-        fNew = 0.0;
-        return false;
-    }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
-    return true;
-}
-
-bool Ascii::ReadInt(int & nNew, bool bPrint){
-    std::string sCheck;
-    //First skip all spaces
-    if(sBuffer[nPosition] == '#' ||
-       sBuffer[nPosition] == 0x0D ||
-       sBuffer[nPosition] == 0x0A)
-    {
-        return false;
-    }
-    while(sBuffer[nPosition] == 0x20){
-        nPosition++;
-        if(sBuffer[nPosition] == '#' ||
-           sBuffer[nPosition] == 0x0D ||
-           sBuffer[nPosition] == 0x0A)
-        {
-            return false;
-        }
-    }
-    while(sBuffer[nPosition] != 0x20 &&
-            sBuffer[nPosition] != '#' &&
-            sBuffer[nPosition] != 0x0D &&
-            sBuffer[nPosition] != 0x0A)
-    {
-        sCheck.push_back(sBuffer[nPosition]);
-        nPosition++;
-    }
-    if(sCheck.length() == 0) return false;
-
-    //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Ascii::ReadInt(): Reading: "<<sCheck<<". ";
-
-    try{
-        nNew = stoi(sCheck,(size_t*) NULL);
-    }
-    catch(std::invalid_argument){
-        std::cout<<"Ascii::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
-        nNew = 0xFFFFFFFF;
-        return false;
-    }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<nNew<<".\n";
-    return true;
-}
-
-void Ascii::SkipLine(){
-    if(sBuffer[nPosition] == 0x0A){
-        nPosition+=1;
-        return;
-    }
-    else if(sBuffer[nPosition] == 0x0D && sBuffer[nPosition+1] == 0x0A){
-        nPosition+=2;
-        return;
-    }
-    bool bStop = false;
-    while(nPosition + 1 < nBufferSize && !bStop){
-        if(sBuffer[nPosition] != 0x0D && sBuffer[nPosition+1] != 0x0A) nPosition++;
-        else bStop = true;
-    }
-    nPosition+=2;
-}
-
-bool Ascii::EmptyRow(){
-    int n = nPosition; //Do not use the iterator
-    while(sBuffer[n] != 0x0D &&
-        sBuffer[n+1] != 0x0A &&
-                n+1 < nBufferSize)
-    {
-        if(sBuffer[n] != 0x20 || (sBuffer[n+1] != 0x20 && sBuffer[n+1] != 0x0D)) return false;
-        n++;
-    }
-    return true;
-}
-
-bool Ascii::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrictNoNewLine){
-    sHandle = ""; //Make sure the handle is cleared
-    while(nPosition < nBufferSize){
-        //std::cout<<"Looping in ReadUntilText main while(), nPosition="<<nPosition<<".\n";
-        if(sBuffer[nPosition] == 0x20){
-            //Skip space
-            nPosition++;
-            if(nPosition >= nBufferSize) return false;
-        }
-        else if(sBuffer[nPosition] == 0x0A){
-            if(bStrictNoNewLine) return false;
-            nPosition++;
-            if(nPosition >= nBufferSize) return false;
-        }
-        else if(sBuffer[nPosition] == '#'){
-            //Return because end of line and nothing was found
-            return false;
-        }
-        else{
-            if(nPosition + 1 < nBufferSize){
-                if(sBuffer[nPosition] == 0x0D &&
-                 sBuffer[nPosition+1] == 0x0A)
-                {
-                    //Return because end of line and nothing was found
-                    return false;
-                }
-            }
-            //Now it gets interesting - we may actually have relevant text now
-                //std::cout<<"Reading and saving non-null character. "<<sBuffer[nPosition]<<".\n";
-            do{
-                //std::cout<<"Reading and saving non-null character. "<<sBuffer[nPosition]<<".\n";
-                sHandle.push_back(sBuffer[nPosition]);
-                nPosition++;
-            }
-            while(sBuffer[nPosition] != 0x20 &&
-                  sBuffer[nPosition] != '#' &&
-                  sBuffer[nPosition] != 0x0D &&
-                  sBuffer[nPosition] != 0x0A &&
-                  nPosition < nBufferSize);
-
-            //Report
-            //if(sHandle != "") std::cout<<"ReadUntilText() found the following string: "<<sHandle<<".\n";
-
-            //convert to lowercase
-            if(bToLowercase) std::transform(sHandle.begin(), sHandle.end(), sHandle.begin(), ::tolower);
-
-            //Go back and tell them you've found something
-            return true;
-        }
-    }
-    //Go back and tell them you're done
-    return false;
 }

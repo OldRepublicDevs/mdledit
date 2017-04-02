@@ -23,34 +23,35 @@ STYLE WS_POPUP | WS_BORDER | DS_CENTER
 BEGIN
 END
 
+IDM_EDITOR_DLG MENU DISCARDABLE
+BEGIN
+    POPUP " &File "
+        BEGIN
+        MENUITEM "&Save", IDDB_SAVE
+        END
+END
+
 IDM_MAIN MENU DISCARDABLE
 BEGIN
     POPUP " &File "
     BEGIN
-    //MENUITEM "&New", IDM_FILE_NEW
-    //MENUITEM "&Open...", IDM_FILE_OPEN
-    //MENUITEM "&Save", IDM_FILE_SAVE
-    //MENUITEM "&Save as...", IDM_FILE_SAVEAS
-    //MENUITEM "&Export XML...", IDM_FILE_EXPORT
-    //MENUITEM SEPARATOR
-    MENUITEM "&Load files...", IDM_MDL_OPEN
-    POPUP "Load"
-        BEGIN
-        MENUITEM "&Load MDL...", IDM_MDL_OPEN
-        MENUITEM "&Load ASCII...", IDM_ASCII_OPEN
-        END
-    //MENUITEM "&Open...", IDM_FILE_OPEN
+    MENUITEM "&Load...", IDM_MDL_OPEN
     POPUP "Export"
         BEGIN
-        MENUITEM "&Export MDL...", IDM_MDL_SAVE
+        MENUITEM "&Export MDL...", IDM_BIN_SAVE
         MENUITEM "&Export ASCII...", IDM_ASCII_SAVE
         END
     MENUITEM SEPARATOR
     MENUITEM "E&xit", IDM_FILE_EXIT
     END
-    POPUP " &Edit "
+    POPUP " &Options "
     BEGIN
     MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
+    POPUP "&Game"
+        BEGIN
+        MENUITEM "&K1", IDM_GAME_K1
+        MENUITEM "&K2", IDM_GAME_K2
+        END
     MENUITEM "&Settings...", IDM_SETTINGS
     END
     /**

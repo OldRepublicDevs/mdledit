@@ -90,7 +90,6 @@ LRESULT CALLBACK DialogWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         break;
         case WM_DESTROY:
             SetWindowText(hEdit, "");
-            DestroyWindow(hwnd);
         break;
         case WM_CLOSE:
             DestroyWindow(hwnd);

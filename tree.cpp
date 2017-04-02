@@ -1,7 +1,12 @@
 #include "MDL.h"
 
-void MDL::AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla){
-    if((cItem[0] == "")) return;
+void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla){
+    bool bVertex = false;
+    if(cItem[0].length() > 6){
+        if(cItem[0].substr(0, 6) == "Vertex") bVertex = true;
+    }
+
+    if(cItem[0] == "") return;
 
     /// Node ///
     else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
@@ -13,7 +18,7 @@ void MDL::AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdd
             pmla->nIndex++;
         }
     }
-    else if((cItem[1] == "Animations")){
+    else if(cItem[1] == "Animations"){
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
     }
@@ -26,162 +31,19 @@ void MDL::AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdd
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_CONTROLLER_DATA, "View ascii");
         pmla->nIndex++;
     }
+    else if(cItem[1] == "Saber Data" && bVertex){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        pmla->nIndex++;
+    }
+    else if(cItem[1] == "Vertices" && bVertex){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        pmla->nIndex++;
+    }
+    else if(cItem[0] == "Trimesh Flags"){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        pmla->nIndex++;
+    }
     else return;
-}
-
-std::string ReturnClassificationName(int nClassification){
-    switch(nClassification){
-        case CLASS_OTHER: return "Other";
-        case CLASS_EFFECT: return "Effect";
-        case CLASS_TILE: return "Tile";
-        case CLASS_CHARACTER: return "Character";
-        case CLASS_DOOR: return "Door";
-        case CLASS_SABER: return "";
-        case CLASS_PLACEABLE: return "Placeable";
-    }
-    std::cout<<string_format("ReturnClassification() ERROR: Unknown classification %i.\n", nClassification);
-    return "unknown";
-}
-
-int ReturnController(std::string sController){
-    if(sController == "position") return CONTROLLER_HEADER_POSITION;
-    else if(sController == "orientation") return CONTROLLER_HEADER_ORIENTATION;
-    else if(sController == "scale") return CONTROLLER_HEADER_SCALING;
-    else if(sController == "color") return CONTROLLER_LIGHT_COLOR;
-    else if(sController == "radius") return CONTROLLER_LIGHT_RADIUS;
-    else if(sController == "shadowradius") return CONTROLLER_LIGHT_SHADOWRADIUS;          //Missing from NWmax
-    else if(sController == "verticaldisplacement") return CONTROLLER_LIGHT_VERTICALDISPLACEMENT;  //Missing from NWmax
-    else if(sController == "multipler") return CONTROLLER_LIGHT_MULTIPLIER;             //NWmax reads 'multipler', not 'multiplier'
-    else if(sController == "multiplier") return CONTROLLER_LIGHT_MULTIPLIER;             //NWmax reads 'multipler', not 'multiplier'
-    else if(sController == "alphaend") return CONTROLLER_EMITTER_ALPHAEND;
-    else if(sController == "alphastart") return CONTROLLER_EMITTER_ALPHASTART;
-    else if(sController == "birthrate") return CONTROLLER_EMITTER_BRITHRATE;
-    else if(sController == "bounce_co") return CONTROLLER_EMITTER_BOUNCE_CO;
-    else if(sController == "combinetime") return CONTROLLER_EMITTER_COMBINETIME;
-    else if(sController == "drag") return CONTROLLER_EMITTER_DRAG;
-    else if(sController == "fps") return CONTROLLER_EMITTER_FPS;
-    else if(sController == "frameend") return CONTROLLER_EMITTER_FRAMEEND;
-    else if(sController == "framestart") return CONTROLLER_EMITTER_FRAMESTART;
-    else if(sController == "grav") return CONTROLLER_EMITTER_GRAV;
-    else if(sController == "lifeexp") return CONTROLLER_EMITTER_LIFEEXP;
-    else if(sController == "mass") return CONTROLLER_EMITTER_MASS;
-    else if(sController == "p2p_bezier2") return CONTROLLER_EMITTER_P2P_BEZIER2;
-    else if(sController == "p2p_bezier3") return CONTROLLER_EMITTER_P2P_BEZIER3;
-    else if(sController == "particlerot") return CONTROLLER_EMITTER_PARTICLEROT;
-    else if(sController == "randvel") return CONTROLLER_EMITTER_RANDVEL;
-    else if(sController == "sizestart") return CONTROLLER_EMITTER_SIZESTART;
-    else if(sController == "sizeend") return CONTROLLER_EMITTER_SIZEEND;
-    else if(sController == "sizestart_y") return CONTROLLER_EMITTER_SIZESTART_Y;
-    else if(sController == "sizeend_y") return CONTROLLER_EMITTER_SIZEEND_Y;
-    else if(sController == "spread") return CONTROLLER_EMITTER_SPREAD;
-    else if(sController == "threshold") return CONTROLLER_EMITTER_THRESHOLD;
-    else if(sController == "velocity") return CONTROLLER_EMITTER_VELOCITY;
-    else if(sController == "xsize") return CONTROLLER_EMITTER_XSIZE;
-    else if(sController == "ysize") return CONTROLLER_EMITTER_YSIZE;
-    else if(sController == "blurlength") return CONTROLLER_EMITTER_BLURLENGTH;
-    else if(sController == "lightningdelay") return CONTROLLER_EMITTER_LIGHTNINGDELAY;
-    else if(sController == "lightningradius") return CONTROLLER_EMITTER_LIGHTNINGRADIUS;
-    else if(sController == "lightningscale") return CONTROLLER_EMITTER_LIGHTNINGSCALE;
-    else if(sController == "lightningsubdiv") return CONTROLLER_EMITTER_LIGHTNINGSUBDIV;
-    else if(sController == "lightningzigzag") return CONTROLLER_EMITTER_LIGHTNINGZIGZAG;    //Missing from NWmax
-    else if(sController == "alphamid") return CONTROLLER_EMITTER_ALPHAMID;           //Missing from NWmax
-    else if(sController == "percentstart") return CONTROLLER_EMITTER_PERCENTSTART;       //Missing from NWmax
-    else if(sController == "percentmid") return CONTROLLER_EMITTER_PERCENTMID;         //Missing from NWmax
-    else if(sController == "percentend") return CONTROLLER_EMITTER_PERCENTEND;         //Missing from NWmax
-    else if(sController == "sizemid") return CONTROLLER_EMITTER_SIZEMID;            //Missing from NWmax
-    else if(sController == "sizemid_y") return CONTROLLER_EMITTER_SIZEMID_Y;          //Missing from NWmax
-    else if(sController == "randombirthrate") return CONTROLLER_EMITTER_RANDOMBIRTHRATE;    //Missing from NWmax
-    else if(sController == "targetsize") return CONTROLLER_EMITTER_TARGETSIZE;         //Missing from NWmax
-    else if(sController == "numcontrolpts") return CONTROLLER_EMITTER_NUMCONTROLPTS;      //Missing from NWmax
-    else if(sController == "controlptradius") return CONTROLLER_EMITTER_CONTROLPTRADIUS;    //Missing from NWmax
-    else if(sController == "controlptdelay") return CONTROLLER_EMITTER_CONTROLPTDELAY;     //Missing from NWmax
-    else if(sController == "tangentspread") return CONTROLLER_EMITTER_TANGENTSPREAD;      //Missing from NWmax
-    else if(sController == "tangentlength") return CONTROLLER_EMITTER_TANGENTLENGTH;      //Missing from NWmax
-    else if(sController == "colormid") return CONTROLLER_EMITTER_COLORMID;           //Missing from NWmax
-    else if(sController == "colorend") return CONTROLLER_EMITTER_COLOREND;
-    else if(sController == "colorstart") return CONTROLLER_EMITTER_COLORSTART;
-    else if(sController == "detonate") return CONTROLLER_EMITTER_DETONATE;           //Missing from NWmax
-    else if(sController == "selfillumcolor") return CONTROLLER_MESH_SELFILLUMCOLOR;
-    else if(sController == "alpha") return CONTROLLER_MESH_ALPHA;
-    else return 0;
-}
-
-std::string ReturnControllerName(int nController, int nType){
-    switch(nController){
-        case CONTROLLER_HEADER_POSITION:            return "position";
-        case CONTROLLER_HEADER_ORIENTATION:         return "orientation";
-        case CONTROLLER_HEADER_SCALING:             return "scale";
-    }
-
-    if(nType & NODE_HAS_LIGHT){
-        switch(nController){
-        case CONTROLLER_LIGHT_COLOR:                return "color";
-        case CONTROLLER_LIGHT_RADIUS:               return "radius";
-        case CONTROLLER_LIGHT_SHADOWRADIUS:         return "shadowradius";          //Missing from NWmax
-        case CONTROLLER_LIGHT_VERTICALDISPLACEMENT: return "verticaldisplacement";  //Missing from NWmax
-        case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";             //NWmax reads 'multipler', not 'multiplier'
-        }
-    }
-    else if(nType & NODE_HAS_EMITTER){
-        switch(nController){
-        case CONTROLLER_EMITTER_ALPHAEND:           return "alphaend";
-        case CONTROLLER_EMITTER_ALPHASTART:         return "alphastart";
-        case CONTROLLER_EMITTER_BRITHRATE:          return "birthrate";
-        case CONTROLLER_EMITTER_BOUNCE_CO:          return "bounce_co";
-        case CONTROLLER_EMITTER_COMBINETIME:        return "combinetime";
-        case CONTROLLER_EMITTER_DRAG:               return "drag";
-        case CONTROLLER_EMITTER_FPS:                return "fps";
-        case CONTROLLER_EMITTER_FRAMEEND:           return "frameend";
-        case CONTROLLER_EMITTER_FRAMESTART:         return "framestart";
-        case CONTROLLER_EMITTER_GRAV:               return "grav";
-        case CONTROLLER_EMITTER_LIFEEXP:            return "lifeexp";
-        case CONTROLLER_EMITTER_MASS:               return "mass";
-        case CONTROLLER_EMITTER_P2P_BEZIER2:        return "p2p_bezier2";
-        case CONTROLLER_EMITTER_P2P_BEZIER3:        return "p2p_bezier3";
-        case CONTROLLER_EMITTER_PARTICLEROT:        return "particlerot";
-        case CONTROLLER_EMITTER_RANDVEL:            return "randvel";
-        case CONTROLLER_EMITTER_SIZESTART:          return "sizestart";
-        case CONTROLLER_EMITTER_SIZEEND:            return "sizeend";
-        case CONTROLLER_EMITTER_SIZESTART_Y:        return "sizestart_y";
-        case CONTROLLER_EMITTER_SIZEEND_Y:          return "sizeend_y";
-        case CONTROLLER_EMITTER_SPREAD:             return "spread";
-        case CONTROLLER_EMITTER_THRESHOLD:          return "threshold";
-        case CONTROLLER_EMITTER_VELOCITY:           return "velocity";
-        case CONTROLLER_EMITTER_XSIZE:              return "xsize";
-        case CONTROLLER_EMITTER_YSIZE:              return "ysize";
-        case CONTROLLER_EMITTER_BLURLENGTH:         return "blurlength";
-        case CONTROLLER_EMITTER_LIGHTNINGDELAY:     return "lightningdelay";
-        case CONTROLLER_EMITTER_LIGHTNINGRADIUS:    return "lightningradius";
-        case CONTROLLER_EMITTER_LIGHTNINGSCALE:     return "lightningscale";
-        case CONTROLLER_EMITTER_LIGHTNINGSUBDIV:    return "lightningsubdiv";
-        case CONTROLLER_EMITTER_LIGHTNINGZIGZAG:    return "lightningzigzag";    //Missing from NWmax
-        case CONTROLLER_EMITTER_ALPHAMID:           return "alphamid";           //Missing from NWmax
-        case CONTROLLER_EMITTER_PERCENTSTART:       return "percentstart";       //Missing from NWmax
-        case CONTROLLER_EMITTER_PERCENTMID:         return "percentmid";         //Missing from NWmax
-        case CONTROLLER_EMITTER_PERCENTEND:         return "percentend";         //Missing from NWmax
-        case CONTROLLER_EMITTER_SIZEMID:            return "sizemid";            //Missing from NWmax
-        case CONTROLLER_EMITTER_SIZEMID_Y:          return "sizemid_y";          //Missing from NWmax
-        case CONTROLLER_EMITTER_RANDOMBIRTHRATE:    return "randombirthrate";    //Missing from NWmax
-        case CONTROLLER_EMITTER_TARGETSIZE:         return "targetsize";         //Missing from NWmax
-        case CONTROLLER_EMITTER_NUMCONTROLPTS:      return "numcontrolpts";      //Missing from NWmax
-        case CONTROLLER_EMITTER_CONTROLPTRADIUS:    return "controlptradius";    //Missing from NWmax
-        case CONTROLLER_EMITTER_CONTROLPTDELAY:     return "controlptdelay";     //Missing from NWmax
-        case CONTROLLER_EMITTER_TANGENTSPREAD:      return "tangentspread";      //Missing from NWmax
-        case CONTROLLER_EMITTER_TANGENTLENGTH:      return "tangentlength";      //Missing from NWmax
-        case CONTROLLER_EMITTER_COLORMID:           return "colormid";           //Missing from NWmax
-        case CONTROLLER_EMITTER_COLOREND:           return "colorend";
-        case CONTROLLER_EMITTER_COLORSTART:         return "colorstart";
-        case CONTROLLER_EMITTER_DETONATE:           return "detonate";           //Missing from NWmax
-        }
-    }
-    else{
-        switch(nController){
-        case CONTROLLER_MESH_SELFILLUMCOLOR:        return "selfillumcolor";
-        case CONTROLLER_MESH_ALPHA:                 return "alpha";
-        }
-    }
-    std::cout<<string_format("ReturnController() ERROR: Unknown controller %i (type %i).\n", nController, nType);
-    return "unknown";
 }
 
 HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hParentNew = NULL, HTREEITEM hAfterNew = NULL, UINT Flags = NULL){
@@ -225,7 +87,7 @@ void AppendAabb(Aabb * AABB, HTREEITEM TopLevel, int & nCount){
     if(AABB->nChild2 > 0) AppendAabb(&(AABB->Child2[0]), TopLevel, nCount);
 }
 
-HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names){
+HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names, MDL & Mdl){
         if(node.Head.nType & NODE_HAS_LIGHT){
             HTREEITEM Light = Append("Light", (LPARAM) &node.Light, Prev);
             Append("Flare Radius", (LPARAM) &node.Light.fFlareRadius, Light);
@@ -280,7 +142,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
                     Vert = Append(cVert, (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
                     //if(node.Mesh.nMdxDataSize > 0) Append("MDX Data", (LPARAM) &(node.Mesh.Vertices[n].MDXData), Vert);
                 }
-                if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
+                if(node.Mesh.nMdxDataSize > 0 && !Mdl.Mdx->empty()) Append("Extra MDX Data", (LPARAM) &(node.Mesh.MDXData), Vertices);
             }
             HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
             if(node.Mesh.Faces.size() > 0){
@@ -300,14 +162,14 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
             Append("Average", (LPARAM) &node.Mesh.vAverage);
             Append("Diffuse Color", (LPARAM) &node.Mesh.fDiffuse);
             Append("Ambient Color", (LPARAM) &node.Mesh.fAmbient);
-            Append("Shininess", (LPARAM) &node.Mesh.nShininess);
+            Append("Transparency Hint", (LPARAM) &node.Mesh.nTransparencyHint);
             Append("Textures", (LPARAM) &node.Mesh);
-            Append("Trimesh Flags", (LPARAM) &node.Mesh);
+            Append("Trimesh Flags", (LPARAM) &node);
             Append("Animated UV", (LPARAM) &node.Mesh);
-            Append("Unknown Array of 3 Integers", (LPARAM) node.Mesh.nUnknown3);
-            Append("Unknown Lightsaber Bytes", (LPARAM) &node.Mesh);
-            Append("Dirt", (LPARAM) &node.Mesh);
+            //Append("Unknown Array of 3 Integers", (LPARAM) node.Mesh.nUnknown3);
+            if(Mdl.bK2) Append("Dirt", (LPARAM) &node.Mesh);
             Append("Total Area", (LPARAM) &node.Mesh.fTotalArea);
+            Append("Unknown Lightsaber Bytes", (LPARAM) &node.Mesh);
             //Append("Padding", (LPARAM) &node.Mesh.nPadding);
         }
         if(node.Head.nType & NODE_HAS_SKIN){
@@ -360,14 +222,14 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names)
         }
 }
 
-void MDL::BuildTree(){
-    if(FH.empty()){
+void BuildTree(MDL & Mdl){
+    if(!Mdl.GetFileData()){
         std::cout<<"No data. Do not build tree.\n";
         return;
     }
-    FileHeader & Data = FH[0];
+    FileHeader & Data = *Mdl.GetFileData();
 
-    HTREEITEM Root = Append(sFile, NULL, TVI_ROOT);
+    HTREEITEM Root = Append(Mdl.GetFilename(), NULL, TVI_ROOT);
     HTREEITEM Header = Append("Header", (LPARAM) &(Data.MH), Root);
     Append("Bounding Box Min", (LPARAM) (&Data.MH.vBBmin), Header);
     Append("Bounding Box Max", (LPARAM) (&Data.MH.vBBmax));
@@ -395,7 +257,7 @@ void MDL::BuildTree(){
             for(int n = 0; n < node.Head.Controllers.size(); n++){
                 int nCtrlIndex = node.Head.Controllers[n].nNameIndex;
                 int nCtrlType = node.Head.Controllers[n].nControllerType;
-                Node & ctrlnode = GetNodeByNameIndex(nCtrlIndex);
+                Node & ctrlnode = Mdl.GetNodeByNameIndex(nCtrlIndex);
                 std::string sName = ReturnControllerName(nCtrlType, ctrlnode.Head.nType);
                 if(node.Head.Controllers[n].nColumnCount == 19) sName+="bezierkey";
                 else sName+="key";
@@ -404,7 +266,7 @@ void MDL::BuildTree(){
 
             HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
             if(node.Head.nParentIndex != -1){
-                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, n), Parent);
+                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, n), Parent);
             }
 
             HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
@@ -433,11 +295,7 @@ void MDL::BuildTree(){
         else sType = "(error) ";
         CurrentNode = Append(sType + Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
 
-        AppendChildren(node, CurrentNode, Data.MH.Names);
-
-        //Append("Position", (LPARAM) &(node.Head.vPos), CurrentNode);
-
-        //Append("Orientation", (LPARAM) &(node.Head.oOrient));
+        AppendChildren(node, CurrentNode, Data.MH.Names, Mdl);
 
         HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
         Append("Controller Data", (LPARAM) &node.Head, Controllers);
@@ -447,7 +305,7 @@ void MDL::BuildTree(){
 
         HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
         if(node.Head.nParentIndex != -1){
-            Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
+            Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
         }
 
         HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
@@ -467,38 +325,43 @@ void MDL::BuildTree(){
 extern char cReturn[4][255];
 char * PrepareFloat(double fFloat, unsigned int n);
 
-void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam){
+extern MDL Model;
+extern WOK Walkmesh;
+
+void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam){
     bool bMdl = false;
     bool bWok = false;
     for(int j = 0; !bMdl && !bWok; j++){
-        if((cItem[j] == Model.GetFilename())) bMdl = true;
-        else if((cItem[j] == Walkmesh.GetFilename())) bWok = true;
+        if(cItem[j] == Model.GetFilename()) bMdl = true;
+        else if(cItem[j] == Walkmesh.GetFilename()) bWok = true;
     }
 
-    if((cItem[0] == "")) sPrint.flush();
+    FileHeader & Data = *Model.GetFileData();
+
+    if(cItem[0] == "") sPrint.flush();
 
     /// Header ///
-    else if((cItem[0] == "Header")){
+    else if(cItem[0] == "Header"){
             sPrint << string_format("Header\r\nModel Name: %s\r\nModel Type: %i\r\nClassification: %s\r\nSupermodel: %s",
-                    FH[0].MH.GH.sName.c_str(), FH[0].MH.GH.nModelType, ReturnClassificationName(FH[0].MH.nClassification).c_str(),
-                    FH[0].MH.cSupermodelName.c_str()/*, FH[0].MH.nChildModelCount*/);
-            sPrint << "\r\nSupermodel Reference: "<<FH[0].MH.nSupermodelReference;
-            sPrint << "\r\n\r\nPadding? (Model Type): "<<(int)FH[0].MH.GH.nPadding[0]<<" "<<(int)FH[0].MH.GH.nPadding[1]<<" "<<(int)FH[0].MH.GH.nPadding[2];
-            sPrint << "\r\nPadding? (Classification): "<<(int)FH[0].MH.nUnknown1[0]<<" "<<(int)FH[0].MH.nUnknown1[1]<<" "<<(int)FH[0].MH.nUnknown1[2];
+                    Data.MH.GH.sName.c_str(), Data.MH.GH.nModelType, ReturnClassificationName(Data.MH.nClassification).c_str(),
+                    Data.MH.cSupermodelName.c_str()/*, Data.MH.nChildModelCount*/);
+            sPrint << "\r\nSupermodel Reference: "<<Data.MH.nSupermodelReference;
+            sPrint << "\r\n\r\nPadding? (Model Type): "<<(int)Data.MH.GH.nPadding[0]<<" "<<(int)Data.MH.GH.nPadding[1]<<" "<<(int)Data.MH.GH.nPadding[2];
+            sPrint << "\r\nPadding? (Classification): "<<(int)Data.MH.nUnknown1[0]<<" "<<(int)Data.MH.nUnknown1[1]<<" "<<(int)Data.MH.nUnknown1[2];
             sPrint << string_format("\r\n\r\nMDL Length: %i\r\nMDX Length: %i\r\nFunction Pointer 0: %i\r\nFunction Pointer 1: %i",
-                    FH[0].nMdlLength, FH[0].nMdxLength, FH[0].MH.GH.nFunctionPointer0, FH[0].MH.GH.nFunctionPointer1);
+                    Data.nMdlLength, Data.nMdxLength, Data.MH.GH.nFunctionPointer0, Data.MH.GH.nFunctionPointer1);
     }
-    else if((cItem[0] == "Bounding Box Min")) sPrint << "Bounding Box Min:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
-    else if((cItem[0] == "Bounding Box Max")) sPrint << "Bounding Box Max:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
-    else if((cItem[0] == "Radius")) sPrint << "Radius:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Scale")) sPrint << "Scale:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Bounding Box Min") sPrint << "Bounding Box Min:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
+    else if(cItem[0] == "Bounding Box Max") sPrint << "Bounding Box Max:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
+    else if(cItem[0] == "Radius") sPrint << "Radius:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Scale") sPrint << "Scale:\r\n" << *((double*) lParam);
 
     /// Animations ///
-    else if((cItem[0] == "Animations")){
+    else if(cItem[0] == "Animations"){
             sPrint << string_format("Animations\r\nOffset to Animation Array: %i\r\nAnimation Count: %i",
-                    FH[0].MH.AnimationArray.nOffset, FH[0].MH.AnimationArray.nCount);
+                    Data.MH.AnimationArray.nOffset, Data.MH.AnimationArray.nCount);
     }
-    else if((cItem[1] == "Animations")){
+    else if(cItem[1] == "Animations"){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Animation %s\r\nOffset: %u\r\nOffset to Root: %u\r\nOwner: %s\r\nNumber of Objects: %u",
                 anim->sName.c_str(), anim->nOffset, anim->nOffsetToRootAnimationNode, anim->sAnimRoot.c_str(), anim->nNumberOfObjects);
@@ -507,21 +370,21 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << string_format("\r\n\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u\r\n",
                 anim->nFunctionPointer0, anim->nFunctionPointer1);
     }
-    else if((cItem[0] == "Length")) sPrint << "Length:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Transition")) sPrint << "Transition:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Sounds")){
+    else if(cItem[0] == "Length") sPrint << "Length:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Transition") sPrint << "Transition:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Sounds"){
         Animation * anim = (Animation * ) lParam;
         sPrint << string_format("Sounds\r\nOffset: %u\r\nCount: %u", anim->SoundArray.nOffset, anim->SoundArray.nCount);
     }
-    else if((cItem[1] == "Sounds")){
+    else if(cItem[1] == "Sounds"){
         Sound * snd = (Sound*) lParam;
         sPrint << string_format("Sound:\r\n%s\r\n\r\nTime:\r\n%f", snd->sName.c_str(), snd->fTime);
     }
 
     /// Geometry ///
-    else if((cItem[0] == "Geometry")){
+    else if(cItem[0] == "Geometry"){
             sPrint << string_format("Geometry\r\nOffset to Name Array: %i\r\nOffset to Root Node: %i\r\nOffset to Head Root Node: %i\r\nNode Count: %i\r\nTotal Node Count (with Supermodel): %i",
-                    FH[0].MH.NameArray.nOffset, FH[0].MH.GH.nOffsetToRootNode, FH[0].MH.nOffsetToHeadRootNode, FH[0].MH.NameArray.nCount, FH[0].MH.GH.nTotalNumberOfNodes);
+                    Data.MH.NameArray.nOffset, Data.MH.GH.nOffsetToRootNode, Data.MH.nOffsetToHeadRootNode, Data.MH.NameArray.nCount, Data.MH.GH.nTotalNumberOfNodes);
     }
 
     /// Node ///
@@ -538,7 +401,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             else if(node->Head.nType & NODE_HAS_LIGHT) sPrint << "light";
             else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
             else sPrint << "unknown - file likely faulty!";
-            sPrint << ") "<<FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
+            sPrint << ") "<<Data.MH.Names[node->Head.nNameIndex].sName.c_str();
             sPrint << "\r\nOffset: "<<node->nOffset;
             sPrint << "\r\nOffset to Root: "<<node->Head.nOffsetToRoot;
             sPrint << "\r\nOffset to Parent: "<<node->Head.nOffsetToParent;
@@ -554,16 +417,16 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
             sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
     }/*
-    else if((cItem[0] == "Position")) sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Orientation")){
+    else if(cItem[0] == "Position") sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if(cItem[0] == "Orientation"){
         Orientation * orient = (Orientation*) lParam;
         sPrint << "Orientation: \r\nx: "<<orient->qX<<" (aa "<<orient->fX<<")\r\ny: "<<orient->qY<<" (aa "<<orient->fY<<")\r\nz: "<<orient->qZ<<" (aa "<<orient->fZ<<")\r\nw: "<<orient->qW<<" (aa "<<orient->fAngle<<")";
     }*/
-    else if((cItem[0] == "Controllers")){
+    else if(cItem[0] == "Controllers"){
         Header * head = (Header * ) lParam;
         sPrint << string_format("Controllers\r\nOffset: %u\r\nCount: %u", head->ControllerArray.nOffset, head->ControllerArray.nCount);
     }
-    else if((cItem[0] == "Controller Data")){
+    else if(cItem[0] == "Controller Data"){
         Header * head = (Header * ) lParam;
         std::vector<double> & fFloats = head->ControllerData;
         sPrint << string_format("Controller Data\r\nOffset: %u\r\nCount: %u", head->ControllerDataArray.nOffset, head->ControllerDataArray.nCount);
@@ -579,23 +442,23 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             i++;
         }
     }
-    else if((cItem[1] == "Controllers")){
+    else if(cItem[1] == "Controllers"){
         Controller * ctrl = (Controller*) lParam;
         sPrint << string_format("%s\r\n\r\nController type:  %i\r\nUnknown int16:   %hi\r\nValue Count:      %hi\r\nTimekey Start:    %hi\r\nData Start:       %hi\r\nColumn Count:     %hhi\r\nPadding?:         %hhi, %hhi, %hhi",
                 cItem[0].c_str(), ctrl->nControllerType, ctrl->nUnknown2, ctrl->nValueCount, ctrl->nTimekeyStart, ctrl->nDataStart, ctrl->nColumnCount, ctrl->nPadding[0], ctrl->nPadding[1], ctrl->nPadding[2]);
     }
-    else if((cItem[0] == "Children")){
+    else if(cItem[0] == "Children"){
         Header * head = (Header * ) lParam;
         sPrint << string_format("Children\r\nOffset: %u\r\nCount: %u", head->ChildrenArray.nOffset, head->ChildrenArray.nCount);
     }
 
     /// Light ///
-    else if((cItem[0] == "Flare Radius")) sPrint << "Flare Radius:\r\n" << *((float*) lParam);
-    else if((cItem[0] == "Unknown Array")){
+    else if(cItem[0] == "Flare Radius") sPrint << "Flare Radius:\r\n" << *((float*) lParam);
+    else if(cItem[0] == "Unknown Array"){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Unknown Array\r\nOffset: %u\r\nCount: %u", light->UnknownArray.nOffset, light->UnknownArray.nCount);
     }
-    else if((cItem[0] == "Flare Sizes")){
+    else if(cItem[0] == "Flare Sizes"){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Sizes\r\nOffset: %u\r\nCount: %u", light->FlareSizeArray.nOffset, light->FlareSizeArray.nCount);
         if(light->FlareSizes.size() > 0){
@@ -605,7 +468,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Flare Positions")){
+    else if(cItem[0] == "Flare Positions"){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Positions\r\nOffset: %u\r\nCount: %u", light->FlarePositionArray.nOffset, light->FlareSizeArray.nCount);
         if(light->FlarePositions.size() > 0){
@@ -615,7 +478,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Flare Color Shifts")){
+    else if(cItem[0] == "Flare Color Shifts"){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Color Shifts\r\nOffset: %u\r\nCount: %u", light->FlareColorShiftArray.nOffset, light->FlareColorShiftArray.nCount);
         if(light->FlareColorShifts.size() > 0){
@@ -625,7 +488,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Flare Textures")){
+    else if(cItem[0] == "Flare Textures"){
         LightHeader * light = (LightHeader * ) lParam;
         sPrint << string_format("Flare Textures\r\nOffset: %u\r\nCount: %u", light->FlareTextureNameArray.nOffset, light->FlareTextureNameArray.nCount);
         if(light->FlareTextureNames.size() > 0){
@@ -635,49 +498,49 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Light Priority")) sPrint << "Light Priority:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Ambient Only")) sPrint << "Ambient Only:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Dynamic Type")) sPrint << "Dynamic Type:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Affect Dynamic")) sPrint << "Affect Dynamic:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Shadow")) sPrint << "Shadow:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Flare")) sPrint << "Flare:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Fading Light")) sPrint << "Fading Light:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Light Priority") sPrint << "Light Priority:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Ambient Only") sPrint << "Ambient Only:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Dynamic Type") sPrint << "Dynamic Type:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Affect Dynamic") sPrint << "Affect Dynamic:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Shadow") sPrint << "Shadow:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Flare") sPrint << "Flare:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Fading Light") sPrint << "Fading Light:\r\n" << *((int*) lParam);
 
     /// Emitter ///
-    else if((cItem[0] == "Dead Space")) sPrint << "Dead Space:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Blast Radius")) sPrint << "Blast Radius:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Blast Length")) sPrint << "Blast Length:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Branch Count")) sPrint << "Branch Count:\r\n" << *((unsigned int*) lParam);
-    else if((cItem[0] == "Control Point Smoothing")) sPrint << "Control Point Smoothing:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "X Grid")) sPrint << "X Grid:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Y Grid")) sPrint << "Y Grid:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Spawn Type")) sPrint << "Spawn Type:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Update")) sPrint << "Update:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Render")) sPrint << "Render:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Blend")) sPrint << "Blend:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Texture")) sPrint << "Texture:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Chunk Name")) sPrint << "Chunk Name:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Twosided Texture")) sPrint << "Twosided Texture:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Loop")) sPrint << "Loop:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Unknown Int16 1")) sPrint << "Unknown Int16 1:\r\n" << *((short*) lParam);
-    //else if((cItem[0] == "Render Order")) sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
-    else if((cItem[0] == "Frame Blending")) sPrint << "Frame Blending:\r\n" << *((unsigned char*) lParam);
-    else if((cItem[0] == "Depth Texture Name")) sPrint << "Depth Texture Name:\r\n" << ((char*) lParam);
-    else if((cItem[0] == "Unknown Byte 1")) sPrint << "Unknown Byte 1:\r\n" << *((unsigned char*) lParam);
-    else if((cItem[0] == "Emitter Flags?"))
+    else if(cItem[0] == "Dead Space") sPrint << "Dead Space:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Blast Radius") sPrint << "Blast Radius:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Blast Length") sPrint << "Blast Length:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Branch Count") sPrint << "Branch Count:\r\n" << *((unsigned int*) lParam);
+    else if(cItem[0] == "Control Point Smoothing") sPrint << "Control Point Smoothing:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "X Grid") sPrint << "X Grid:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Y Grid") sPrint << "Y Grid:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Spawn Type") sPrint << "Spawn Type:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Update") sPrint << "Update:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Render") sPrint << "Render:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Blend") sPrint << "Blend:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Texture") sPrint << "Texture:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Chunk Name") sPrint << "Chunk Name:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Twosided Texture") sPrint << "Twosided Texture:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Loop") sPrint << "Loop:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int16 1") sPrint << "Unknown Int16 1:\r\n" << *((short*) lParam);
+    //else if(cItem[0] == "Render Order") sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
+    else if(cItem[0] == "Frame Blending") sPrint << "Frame Blending:\r\n" << *((unsigned char*) lParam);
+    else if(cItem[0] == "Depth Texture Name") sPrint << "Depth Texture Name:\r\n" << ((char*) lParam);
+    else if(cItem[0] == "Unknown Byte 1") sPrint << "Unknown Byte 1:\r\n" << *((unsigned char*) lParam);
+    else if(cItem[0] == "Emitter Flags?")
         sPrint << string_format("Emitter Flags??\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
                 *((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_BOUNCE ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_RANDOM ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_VEL ? 1 : 0,
                 *((int*) lParam) & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
 
     /// Mesh ///
-    else if((cItem[0] == "Mesh")){
+    else if(cItem[0] == "Mesh"){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Mesh\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u",
                 mesh->nFunctionPointer0, mesh->nFunctionPointer1);
         sPrint << "\r\n\r\nInverted Counter: "<<mesh->nMeshInvertedCounter<<"\r\n(Offset: "<<mesh->MeshInvertedCounterArray.nOffset<<", Count: "<<mesh->MeshInvertedCounterArray.nCount<<")";
     }
-    else if((cItem[0] == "Mesh Inverted Counters Array")){
+    else if(cItem[0] == "Mesh Inverted Counters Array"){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Mesh Inverted Counters Array\r\nOffset: %u\r\nCount: %u",
                 mesh->MeshInvertedCounterArray.nOffset, mesh->MeshInvertedCounterArray.nCount, mesh->nMeshInvertedCounter);
@@ -706,10 +569,10 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << "Vertices\r\nOffset: "<<mesh->nOffsetToVertArray;
         sPrint<<"\r\nCount: "<<mesh->nNumberOfVerts;
     }
-    else if((cItem[0] == "Extra MDX Data")){
+    else if(cItem[0] == "Extra MDX Data"){
         MDXDataStruct * mdx = (MDXDataStruct * ) lParam;
         sPrint << cItem[0].c_str();
-        Node & node = GetNodeByNameIndex(mdx->nNameIndex);
+        Node & node = Model.GetNodeByNameIndex(mdx->nNameIndex);
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
             sPrint << string_format("\r\n\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
         }
@@ -757,15 +620,15 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             sPrint << string_format("\r\n\r\nWeight Index: %f\r\n              %f\r\n              %f\r\n              %f", mdx->Weights.fWeightIndex[0], mdx->Weights.fWeightIndex[1], mdx->Weights.fWeightIndex[2], mdx->Weights.fWeightIndex[3]);
         }
     }
-    else if((cItem[1] == "Vertices")){
+    else if(cItem[1] == "Vertices"){
         Vertex * vert = (Vertex * ) lParam;
         sPrint << string_format("%s\r\nx: %f\r\ny: %f\r\nz: %f",
                 cItem[0].c_str(), vert->fX, vert->fY, vert->fZ);
 
         MDXDataStruct * mdx = &vert->MDXData;
-        Node & node = GetNodeByNameIndex(mdx->nNameIndex);
+        Node & node = Model.GetNodeByNameIndex(mdx->nNameIndex);
         if(!(node.Head.nType & NODE_HAS_SABER)){
-            if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx.empty()){
+            if(node.Mesh.nMdxDataSize > 0 && !Model.Mdx->empty()){
                 sPrint << "\r\n\r\nMDX Data";
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                     sPrint << string_format("\r\nVertex: %f\r\n        %f\r\n        %f", mdx->vVertex.fX, mdx->vVertex.fY, mdx->vVertex.fZ);
@@ -822,7 +685,7 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << "\r\n\r\nIndexes Count: "<<mesh->nVertIndicesCount<<"\r\n(Offset: "<<mesh->IndexCounterArray.nOffset<<")";
         sPrint << "\r\nIndexes Offset: "<<mesh->nVertIndicesLocation<<"\r\n(Offset: "<<mesh->IndexLocationArray.nOffset<<")";
     }
-    else if((cItem[1] == "Faces")){
+    else if(cItem[1] == "Faces"){
         Face * face = (Face * ) lParam;
         sPrint << string_format("%s\r\nNormal: %f\r\n        %f\r\n        %f\r\nDistance: %f\r\nMaterial ID: %i\r\nAdjacent Faces: %i, %i, %i\r\nVertex Indices: %i, %i, %i",
                 cItem[0].c_str(), face->vNormal.fX, face->vNormal.fY, face->vNormal.fZ, face->fDistance, face->nMaterialID,
@@ -833,48 +696,56 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             if(pown(2, n) & face->nSmoothingGroup) sPrint << n+1 <<" ";
         }
     }
-    else if((cItem[0] == "Vertex Indices 2")){
+    else if(cItem[0] == "Vertex Indices 2"){
         VertIndicesStruct * vert = (VertIndicesStruct * ) lParam;
         sPrint << string_format("Vertex Indices 2\r\nValues: %u, %u, %u", vert->nValues[0], vert->nValues[1], vert->nValues[2]);
     }
-    else if((cItem[0] == "Average")) sPrint << string_format("Average: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Ambient Color")) sPrint << string_format("Ambient Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Diffuse Color")) sPrint << string_format("Diffuse Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
-    else if((cItem[0] == "Shininess")) sPrint << "Shininess:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Textures")){
+    else if(cItem[0] == "Average") sPrint << string_format("Average: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if(cItem[0] == "Ambient Color") sPrint << string_format("Ambient Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if(cItem[0] == "Diffuse Color") sPrint << string_format("Diffuse Color: \r\n%f\r\n%f\r\n%f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
+    else if(cItem[0] == "Transparency Hint") sPrint << "Transparency Hint:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Textures"){
         MeshHeader * mesh = (MeshHeader * ) lParam;
         sPrint << string_format("Textures\r\nTexture Count: %u\r\nTexture 1: %s\r\nTexture 2: %s\r\nTexture 3: %s\r\nTexture 4: %s",
                 mesh->nTextureNumber, mesh->GetTexture(1), mesh->GetTexture(2), mesh->GetTexture(3), mesh->GetTexture(4));
     }
-    else if((cItem[0] == "Trimesh Flags"))
-        sPrint << string_format("Trimesh Flags\r\nHasLightmap: %i\r\nRotateTexture: %i\r\nBackgroundGeometry: %i\r\nShadow: %i\r\nBeaming: %i\r\nRender: %i\r\nDirt Enabled: %i\r\nHide in Holograms: %i",
-                ((MeshHeader*) lParam)->nHasLightmap, ((MeshHeader*) lParam)->nRotateTexture, ((MeshHeader*) lParam)->nBackgroundGeometry, ((MeshHeader*) lParam)->nShadow,
-                ((MeshHeader*) lParam)->nBeaming, ((MeshHeader*) lParam)->nRender, ((MeshHeader*) lParam)->nDirtEnabled, ((MeshHeader*) lParam)->nHideInHolograms);
-    else if((cItem[0] == "Animated UV"))
+    else if(cItem[0] == "Trimesh Flags"){
+        Node * node = (Node*) lParam;
+        sPrint << "Trimesh Flags";
+        sPrint << "\r\nHas Lightmap: " << (int) node->Mesh.nHasLightmap;
+        sPrint << "\r\nRotate Texture: " << (int) node->Mesh.nRotateTexture;
+        sPrint << "\r\nBackground Geometry: " << (int) node->Mesh.nBackgroundGeometry;
+        sPrint << "\r\nShadow: " << (int) node->Mesh.nShadow;
+        sPrint << "\r\nBeaming: " << (int) node->Mesh.nBeaming;
+        sPrint << "\r\nRender: " << (int) node->Mesh.nRender;
+        if(Model.bK2) sPrint << "\r\nDirt Enabled: " << (int) node->Mesh.nDirtEnabled;
+        if(Model.bK2) sPrint << "\r\nHide in Holograms: " << (int) node->Mesh.nHideInHolograms;
+    }
+    else if(cItem[0] == "Animated UV")
         sPrint << string_format("Animated UV\r\nAnimate UV:      %i\r\nUV Direction X:  %f\r\nUV Direction Y:  %f\r\nUV Jitter:       %f\r\nUV Jitter Speed: %f",
                 ((MeshHeader*) lParam)->nAnimateUV, ((MeshHeader*) lParam)->fUVDirectionX, ((MeshHeader*) lParam)->fUVDirectionY, ((MeshHeader*) lParam)->fUVJitter, ((MeshHeader*) lParam)->fUVJitterSpeed);
-    else if((cItem[0] == "Unknown Lightsaber Bytes"))
+    else if(cItem[0] == "Unknown Lightsaber Bytes")
         sPrint << string_format("Unknown Lightsaber Bytes\r\nUnknown 1: %i\r\nUnknown 2: %i\r\nUnknown 3: %i\r\nUnknown 4: %i\r\nUnknown 5: %i\r\nUnknown 6: %i\r\nUnknown 7: %i\r\nUnknown 8: %i",
                 ((MeshHeader*) lParam)->nSaberUnknown1, ((MeshHeader*) lParam)->nSaberUnknown2, ((MeshHeader*) lParam)->nSaberUnknown3, ((MeshHeader*) lParam)->nSaberUnknown4,
                 ((MeshHeader*) lParam)->nSaberUnknown5, ((MeshHeader*) lParam)->nSaberUnknown6, ((MeshHeader*) lParam)->nSaberUnknown7, ((MeshHeader*) lParam)->nSaberUnknown8);
-    else if((cItem[0] == "Unknown Array of 3 Integers")) sPrint << string_format("Unknown Array of 3 Integers: \r\n%i\r\n%i\r\n%i", ((int*) lParam)[0], ((int*) lParam)[1], ((int*) lParam)[2]);
-    else if((cItem[0] == "Dirt")){
+    else if(cItem[0] == "Unknown Array of 3 Integers") sPrint << string_format("Unknown Array of 3 Integers: \r\n%i\r\n%i\r\n%i", ((int*) lParam)[0], ((int*) lParam)[1], ((int*) lParam)[2]);
+    else if(cItem[0] == "Dirt"){
         MeshHeader * mesh = (MeshHeader *) lParam;
         sPrint << "Dirt Texture: " << mesh->nDirtTexture;
         sPrint << "\r\nDirt Coord Space: " << mesh->nDirtCoordSpace;
     }
-    else if((cItem[0] == "Total Area")) sPrint << "Total Area:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Padding")) sPrint << "Padding:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Total Area") sPrint << "Total Area:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Padding") sPrint << "Padding:\r\n" << *((int*) lParam);
 
     /// Skin ///
-    else if((cItem[0] == "Bones")){
+    else if(cItem[0] == "Bones"){
         SkinHeader * skin = (SkinHeader * ) lParam;
         sPrint << string_format("Bonemap\r\nOffset: %u\r\nCount: %u", skin->nOffsetToBonemap, skin->nNumberOfBonemap);
         sPrint << string_format("\r\n\r\nQ Bones\r\nOffset: %u\r\nCount: %u", skin->QBoneArray.nOffset, skin->QBoneArray.nCount);
         sPrint << string_format("\r\n\r\nT Bones\r\nOffset: %u\r\nCount: %u", skin->TBoneArray.nOffset, skin->TBoneArray.nCount);
         sPrint << string_format("\r\n\r\nArray8\r\nOffset: %u\r\nCount: %u", skin->Array8Array.nOffset, skin->Array8Array.nCount);
     }
-    else if((cItem[1] == "Bones")){
+    else if(cItem[1] == "Bones"){
         Bone * bone = (Bone * ) lParam;
         sPrint << cItem[0].c_str();
         sPrint << "\r\n\r\nBonemap: "<<PrepareFloat(bone->fBonemap, 0);
@@ -892,14 +763,14 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << string_format("MDX Data Pointers\r\nTo Weight Value: %i\r\nTo Weight Index: %i",
             skin->nOffsetToWeightValuesInMDX, skin->nOffsetToBoneIndexInMDX);
     }
-    else if((cItem[0] == "Bone Indexes")){
+    else if(cItem[0] == "Bone Indexes"){
         short * sarray = (short * ) lParam;
         sPrint<<"Bone Indexes";
         for(int n = 0; n < 18; n++) sPrint<<"\r\nIndex "<<n+1<<": "<<sarray[n];
     }
 
     /// Danglymesh ///
-    else if((cItem[0] == "Constraints")){
+    else if(cItem[0] == "Constraints"){
         DanglymeshHeader * dangly = (DanglymeshHeader * ) lParam;
         sPrint << string_format("Constraints\r\nOffset: %u\r\nCount: %u", dangly->ConstraintArray.nOffset, dangly->ConstraintArray.nCount);
         if(dangly->Constraints.size() > 0){
@@ -915,14 +786,14 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
             }
         }
     }
-    else if((cItem[0] == "Displacement")) sPrint << "Displacement:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Tightness")) sPrint << "Tightness:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Period")) sPrint << "Period:\r\n" << *((double*) lParam);
-    else if((cItem[0] == "Data2")){
+    else if(cItem[0] == "Displacement") sPrint << "Displacement:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Tightness") sPrint << "Tightness:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Period") sPrint << "Period:\r\n" << *((double*) lParam);
+    else if(cItem[0] == "Data2"){
         DanglymeshHeader * dangly = (DanglymeshHeader * ) lParam;
         sPrint << string_format("Data2\r\nOffset: %u\r\nCount: %u", dangly->nOffsetToData2, dangly->ConstraintArray.nCount);
     }
-    else if((cItem[1] == "Data2")){
+    else if(cItem[1] == "Data2"){
         Vector * data = (Vector * ) lParam;
         sPrint << cItem[0].c_str();
         sPrint << "\r\nx: "<<data->fX;
@@ -931,11 +802,11 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
 
     /// Walkmesh ///
-    else if((cItem[0] == "Walkmesh")){
+    else if(cItem[0] == "Walkmesh"){
         WalkmeshHeader * walk = (WalkmeshHeader * ) lParam;
         sPrint << string_format("Walkmesh\r\nOffset to aabb tree: %u\r\nCount: ?", walk->nOffsetToAabb);
     }
-    else if((cItem[1] == "Walkmesh")){
+    else if(cItem[1] == "Walkmesh"){
         Aabb * aabb = (Aabb * ) lParam;
         std::string sProperty;
         if(aabb->nProperty == 1) sProperty = "Positive X";
@@ -960,22 +831,22 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
     }
 
     /// Saber ///
-    else if((cItem[0] == "Saber Data")){
+    else if(cItem[0] == "Saber Data"){
         SaberHeader * saber = (SaberHeader * ) lParam;
         sPrint << string_format("Saber Data\r\nOffset 1: %u\r\nOffset 2: %u\r\nOffset 3: %u\r\nCount: %u", saber->nOffsetToSaberData1, saber->nOffsetToSaberData2, saber->nOffsetToSaberData3, saber->nNumberOfSaberData);
     }
-    else if((cItem[1] == "Saber Data")){
+    else if(cItem[1] == "Saber Data"){
         SaberDataStruct * saber = (SaberDataStruct *) lParam;
         sPrint << cItem[0].c_str();
         sPrint << string_format("\r\n1. Vertex Coordinates:\r\n   %f\r\n   %f\r\n   %f", saber->vVertex.fX, saber->vVertex.fY, saber->vVertex.fZ);
         sPrint << string_format("\r\n\r\n2. UV:\r\n   %f\r\n   %f", saber->vUV.fX, saber->vUV.fY);
         sPrint << string_format("\r\n\r\n3. Normal?:\r\n   %f\r\n   %f\r\n   %f", saber->vNormal.fX, saber->vNormal.fY, saber->vNormal.fZ);
     }
-    else if((cItem[0] == "Mesh Inverted Counter 1")) sPrint << "Mesh Inverted Counter 1:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Mesh Inverted Counter 2")) sPrint << "Mesh Inverted Counter 2:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Mesh Inverted Counter 1") sPrint << "Mesh Inverted Counter 1:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Mesh Inverted Counter 2") sPrint << "Mesh Inverted Counter 2:\r\n" << *((int*) lParam);
 
     /// WOK ///
-    else if((cItem[1] == "Aabb")){
+    else if(cItem[1] == "Aabb"){
         Aabb * aabb = (Aabb * ) lParam;
         std::string sProperty;
         if(aabb->nProperty == 1) sProperty = "Positive X";
@@ -999,19 +870,19 @@ void MDL::DetermineDisplayText(std::vector<std::string>cItem, std::stringstream 
         sPrint << "\r\nChild 2 Index: "<<aabb->nChild2;
         sPrint << "\r\nExtra: "<<aabb->nExtra;
     }
-    else if((cItem[1] == "Array 1")){
+    else if(cItem[1] == "Array 1"){
         sPrint << string_format("Values:\r\n%i\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2, ((Triples*) lParam)->n3);
     }
-    else if((cItem[1] == "Array 2")){
+    else if(cItem[1] == "Array 2"){
         sPrint << string_format("Values:\r\n%i\r\n%i", ((Triples*) lParam)->n1, ((Triples*) lParam)->n2);
     }
-    else if((cItem[1] == "Array 3")) sPrint << "Value:\r\n" << *((int*) lParam);
+    else if(cItem[1] == "Array 3") sPrint << "Value:\r\n" << *((int*) lParam);
 
     /// Unknowns ///
-    else if((cItem[0] == "Unknown Int32 1")) sPrint << "Unknown Int32 1:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Unknown Int32 2")) sPrint << "Unknown Int32 2:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Unknown Int32 3")) sPrint << "Unknown Int32 3:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Unknown Int32 4")) sPrint << "Unknown Int32 4:\r\n" << *((int*) lParam);
-    else if((cItem[0] == "Unknown Int32 5")) sPrint << "Unknown Int32 5:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int32 1") sPrint << "Unknown Int32 1:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int32 2") sPrint << "Unknown Int32 2:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int32 3") sPrint << "Unknown Int32 3:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int32 4") sPrint << "Unknown Int32 4:\r\n" << *((int*) lParam);
+    else if(cItem[0] == "Unknown Int32 5") sPrint << "Unknown Int32 5:\r\n" << *((int*) lParam);
     else sPrint.flush();
 }

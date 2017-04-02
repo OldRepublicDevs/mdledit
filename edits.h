@@ -6,6 +6,9 @@
 #include <windowsx.h>
 #include <commctrl.h>
 
+extern MDL Model;
+extern WOK Walkmesh;
+
 class Edits{
     //Control Creation
     WNDCLASSEX WindowClass;
@@ -46,9 +49,9 @@ class Edits{
             nBufferSize = Model.GetBufferLength();
         }
         else if(nSel == 1){
-            nKnownArray = &Model.Mdx.GetKnownData();
-            sBuffer = &Model.Mdx.GetBuffer();
-            nBufferSize = Model.Mdx.GetBufferLength();
+            nKnownArray = &Model.Mdx->GetKnownData();
+            sBuffer = &Model.Mdx->GetBuffer();
+            nBufferSize = Model.Mdx->GetBufferLength();
         }
         else if(nSel == 2){
             nKnownArray = &Walkmesh.GetKnownData();

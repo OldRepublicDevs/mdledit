@@ -3,15 +3,126 @@
 #include <fstream>
 /// This file should be a general initializer/implementor of MDL.h
 
+int MDL::GetNameIndex(std::string sName){
+    if(FH){
+        std::vector<Name> & Names = FH->MH.Names;
+        int n = 0;
+        while(n < Names.size()){
+            if(Names[n].sName == sName) return n;
+            n++;
+        }
+    }
+    return -1;
+}
+
+void MDL::LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
+    for(int n = 0; n < NODE.Head.Children.size(); n++){
+        LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
+    }
+    ArrayOfNodes.at(NODE.Head.nNameIndex) = std::move(NODE);
+}
+
+void MDL::LinearizeAnimations(Node & NODE, std::vector<Node> & ArrayOfNodes){
+    ArrayOfNodes.push_back(std::move(NODE));
+    Node & node = ArrayOfNodes.back();
+    for(int n = 0; n < node.Head.Children.size(); n++){
+        LinearizeAnimations(node.Head.Children[n], ArrayOfNodes);
+    }
+}
+
+std::unique_ptr<FileHeader> & MDL::GetFileData(){
+    return FH;
+}
+
+std::vector<char> & MDL::GetAsciiBuffer(){
+    return Ascii->GetBuffer();
+}
+
+Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
+    if(nAnimation == -1){
+        return FH->MH.ArrayOfNodes.at(nIndex);
+    }
+    else{
+        std::vector<Node> & Array = FH->MH.Animations[nAnimation].ArrayOfNodes;
+        for(int n = 0; n < Array.size(); n++){
+            //std::cout<<"Looping through animation nodes for our node\n";
+            if(Array[n].Head.nNameIndex == nIndex) return Array[n];
+        }
+    }
+}
+
+bool MDL::HeadLinked(){
+    for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
+        if(FH->MH.ArrayOfNodes.at(n).nOffset == FH->MH.nOffsetToHeadRootNode){
+            if(FH->MH.Names.at(FH->MH.ArrayOfNodes.at(n).Head.nNameIndex).sName == "neck_g") return true;
+            else return false;
+        }
+    }
+    return false;
+}
+
+bool MDL::NodeExists(const std::string & sNodeName){
+    if(GetNameIndex(sNodeName) != -1) return true;
+    return false;
+}
+
+void MDL::FlushData(){
+    FH.reset();
+}
+
+//Setters/general
+bool MDL::LinkHead(bool bLink){
+    unsigned int nOffset;
+    if(bLink){
+        int nNameIndex = -1;
+        for(int n = 0; n < FH->MH.Names.size() && nNameIndex == -1; n++){
+            if(FH->MH.Names.at(n).sName == "neck_g") nNameIndex = n;
+        }
+        if(nNameIndex != -1){
+            nOffset = GetNodeByNameIndex(nNameIndex).nOffset;
+        }
+        else return false;
+    }
+    else{
+        nOffset = FH->MH.GH.nOffsetToRootNode;
+    }
+    FH->MH.nOffsetToHeadRootNode = nOffset;
+    WriteIntToPH(nOffset, 180, nOffset);
+    return true;
+}
+
+void MDL::WriteUintToPlaceholder(unsigned int nUint, int nOffset){
+    WriteIntToPH(nUint, nOffset, nUint);
+}
+
+void MDL::WriteByteToPlaceholder(unsigned char nByte, int nOffset){
+    sBuffer.at(nOffset) = nByte;
+}
+
+//ascii
+void MDL::FlushAscii(){
+    Ascii->FlushAll();
+}
+
+std::vector<char> & MDL::CreateAsciiBuffer(int nSize){
+    return Ascii->CreateBuffer(nSize);
+}
+
+bool MDL::ReadAscii(){
+    //CreateDataStructure
+    FH.reset(new FileHeader);
+    bool bReturn = Ascii->Read(*this);
+    if(!bReturn){
+        FlushData();
+    }
+    else std::cout<<"Ascii read succesfully!\n";
+    return bReturn;
+}
+
 void File::SetFilePath(std::string & sPath){
     sFullPath = sPath;
     sFile = sPath;    PathStripPath(&sFile.front());
     sFile.resize(strlen(sFile.c_str()));
-}
-
-
-std::string & Node::GetName(){
-    return Model.FH.at(0).MH.Names.at(Head.nNameIndex).sName;
 }
 
 Location Node::GetLocation(){
@@ -51,9 +162,9 @@ Location Node::GetLocation(){
     return location;
 }
 
-const std::string MDL::sName = "MDL";
-const std::string MDX::sName = "MDX";
-const std::string WOK::sName = "WOK";
+const std::string MDL::sClassName = "MDL";
+const std::string MDX::sClassName = "MDX";
+const std::string WOK::sClassName = "WOK";
 
 const char QU_X = 0x01;
 const char QU_Y = 0x02;
@@ -170,7 +281,7 @@ void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
 /// This function is to be used both when compiling and decompiling (to determine smoothing groups)
 /// It is very expensive, so modify with care to keep it efficient. Any calculations that can be performed outside, should be.
 void MDL::CreatePatches(){
-    FileHeader & Data = FH[0];
+    FileHeader & Data = *FH;
 
     SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size()));
     SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
@@ -281,78 +392,78 @@ void MDL::CreatePatches(){
 
 //This function together with the next one, checks the currently loaded data in MDL for any special properties
 void MDL::CheckPeculiarities(){
-    FileHeader * Data = &FH[0];
+    FileHeader & Data = *FH;
     std::stringstream ssReturn;
     bool bUpdate = false;
     ssReturn<<"Lucky you! Your model has some rare peculiarities:";
-    if(!Data->MH.GH.RuntimeArray1.empty()){
+    if(!Data.MH.GH.RuntimeArray1.empty()){
         ssReturn<<"\r\n - First empty runtime array in the GH has a some nonzero value!";
         bUpdate = true;
     }
-    if(!Data->MH.GH.RuntimeArray2.empty()){
+    if(!Data.MH.GH.RuntimeArray2.empty()){
         ssReturn<<"\r\n - Second empty runtime array in the GH has a some nonzero value!";
         bUpdate = true;
     }
-    if(Data->MH.GH.nRefCount != 0){
+    if(Data.MH.GH.nRefCount != 0){
         ssReturn<<"\r\n - RefCount has a value!";
         bUpdate = true;
     }
-    if(Data->MH.GH.nModelType != 2){
+    if(Data.MH.GH.nModelType != 2){
         ssReturn<<"\r\n - Header ModelType different than 2!";
         bUpdate = true;
     }
-    if(Data->MH.nChildModelCount != 0){
+    if(Data.MH.nChildModelCount != 0){
         ssReturn<<"\r\n - ChildModelCount has a value!";
         bUpdate = true;
     }
-    if(Data->MH.AnimationArray.GetDoCountsDiffer()){
+    if(Data.MH.AnimationArray.GetDoCountsDiffer()){
         ssReturn<<"\r\n - AnimationArray counts differ!";
         bUpdate = true;
     }
-    if(Data->MH.nUnknown2 != 0){
+    if(Data.MH.nUnknown2 != 0){
         ssReturn<<"\r\n - Unknown int32 after the Root Head Node Offset in the MH has a value!";
         bUpdate = true;
     }
-    if(Data->MH.nMdxLength2 != Data->nMdxLength){
+    if(Data.MH.nMdxLength2 != Data.nMdxLength){
         ssReturn<<"\r\n - MdxLength in FH and MdxLength2 in MH don't have the same value!";
         bUpdate = true;
     }
-    if(Data->MH.nOffsetIntoMdx != 0){
+    if(Data.MH.nOffsetIntoMdx != 0){
         ssReturn<<"\r\n - OffsetIntoMdx after the MdxLength2 in the MH has a value!";
         bUpdate = true;
     }
-    if(Data->MH.NameArray.GetDoCountsDiffer()){
+    if(Data.MH.NameArray.GetDoCountsDiffer()){
         ssReturn<<"\r\n - NameArray counts differ!";
         bUpdate = true;
     }
-    for(int a = 0; a < Data->MH.AnimationArray.nCount; a++){
-        if(!Data->MH.GH.RuntimeArray1.empty()){
+    for(int a = 0; a < Data.MH.AnimationArray.nCount; a++){
+        if(!Data.MH.GH.RuntimeArray1.empty()){
             ssReturn<<"\r\n   - First empty runtime array in the Animation GH has a some nonzero value!";
             bUpdate = true;
         }
-        if(!Data->MH.GH.RuntimeArray2.empty()){
+        if(!Data.MH.GH.RuntimeArray2.empty()){
             ssReturn<<"\r\n   - Second empty runtime array in the Animation GH has a some nonzero value!";
             bUpdate = true;
         }
-        if(Data->MH.Animations[a].nRefCount != 0){
+        if(Data.MH.Animations[a].nRefCount != 0){
             ssReturn<<"\r\n   - Animation counterpart to RefCount has a value!";
             bUpdate = true;
         }
-        if(Data->MH.Animations[a].SoundArray.GetDoCountsDiffer()){
+        if(Data.MH.Animations[a].SoundArray.GetDoCountsDiffer()){
             ssReturn<<"\r\n   - SoundArray counts differ!";
             bUpdate = true;
         }
-        if(Data->MH.Animations[a].nPadding2 != 0){
+        if(Data.MH.Animations[a].nPadding2 != 0){
             ssReturn<<"\r\n   - Unknown int32 after SoundArrayHead has a value!";
             bUpdate = true;
         }
-        if(Data->MH.Animations[a].nModelType != 5){
+        if(Data.MH.Animations[a].nModelType != 5){
             ssReturn<<"\r\n   - Animation ModelType is not 5!";
             bUpdate = true;
         }
-        if(CheckNodes(Data->MH.Animations[a].ArrayOfNodes, ssReturn, a)) bUpdate = true;
+        if(CheckNodes(Data.MH.Animations[a].ArrayOfNodes, ssReturn, a)) bUpdate = true;
     }
-    if(CheckNodes(Data->MH.ArrayOfNodes, ssReturn, -1)) bUpdate = true;
+    if(CheckNodes(Data.MH.ArrayOfNodes, ssReturn, -1)) bUpdate = true;
     if(!bUpdate){
         std::cout<<"Checked for peculiarities, nothing to report.\n";
         return;
@@ -367,8 +478,8 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
         std::stringstream ssAdd;
         std::string sCont;
         if(nAnimation == -1) sCont = "geometry";
-        else sCont = FH[0].MH.Animations.at(nAnimation).sName.c_str();
-        ssAdd<<"\r\n - "<<FH[0].MH.Names[NodeArray[b].Head.nNameIndex].sName<<" ("<<NodeArray[b].Head.nType<<", "<<sCont<<")";
+        else sCont = FH->MH.Animations.at(nAnimation).sName.c_str();
+        ssAdd<<"\r\n - "<<FH->MH.Names[NodeArray[b].Head.nNameIndex].sName<<" ("<<NodeArray[b].Head.nType<<", "<<sCont<<")";
         if(NodeArray[b].Head.nType & NODE_HAS_HEADER){
             if(NodeArray[b].Head.nPadding1 != 0){
                 ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
@@ -516,4 +627,160 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
         }
     }
     return bMasterUpdate;
+}
+
+
+std::string ReturnClassificationName(int nClassification){
+    switch(nClassification){
+        case CLASS_OTHER: return "Other";
+        case CLASS_EFFECT: return "Effect";
+        case CLASS_TILE: return "Tile";
+        case CLASS_CHARACTER: return "Character";
+        case CLASS_DOOR: return "Door";
+        case CLASS_SABER: return "";
+        case CLASS_PLACEABLE: return "Placeable";
+    }
+    std::cout<<string_format("ReturnClassification() ERROR: Unknown classification %i.\n", nClassification);
+    return "unknown";
+}
+
+int ReturnController(std::string sController){
+    if(sController == "position") return CONTROLLER_HEADER_POSITION;
+    else if(sController == "orientation") return CONTROLLER_HEADER_ORIENTATION;
+    else if(sController == "scale") return CONTROLLER_HEADER_SCALING;
+    else if(sController == "color") return CONTROLLER_LIGHT_COLOR;
+    else if(sController == "radius") return CONTROLLER_LIGHT_RADIUS;
+    else if(sController == "shadowradius") return CONTROLLER_LIGHT_SHADOWRADIUS;          //Missing from NWmax
+    else if(sController == "verticaldisplacement") return CONTROLLER_LIGHT_VERTICALDISPLACEMENT;  //Missing from NWmax
+    else if(sController == "multipler") return CONTROLLER_LIGHT_MULTIPLIER;             //NWmax reads 'multipler', not 'multiplier'
+    else if(sController == "multiplier") return CONTROLLER_LIGHT_MULTIPLIER;             //NWmax reads 'multipler', not 'multiplier'
+    else if(sController == "alphaend") return CONTROLLER_EMITTER_ALPHAEND;
+    else if(sController == "alphastart") return CONTROLLER_EMITTER_ALPHASTART;
+    else if(sController == "birthrate") return CONTROLLER_EMITTER_BRITHRATE;
+    else if(sController == "bounce_co") return CONTROLLER_EMITTER_BOUNCE_CO;
+    else if(sController == "combinetime") return CONTROLLER_EMITTER_COMBINETIME;
+    else if(sController == "drag") return CONTROLLER_EMITTER_DRAG;
+    else if(sController == "fps") return CONTROLLER_EMITTER_FPS;
+    else if(sController == "frameend") return CONTROLLER_EMITTER_FRAMEEND;
+    else if(sController == "framestart") return CONTROLLER_EMITTER_FRAMESTART;
+    else if(sController == "grav") return CONTROLLER_EMITTER_GRAV;
+    else if(sController == "lifeexp") return CONTROLLER_EMITTER_LIFEEXP;
+    else if(sController == "mass") return CONTROLLER_EMITTER_MASS;
+    else if(sController == "p2p_bezier2") return CONTROLLER_EMITTER_P2P_BEZIER2;
+    else if(sController == "p2p_bezier3") return CONTROLLER_EMITTER_P2P_BEZIER3;
+    else if(sController == "particlerot") return CONTROLLER_EMITTER_PARTICLEROT;
+    else if(sController == "randvel") return CONTROLLER_EMITTER_RANDVEL;
+    else if(sController == "sizestart") return CONTROLLER_EMITTER_SIZESTART;
+    else if(sController == "sizeend") return CONTROLLER_EMITTER_SIZEEND;
+    else if(sController == "sizestart_y") return CONTROLLER_EMITTER_SIZESTART_Y;
+    else if(sController == "sizeend_y") return CONTROLLER_EMITTER_SIZEEND_Y;
+    else if(sController == "spread") return CONTROLLER_EMITTER_SPREAD;
+    else if(sController == "threshold") return CONTROLLER_EMITTER_THRESHOLD;
+    else if(sController == "velocity") return CONTROLLER_EMITTER_VELOCITY;
+    else if(sController == "xsize") return CONTROLLER_EMITTER_XSIZE;
+    else if(sController == "ysize") return CONTROLLER_EMITTER_YSIZE;
+    else if(sController == "blurlength") return CONTROLLER_EMITTER_BLURLENGTH;
+    else if(sController == "lightningdelay") return CONTROLLER_EMITTER_LIGHTNINGDELAY;
+    else if(sController == "lightningradius") return CONTROLLER_EMITTER_LIGHTNINGRADIUS;
+    else if(sController == "lightningscale") return CONTROLLER_EMITTER_LIGHTNINGSCALE;
+    else if(sController == "lightningsubdiv") return CONTROLLER_EMITTER_LIGHTNINGSUBDIV;
+    else if(sController == "lightningzigzag") return CONTROLLER_EMITTER_LIGHTNINGZIGZAG;    //Missing from NWmax
+    else if(sController == "alphamid") return CONTROLLER_EMITTER_ALPHAMID;           //Missing from NWmax
+    else if(sController == "percentstart") return CONTROLLER_EMITTER_PERCENTSTART;       //Missing from NWmax
+    else if(sController == "percentmid") return CONTROLLER_EMITTER_PERCENTMID;         //Missing from NWmax
+    else if(sController == "percentend") return CONTROLLER_EMITTER_PERCENTEND;         //Missing from NWmax
+    else if(sController == "sizemid") return CONTROLLER_EMITTER_SIZEMID;            //Missing from NWmax
+    else if(sController == "sizemid_y") return CONTROLLER_EMITTER_SIZEMID_Y;          //Missing from NWmax
+    else if(sController == "randombirthrate") return CONTROLLER_EMITTER_RANDOMBIRTHRATE;    //Missing from NWmax
+    else if(sController == "targetsize") return CONTROLLER_EMITTER_TARGETSIZE;         //Missing from NWmax
+    else if(sController == "numcontrolpts") return CONTROLLER_EMITTER_NUMCONTROLPTS;      //Missing from NWmax
+    else if(sController == "controlptradius") return CONTROLLER_EMITTER_CONTROLPTRADIUS;    //Missing from NWmax
+    else if(sController == "controlptdelay") return CONTROLLER_EMITTER_CONTROLPTDELAY;     //Missing from NWmax
+    else if(sController == "tangentspread") return CONTROLLER_EMITTER_TANGENTSPREAD;      //Missing from NWmax
+    else if(sController == "tangentlength") return CONTROLLER_EMITTER_TANGENTLENGTH;      //Missing from NWmax
+    else if(sController == "colormid") return CONTROLLER_EMITTER_COLORMID;           //Missing from NWmax
+    else if(sController == "colorend") return CONTROLLER_EMITTER_COLOREND;
+    else if(sController == "colorstart") return CONTROLLER_EMITTER_COLORSTART;
+    else if(sController == "detonate") return CONTROLLER_EMITTER_DETONATE;           //Missing from NWmax
+    else if(sController == "selfillumcolor") return CONTROLLER_MESH_SELFILLUMCOLOR;
+    else if(sController == "alpha") return CONTROLLER_MESH_ALPHA;
+    else return 0;
+}
+
+std::string ReturnControllerName(int nController, int nType){
+    switch(nController){
+        case CONTROLLER_HEADER_POSITION:            return "position";
+        case CONTROLLER_HEADER_ORIENTATION:         return "orientation";
+        case CONTROLLER_HEADER_SCALING:             return "scale";
+    }
+
+    if(nType & NODE_HAS_LIGHT){
+        switch(nController){
+        case CONTROLLER_LIGHT_COLOR:                return "color";
+        case CONTROLLER_LIGHT_RADIUS:               return "radius";
+        case CONTROLLER_LIGHT_SHADOWRADIUS:         return "shadowradius";          //Missing from NWmax
+        case CONTROLLER_LIGHT_VERTICALDISPLACEMENT: return "verticaldisplacement";  //Missing from NWmax
+        case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";             //NWmax reads 'multipler', not 'multiplier'
+        }
+    }
+    else if(nType & NODE_HAS_EMITTER){
+        switch(nController){
+        case CONTROLLER_EMITTER_ALPHAEND:           return "alphaEnd";
+        case CONTROLLER_EMITTER_ALPHASTART:         return "alphaStart";
+        case CONTROLLER_EMITTER_BRITHRATE:          return "birthrate";
+        case CONTROLLER_EMITTER_BOUNCE_CO:          return "bounce_co";
+        case CONTROLLER_EMITTER_COMBINETIME:        return "combinetime";
+        case CONTROLLER_EMITTER_DRAG:               return "drag";
+        case CONTROLLER_EMITTER_FPS:                return "fps";
+        case CONTROLLER_EMITTER_FRAMEEND:           return "frameEnd";
+        case CONTROLLER_EMITTER_FRAMESTART:         return "frameStart";
+        case CONTROLLER_EMITTER_GRAV:               return "grav";
+        case CONTROLLER_EMITTER_LIFEEXP:            return "lifeExp";
+        case CONTROLLER_EMITTER_MASS:               return "mass";
+        case CONTROLLER_EMITTER_P2P_BEZIER2:        return "p2p_bezier2";
+        case CONTROLLER_EMITTER_P2P_BEZIER3:        return "p2p_bezier3";
+        case CONTROLLER_EMITTER_PARTICLEROT:        return "particleRot";
+        case CONTROLLER_EMITTER_RANDVEL:            return "randvel";
+        case CONTROLLER_EMITTER_SIZESTART:          return "sizeStart";
+        case CONTROLLER_EMITTER_SIZEEND:            return "sizeEnd";
+        case CONTROLLER_EMITTER_SIZESTART_Y:        return "sizeStart_y";
+        case CONTROLLER_EMITTER_SIZEEND_Y:          return "sizeEnd_y";
+        case CONTROLLER_EMITTER_SPREAD:             return "spread";
+        case CONTROLLER_EMITTER_THRESHOLD:          return "threshold";
+        case CONTROLLER_EMITTER_VELOCITY:           return "velocity";
+        case CONTROLLER_EMITTER_XSIZE:              return "xsize";
+        case CONTROLLER_EMITTER_YSIZE:              return "ysize";
+        case CONTROLLER_EMITTER_BLURLENGTH:         return "blurlength";
+        case CONTROLLER_EMITTER_LIGHTNINGDELAY:     return "lightningDelay";
+        case CONTROLLER_EMITTER_LIGHTNINGRADIUS:    return "lightningRadius";
+        case CONTROLLER_EMITTER_LIGHTNINGSCALE:     return "lightningScale";
+        case CONTROLLER_EMITTER_LIGHTNINGSUBDIV:    return "lightningSubDiv";
+        case CONTROLLER_EMITTER_LIGHTNINGZIGZAG:    return "lightningzigzag";    //Missing from NWmax
+        case CONTROLLER_EMITTER_ALPHAMID:           return "alphaMid";           //Missing from NWmax
+        case CONTROLLER_EMITTER_PERCENTSTART:       return "percentStart";       //Missing from NWmax
+        case CONTROLLER_EMITTER_PERCENTMID:         return "percentMid";         //Missing from NWmax
+        case CONTROLLER_EMITTER_PERCENTEND:         return "percentEnd";         //Missing from NWmax
+        case CONTROLLER_EMITTER_SIZEMID:            return "sizeMid";            //Missing from NWmax
+        case CONTROLLER_EMITTER_SIZEMID_Y:          return "sizeMid_y";          //Missing from NWmax
+        case CONTROLLER_EMITTER_RANDOMBIRTHRATE:    return "m_fRandomBirthRate";    //Missing from NWmax
+        case CONTROLLER_EMITTER_TARGETSIZE:         return "targetsize";         //Missing from NWmax
+        case CONTROLLER_EMITTER_NUMCONTROLPTS:      return "numcontrolpts";      //Missing from NWmax
+        case CONTROLLER_EMITTER_CONTROLPTRADIUS:    return "controlptradius";    //Missing from NWmax
+        case CONTROLLER_EMITTER_CONTROLPTDELAY:     return "controlptdelay";     //Missing from NWmax
+        case CONTROLLER_EMITTER_TANGENTSPREAD:      return "tangentspread";      //Missing from NWmax
+        case CONTROLLER_EMITTER_TANGENTLENGTH:      return "tangentlength";      //Missing from NWmax
+        case CONTROLLER_EMITTER_COLORMID:           return "colorMid";           //Missing from NWmax
+        case CONTROLLER_EMITTER_COLOREND:           return "colorEnd";
+        case CONTROLLER_EMITTER_COLORSTART:         return "colorStart";
+        case CONTROLLER_EMITTER_DETONATE:           return "detonate";           //Missing from NWmax
+        }
+    }
+    else{
+        switch(nController){
+        case CONTROLLER_MESH_SELFILLUMCOLOR:        return "selfillumcolor";
+        case CONTROLLER_MESH_ALPHA:                 return "alpha";
+        }
+    }
+    std::cout<<string_format("ReturnController() ERROR: Unknown controller %i (type %i).\n", nController, nType);
+    return "unknown";
 }

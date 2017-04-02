@@ -102,43 +102,43 @@ void WOK::ProcessWalkmesh(){
 
 HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hParentNew = NULL, HTREEITEM hAfterNew = NULL, UINT Flags = NULL);
 
-void WOK::BuildTree(){
-    HTREEITEM Root = Append(sFile, NULL, TVI_ROOT);
+void BuildTree(WOK & Walkmesh){
+    HTREEITEM Root = Append(Walkmesh.GetFilename(), NULL, TVI_ROOT);
     HTREEITEM Verts = Append("Vertices", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfVerts; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfVerts; n++){
         std::stringstream ss;
         ss << "Vertex " << n;
-        Append(ss.str().c_str(), (LPARAM) &verts[n], Verts);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.verts[n], Verts);
     }
     HTREEITEM Faces = Append("Faces", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfFaces; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfFaces; n++){
         std::stringstream ss;
         ss << "Face " << n;
-        Append(ss.str().c_str(), (LPARAM) &faces[n], Faces);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.faces[n], Faces);
     }
     HTREEITEM Aabb = Append("Aabb", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfAabb; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfAabb; n++){
         std::stringstream ss;
         ss << "aabb " << n;
-        Append(ss.str().c_str(), (LPARAM) &aabb[n], Aabb);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.aabb[n], Aabb);
     }
     HTREEITEM Array1 = Append("Array 1", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfTriples; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfTriples; n++){
         std::stringstream ss;
         ss << "Triple " << n;
-        Append(ss.str().c_str(), (LPARAM) &triples[n], Array1);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.triples[n], Array1);
     }
     HTREEITEM Array2 = Append("Array 2", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfDoubles; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfDoubles; n++){
         std::stringstream ss;
         ss << "Double " << n;
-        Append(ss.str().c_str(), (LPARAM) &doubles[n], Array2);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.doubles[n], Array2);
     }
     HTREEITEM Array3 = Append("Array 3", (LPARAM) NULL, Root);
-    for(int n = 0; n < nNumberOfSingles; n++){
+    for(int n = 0; n < Walkmesh.nNumberOfSingles; n++){
         std::stringstream ss;
         ss << "Single " << n;
-        Append(ss.str().c_str(), (LPARAM) &singles[n], Array3);
+        Append(ss.str().c_str(), (LPARAM) &Walkmesh.singles[n], Array3);
     }
 
 }

@@ -25,12 +25,15 @@
 #define IDM_DRAW_H          116
 #define IDM_MDL_OPEN        117
 #define IDM_ASCII_OPEN      118
-#define IDM_MDL_SAVE        119
+#define IDM_BIN_SAVE        119
 #define IDM_MDX_SAVE        120
 #define IDM_WOK_SAVE        121
 #define IDM_ASCII_SAVE      122
 #define IDM_LINK_HEAD       123
 #define IDM_SETTINGS        124
+#define IDM_EDITOR_DLG      125
+#define IDM_GAME_K1         126
+#define IDM_GAME_K2         127
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -46,6 +49,7 @@
 #define IDC_EDIT_FLOAT   210
 #define IDC_EDIT_DISPLAY 211
 #define IDC_TREEVIEW     212
+#define IDD_EDITOR_DLG   213
 
 #define IDC_SBS_SBH      230
 #define IDC_SBS_SBV      231
@@ -60,6 +64,9 @@
 #define IDPM_TV_EXPAND_CHILDREN     304
 #define IDPM_OPEN_CONTROLLER_DATA   305
 #define IDPM_OPEN_GEO_VIEWER        306
+#define IDPM_OPEN_EDITOR            307
+
+#define IDP_DISPLAY_UPDATE          350
 
 #define DLG_SETTINGS         401
 #define DLG_ID_AREA_WEIGHT   402
@@ -68,6 +75,7 @@
 #define DLG_PROGRESS         405
 
 #define IDDB_EDIT                   500
+#define IDDB_SAVE                   501
 
 #define IDDB_DIALOG_TYPE_1          1200
 

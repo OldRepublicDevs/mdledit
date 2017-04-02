@@ -1,5 +1,7 @@
 #include "frame.h"
 #include "edits.h"
+#include <Shlwapi.h>
+#include <fstream>
 #include "MDL.h"
 
 char Frame::cClassName[] = "mdleditframe";
@@ -303,7 +305,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                 }
                 break;
-                case IDM_MDL_SAVE:
+                case IDM_BIN_SAVE:
                 {
                     int nReturn = IDOK;
                     if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
@@ -325,7 +327,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_ASCII_SAVE:
                 {
                     int nReturn = IDOK;
-                    if(Model.Mdx.empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
+                    if(Model.Mdx->empty()) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
                     if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
                 }
                 break;
@@ -347,6 +349,13 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         }
                         else std::cout<<"neck_g was not found!\n";
                     }
+                }
+                break;
+                case IDD_EDITOR_DLG:
+                {
+                    Edit1.UpdateEdit();
+                    HTREEITEM hSel = TreeView_GetSelection(hTree);
+                    if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                 }
                 break;
                 case IDM_SETTINGS:
@@ -389,6 +398,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDPM_OPEN_GEO_VIEWER:
                 {
                     ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_OPEN_GEO_VIEWER, NULL);
+                }
+                break;
+                case IDPM_OPEN_EDITOR:
+                {
+                    ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_OPEN_EDITOR, NULL);
                 }
                 break;
             }
@@ -486,7 +500,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    if(nID == IDM_MDL_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -526,7 +540,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             file.open(cMdx, std::ios::binary | std::fstream::out);
 
             sBinaryExport.clear();
-            Model.Mdx.Export(sBinaryExport);
+            Model.Mdx->Export(sBinaryExport);
 
             //Write and close file
             file<<sBinaryExport;
@@ -538,7 +552,8 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    else if(nID == IDM_ASCII_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_ASCII_OPEN){
+    /*        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -568,13 +583,13 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             //If we pass, then the file is definitely ready to be read.
 
             //Now we need to check our current data
-            if(!Model.empty() || (!Model.GetAsciiBuffer().empty())){
+            if(Model.GetFileData()){
                 //A model is already open. Flush it to make room for the new one.
                 TreeView_DeleteAllItems(hTree);
                 Model.FlushData();
                 Model.FlushAscii();
                 Model.FlushAll();
-                Model.Mdx.FlushAll();
+                Model.Mdx->FlushAll();
                 Walkmesh.FlushAll();
             }
 
@@ -593,7 +608,8 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 bReturn = true;
             }
             else bReturn = false;        }
-        else std::cout<<"Selecting file failed. :( \n";    }
+        else std::cout<<"Selecting file failed. :( \n";
+    */    }
     else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "KotOR MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
@@ -613,86 +629,107 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             }
 
             //If everything checks out, we may begin reading
+            bool bAscii = false;
             file.seekg(0,std::ios::beg);
             char cBinary [4];
             file.read(cBinary, 4);
-            //Make sure that what we've read is a binary .mdl as far as we can tell
+            //First check whether it's an ascii or a binary
             if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
-                Error("The file is not a binary .mdl file!");                file.close();
-                return false;
+                bAscii = true;
             }
-            //If we pass, then the file is definitely ready to be read.
 
             //Now we need to check our current data
-            if(!Model.empty() || !(Model.GetAsciiBuffer().empty())){
+            if(Model.GetFileData()){
                 //A model is already open. Flush it to make room for the new one.
                 TreeView_DeleteAllItems(hTree);
                 Model.FlushData();
                 Model.FlushAscii();
                 Model.FlushAll();
-                Model.Mdx.FlushAll();
+                Model.Mdx->FlushAll();
                 Walkmesh.FlushAll();
             }
 
-            file.seekg(0, std::ios::end);
-            std::streampos length = file.tellg();
-            file.seekg(0,std::ios::beg);
-            std::vector<char> & sBufferRef = Model.CreateBuffer(length);
-            file.read(&sBufferRef[0], length);
-            file.close();
-            Model.SetFilePath(cFile);
+            if(bAscii){
+                std::cout<<"Reading ascii...\n";
+                file.seekg(0, std::ios::end);
+                std::streampos length = file.tellg();
+                file.seekg(0,std::ios::beg);
+                std::vector<char> & sBufferRef = Model.CreateAsciiBuffer(length);
+                file.read(&sBufferRef[0], length);
+                file.close();
 
-            //Open and process .mdx if it exists
-            std::string cMdx;
-            cMdx = cFile;
-            char * cExt2 = PathFindExtension(cMdx.c_str());
-            sprintf(cExt2, ".mdx");
-            if(PathFileExists(cMdx.c_str())){
-                file.open(cMdx, std::ios::binary);
-                if(!file.is_open()){
-                    std::cout<<"File creation/opening failed (mdx). Aborting.\n";
+                //Process the data
+                Model.SetFilePath(cFile);
+                if(Model.ReadAscii()){
+                    DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1);
+
+                    bReturn = true;
                 }
-                else{
-                    //We may begin reading
-                    file.seekg(0, std::ios::end);
-                    std::streampos length = file.tellg();
-                    file.seekg(0,std::ios::beg);
-                    std::vector<char> & sBufferRef = Model.Mdx.CreateBuffer(length);
-                    file.read(&sBufferRef[0], length);
-                    file.close();
-                    Model.Mdx.SetFilePath(cMdx);
-                }
+                else bReturn = false;
             }
-            else{                PathStripPath(&cMdx.front());
-                Warning("Could not find "+cMdx+" in the same directory. Will load the without the MDX data.");
-            }
+            else{
+                std::cout<<"Reading binary...\n";
+                file.seekg(0, std::ios::end);
+                std::streampos length = file.tellg();
+                file.seekg(0,std::ios::beg);
+                std::vector<char> & sBufferRef = Model.CreateBuffer(length);
+                file.read(&sBufferRef[0], length);
+                file.close();
+                Model.SetFilePath(cFile);
 
-            //Open and process .wok if it exists
-            std::string cWok;
-            cWok = cFile;
-            cExt2 = PathFindExtension(cWok.c_str());
-            sprintf(cExt2, ".wok");
-            if(PathFileExists(cWok.c_str())){
-                file.open(cWok, std::ios::binary);
-                if(!file.is_open()){
-                    std::cout<<"File creation/opening failed (wok). Aborting.\n";
+                //Open and process .mdx if it exists
+                std::string cMdx;
+                cMdx = cFile;
+                char * cExt2 = PathFindExtension(cMdx.c_str());
+                sprintf(cExt2, ".mdx");
+                if(PathFileExists(cMdx.c_str())){
+                    file.open(cMdx, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (mdx). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        Model.Mdx.reset(new MDX());
+                        std::vector<char> & sBufferRef = Model.Mdx->CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Model.Mdx->SetFilePath(cMdx);
+                    }
                 }
-                else{
-                    //We may begin reading
-                    file.seekg(0, std::ios::end);
-                    std::streampos length = file.tellg();
-                    file.seekg(0,std::ios::beg);
-                    std::vector<char> & sBufferRef = Walkmesh.CreateBuffer(length);
-                    file.read(&sBufferRef[0], length);
-                    file.close();
-                    Walkmesh.SetFilePath(cWok);
+                else{                    PathStripPath(&cMdx.front());
+                    Warning("Could not find "+cMdx+" in the same directory. Will load the without the MDX data.");
                 }
-            }
 
-            //Process the data
-            DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2);
+                //Open and process .wok if it exists
+                std::string cWok;
+                cWok = cFile;
+                cExt2 = PathFindExtension(cWok.c_str());
+                sprintf(cExt2, ".wok");
+                if(PathFileExists(cWok.c_str())){
+                    file.open(cWok, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        std::vector<char> & sBufferRef = Walkmesh.CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Walkmesh.SetFilePath(cWok);
+                    }
+                }
 
-            bReturn = true;        }
+                //Process the data
+                DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2);
+
+                bReturn = true;
+            }        }
         else std::cout<<"Selecting file failed. :( \n";    }
     return bReturn;
 }
@@ -734,13 +771,9 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     //This should bring us to a state where all data is ready,
     //even the binary file-specific data
 
-    Model.CleanupAfterCompilation();
-    //This should bring us to a state where all data is ready
-    //and all the unnecessary calculation data structures are deleted
-
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
-    Model.BuildTree(); //Fills the TreeView control
+    BuildTree(Model); //Fills the TreeView control
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }
@@ -752,8 +785,8 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     //Load the data
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData();
-    Model.BuildTree();
-    if(!Walkmesh.empty()) Walkmesh.BuildTree();
+    BuildTree(Model);
+    if(!Walkmesh.empty()) BuildTree(Walkmesh);
     std::cout<<string_format("Data loaded!\n");
 
     Model.CheckPeculiarities(); //Finally, check for peculiarities
@@ -826,18 +859,21 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     if(nAction == ACTION_UPDATE_DISPLAY){
         std::stringstream sPrint;
         //Determine cPrint that is to be shown
-        Model.DetermineDisplayText(cItem, sPrint, lParam);
+        DetermineDisplayText(cItem, sPrint, lParam);
 
         //Update DisplayEdit
         SetWindowText(hDisplayEdit, sPrint.str().c_str());
     }
     else if(nAction == ACTION_ADD_MENU_LINES){
-        Model.AddMenuLines(cItem, lParam, (MenuLineAdder*) Pointer);
+        AddMenuLines(cItem, lParam, (MenuLineAdder*) Pointer);
     }
     else if(nAction == ACTION_OPEN_VIEWER){
-        Model.OpenViewer(cItem, lParam);
+        OpenViewer(Model, cItem, lParam);
     }
     else if(nAction == ACTION_OPEN_GEO_VIEWER){
-        Model.OpenGeoViewer(cItem, lParam);
+        OpenGeoViewer(Model, cItem, lParam);
+    }
+    else if(nAction == ACTION_OPEN_EDITOR){
+        OpenEditorDlg(Model, cItem, lParam);
     }
 }

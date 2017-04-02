@@ -2,7 +2,7 @@
 
 void MDL::ExportAscii(std::string &sExport){
     std::stringstream ss;
-    ConvertToAscii(CONVERT_MODEL, ss, (void*) &FH[0].MH);
+    ConvertToAscii(CONVERT_MODEL, ss, (void*) &FH->MH);
     sExport = ss.str();
 }
 
@@ -16,8 +16,8 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
     }
 }
 
-std::string MakeUniqueName(int nNameIndex){
-    std::vector<Name> & Names = Model.GetFileData()->MH.Names;
+std::string MDL::MakeUniqueName(int nNameIndex){
+    std::vector<Name> & Names = FH->MH.Names;
     std::string sReturn = Names.at(nNameIndex).sName.c_str();
     int nDupl = 0;
     for(int n = 0; n < nNameIndex; n++){
@@ -92,7 +92,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
-        sReturn << "\r\nnewanim " << anim->sName.c_str() <<" "<< FH[0].MH.GH.sName.c_str();
+        sReturn << "\r\nnewanim " << anim->sName.c_str() <<" "<< FH->MH.GH.sName.c_str();
         sReturn << "\r\n  length " << PrepareFloat(anim->fLength, 0);
         sReturn << "\r\n  transtime " << PrepareFloat(anim->fTransition, 0);
         sReturn << "\r\n  animroot " << anim->sAnimRoot.c_str();
@@ -108,7 +108,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
             ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
         }
-        sReturn << string_format("\r\ndoneanim %s %s", anim->sName.c_str(), FH[0].MH.GH.sName.c_str());
+        sReturn << string_format("\r\ndoneanim %s %s", anim->sName.c_str(), FH->MH.GH.sName.c_str());
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
@@ -121,8 +121,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
         else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
         else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
-        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
-        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
@@ -140,10 +140,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
         else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
         else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
-        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
-        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
-        //sReturn << FH[0].MH.Names[node->Head.nNameIndex].sName.c_str();
-        //sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? FH[0].MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        //sReturn << FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        //sReturn << "\r\n  parent " << (node->Head.nParentIndex != -1 ? FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
                 sReturn << string_format("\r\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
@@ -243,7 +243,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
         sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         //sReturn << "\r\n  specular 0.0 0.0 0.0";
-        sReturn << "\r\n  shininess " << node->Mesh.nShininess;
+        sReturn << "\r\n  shininess " << node->Mesh.nTransparencyHint;
         sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
         //if(node->Mesh.nAnimateUV){
             sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
@@ -267,7 +267,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(Mdx.empty()) sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ, 2);
+            if(Mdx->empty()) sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ, 2);
             else sReturn << "\r\n    "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX, 0)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY, 1)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ, 2);
         }
         sReturn << "\r\n  faces " << node->Mesh.Faces.size();
@@ -282,28 +282,28 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
             sReturn << " " << node->Mesh.Faces[n].nMaterialID;
         }
-        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
             sReturn << "\r\n  tverts "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   " << PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fX, 0);
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fY, 1);
             }
         }
-        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
             sReturn << "\r\n  tverts1 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fX, 0);
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fY, 1);
             }
         }
-        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
             sReturn << "\r\n  tverts2 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fX, 0);
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fY, 1);
             }
         }
-        if(!Mdx.sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
             sReturn << "\r\n  tverts3 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fX, 0);
@@ -313,7 +313,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_SKIN){
         Node * node = (Node*) Data;
-        if(!Mdx.sBuffer.empty()){
+        if(!Mdx->sBuffer.empty()){
             sReturn << "\r\n  weights "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\r\n   ";
@@ -322,9 +322,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndexes.size()<<"\n";
                 while(nBoneNumber != -1 && i < 4){
                     //std::cout<<"Reading bone number "<<nBoneNumber;
-                    //std::cout<<", representing bone "<<FH[0].MH.Names.at(node->Skin.BoneNameIndexes.at(nBoneNumber)).sName.c_str()<<".\n";
+                    //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndexes.at(nBoneNumber)).sName.c_str()<<".\n";
                     int nNameIndex = node->Skin.BoneNameIndexes.at(nBoneNumber);
-                    //sReturn << " "<<FH[0].MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
+                    //sReturn << " "<<FH->MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
                     sReturn << " "<<MakeUniqueName(nNameIndex)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i], 0);
                     i++;
                     nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
@@ -360,13 +360,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  beaming " << (int) node->Mesh.nBeaming;
         sReturn << "\r\n  lightmapped " << (int) node->Mesh.nHasLightmap;
         sReturn << "\r\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
-        /// transparencyhint
         sReturn << "\r\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
         sReturn << "\r\n  dirt_texture " << node->Mesh.nDirtTexture;
         sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
         sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         //sReturn << "\r\n  specular 0.0 0.0 0.0";
-        sReturn << "\r\n  shininess " << node->Mesh.nShininess;
+        sReturn << "\r\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
         //if(node->Mesh.nAnimateUV){
             sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
@@ -477,8 +476,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
         sReturn << "\r\nendlist";
@@ -525,8 +524,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH[0].MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH[0].MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }

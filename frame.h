@@ -2,9 +2,8 @@
 #define FRAME_H_INCLUDED
 
 #include "general.h"
-#include <fstream>
 #include <commctrl.h>
-#include <Shlwapi.h>
+#include "MDL.h"
 
 class Frame{
     //Main Window Creation
@@ -24,9 +23,17 @@ class Frame{
 #define ACTION_ADD_MENU_LINES      1
 #define ACTION_OPEN_VIEWER         2
 #define ACTION_OPEN_GEO_VIEWER     3
+#define ACTION_OPEN_EDITOR         4
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+void BuildTree(MDL & Mdl);
+void BuildTree(WOK & Wok);
+void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam);
+void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla);
+void OpenGeoViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
+void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
+void OpenEditorDlg(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
 
 #endif // FRAME_H_INCLUDED

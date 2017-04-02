@@ -80,3 +80,7 @@ MDLOps data.txt
 obj/Release/Settings.o
 
 obj/Release/readbinary.o
+
+obj/Debug/file.o
+
+obj/Debug/editordlg.o

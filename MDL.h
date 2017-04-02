@@ -1,8 +1,8 @@
 #ifndef MDL_H_INCLUDED
 #define MDL_H_INCLUDED
 
+#include "file.h"
 #include "general.h"
-#include "MDLdefinitions.h"
 
 /**
     UNKNOWNS:
@@ -35,7 +35,211 @@
 
 /**/
 
-//Forward declarations
+#define MDL_OFFSET 12
+#define ANIM_OFFSET 136
+
+#define CONVERT_CONTROLLER_SINGLE        1
+#define CONVERT_CONTROLLER_KEYED         2
+#define CONVERT_HEADER                   3
+#define CONVERT_LIGHT                    4
+#define CONVERT_EMITTER                  5
+#define CONVERT_MESH                     6
+#define CONVERT_SKIN                     7
+#define CONVERT_DANGLY                   8
+#define CONVERT_AABB                     9
+#define CONVERT_SABER                    10
+#define CONVERT_ENDNODE                  11
+#define CONVERT_ANIMATION                12
+#define CONVERT_ANIMATION_NODE           13
+#define CONVERT_MODEL_GEO                14
+#define CONVERT_MODEL                    15
+
+#define K1_FUNCTION_POINTER_0 4273776
+#define K1_FUNCTION_POINTER_1 4216096
+#define K2_FUNCTION_POINTER_0 4285200
+#define K2_FUNCTION_POINTER_1 4216320
+
+#define CLASS_OTHER           0x00
+#define CLASS_EFFECT          0x01
+#define CLASS_TILE            0x02
+#define CLASS_CHARACTER       0x04
+#define CLASS_DOOR            0x08
+#define CLASS_SABER           0x10 //Probably more general, weapon or item
+#define CLASS_PLACEABLE       0x20
+//#define CLASS_40            0x40
+//#define CLASS_80            0x80
+
+#define NODE_HAS_HEADER       0x0001
+#define NODE_HAS_LIGHT        0x0002
+#define NODE_HAS_EMITTER      0x0004
+//#define NODE_HAS_CAMERA     0x0008
+//#define NODE_HAS_REFERENCE  0x0010
+#define NODE_HAS_MESH         0x0020
+#define NODE_HAS_SKIN         0x0040
+//#define NODE_HAS_ANIM       0x0080
+#define NODE_HAS_DANGLY       0x0100
+#define NODE_HAS_AABB         0x0200
+//#define NODE_HAS_400        0x0400
+#define NODE_HAS_SABER        0x0800
+//#define NODE_HAS_GOB        0x1000
+//#define NODE_HAS_COLLISION  0x2000
+//#define NODE_HAS_SPHERE     0x4000
+//#define NODE_HAS_CAPSULE    0x8000
+
+#define NODE_SIZE_HEADER      80
+#define NODE_SIZE_LIGHT       92
+#define NODE_SIZE_EMITTER     224
+//#define NODE_SIZE_CAMERA    0
+//#define NODE_SIZE_REFERENCE 0
+#define NODE_SIZE_MESH        340
+#define NODE_SIZE_SKIN        100
+//#define NODE_SIZE_ANIM      0
+#define NODE_SIZE_DANGLY      28
+#define NODE_SIZE_AABB        1
+//#define NODE_SIZE_400       0
+#define NODE_SIZE_SABER       20
+
+#define EMITTER_FLAG_P2P                0x0001
+#define EMITTER_FLAG_P2P_SEL            0x0002
+#define EMITTER_FLAG_AFFECTED_WIND      0x0004
+#define EMITTER_FLAG_TINTED             0x0008
+#define EMITTER_FLAG_BOUNCE             0x0010
+#define EMITTER_FLAG_RANDOM             0x0020
+#define EMITTER_FLAG_INHERIT            0x0040
+#define EMITTER_FLAG_INHERIT_VEL        0x0080
+#define EMITTER_FLAG_INHERIT_LOCAL      0x0100
+#define EMITTER_FLAG_SPLAT              0x0200
+#define EMITTER_FLAG_INHERIT_PART       0x0400
+#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //ndix UR
+#define EMITTER_FLAG_RENDER_ORDER       0x1000 //ndix UR
+//#define EMITTER_FLAG_2000             0x2000
+//#define EMITTER_FLAG_3000             0x4000
+//#define EMITTER_FLAG_4000             0x8000
+
+#define MDX_FLAG_VERTEX                0x0001
+#define MDX_FLAG_HAS_UV1               0x0002
+#define MDX_FLAG_HAS_UV2               0x0004
+#define MDX_FLAG_HAS_UV3               0x0008
+#define MDX_FLAG_HAS_UV4               0x0010
+#define MDX_FLAG_HAS_NORMAL            0x0020
+#define MDX_FLAG_0040         /*??*/   0x0040
+#define MDX_FLAG_HAS_TANGENT1          0x0080
+#define MDX_FLAG_HAS_TANGENT2 /*??*/   0x0100
+#define MDX_FLAG_HAS_TANGENT3 /*??*/   0x0200
+#define MDX_FLAG_HAS_TANGENT4 /*??*/   0x0400
+//#define MDX_FLAG_0800                0x0800
+//#define MDX_FLAG_1000                0x1000
+//#define MDX_FLAG_2000                0x2000
+//#define MDX_FLAG_3000                0x4000
+//#define MDX_FLAG_4000                0x8000
+
+#define AABB_NO_CHILDREN    0x00
+#define AABB_POSITIVE_X     0x01
+#define AABB_POSITIVE_Y     0x02
+#define AABB_POSITIVE_Z     0x04
+#define AABB_NEGATIVE_X     0x08
+#define AABB_NEGATIVE_Y     0x10
+#define AABB_NEGATIVE_Z     0x20
+//#define AABB_40           0x40
+//#define AABB_80           0x80
+
+#define MATERIAL_NONE           0
+#define MATERIAL_DIRT           1
+#define MATERIAL_OBSCURING      2
+#define MATERIAL_GRASS          3
+#define MATERIAL_STONE          4
+#define MATERIAL_WOOD           5
+#define MATERIAL_WATER          6
+#define MATERIAL_NONWALK        7
+#define MATERIAL_TRANSPARENT    8
+#define MATERIAL_CARPET         9
+#define MATERIAL_METAL          10
+#define MATERIAL_PUDDLES        11
+#define MATERIAL_SWAMP          12
+#define MATERIAL_MUD            13
+#define MATERIAL_LEAVES         14
+#define MATERIAL_LAVA           15
+#define MATERIAL_BOTTOMLESSPIT  16
+#define MATERIAL_DEEPWATER      17
+#define MATERIAL_DOOR           18
+#define MATERIAL_SNOW           19
+#define MATERIAL_SAND           20
+
+///All controller numbers apparently must be divisible by 4
+#define CONTROLLER_HEADER_POSITION              8
+#define CONTROLLER_HEADER_ORIENTATION           20
+#define CONTROLLER_HEADER_SCALING               36
+///------------------------------------------------
+#define CONTROLLER_LIGHT_COLOR                  76
+#define CONTROLLER_LIGHT_RADIUS                 88
+#define CONTROLLER_LIGHT_SHADOWRADIUS           96
+#define CONTROLLER_LIGHT_VERTICALDISPLACEMENT   100
+#define CONTROLLER_LIGHT_MULTIPLIER             140
+///------------------------------------------------
+#define CONTROLLER_EMITTER_ALPHAEND             80
+#define CONTROLLER_EMITTER_ALPHASTART           84
+#define CONTROLLER_EMITTER_BRITHRATE            88
+#define CONTROLLER_EMITTER_BOUNCE_CO            92
+#define CONTROLLER_EMITTER_COMBINETIME          96
+#define CONTROLLER_EMITTER_DRAG                 100
+#define CONTROLLER_EMITTER_FPS                  104
+#define CONTROLLER_EMITTER_FRAMEEND             108
+#define CONTROLLER_EMITTER_FRAMESTART           112
+#define CONTROLLER_EMITTER_GRAV                 116
+#define CONTROLLER_EMITTER_LIFEEXP              120
+#define CONTROLLER_EMITTER_MASS                 124
+#define CONTROLLER_EMITTER_P2P_BEZIER2          128
+#define CONTROLLER_EMITTER_P2P_BEZIER3          132
+#define CONTROLLER_EMITTER_PARTICLEROT          136
+#define CONTROLLER_EMITTER_RANDVEL              140
+#define CONTROLLER_EMITTER_SIZESTART            144
+#define CONTROLLER_EMITTER_SIZEEND              148
+#define CONTROLLER_EMITTER_SIZESTART_Y          152
+#define CONTROLLER_EMITTER_SIZEEND_Y            156
+#define CONTROLLER_EMITTER_SPREAD               160
+#define CONTROLLER_EMITTER_THRESHOLD            164
+#define CONTROLLER_EMITTER_VELOCITY             168
+#define CONTROLLER_EMITTER_XSIZE                172
+#define CONTROLLER_EMITTER_YSIZE                176
+#define CONTROLLER_EMITTER_BLURLENGTH           180
+#define CONTROLLER_EMITTER_LIGHTNINGDELAY       184
+#define CONTROLLER_EMITTER_LIGHTNINGRADIUS      188
+#define CONTROLLER_EMITTER_LIGHTNINGSCALE       192
+#define CONTROLLER_EMITTER_LIGHTNINGSUBDIV      196
+#define CONTROLLER_EMITTER_LIGHTNINGZIGZAG      200
+//#define CONTROLLER_EMITTER_204                204
+//#define CONTROLLER_EMITTER_208                208
+//#define CONTROLLER_EMITTER_212                212
+#define CONTROLLER_EMITTER_ALPHAMID             216
+#define CONTROLLER_EMITTER_PERCENTSTART         220
+#define CONTROLLER_EMITTER_PERCENTMID           224
+#define CONTROLLER_EMITTER_PERCENTEND           228
+#define CONTROLLER_EMITTER_SIZEMID              232
+#define CONTROLLER_EMITTER_SIZEMID_Y            236
+#define CONTROLLER_EMITTER_RANDOMBIRTHRATE      240
+//#define CONTROLLER_EMITTER 244                244
+//#define CONTROLLER_EMITTER 248                248
+#define CONTROLLER_EMITTER_TARGETSIZE           252
+#define CONTROLLER_EMITTER_NUMCONTROLPTS        256
+#define CONTROLLER_EMITTER_CONTROLPTRADIUS      260
+#define CONTROLLER_EMITTER_CONTROLPTDELAY       264
+#define CONTROLLER_EMITTER_TANGENTSPREAD        268
+#define CONTROLLER_EMITTER_TANGENTLENGTH        272
+//#define CONTROLLER_EMITTER_276                276
+//#define CONTROLLER_EMITTER_280                280
+#define CONTROLLER_EMITTER_COLORMID             284
+/// ... many controller numbers ... ///
+#define CONTROLLER_EMITTER_COLOREND             380
+//#define CONTROLLER_EMITTER_384                384
+//#define CONTROLLER_EMITTER_388                388
+#define CONTROLLER_EMITTER_COLORSTART           392
+/// ... many controller numbers ... ///
+#define CONTROLLER_EMITTER_DETONATE             502
+///------------------------------------------------
+#define CONTROLLER_MESH_SELFILLUMCOLOR          100
+#define CONTROLLER_MESH_ALPHA                   132
+
+//Data structures
 struct Face;
 struct Aabb;
 struct Controller;
@@ -45,6 +249,24 @@ struct SaberDataStruct;
 struct VertIndicesStruct;
 struct MDXDataStruct;
 struct Vertex;
+struct Matrix22;
+struct Vector;
+struct Color;
+struct Triples;
+struct Bone;
+
+//Orientation class
+extern const char QU_X;
+extern const char QU_Y;
+extern const char QU_Z;
+extern const char QU_W;
+extern const char AA_X;
+extern const char AA_Y;
+extern const char AA_Z;
+extern const char AA_A;
+class Orientation;
+
+//Node structs
 struct Node;
 struct Header;
 struct LightHeader;
@@ -54,19 +276,28 @@ struct SkinHeader;
 struct DanglymeshHeader;
 struct WalkmeshHeader;
 struct SaberHeader;
+
+//Higher structures
 struct Animation;
 struct GeometryHeader;
 struct ModelHeader;
 struct FileHeader;
-struct Vector;
-class Orientation;
-struct Color;
-struct Triples;
-struct Bone;
 
+//Convert unions
 extern ByteBlock2 ByteBlock2;
 extern ByteBlock4 ByteBlock4;
 extern ByteBlock8 ByteBlock8;
+
+//File structs
+class File;
+class BinaryFile;
+class MDL;
+class MDX;
+class WOK;
+class Ascii;
+
+void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
+
 
 /**** DATA STRUCTS ****/
 
@@ -84,14 +315,6 @@ struct Matrix22{
     }
 };
 
-extern const char QU_X;
-extern const char QU_Y;
-extern const char QU_Z;
-extern const char QU_W;
-extern const char AA_X;
-extern const char AA_Y;
-extern const char AA_Z;
-extern const char AA_A;
 class Orientation{
     //unsigned int nCompressed = 0; //Since it is compressed, best to get it in a neutral type
     double qX;
@@ -396,18 +619,6 @@ struct Vector{
     }
 };
 
-Vector operator*(Vector v, const Matrix22 & m);
-Vector operator*(Vector v, const double & f);
-Vector operator/(Vector v, const double & f);
-Vector operator*(const double & f, Vector v);
-double operator*(const Vector & v, const Vector & v2); //dot product
-Vector operator/(Vector v, const Vector & v2); //cross product
-Vector operator+(Vector v, const Vector & v2);
-Vector operator-(Vector v, const Vector & v2);
-double Angle(const Vector & v, const Vector & v2);
-Orientation operator*(Orientation o1, const Orientation & o2);
-double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3);
-
 struct Location{
     Vector vPosition;
     Orientation oOrientation;
@@ -485,6 +696,9 @@ struct Name{
 };
 
 struct SaberDataStruct{
+    int nOffsetVertex = 0;
+    int nOffsetUV = 0;
+    int nOffsetNormal = 0;
     Vector vVertex;
     Vector vUV;
     Vector vNormal;
@@ -512,8 +726,6 @@ struct MDXDataStruct{
     Vector vTangent3[3];
     Vector vTangent4[3];
     Weight Weights;
-    //double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
-    //double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
 
     //Added members
     int nNameIndex = -1;
@@ -529,9 +741,6 @@ struct ArrayHead{
         if(nCount == nCount2) return false;
         else return true; //We sure don't expect that!
     }
-    //int GetCount(){
-    //    return nCount;
-    //}
     void ResetToSize(int nSize){
         nOffset = 0;
         nCount = nSize;
@@ -568,9 +777,7 @@ struct Patch{
 };
 
 struct Vertex: public Vector{
-    //float fFromRootX = 0.0;
-    //float fFromRootY = 0.0;
-    //float fFromRootZ = 0.0;
+    int nOffset = 0;
     MDXDataStruct MDXData;
     int nLinkedFacesIndex = -1;
     Vertex assign(const Vector & v){
@@ -728,7 +935,7 @@ struct MeshHeader{
     Vector vAverage;
     Color fDiffuse;
     Color fAmbient;
-    unsigned int nShininess = 0;
+    unsigned int nTransparencyHint = 0;
         /* MagnusII:
          * 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
          * Blend Factor, SamplerStageStates, TextureOperation?
@@ -1006,121 +1213,101 @@ struct FileHeader{
   /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
 /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
 
-int ReturnController(std::string sController);
-std::string ReturnClassificationName(int nClassification);
-std::string ReturnControllerName(int, int nType);
-
-class File{
-  protected:
-    bool bLoaded = false;
-    std::string sFile;
-    std::string sFullPath;
-    std::vector<char> sBuffer;
-    unsigned int nBufferSize;
-    unsigned int nPosition;
-  public:
-    //Getters
-    std::vector<char> & GetBuffer(){
-        return sBuffer;
-    }
-    unsigned int GetBufferLength(){
-        return nBufferSize;
-    }
-    const std::string & GetFilename(){
-        return sFile;
-    }
-    const std::string & GetFullPath(){
-        return sFullPath;
-    }
-    virtual const std::string GetName(){
-        return "";
-    }
-    bool empty(){
-        return !bLoaded;
-    }
-    void Export(std::string &sExport){
-        sExport = std::string(sBuffer.begin(), sBuffer.end());
-    }
-
-    //Setters
-    void SetFilePath(std::string & sPath);
-
-    //Loaders/Unloaders
-    virtual std::vector<char> & CreateBuffer(int nSize){
-        nBufferSize = nSize;
-        bLoaded = true;
-        sBuffer.resize(nSize, '\0');
-        return sBuffer;
-    }
-    virtual void FlushAll(){
-        sBuffer.clear();
-        sBuffer.shrink_to_fit();
-        nBufferSize = 0;
-        bLoaded = false;
-    }
-
-};
-
-
-
-class BinaryFile: public File{
-
-  protected:
-    //For coloring bytes
-    std::vector<int> bKnown;
-    void MarkBytes(unsigned int nOffset, int nLength, int nClass);
-
-    //Reading functions
-    int ReadInt(unsigned int * nPosition, int nMarking, int nBytes = 4);
-    float ReadFloat(unsigned int * nPosition, int nMarking, int nBytes = 4);
-    void ReadString(std::string & sArray1, unsigned int *nPosition, int nMarking, int nNumber);
-
-    //Writing functions
-    void WriteInt(int nInt, int nKnown, int nBytes = 4);
-    void WriteFloat(float fFloat, int nKnown, int nBytes = 4);
-    void WriteString(std::string sString, int nKnown);
-    void WriteByte(char cByte, int nKnown);
-    void WriteIntToPH(int nInt, int nPH, unsigned int & nContainer); //PH is placeholder
-
-  public:
-    //Getters
-    std::vector<int> & GetKnownData(){
-        return bKnown;
-    }
-
-    //Loaders/Unloaders
-    std::vector<char> & CreateBuffer(int nSize){
-        nBufferSize = nSize;
-        bLoaded = true;
-        sBuffer.resize(nSize, '\0');
-        bKnown.resize(nSize, 0);
-        return sBuffer;
-    }
-    void FlushAll(){
-        sBuffer.clear();
-        bKnown.clear();
-        bLoaded = false;
-        nBufferSize = 0;
-    }
-};
-
-class MDL;
-
 class MDX: public BinaryFile{
-    static const std::string sName;
+    static const std::string sClassName;
   public:
      //Getters
-     const std::string GetName(){
-        return sName;
-     }
+     const std::string GetName(){ return sClassName; }
 
     //Friends
     friend class MDL;
     //We need this so that MDL::functions can call protected members inherited from BinaryFile
 };
 
+class ASCII: public TextFile{
+    void BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter);
+  public:
+    bool Read(MDL & Mdl);
+};
+
+class MDL: public BinaryFile{
+    static const std::string sClassName;
+    std::unique_ptr<FileHeader> FH;
+
+    //Reading
+    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMinimal = false);
+    void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
+    void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes);
+    void LinearizeAnimations(Node & NODE, std::vector<Node> & ArrayOfNodes);
+
+    bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
+
+    //Writing
+    void WriteNodes(Node & node);
+    void WriteAabb(Aabb & aabb);
+    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
+    void DoCalculations(Node & NODE, int & nMeshCounter);
+
+    //Calculating
+    void CreatePatches();
+    void DetermineSmoothing();
+    void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg, std::stringstream & file);
+    bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
+    int FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
+                           const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
+                           const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
+                           std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
+    void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
+    std::string MakeUniqueName(int nNameIndex);
+
+    //Getters
+    const std::string GetName(){ return sClassName; }
+
+  public:
+    std::unique_ptr<ASCII> Ascii;
+    std::unique_ptr<MDX> Mdx;
+
+    //Friends
+    friend ASCII;
+    friend Node;
+
+    //Version
+    bool bK2 = true;
+    bool bDebug = true;
+    bool bDetermineSmoothing = true;
+    bool bSmoothAreaWeighting = true;
+    bool bSmoothAngleWeighting = false;
+
+    //Getters
+    std::unique_ptr<FileHeader> & GetFileData();
+    std::vector<char> & GetAsciiBuffer();
+    Node & GetNodeByNameIndex(int nIndex, int nAnimation = -1);
+    bool HeadLinked();
+    bool NodeExists(const std::string & sNodeName);
+    int GetNameIndex(std::string sName);
+
+    //Loaders
+    bool Compile();
+    void DecompileModel(bool bMinimal = false);
+    void AsciiPostProcess();
+    void CheckPeculiarities();
+    void FlushData();
+    void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
+
+    //Setters/general
+    bool LinkHead(bool bLink);
+    void WriteUintToPlaceholder(unsigned int nUint, int nOffset);
+    void WriteByteToPlaceholder(unsigned char nByte, int nOffset);
+
+    //ascii
+    void ExportAscii(std::string &sExport);
+    void FlushAscii();
+    std::vector<char> & CreateAsciiBuffer(int nSize);
+    bool ReadAscii();
+};
+
 class WOK: public BinaryFile{
-    static const std::string sName;
+    static const std::string sClassName;
 
     //Data
     unsigned int nNumberOfVerts;
@@ -1147,200 +1334,28 @@ class WOK: public BinaryFile{
 
   public:
     //Getters
-    const std::string GetName(){
-        return sName;
-    }
+    const std::string GetName(){ return sClassName; }
 
     //Loaders
     void ProcessWalkmesh();
-    void BuildTree();
+    friend void BuildTree(WOK & Walkmesh);
 };
 
-//extern MDX Mdx;
-extern WOK Walkmesh;
+Vector operator*(Vector v, const Matrix22 & m);
+Vector operator*(Vector v, const double & f);
+Vector operator/(Vector v, const double & f);
+Vector operator*(const double & f, Vector v);
+double operator*(const Vector & v, const Vector & v2); //dot product
+Vector operator/(Vector v, const Vector & v2); //cross product
+Vector operator+(Vector v, const Vector & v2);
+Vector operator-(Vector v, const Vector & v2);
+double Angle(const Vector & v, const Vector & v2);
+Orientation operator*(Orientation o1, const Orientation & o2);
+double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3);
 
-class Ascii: public File{
-    //Reading
-    bool ReadFloat(double & fNew, bool bPrint = false);
-    bool ReadInt(int & nNew, bool bPrint = false);
-    bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
-    void SkipLine();
-    bool EmptyRow();
-    void BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter);
-
-    //Getters
-    int GetNameIndex(std::string sName, std::vector<Name> Names);
-
-  public:
-    bool Read(FileHeader * FH);
-};
-
-class MDL: public BinaryFile{
-    static const std::string sName;
-    std::vector<FileHeader> FH;
-    Ascii AsciiReader;
-
-    //Reading
-    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMinimal = false);
-    void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
-    void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
-        for(int n = 0; n < NODE.Head.Children.size(); n++){
-            LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
-        }
-        ArrayOfNodes.at(NODE.Head.nNameIndex) = std::move(NODE);
-    }
-    void LinearizeAnimations(Node & NODE, std::vector<Node> & ArrayOfNodes){
-        ArrayOfNodes.push_back(std::move(NODE));
-        Node & node = ArrayOfNodes.back();
-        for(int n = 0; n < node.Head.Children.size(); n++){
-            LinearizeAnimations(node.Head.Children[n], ArrayOfNodes);
-        }
-    }
-
-    //Display
-    void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
-
-    //Context menu
-    void AddMenuLines(std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla);
-
-    //Viewers
-    void OpenViewer(std::vector<std::string> cItem, LPARAM lParam);
-    void OpenGeoViewer(std::vector<std::string> cItem, LPARAM lParam);
-
-    void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
-    bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
-
-    //Writing
-    void WriteNodes(Node & node);
-    void WriteAabb(Aabb & aabb);
-    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
-    void DoCalculations(Node & NODE, int & nMeshCounter);
-
-    //Calculating
-    void CreatePatches();
-    void DetermineSmoothing();
-    bool bDetermineSmoothing = true;
-    bool bSmoothAreaWeighting = true;
-    bool bSmoothAngleWeighting = false;
-    void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg, std::stringstream & file);
-    bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
-    int FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
-                           const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
-                           const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
-                           std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
-
-    //Getters
-    const std::string GetName(){
-        return sName;
-    }
-
-  public:
-    //Friends
-    friend Ascii;
-    friend Node;
-    friend void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer);
-
-    //Version
-    bool bK2 = true;
-    bool bDebug = true;
-
-    MDX Mdx;
-
-    //Getters
-    FileHeader * GetFileData(){
-        if(FH.empty()) return nullptr;
-        else return &FH[0];
-    }
-    std::vector<char> & GetAsciiBuffer(){
-        return AsciiReader.GetBuffer();
-    }
-    Node & GetNodeByNameIndex(int nIndex, int nAnimation = -1){
-        if(nAnimation == -1){
-            return FH[0].MH.ArrayOfNodes.at(nIndex);
-        }
-        else{
-            std::vector<Node> & Array = FH[0].MH.Animations[nAnimation].ArrayOfNodes;
-            for(int n = 0; n < Array.size(); n++){
-                //std::cout<<"Looping through animation nodes for our node\n";
-                if(Array[n].Head.nNameIndex == nIndex) return Array[n];
-            }
-        }
-    }
-    bool HeadLinked(){
-        for(int n = 0; n < FH[0].MH.ArrayOfNodes.size(); n++){
-            if(FH[0].MH.ArrayOfNodes.at(n).nOffset == FH[0].MH.nOffsetToHeadRootNode){
-                if(FH[0].MH.Names.at(FH[0].MH.ArrayOfNodes.at(n).Head.nNameIndex).sName == "neck_g") return true;
-                else return false;
-            }
-        }
-        return false;
-    }
-    bool NodeExists(const std::string & sNodeName){
-        FileHeader & Data = FH[0];
-        for(int n = 0; n < Data.MH.Names.size(); n++){
-            if(Data.MH.Names.at(n).sName == sNodeName) return true;
-        }
-        return false;
-    }
-
-
-    //Loaders
-    bool Compile();
-    void DecompileModel(bool bMinimal = false);
-    void AsciiPostProcess();
-    void CleanupAfterCompilation(){}
-    void CheckPeculiarities();
-    void BuildTree();
-    void UpdateDisplay(HTREEITEM hItem);
-    void FlushData(){
-        FH.clear();
-    }
-
-
-    //Setters/general
-    bool LinkHead(bool bLink){
-        unsigned int nOffset;
-        if(bLink){
-            int nNameIndex = -1;
-            for(int n = 0; n < FH[0].MH.Names.size() && nNameIndex == -1; n++){
-                if(FH[0].MH.Names.at(n).sName == "neck_g") nNameIndex = n;
-            }
-            if(nNameIndex != -1){
-                nOffset = GetNodeByNameIndex(nNameIndex).nOffset;
-            }
-            else return false;
-        }
-        else{
-            nOffset = FH[0].MH.GH.nOffsetToRootNode;
-        }
-        FH[0].MH.nOffsetToHeadRootNode = nOffset;
-        WriteIntToPH(nOffset, 180, nOffset);
-        return true;
-    }
-
-    //ascii
-    void ExportAscii(std::string &sExport);
-    void FlushAscii(){
-        AsciiReader.FlushAll();
-    }
-    std::vector<char> & CreateAsciiBuffer(int nSize){
-        return AsciiReader.CreateBuffer(nSize);
-    }
-    bool ReadAscii(){
-        //CreateDataStructure
-        FH.resize(1);
-        bool bReturn = AsciiReader.Read(&FH[0]);
-        if(!bReturn){
-            FlushData();
-        }
-        else std::cout<<"Ascii read succesfully!\n";
-        return bReturn;
-    }
-};
-
-void LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
-
-extern MDL Model;
+int ReturnController(std::string sController);
+std::string ReturnClassificationName(int nClassification);
+std::string ReturnControllerName(int, int nType);
 
 
 #endif // MDL_H_INCLUDED
