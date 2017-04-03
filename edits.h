@@ -47,8 +47,14 @@ class Edits{
             sBuffer = &Model.GetBuffer();
         }
         else if(nSel == 1){
-            nKnownArray = &Model.Mdx->GetKnownData();
-            sBuffer = &Model.Mdx->GetBuffer();
+            if(Model.Mdx){
+                nKnownArray = &Model.Mdx->GetKnownData();
+                sBuffer = &Model.Mdx->GetBuffer();
+            }
+            else{
+                nKnownArray = nullptr;
+                sBuffer = nullptr;
+            }
         }
         else if(nSel == 2){
             nKnownArray = &Walkmesh.GetKnownData();
@@ -56,27 +62,29 @@ class Edits{
         }
         else Error("Trying to select a tab that does not exist! (Don't ask me how that's possible)");
 
-        if(sBuffer->empty()) ShowWindow(hScrollVert, false);
-        else ShowWindow(hScrollVert, true);
+        if(sBuffer != nullptr && nKnownArray != nullptr){
+            if(sBuffer->empty()) ShowWindow(hScrollVert, false);
+            else ShowWindow(hScrollVert, true);
 
-        SetClassLongPtr(hMe, GCLP_HCURSOR, (LONG_PTR) LoadCursor(NULL, IDC_ARROW));
-        ptHover.x = -1;
-        ptHover.y = -1;
-        ptPrevious.x = -1;
-        ptPrevious.y = -1;
-        ptClick.x = -1;
-        ptClick.y = -1;
-        ptRelease.x = -1;
-        ptRelease.y = -1;
-        nSelectStart = -1;
-        nSelectEnd = -1;
-        bSelection = false;
-        yMaxScroll = ((sBuffer->size() - 1)/16 + 2) * ME_EDIT_NEXT_ROW;
-        yCurrentScroll = 0;
-        UpdateEdit();
-        UpdateStatusBar();
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) "");
-        if(DEBUG_LEVEL > 80) std::cout<<string_format("New MaxScroll: %i, new CurrentScroll: %i \n", yMaxScroll, yCurrentScroll);
+            SetClassLongPtr(hMe, GCLP_HCURSOR, (LONG_PTR) LoadCursor(NULL, IDC_ARROW));
+            ptHover.x = -1;
+            ptHover.y = -1;
+            ptPrevious.x = -1;
+            ptPrevious.y = -1;
+            ptClick.x = -1;
+            ptClick.y = -1;
+            ptRelease.x = -1;
+            ptRelease.y = -1;
+            nSelectStart = -1;
+            nSelectEnd = -1;
+            bSelection = false;
+            yMaxScroll = ((sBuffer->size() - 1)/16 + 2) * ME_EDIT_NEXT_ROW;
+            yCurrentScroll = 0;
+            UpdateEdit();
+            UpdateStatusBar();
+            SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) "");
+            if(DEBUG_LEVEL > 80) std::cout<<string_format("New MaxScroll: %i, new CurrentScroll: %i \n", yMaxScroll, yCurrentScroll);
+        }
     }
     HWND GetWindowHandle(){
         return hMe;

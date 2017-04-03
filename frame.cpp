@@ -182,9 +182,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             mii.fState = MFS_DISABLED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
             mii.fState = MFS_UNCHECKED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
             mii.fState = MFS_CHECKED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
         }
         break;
         case WM_NOTIFY:
@@ -306,6 +306,12 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         else if(bLinkHead) mii.fState = MFS_CHECKED;
                         else mii.fState = MFS_UNCHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                        if(Model.bK2) mii.fState = MFS_UNCHECKED;
+                        else mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
+                        if(!Model.bK2) mii.fState = MFS_UNCHECKED;
+                        else mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
                     }
                 }
                 break;
@@ -361,9 +367,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             mii.cbSize = sizeof(MENUITEMINFO);
                             mii.fMask = MIIM_STATE;
                             mii.fState = MFS_CHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
                             mii.fState = MFS_UNCHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
                         }
                     }
                 }
@@ -385,9 +391,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             mii.cbSize = sizeof(MENUITEMINFO);
                             mii.fMask = MIIM_STATE;
                             mii.fState = MFS_UNCHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K1, false, &mii);
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
                             mii.fState = MFS_CHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_GAME_K2, false, &mii);
+                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
                         }
                     }
                 }
@@ -506,7 +512,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     bool bReturn = false;
 
     cFile.resize(MAX_PATH);
-    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -541,7 +547,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());
@@ -593,7 +599,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile[0]; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
             cExt = PathFindExtension(cFile.c_str());

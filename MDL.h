@@ -97,7 +97,7 @@
 #define NODE_SIZE_DANGLY      28
 #define NODE_SIZE_AABB        1
 //#define NODE_SIZE_400       0
-#define NODE_SIZE_SABER       20
+#define NODE_SIZE_SABER       20   // Not supported by NWMax
 
 #define EMITTER_FLAG_P2P                0x0001
 #define EMITTER_FLAG_P2P_SEL            0x0002
@@ -110,8 +110,8 @@
 #define EMITTER_FLAG_INHERIT_LOCAL      0x0100
 #define EMITTER_FLAG_SPLAT              0x0200
 #define EMITTER_FLAG_INHERIT_PART       0x0400
-#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //ndix UR
-#define EMITTER_FLAG_RENDER_ORDER       0x1000 //ndix UR
+#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //ndix UR¸  // Not supported by NWMax
+#define EMITTER_FLAG_RENDER_ORDER       0x1000 //ndix UR   // Not supported by NWMax
 //#define EMITTER_FLAG_2000             0x2000
 //#define EMITTER_FLAG_3000             0x4000
 //#define EMITTER_FLAG_4000             0x8000
@@ -170,10 +170,13 @@
 #define CONTROLLER_HEADER_ORIENTATION           20
 #define CONTROLLER_HEADER_SCALING               36
 ///------------------------------------------------
+#define CONTROLLER_MESH_SELFILLUMCOLOR          100
+#define CONTROLLER_MESH_ALPHA                   132
+///------------------------------------------------
 #define CONTROLLER_LIGHT_COLOR                  76
 #define CONTROLLER_LIGHT_RADIUS                 88
-#define CONTROLLER_LIGHT_SHADOWRADIUS           96
-#define CONTROLLER_LIGHT_VERTICALDISPLACEMENT   100
+#define CONTROLLER_LIGHT_SHADOWRADIUS           96   // Not supported by NWMax
+#define CONTROLLER_LIGHT_VERTICALDISPLACEMENT   100  // Not supported by NWMax
 #define CONTROLLER_LIGHT_MULTIPLIER             140
 ///------------------------------------------------
 #define CONTROLLER_EMITTER_ALPHAEND             80
@@ -206,38 +209,35 @@
 #define CONTROLLER_EMITTER_LIGHTNINGRADIUS      188
 #define CONTROLLER_EMITTER_LIGHTNINGSCALE       192
 #define CONTROLLER_EMITTER_LIGHTNINGSUBDIV      196
-#define CONTROLLER_EMITTER_LIGHTNINGZIGZAG      200
+#define CONTROLLER_EMITTER_LIGHTNINGZIGZAG      200  // Not supported by NWMax
 //#define CONTROLLER_EMITTER_204                204
 //#define CONTROLLER_EMITTER_208                208
 //#define CONTROLLER_EMITTER_212                212
-#define CONTROLLER_EMITTER_ALPHAMID             216
-#define CONTROLLER_EMITTER_PERCENTSTART         220
-#define CONTROLLER_EMITTER_PERCENTMID           224
-#define CONTROLLER_EMITTER_PERCENTEND           228
-#define CONTROLLER_EMITTER_SIZEMID              232
-#define CONTROLLER_EMITTER_SIZEMID_Y            236
-#define CONTROLLER_EMITTER_RANDOMBIRTHRATE      240
+#define CONTROLLER_EMITTER_ALPHAMID             216  // Not supported by NWMax
+#define CONTROLLER_EMITTER_PERCENTSTART         220  // Not supported by NWMax
+#define CONTROLLER_EMITTER_PERCENTMID           224  // Not supported by NWMax
+#define CONTROLLER_EMITTER_PERCENTEND           228  // Not supported by NWMax
+#define CONTROLLER_EMITTER_SIZEMID              232  // Not supported by NWMax
+#define CONTROLLER_EMITTER_SIZEMID_Y            236  // Not supported by NWMax
+#define CONTROLLER_EMITTER_RANDOMBIRTHRATE      240  // Not supported by NWMax
 //#define CONTROLLER_EMITTER 244                244
 //#define CONTROLLER_EMITTER 248                248
-#define CONTROLLER_EMITTER_TARGETSIZE           252
-#define CONTROLLER_EMITTER_NUMCONTROLPTS        256
-#define CONTROLLER_EMITTER_CONTROLPTRADIUS      260
-#define CONTROLLER_EMITTER_CONTROLPTDELAY       264
-#define CONTROLLER_EMITTER_TANGENTSPREAD        268
-#define CONTROLLER_EMITTER_TANGENTLENGTH        272
+#define CONTROLLER_EMITTER_TARGETSIZE           252  // Not supported by NWMax
+#define CONTROLLER_EMITTER_NUMCONTROLPTS        256  // Not supported by NWMax
+#define CONTROLLER_EMITTER_CONTROLPTRADIUS      260  // Not supported by NWMax
+#define CONTROLLER_EMITTER_CONTROLPTDELAY       264  // Not supported by NWMax
+#define CONTROLLER_EMITTER_TANGENTSPREAD        268  // Not supported by NWMax
+#define CONTROLLER_EMITTER_TANGENTLENGTH        272  // Not supported by NWMax
 //#define CONTROLLER_EMITTER_276                276
 //#define CONTROLLER_EMITTER_280                280
-#define CONTROLLER_EMITTER_COLORMID             284
+#define CONTROLLER_EMITTER_COLORMID             284  // Not supported by NWMax
 /// ... many controller numbers ... ///
 #define CONTROLLER_EMITTER_COLOREND             380
 //#define CONTROLLER_EMITTER_384                384
 //#define CONTROLLER_EMITTER_388                388
 #define CONTROLLER_EMITTER_COLORSTART           392
 /// ... many controller numbers ... ///
-#define CONTROLLER_EMITTER_DETONATE             502
-///------------------------------------------------
-#define CONTROLLER_MESH_SELFILLUMCOLOR          100
-#define CONTROLLER_MESH_ALPHA                   132
+#define CONTROLLER_EMITTER_DETONATE             502  // Not supported by NWMax
 
 //Data structures
 struct Face;
@@ -891,8 +891,8 @@ struct EmitterHeader{
     double fDeadSpace = 0.0;
     double fBlastRadius = 0.0;
     double fBlastLength = 0.0;
-    unsigned int nBranchCount = 0;
-    double fControlPointSmoothing = 0.0;
+    unsigned int nBranchCount = 0;    // Not supported by NWMax
+    double fControlPointSmoothing = 0.0;    // Not supported by NWMax
     unsigned int nxGrid = 0;
     unsigned int nyGrid = 0;
     unsigned int nSpawnType = 0;
@@ -904,8 +904,8 @@ struct EmitterHeader{
     unsigned int nTwosidedTex = 0;
     unsigned int nLoop = 0;
     unsigned short nUnknown1 = 0;
-    unsigned char nFrameBlending = 0;
-    std::string cDepthTextureName; //32B
+    unsigned char nFrameBlending = 0;   // Not supported by NWMax
+    std::string cDepthTextureName; //32B   // Not supported by NWMax
     unsigned char nUnknown2 = 0;
     unsigned int nFlags = 0; //unsure
 };
@@ -924,10 +924,10 @@ struct MeshHeader{
          * 4216896 K2, 4216832 K2 SkinMesh, 4216848 K2 DanglyMesh
          */
     ArrayHead FaceArray;
-    Vector vBBmin;
-    Vector vBBmax;
-    double fRadius = 0.0;
-    Vector vAverage;
+    Vector vBBmin; //not exported
+    Vector vBBmax; //not exported
+    double fRadius = 0.0; //not exported
+    Vector vAverage; //not exported
     Color fDiffuse;
     Color fAmbient;
     unsigned int nTransparencyHint = 0;
@@ -936,9 +936,9 @@ struct MeshHeader{
          * Blend Factor, SamplerStageStates, TextureOperation?
          */
     std::string cTexture1;
-    std::string cTexture2;
-    std::string cTexture3;
-    std::string cTexture4;
+    std::string cTexture2;   // Not supported by NWMax (export only with magnusll's script)
+    std::string cTexture3;   // Not supported by NWMax
+    std::string cTexture4;   // Not supported by NWMax
     ArrayHead IndexCounterArray;
     ArrayHead IndexLocationArray;
     ArrayHead MeshInvertedCounterArray;
@@ -958,7 +958,7 @@ struct MeshHeader{
     char nSaberUnknown5 = 0; // 0 for non-saber
     char nSaberUnknown6 = 0; // 0 for non-saber
     char nSaberUnknown7 = 0; // 0 for non-saber
-    char nSaberUnknown8 = 0; // 0 for non-saber, 17 for sabers
+    char nSaberUnknown8 = 0; // 0 for non-saber
     int nAnimateUV = 0;
     double fUVDirectionX = 0.0;
     double fUVDirectionY = 0.0;
@@ -981,20 +981,20 @@ struct MeshHeader{
 
     unsigned short nNumberOfVerts = 0;
     unsigned short nTextureNumber = 0;
-    char nHasLightmap = 0;
+    char nHasLightmap = 0;  // Not supported by NWMax
     char nRotateTexture = 0;
-    char nBackgroundGeometry = 0;
+    char nBackgroundGeometry = 0;  // Not supported by NWMax
     char nShadow = 0;
     char nBeaming = 0;
     char nRender = 0;
-    char nDirtEnabled = 0; //K2
+    char nDirtEnabled = 0; //K2  // Not supported by NWMax
     char nUnknown1 = 0; //K2
-    short nDirtTexture = 0; //K2
-    short nDirtCoordSpace = 0; //K2
-    char nHideInHolograms = 0; //K2
+    short nDirtTexture = 0; //K2  // Not supported by NWMax
+    short nDirtCoordSpace = 0; //K2  // Not supported by NWMax
+    char nHideInHolograms = 0; //K2  // Not supported by NWMax
     char nUnknown2 = 0; //K2
     short nUnknown4 = 0;
-    double fTotalArea = 0.0;
+    double fTotalArea = 0.0; //not exported
     unsigned int nPadding = 0;
     unsigned int nOffsetIntoMdx = 0;
     unsigned int nOffsetToVertArray = 0;

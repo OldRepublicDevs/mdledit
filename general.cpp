@@ -278,6 +278,11 @@ void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount){
     }
 }
 
+char * operator&(std::string & sStr){
+    if(sStr.length() > 0) return &sStr.at(0);
+    else return nullptr;
+}
+
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     int nx = ptLine1.x;
     int nx2 = ptLine2.x;

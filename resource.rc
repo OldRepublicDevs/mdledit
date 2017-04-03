@@ -34,26 +34,26 @@ END
 IDM_MAIN MENU DISCARDABLE
 BEGIN
     POPUP " &File "
-    BEGIN
-    MENUITEM "&Load...", IDM_MDL_OPEN
-    POPUP "Export"
         BEGIN
-        MENUITEM "&Binary...", IDM_BIN_SAVE
-        MENUITEM "&ASCII...", IDM_ASCII_SAVE
+        MENUITEM "&Load...", IDM_MDL_OPEN
+        POPUP "Export"
+            BEGIN
+            MENUITEM "&Binary...", IDM_BIN_SAVE
+            MENUITEM "&ASCII...", IDM_ASCII_SAVE
+            END
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit", IDM_FILE_EXIT
         END
-    MENUITEM SEPARATOR
-    MENUITEM "E&xit", IDM_FILE_EXIT
-    END
     POPUP " &Options "
-    BEGIN
-    MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
-    POPUP "&Game"
+        BEGIN
+        MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
+        MENUITEM "&Settings...", IDM_SETTINGS
+        END
+    POPUP " &Game "
         BEGIN
         MENUITEM "&K1", IDM_GAME_K1
         MENUITEM "&K2", IDM_GAME_K2
         END
-    MENUITEM "&Settings...", IDM_SETTINGS
-    END
     /**
     POPUP " &MDL "
     BEGIN

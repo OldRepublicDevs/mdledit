@@ -80,16 +80,16 @@ int Error(std::string sErrorMessage);
 int WarningCancel(std::string sWarningMessage);
 int Warning(std::string sWarningMessage);
 int pown(int base, int exp);
-float powf(float base, float exp);
+//float powf(float base, float exp);
 float deg(float rad);
 float rad(float deg);
 double deg(double rad);
 double rad(double deg);
-float acosf(float fVal);
-float cosf(float fVal);
-float sinf(float fVal);
-float tanf(float fVal);
-float sqrtf(float fVal);
+//float acosf(float fVal);
+//float cosf(float fVal);
+//float sinf(float fVal);
+//float tanf(float fVal);
+//float sqrtf(float fVal);
 void QuaternionToAA(float * fQuaternion, float * fAA);
 void AAToQuaternion(float * fAA, float * fQuaternion);
 void QuaternionToAA(double * fQuaternion, double * fAA);
@@ -102,5 +102,7 @@ struct MenuLineAdder{
     HMENU hMenu;
     int nIndex;
 };
+
+char * operator&(std::string & sStr);
 
 #endif // GENERAL_H_INCLUDED
