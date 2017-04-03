@@ -1,9 +1,17 @@
 
 
-
- 1. viewer for Walkmesh (somewhat done)
- 2. interpret WOK (mostly done)
- 3. AABB tree creator
+TO DO:
+ - Make import for bezier keys
+ - Make new duplicate node numbering
+ - Add more stuff to editordlg (texture names, controller data, for example)
+ - Create model-wide texture name replacer
+ - NWMax scripts: see if it's possible to import channels 2,3,4 and export channels 3,4.
+ - Calculate the radius from the average
+ - make saber import
+ - test bezier keys
+ - viewer for Walkmesh (somewhat done)
+ - interpret WOK (mostly done)
+ - AABB tree creator
 
 
  Binary diff shortcomings:

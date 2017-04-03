@@ -343,3 +343,8 @@ bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     }
     else return false;
 }
+
+std::string safesubstr(const std::string & sParam, size_t nStart, size_t nEnd){
+    if(nStart > sParam.length() || nEnd < 0 || nStart < 0) return sParam;
+    else return sParam.substr(nStart, nEnd);
+}

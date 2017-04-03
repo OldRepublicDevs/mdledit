@@ -263,7 +263,7 @@ void BuildTree(MDL & Mdl){
             CurrentNode = Append(Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
 
             HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
-            Append("Controller Data", (LPARAM) &node.Head, Controllers);
+            if(!node.Head.ControllerData.empty()) Append("Controller Data", (LPARAM) &node.Head, Controllers);
             for(int n = 0; n < node.Head.Controllers.size(); n++){
                 int nCtrlIndex = node.Head.Controllers[n].nNameIndex;
                 int nCtrlType = node.Head.Controllers[n].nControllerType;
@@ -292,37 +292,38 @@ void BuildTree(MDL & Mdl){
     Nodes = Append("Geometry", NULL, Root);
     for(int a = 0; a < Data.MH.ArrayOfNodes.size(); a++){
         Node & node = Data.MH.ArrayOfNodes[a];
+        if(node.Head.nType != 0){
+            std::string sType;
+            if(node.Head.nType & NODE_HAS_SABER) sType = "(saber) ";
+            else if(node.Head.nType & NODE_HAS_AABB) sType = "(walkmesh) ";
+            else if(node.Head.nType & NODE_HAS_DANGLY) sType = "(danglymesh) ";
+            else if(node.Head.nType & NODE_HAS_SKIN) sType = "(skin) ";
+            else if(node.Head.nType & NODE_HAS_MESH) sType = "(mesh) ";
+            else if(node.Head.nType & NODE_HAS_EMITTER) sType = "(emitter) ";
+            else if(node.Head.nType & NODE_HAS_LIGHT) sType = "(light) ";
+            else if(node.Head.nType & NODE_HAS_HEADER) sType = "(basic) ";
+            else sType = "(unknown) ";
+            CurrentNode = Append(sType + Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
 
-        std::string sType;
-        if(node.Head.nType & NODE_HAS_SABER) sType = "(saber) ";
-        else if(node.Head.nType & NODE_HAS_AABB) sType = "(walkmesh) ";
-        else if(node.Head.nType & NODE_HAS_DANGLY) sType = "(danglymesh) ";
-        else if(node.Head.nType & NODE_HAS_SKIN) sType = "(skin) ";
-        else if(node.Head.nType & NODE_HAS_MESH) sType = "(mesh) ";
-        else if(node.Head.nType & NODE_HAS_EMITTER) sType = "(emitter) ";
-        else if(node.Head.nType & NODE_HAS_LIGHT) sType = "(light) ";
-        else if(node.Head.nType & NODE_HAS_HEADER) sType = "(basic) ";
-        else sType = "(error) ";
-        CurrentNode = Append(sType + Data.MH.Names[node.Head.nNameIndex].sName, (LPARAM) &node, Nodes);
+            AppendChildren(node, CurrentNode, Data.MH.Names, Mdl);
 
-        AppendChildren(node, CurrentNode, Data.MH.Names, Mdl);
+            HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
+            if(!node.Head.ControllerData.empty()) Append("Controller Data", (LPARAM) &node.Head, Controllers);
+            for(int n = 0; n < node.Head.Controllers.size(); n++){
+                Append(ReturnControllerName(node.Head.Controllers[n].nControllerType, node.Head.nType), (LPARAM) &(node.Head.Controllers[n]), Controllers);
+            }
 
-        HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
-        Append("Controller Data", (LPARAM) &node.Head, Controllers);
-        for(int n = 0; n < node.Head.Controllers.size(); n++){
-            Append(ReturnControllerName(node.Head.Controllers[n].nControllerType, node.Head.nType), (LPARAM) &(node.Head.Controllers[n]), Controllers);
-        }
+            HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
+            if(node.Head.nParentIndex != -1){
+                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
+            }
 
-        HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
-        if(node.Head.nParentIndex != -1){
-            Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
-        }
-
-        HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
-        for(int g = 0; g < Data.MH.ArrayOfNodes.size(); g++){
-            Node & curnode = Data.MH.ArrayOfNodes[g];
-            if(curnode.Head.nParentIndex == node.Head.nNameIndex){
-                Append(Data.MH.Names[curnode.Head.nNameIndex].sName, (LPARAM) &curnode, Children);
+            HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
+            for(int g = 0; g < Data.MH.ArrayOfNodes.size(); g++){
+                Node & curnode = Data.MH.ArrayOfNodes[g];
+                if(curnode.Head.nParentIndex == node.Head.nNameIndex){
+                    Append(Data.MH.Names[curnode.Head.nNameIndex].sName, (LPARAM) &curnode, Children);
+                }
             }
         }
     }

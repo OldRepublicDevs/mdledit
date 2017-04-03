@@ -79,7 +79,7 @@ void MDL::FlushData(){
     FH.reset();
     Ascii.reset();
     Mdx.reset();
-    sBuffer.clear();
+    FlushAll();
 }
 
 //Setters/general
@@ -113,7 +113,7 @@ void MDL::WriteByteToPlaceholder(unsigned char nByte, int nOffset){
 
 //ascii
 void MDL::FlushAscii(){
-    Ascii->FlushAll();
+    if(Ascii) Ascii->FlushAll();
 }
 
 std::vector<char> & MDL::CreateAsciiBuffer(int nSize){
@@ -669,7 +669,7 @@ std::string ReturnClassificationName(int nClassification){
         case CLASS_SABER: return "";
         case CLASS_PLACEABLE: return "Placeable";
     }
-    std::cout<<string_format("ReturnClassification() ERROR: Unknown classification %i.\n", nClassification);
+    std::cout<<"ReturnClassification() ERROR: Unknown classification "<<nClassification<<".\n";
     return "unknown";
 }
 
@@ -749,7 +749,7 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_LIGHT_RADIUS:               return "radius";
         case CONTROLLER_LIGHT_SHADOWRADIUS:         return "shadowradius";          //Missing from NWmax
         case CONTROLLER_LIGHT_VERTICALDISPLACEMENT: return "verticaldisplacement";  //Missing from NWmax
-        case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";             //NWmax reads 'multipler', not 'multiplier'
+        case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";
         }
     }
     else if(nType & NODE_HAS_EMITTER){

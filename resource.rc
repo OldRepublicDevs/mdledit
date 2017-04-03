@@ -55,15 +55,6 @@ BEGIN
         MENUITEM "&K2", IDM_GAME_K2
         END
     /**
-    POPUP " &MDL "
-    BEGIN
-    MENUITEM "&Open...", IDM_MDL_OPEN
-    END
-    POPUP " &MDX "
-    BEGIN
-    MENUITEM "&Open...", IDM_MDX_OPEN
-    END
-    /**
     POPUP "&Help"
     BEGIN
         MENUITEM "&About", IDM_HELP_ABOUT

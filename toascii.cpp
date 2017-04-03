@@ -51,7 +51,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
             }
             else{
-                std::cout<<string_format("Writing ASCII ERROR!!! Headerless node! Offset: %u\n", node.nOffset);
+                std::cout<<"Writing ASCII WARNING: Headerless (ghost?) node! Offset: "<<node.nOffset<<"\n";
             }
             if(node.Head.nType & NODE_HAS_AABB){
                 ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
@@ -77,7 +77,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else if(node.Head.nType & NODE_HAS_LIGHT){
                 ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
             }
-            ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
+            if(node.Head.nType != 0) ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
         }
         sReturn << string_format("\r\nendmodelgeom %s\r\n", mh->GH.sName.c_str());
 
@@ -233,13 +233,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\r\n  beaming " << (int) node->Mesh.nBeaming;
         sReturn << "\r\n  lightmapped " << (int) node->Mesh.nHasLightmap;
         sReturn << "\r\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
-        /// transparencyhint
         sReturn << "\r\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
         sReturn << "\r\n  dirt_texture " << node->Mesh.nDirtTexture;
         sReturn << "\r\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
         sReturn << "\r\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         //sReturn << "\r\n  specular 0.0 0.0 0.0";
-        sReturn << "\r\n  shininess " << node->Mesh.nTransparencyHint;
+        sReturn << "\r\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\r\n  animateuv " << node->Mesh.nAnimateUV;
         //if(node->Mesh.nAnimateUV){
             sReturn << "\r\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX, 0);
@@ -418,7 +417,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "\r\n    13 8 12 1 13 8 12 0";
             sReturn << "\r\n    8 13 9 1 8 13 9 0";
             sReturn << "\r\n    6 5 1 1 6 5 1 0";
+            //sReturn << "\r\n    2 6 5 1 2 6 5 0"; //Correct faces, but not what they are in the game
             sReturn << "\r\n    1 2 6 1 1 2 6 0";
+            //sReturn << "\r\n    1 2 5 1 1 2 5 0"; //Correct faces, but not what they are in the game
             sReturn << "\r\n    10 9 13 1 10 9 13 0";
             sReturn << "\r\n    13 14 10 1 13 14 10 0";
             sReturn << "\r\n    3 6 2 1 3 6 2 0";
@@ -451,7 +452,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node & geonode = GetNodeByNameIndex(ctrl->nNameIndex);
         Location loc = geonode.GetLocation();
         Node & node = GetNodeByNameIndex(ctrl->nNameIndex, ctrl->nAnimation);
-        sReturn<<"\r\n"<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType)<<"key";
+        sReturn<<"\r\n"<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
+        if(ctrl->nColumnCount > 16) sReturn<<"bezierkey";
+        else sReturn<<"key";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
             ///TO-DO: add the geometry value
@@ -478,8 +481,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 CtrlOrient.ConvertToAA();
                 sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
             }
-        }
-        else if(ctrl->nColumnCount == 19 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+        }/*
+        /// positionbezierkey
+        else if(ctrl->nColumnCount > 16 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
             std::cout<<"Warning! Converting positionbezierkey to ascii positionkey. The bezier data is lost.\n";
             for(int n = 0; n < ctrl->nValueCount; n++){
@@ -490,7 +494,19 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*9 + (6 + 2)], 0);
             }
+        }*/
+        /// regular bezierkey
+        else if(ctrl->nColumnCount > 16){
+            //bezierkey
+            for(int n = 0; n < ctrl->nValueCount; n++){
+                sReturn<<"\r\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                for(int i = 0; i < (ctrl->nColumnCount - 16) * 3; i++){
+                    sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*((ctrl->nColumnCount - 16) * 3) + i], 0);
+                    if(i < (ctrl->nColumnCount - 16) * 3 - 1) sReturn << " ";
+                }
+            }
         }
+        /// positionkey
         else if(ctrl->nColumnCount == 3 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //normal position
             for(int n = 0; n < ctrl->nValueCount; n++){
@@ -503,6 +519,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
 
         }
+        /// regular key
         else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
             //default parser
             for(int n = 0; n < ctrl->nValueCount; n++){

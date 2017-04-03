@@ -135,7 +135,7 @@ bool ASCII::Read(MDL & Mdl){
 
                     if(!ReadFloat(fConvert)) bError = true; //First read the timekey, also check that we're valid
 
-                    if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION && ctrl.nColumnCount < 16){
                         double fX, fY, fZ, fA;
                         if(ReadFloat(fConvert)) fX = fConvert;
                         else bError = true;
@@ -153,7 +153,7 @@ bool ASCII::Read(MDL & Mdl){
                         node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
                         node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
                     }
-                    else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
+                    else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION && ctrl.nColumnCount < 16){
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
                         else bError = true;
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fY);
@@ -1339,15 +1339,15 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                /// Next we have keyed controllers
-                else if(sLastThree == "key" && ReturnController(sID.substr(0, sID.length()-3))){
+                /// Next we have bezier controllers
+                else if(safesubstr(sID, sID.length()-9) == "bezierkey" && ReturnController(safesubstr(sID, 0, sID.length()-9))){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Animation & anim = FH->MH.Animations.back();
                     Node & node = anim.ArrayOfNodes.back();
                     Controller ctrl;
                     ctrl.nAnimation = nAnimation;
                     ctrl.nNameIndex = node.Head.nNameIndex;
-                    ctrl.nControllerType = ReturnController(sID.substr(0, sID.length()-3));
+                    ctrl.nControllerType = ReturnController(safesubstr(sID, 0, sID.length()-9));
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
@@ -1382,6 +1382,94 @@ bool ASCII::Read(MDL & Mdl){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
                         bError = true;
                     }
+
+                    ctrl.nColumnCount = 16 + (nDataCounter - 1) / 3;
+                    //std::cout<<"Column count for "<<sID<<" is "<<nDataCounter - 1<<"\n";
+
+                    //Now let's get the row count. It is actually best to also read the timekeys in this step
+                    nPosition = nSavePos;
+                    SkipLine();
+                    nDataCounter = 0;
+                    bFound = true;
+                    int nSavePos2;
+                    while(bFound){
+                        nSavePos2 = nPosition;
+                        ReadUntilText(sID);
+                        if(sID=="endlist") bFound = false;
+                        else{
+                            nPosition = nSavePos2;
+                            if(!EmptyRow()){
+                                if(ReadFloat(fConvert)){
+                                    node.Head.ControllerData.push_back(fConvert);
+                                }
+                                else bError = true;
+                                nDataCounter++;
+                            }
+                            SkipLine();
+                        }
+                    }
+                    if(nDataCounter == 0){
+                        std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
+                        bError = true;
+                    }
+                    ctrl.nValueCount = nDataCounter;
+                    ctrl.nDataStart = node.Head.ControllerData.size();
+
+                    //We now have all the data, append the controller, reset the position and prepare for actually reading the keys.
+                    nPosition = nSavePos;
+                    if(!bError){
+                        node.Head.Controllers.push_back(ctrl);
+                    }
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    bKeys = true;
+                    SkipLine();
+                }
+                /// Next we have keyed controllers
+                else if(safesubstr(sID, sID.length()-3) == "key" && ReturnController(safesubstr(sID, 0, sID.length()-3))){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Animation & anim = FH->MH.Animations.back();
+                    Node & node = anim.ArrayOfNodes.back();
+                    Controller ctrl;
+                    ctrl.nAnimation = nAnimation;
+                    ctrl.nNameIndex = node.Head.nNameIndex;
+                    ctrl.nControllerType = ReturnController(safesubstr(sID, 0, sID.length()-3));
+                    ctrl.nTimekeyStart = node.Head.ControllerData.size();
+                    ctrl.nUnknown2 = -1;
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
+                       Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
+                        //For non-emitter and non-light controllers
+                        ctrl.nPadding[0] = 50;
+                        ctrl.nPadding[1] = 18;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    else{
+                        //all emitter and light controllers
+                        ctrl.nPadding[0] = 51;
+                        ctrl.nPadding[1] = 18;
+                        ctrl.nPadding[2] = 0;
+                    }
+                    //This is all we can tell right now.
+                    int nSavePos = nPosition; //Save position
+
+                    //To continue let's first get the column count
+                    SkipLine();
+                    nDataCounter = 0;
+                    bFound = true;
+                    while(bFound){
+                        if(ReadFloat(fConvert)){
+                            nDataCounter++;
+                        }
+                        else bFound = false;
+                    }
+                    if(nDataCounter == 0){
+                        std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
+                        bError = true;
+                    }
+
                     ctrl.nColumnCount = nDataCounter - 1;
                     //std::cout<<"Column count for "<<sID<<" is "<<nDataCounter - 1<<"\n";
 

@@ -632,9 +632,6 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 //A model is already open. Flush it to make room for the new one.
                 TreeView_DeleteAllItems(hTree);
                 Model.FlushData();
-                Model.FlushAscii();
-                Model.FlushAll();
-                Model.Mdx->FlushAll();
                 Walkmesh.FlushAll();
             }
 
@@ -782,19 +779,20 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     Model.CheckPeculiarities(); //Finally, check for peculiarities
 
     //Create filedebug
-    std::string sSuperDebug = Model.GetFullPath().c_str();
-    sSuperDebug += "_super.txt";
-    std::stringstream filedebug;
+    //std::string sSuperDebug = Model.GetFullPath().c_str();
+    //sSuperDebug += "_super.txt";
+    //std::stringstream filedebug;
+    /*
     std::vector<MDL> Supermodels;
     LoadSupermodel(Model, Supermodels);
     for(int m = Supermodels.size() - 1; m >= 0; m--){
         FileHeader & Data = *Supermodels.at(m).GetFileData();
-        filedebug<<Data.MH.GH.sName.c_str()<<"\r\n";
+        //filedebug<<Data.MH.GH.sName.c_str()<<"\r\n";
         for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
             Node & node = Data.MH.ArrayOfNodes.at(n);
-            filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
-            if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
-            filedebug<<"\r\n";
+            //filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
+            //if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
+            //filedebug<<"\r\n";
         }
     }
     FileHeader & Data = *Model.GetFileData();
@@ -812,6 +810,7 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
         filedebugwrite<<filedebug.str();
     }
     filedebugwrite.close();
+    */
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }

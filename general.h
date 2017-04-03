@@ -90,8 +90,8 @@ double rad(double deg);
 //float sinf(float fVal);
 //float tanf(float fVal);
 //float sqrtf(float fVal);
-void QuaternionToAA(float * fQuaternion, float * fAA);
-void AAToQuaternion(float * fAA, float * fQuaternion);
+//void QuaternionToAA(float * fQuaternion, float * fAA);
+//void AAToQuaternion(float * fAA, float * fQuaternion);
 void QuaternionToAA(double * fQuaternion, double * fAA);
 void AAToQuaternion(double * fAA, double * fQuaternion);
 double RoundDec(double fNumber, int nDecPlaces);
@@ -104,5 +104,6 @@ struct MenuLineAdder{
 };
 
 char * operator&(std::string & sStr);
+std::string safesubstr(const std::string & sParam, size_t nStart, size_t nEnd = std::string::npos);
 
 #endif // GENERAL_H_INCLUDED
