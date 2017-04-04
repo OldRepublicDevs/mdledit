@@ -43,10 +43,6 @@ std::string MDL::MakeUniqueName(int nNameIndex){
     return sReturn;
 }
 
-std::vector<char> & MDL::GetAsciiBuffer(){
-    return Ascii->GetBuffer();
-}
-
 Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
     if(nAnimation == -1){
         return FH->MH.ArrayOfNodes.at(nIndex);
