@@ -2,7 +2,6 @@
 #include "file.h"
 #include <iostream>
 #include <algorithm>
-#define DEBUG_LEVEL 0
 
 BB2 ByteBlock2;
 BB4 ByteBlock4;
@@ -300,11 +299,12 @@ void TextFile::SkipLine(){
 
 bool TextFile::EmptyRow(){
     int n = nPosition; //Do not use the iterator
-    while(sBuffer[n] != 0x0D &&
-        sBuffer[n+1] != 0x0A &&
-                n+1 < sBuffer.size())
+    while( sBuffer[n] != 0x0D &&
+           sBuffer[n+1] != 0x0A &&
+           sBuffer[n] != '#' &&
+           n+1 < sBuffer.size())
     {
-        if(sBuffer[n] != 0x20 || (sBuffer[n+1] != 0x20 && sBuffer[n+1] != 0x0D)) return false;
+        if(sBuffer[n] != 0x20 || (sBuffer[n+1] != 0x20 && sBuffer[n+1] != 0x0D && sBuffer[n+1] != '#')) return false;
         n++;
     }
     return true;

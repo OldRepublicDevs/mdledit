@@ -8,7 +8,7 @@
 #include <math.h>
 #include <iostream> //for std::cout
 #include <vector> //for std::vector
-#include <memory> //for std::unique_ptr - can be eliminated if I get rid of string_format
+#include <memory> //for std::unique_ptr
 #include <string> //for std::string
 #include <sstream> //for std::stringstream
 #include "resource.h"
@@ -52,7 +52,7 @@
 #define ME_DISPLAY_OFFSET_Y         71
 #define ME_DISPLAY_SIZE_Y           205
 
-#define DEBUG_LEVEL 1
+#define DEBUG_LEVEL 0
 
 template<typename ... Args> std::string string_format( const std::string& format, Args ... args ){
     size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'

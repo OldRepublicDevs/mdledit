@@ -535,14 +535,25 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
     else if(cItem[0] == "Loop") sPrint << "Loop:\r\n" << *((int*) lParam);
     else if(cItem[0] == "Unknown Int16 1") sPrint << "Unknown Int16 1:\r\n" << *((short*) lParam);
     //else if(cItem[0] == "Render Order") sPrint << string_format("Render Order:\r\n%u", *((short*) lParam));
-    else if(cItem[0] == "Frame Blending") sPrint << "Frame Blending:\r\n" << *((unsigned char*) lParam);
+    else if(cItem[0] == "Frame Blending") sPrint << "Frame Blending:\r\n" << (int) *((unsigned char*) lParam);
     else if(cItem[0] == "Depth Texture Name") sPrint << "Depth Texture Name:\r\n" << ((char*) lParam);
-    else if(cItem[0] == "Unknown Byte 1") sPrint << "Unknown Byte 1:\r\n" << *((unsigned char*) lParam);
-    else if(cItem[0] == "Emitter Flags?")
-        sPrint << string_format("Emitter Flags??\r\np2p:           %i\r\np2p_sel:       %i\r\naffected_wind: %i\r\ntinted:        %i\r\nbounce:        %i\r\nrandom:        %i\r\ninherit:       %i\r\ninherit_vel:   %i\r\ninherit_local: %i\r\nsplat:         %i\r\ninherit_part:  %i",
-                *((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0,
-                *((int*) lParam) & EMITTER_FLAG_BOUNCE ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_RANDOM ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_VEL ? 1 : 0,
-                *((int*) lParam) & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0, *((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
+    else if(cItem[0] == "Unknown Byte 1") sPrint << "Unknown Byte 1:\r\n" << (int) *((unsigned char*) lParam);
+    else if(cItem[0] == "Emitter Flags?"){
+        sPrint << "Emitter Flags??";
+        sPrint << "\r\np2p:            "<<(*((int*) lParam) & EMITTER_FLAG_P2P ? 1 : 0);
+        sPrint << "\r\np2p_sel:        "<<(*((int*) lParam) & EMITTER_FLAG_P2P_SEL ? 1 : 0);
+        sPrint << "\r\naffected_wind:  "<<(*((int*) lParam) & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0);
+        sPrint << "\r\ntinted:         "<<(*((int*) lParam) & EMITTER_FLAG_TINTED ? 1 : 0);
+        sPrint << "\r\nbounce:         "<<(*((int*) lParam) & EMITTER_FLAG_BOUNCE ? 1 : 0);
+        sPrint << "\r\nrandom:         "<<(*((int*) lParam) & EMITTER_FLAG_RANDOM ? 1 : 0);
+        sPrint << "\r\ninherit:        "<<(*((int*) lParam) & EMITTER_FLAG_INHERIT ? 1 : 0);
+        sPrint << "\r\ninherit_vel:    "<<(*((int*) lParam) & EMITTER_FLAG_INHERIT_VEL ? 1 : 0);
+        sPrint << "\r\ninherit_local:  "<<(*((int*) lParam) & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0);
+        sPrint << "\r\nsplat:          "<<(*((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0);
+        sPrint << "\r\ninherit_part:   "<<(*((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
+        sPrint << "\r\ndepth_texture?: "<<(*((int*) lParam) & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
+        sPrint << "\r\nrenderorder?:    "<<(*((int*) lParam) & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
+    }
 
     /// Mesh ///
     else if(cItem[0] == "Mesh"){

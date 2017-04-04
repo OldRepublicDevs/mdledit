@@ -126,6 +126,7 @@ bool ASCII::Read(MDL & Mdl){
 
                 /// Read the data
                 if(bKeys){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading key data "<<nDataCounter<<".\n";
                     //We've already read the timekeys, we're left with the values
                     Animation & anim = FH->MH.Animations.back();
                     Node & node = anim.ArrayOfNodes.back();
@@ -196,6 +197,7 @@ bool ASCII::Read(MDL & Mdl){
                     else bError = true;
                 }
                 else if(bAabb){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading aabb data "<<nDataCounter<<".\n";
                     Aabb aabb; //New aabb
                     bFound = true;
                     if(ReadFloat(fConvert)) aabb.vBBmin.fX = fConvert;
@@ -220,7 +222,7 @@ bool ASCII::Read(MDL & Mdl){
                     else bError = true;
                 }
                 else if(bVerts){
-                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data"<<""<<".\n";
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data "<<nDataCounter<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = true;
                     Vector vert;
@@ -817,7 +819,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ReadInt(nConvert)) node.Emitter.nFrameBlending = nConvert;
                     SkipLine();
                 }
-                else if(sID == "m_sdepthtexture" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "m_sdepthtexturename" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1376,7 +1378,11 @@ bool ASCII::Read(MDL & Mdl){
                         if(ReadFloat(fConvert)){
                             nDataCounter++;
                         }
-                        else bFound = false;
+                        else{
+                            std::cout<<"This is not a float: "<<sID<<".\n";
+                            bError = true;
+                        }
+                        if(EmptyRow()) bFound = false;
                     }
                     if(nDataCounter == 0){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
@@ -1393,19 +1399,26 @@ bool ASCII::Read(MDL & Mdl){
                     bFound = true;
                     int nSavePos2;
                     while(bFound){
-                        nSavePos2 = nPosition;
-                        ReadUntilText(sID);
-                        if(sID=="endlist") bFound = false;
+                        //std::cout<<"Looking.. Position="<<nPosition<<".\n";
+                        if(EmptyRow()) SkipLine();
                         else{
-                            nPosition = nSavePos2;
-                            if(!EmptyRow()){
-                                if(ReadFloat(fConvert)){
-                                    node.Head.ControllerData.push_back(fConvert);
+                            nSavePos2 = nPosition;
+                            ReadUntilText(sID);
+                            if(sID=="endlist") bFound = false;
+                            else{
+                                nPosition = nSavePos2;
+                                if(!EmptyRow()){
+                                    if(ReadFloat(fConvert)){
+                                        node.Head.ControllerData.push_back(fConvert);
+                                    }
+                                    else{
+                                        std::cout<<"This is not a float: "<<sID<<".\n";
+                                        bError = true;
+                                    }
+                                    nDataCounter++;
                                 }
-                                else bError = true;
-                                nDataCounter++;
+                                SkipLine();
                             }
-                            SkipLine();
                         }
                     }
                     if(nDataCounter == 0){
@@ -1463,7 +1476,11 @@ bool ASCII::Read(MDL & Mdl){
                         if(ReadFloat(fConvert)){
                             nDataCounter++;
                         }
-                        else bFound = false;
+                        else{
+                            std::cout<<"This is not a float: "<<sID<<".\n";
+                            bError = true;
+                        }
+                        if(EmptyRow()) bFound = false;
                     }
                     if(nDataCounter == 0){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
@@ -1480,19 +1497,25 @@ bool ASCII::Read(MDL & Mdl){
                     bFound = true;
                     int nSavePos2;
                     while(bFound){
-                        nSavePos2 = nPosition;
-                        ReadUntilText(sID);
-                        if(sID=="endlist") bFound = false;
+                        if(EmptyRow()) SkipLine();
                         else{
-                            nPosition = nSavePos2;
-                            if(!EmptyRow()){
-                                if(ReadFloat(fConvert)){
-                                    node.Head.ControllerData.push_back(fConvert);
+                            nSavePos2 = nPosition;
+                            ReadUntilText(sID);
+                            if(sID=="endlist") bFound = false;
+                            else{
+                                nPosition = nSavePos2;
+                                if(!EmptyRow()){
+                                    if(ReadFloat(fConvert)){
+                                        node.Head.ControllerData.push_back(fConvert);
+                                    }
+                                    else{
+                                        std::cout<<"This is not a float: "<<sID<<".\n";
+                                        bError = true;
+                                    }
+                                    nDataCounter++;
                                 }
-                                else bError = true;
-                                nDataCounter++;
+                                SkipLine();
                             }
-                            SkipLine();
                         }
                     }
                     if(nDataCounter == 0){
@@ -1702,6 +1725,7 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "filedependancy") SkipLine();
                 else if(sID == "specular") SkipLine();
                 else if(sID == "wirecolor") SkipLine();
+                else if(sID == "shininess") SkipLine();
                 else{
                     std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
                     SkipLine();

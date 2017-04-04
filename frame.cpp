@@ -652,7 +652,12 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
                     bReturn = true;
                 }
-                else bReturn = false;
+                else{
+                    //We failed reading the ascii, so we need to clean up
+                    Edit1.LoadData();
+                    ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
+                    bReturn = false;
+                }
             }
             else{
                 std::cout<<"Reading binary...\n";
@@ -834,6 +839,7 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
 
     //Fill cItem with all the ancestors of our item
     bool bStop = false;
+    if(hItem == NULL) bStop = true;
     int n = 1;
     while(!bStop && !(cItem[0] == Model.GetFilename()) && !(cItem[0] == Walkmesh.GetFilename())){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
@@ -848,7 +854,7 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     if(nAction == ACTION_UPDATE_DISPLAY){
         std::stringstream sPrint;
         //Determine cPrint that is to be shown
-        DetermineDisplayText(cItem, sPrint, lParam);
+        if(hItem != NULL) DetermineDisplayText(cItem, sPrint, lParam);
 
         //Update DisplayEdit
         SetWindowText(hDisplayEdit, sPrint.str().c_str());

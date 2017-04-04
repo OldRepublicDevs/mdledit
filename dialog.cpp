@@ -115,13 +115,6 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
 
         sName<<"animation "<<anim->sName;
         Mdl.ConvertToAscii(CONVERT_ANIMATION, sPrint, (void*) lParam);
-
-        DialogWindow ctrldata;
-        if(!ctrldata.Run()){
-            std::cout<<string_format("DialogWindow creation failed!\n");
-        }
-        SetWindowText(ctrldata.hMe, sName.str().c_str());
-        SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     /// Anim Node ///
     else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
@@ -130,13 +123,6 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         sName<<"animated node "<<Mdl.GetFileData()->MH.Names[node->Head.nNameIndex].sName;
         Mdl.ConvertToAscii(CONVERT_ANIMATION_NODE, sPrint, (void*) lParam);
         Mdl.ConvertToAscii(CONVERT_ENDNODE, sPrint, (void*) lParam);
-
-        DialogWindow ctrldata;
-        if(!ctrldata.Run()){
-            std::cout<<string_format("DialogWindow creation failed!\n");
-        }
-        SetWindowText(ctrldata.hMe, sName.str().c_str());
-        SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     /// Geo Node ///
     else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
@@ -171,15 +157,6 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
             Mdl.ConvertToAscii(CONVERT_LIGHT, sPrint, (void*) lParam);
         }
         Mdl.ConvertToAscii(CONVERT_ENDNODE, sPrint, (void*) lParam);
-
-        DialogWindow ctrldata;
-        if(!ctrldata.Run()){
-            std::cout<<string_format("DialogWindow creation failed!\n");
-        }
-        else{
-            SetWindowText(ctrldata.hMe, sName.str().c_str());
-            SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
-        }
     }
     /// Controller ///
     else if((cItem[1] == "Controllers")){
@@ -203,13 +180,22 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         else{
             Mdl.ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sPrint, (void*) lParam);
         }
-
-        DialogWindow ctrldata;
-        if(!ctrldata.Run()){
-            std::cout<<string_format("DialogWindow creation failed!\n");
-        }
-        SetWindowText(ctrldata.hMe, sName.str().c_str());
-        SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), sPrint.str().c_str());
     }
     else return;
+
+    //Fix newlines
+    std::string line;
+    std::string text;
+    while(std::getline(sPrint, line)){
+        line += "\r\n";
+        text += line;
+    }
+
+    //Create window
+    DialogWindow ctrldata;
+    if(!ctrldata.Run()){
+        std::cout<<"DialogWindow creation failed!\n";
+    }
+    SetWindowText(ctrldata.hMe, sName.str().c_str());
+    SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), text.c_str());
 }

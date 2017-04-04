@@ -297,10 +297,10 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
 /**** DATA STRUCTS ****/
 
 struct Matrix22{
-    double f11;
-    double f12;
-    double f21;
-    double f22;
+    double f11 = 0.0;
+    double f12 = 0.0;
+    double f21 = 0.0;
+    double f22 = 0.0;
 
     Matrix22(const double & f1, const double & f2, const double & f3, const double & f4){
         f11 = f1;
@@ -600,7 +600,7 @@ struct Vector{
         }
         else *this /= fNorm;
     }
-    bool Compare(const Vector & v1, double fDiff = 0.0001){
+    bool Compare(const Vector & v1, double fDiff = 0.00001){
         if(abs(fX - v1.fX) < fDiff &&
            abs(fY - v1.fY) < fDiff &&
            abs(fZ - v1.fZ) < fDiff ) return true;

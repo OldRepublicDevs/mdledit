@@ -507,6 +507,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         nPos++;
         NODE->Mesh.nSaberUnknown8 = sBuffer[nPos];
         nPos++;
+        /*
+        This was to check out if maybe they represent orientation, but it's unlikely
         ByteBlock4.bytes[0] = NODE->Mesh.nSaberUnknown1;
         ByteBlock4.bytes[1] = NODE->Mesh.nSaberUnknown2;
         ByteBlock4.bytes[2] = NODE->Mesh.nSaberUnknown3;
@@ -514,7 +516,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         Orientation oSaber;
         oSaber.Decompress(ByteBlock4.ui);
         std::cout<<"Saber orient ("<<ByteBlock4.ui<<"): x="<<oSaber.Get(AA_X)<<", y="<<oSaber.Get(AA_Y)<<", z="<<oSaber.Get(AA_Z)<<", A="<<oSaber.Get(AA_A)<<".\n";
-
+        */
 
         NODE->Mesh.nAnimateUV = ReadInt(&nPos, 4);
         NODE->Mesh.fUVDirectionX = ReadFloat(&nPos, 2);
@@ -1092,7 +1094,7 @@ void MDL::DetermineSmoothing(){
             patch.SmoothedPatches.reserve(nPatchCount);
             patch.SmoothedPatches.clear();
 
-            file<<"->Calculating for patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<", faces";
+            file<<"-> Patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNameIndex).sName<<", vert "<<patch.nVertex<<", faces";
             for(int f = 0; f < patch.FaceIndices.size(); f++) file<<" "<<patch.FaceIndices.at(f);
             file<<")";
             if(GetNodeByNameIndex(patch.nNameIndex).Head.nType & NODE_HAS_DANGLY && GetNodeByNameIndex(patch.nNameIndex).Dangly.Constraints.at(patch.nVertex) == 0.0){
@@ -1172,12 +1174,6 @@ void MDL::DetermineSmoothing(){
                                 }
                             }
                             vNormalBase += vAdd;
-
-                            if(bDebug){
-                                vTangentBase += face.vTangent;
-                                vBitangentBase += face.vBitangent;
-                                vTangentNormalBase += (face.vBitangent / face.vTangent);
-                            }
                         }
                     }
                 }
@@ -1483,7 +1479,7 @@ void MDL::DetermineSmoothing(){
     std::cout<<"Done calculating smoothing groups!\n";
     std::cout<<"Found normals: "<<nNumOfFoundNormals<<"/"<<Data.MH.nTotalVertCount<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
     std::cout<<"  Without bad geometry: "<<nNumOfFoundNormals<<"/"<<(Data.MH.nTotalVertCount - nBadGeo)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
-    if(bDebug){
+    if(bDebug && Data.MH.nTotalTangent1Count > 0){
         fPercentage = ((double)nNumOfFoundTS / (double)Data.MH.nTotalTangent1Count) * 100.0;
         fPercentage2 = ((double)nNumOfFoundTS / (double)(Data.MH.nTotalTangent1Count - nBadUV)) * 100.0;
         std::cout<<"Found tangent spaces: "<<nNumOfFoundTS<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";

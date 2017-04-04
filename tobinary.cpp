@@ -334,9 +334,10 @@ void MDL::AsciiPostProcess(){
     /// Get rid of the duplication marks
     for(int n = 0; n < Data.MH.Names.size(); n++){
         std::string & sNode = Data.MH.Names.at(n).sName;
-        if(sNode.length() > 6){
-            if(sNode.substr(sNode.length() - 6, 5) == "__dpl"){
-                sNode = sNode.substr(0, sNode.length() - 6);
+        for(int i = 0; i < 4 && sNode.length() > 5 + i; i++){
+            if(safesubstr(sNode, sNode.length() - 5 - i, 5) == "__dpl"){
+                    sNode = safesubstr(sNode, 0, sNode.length() - 5 - i);
+                    i = 6;
             }
         }
     }
@@ -631,8 +632,7 @@ void MDL::AsciiPostProcess(){
 bool MDL::Compile(){
     nPosition = 0;
     sBuffer.resize(0);
-    Mdx->nPosition = 0;
-    Mdx->sBuffer.resize(0);
+    Mdx.reset(new MDX());
 
     std::unique_ptr<FileHeader> & Data = FH;
 

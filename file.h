@@ -30,7 +30,7 @@ class File{
     std::string sFile;
     std::string sFullPath;
     std::vector<char> sBuffer;
-    unsigned int nPosition;
+    unsigned int nPosition = 0;
   public:
     //Getters
     std::vector<char> & GetBuffer(){ return sBuffer; }
