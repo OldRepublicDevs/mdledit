@@ -67,7 +67,7 @@ rollout rl_binmdl "Decompile MDL"
     label lbl_1 "Model decompile in progress"
     label lbl_ticker ""
     timer t_looking interval:1000
-    
+
     on t_looking tick do
     (
         tickCounter += 1
@@ -115,7 +115,7 @@ fn addMDLSkin node buf =
 
     if not DEBUG then
         DisableSceneRedraw()
-    
+
     local v = 0
     local i = 0
     local gmax_bug
@@ -126,14 +126,14 @@ fn addMDLSkin node buf =
     local boneName
     local weight
     local tok
-    
+
     if DEBUG then format "%SKIN PROCESSING: build up skin vert list\r\n" strIndent3
     local allVerts = #()
     for i = 1 to (skinops.getnumbervertices (node.skin)) do
     (
         append allVerts i
     )
-    
+
     if DEBUG then format "%SKIN PROCESSING: Start loading weight data\r\n" strIndent3
     -- Work through the weight data
     for data in buf do
@@ -143,7 +143,7 @@ fn addMDLSkin node buf =
         tok = nx_Tokenizer()
         tok.SetString(data)
         --format "v: % " v
-        
+
         if DEBUG then format "%SKIN PROCESSING: build up the bone and weight lists for the vertex\r\n" strIndent4
         -- build up the bone and weight lists for the vertex
         while (tok.PeekToken() != undefined) do
@@ -151,7 +151,7 @@ fn addMDLSkin node buf =
             b = 0   -- bone index
             boneName = tok.ReadString()
             weight = tok.ReadFloat()
-            
+
             if DEBUG then format "%SKIN PROCESSING: Finding bone in skin\r\n" strIndent4
             for i = 1 to (skinops.GetNumberBones node.skin) do
             (
@@ -161,20 +161,20 @@ fn addMDLSkin node buf =
                     exit
                 )
             )
-            
+
             if (b == 0) then    -- bone not yet linked to skin
             (
                 if DEBUG then format "%SKIN PROCESSING: Start linking bone to skin\r\n" strIndent4
                 boneNode = getNodeByName boneName
-                
+
                 if boneNode == undefined then
                 (
                     format "ERROR! Unable to find the bone '%' in the scene! Check bones are in mdl.\r\n" boneName
                 )
-                
+
                 skinops.AddBone node.skin boneNode 0
                 b = skinops.GetNumberBones node.skin
-                
+
                 -- also mark this node as a bone
                 --format "Setting bone states for: %\r\n" boneNode.name
                 boneNode.SetBoneEnable true 0
@@ -182,11 +182,11 @@ fn addMDLSkin node buf =
                 boneNode.BoneFreezeLength = true
                 boneNode.ShowLinks = true
                 boneNode.ShowLinksOnly = false
-                boneNode.BoneScaleType = #None  
-                
+                boneNode.BoneScaleType = #None
+
                 -- exclude all the vertexes for this bone
                 --format "Exclude all verts for bone: %\r\n" boneNode.name
-                skinOps.SelectBone (node.skin) b 
+                skinOps.SelectBone (node.skin) b
                 skinOps.SelectVertices (node.skin) allVerts
                 skinOps.buttonExclude (node.skin)
                 skinOps.SetInnerRadius (node.skin) b 1 0.0
@@ -199,8 +199,8 @@ fn addMDLSkin node buf =
                 --skinops.setSelectedBonePropRelative (node.skin) 1
                 if DEBUG then format "%SKIN PROCESSING: End linking bone to skin\r\n" strIndent4
             )
-            
-            
+
+
             gmax_bug = node.numVerts
             skinops.SelectVertices (node.skin) v
             skinops.buttonInclude (node.skin)
@@ -209,24 +209,24 @@ fn addMDLSkin node buf =
             if DEBUG then (
                 format "%addMDLSkin: vertex:% bone:%(%) weight=%\r\n" strIndent4 v boneName b weight
             )
-            
+
             -- add to bone and weight lists
             append bonelist b
             append weightlist weight
-            
+
         ) -- end While
         if DEBUG then format "%SKIN PROCESSING: done building up the bone and weight lists for the vertex\r\n" strIndent4
-        
+
         -- add vertex weight data
         skinops.SetVertexWeights (node.skin) v bonelist weightlist
         bonelist = #()
         weightlist = #()
     )
     if DEBUG then format "%SKIN PROCESSING: Stop loading weight data\r\n" strIndent3
-    
+
     if not DEBUG then
         EnableSceneRedraw()
-    
+
     if DEBUG then format "%SKIN PROCESSING: end\r\n" strIndent3
 )
 
@@ -266,7 +266,7 @@ fn ImportNWNwk pFile type =
 
         -- Start up model dialog to wait for this processing to complete
         createdialog rl_binmdl modal:true
-        
+
         -- check for ascii model exists
         pFile = pFile + ".ascii"
         if (nx_existFile pFile) == false then
@@ -289,7 +289,7 @@ fn ImportNWNwk pFile type =
             tok.SetString (line)
             local idToken = tok.ReadToken()
             if (idToken[1] == "#") then idToken = "#"
-            
+
             case idToken of
             (
                 "#": () -- ignore comments
@@ -305,19 +305,19 @@ fn ImportNWNwk pFile type =
                     objSelfIllum = color 0 0 0
                     objShine = 0
                     objAlpha = 1
-                    
+
                     parent = ""
                     textureName = ""
-                    
+
                     objPos = [0, 0, 0]
                     objRot = quat 0 0 0 0
                     objScale = [1, 1, 1]
                     objMaterial = undefined
-                    
+
                     objInheritcolor = 0
                     objRotatetexture = 0
                     objTransparencyhint = 0
-                    
+
                     numVerts = 0
                     verts = #()
                     numFaces = 0
@@ -347,12 +347,12 @@ fn ImportNWNwk pFile type =
                 "specular": objSpecular = tok.ReadColor()
                 "shininess": objShine = tok.ReadInteger()
                 "alpha": objAlpha = tok.ReadFloat()
-                
+
                 "selfillumcolor": objSelfIllum = tok.ReadColor()
                 -- to cope with a bug in old versions of nwe
                 "setfillumcolor": objSelfIllum = tok.ReadColor()
                 -- bug coping ends
-                
+
                 "bitmap":
                 (
                     textureName = tok.ReadToken()
@@ -442,11 +442,11 @@ fn ImportNWNwk pFile type =
                                 setVert newObj verti verts[verti]
                             )
                             update newObj
-                            
+
                             -- Assign smoothing groups
                             for i = 1 to smoothGroups.count do
                                 setFaceSmoothGroup newObj i smoothGroups[i]
-                                
+
                             -- We need to process for the appropriate
                             -- modifiers to be applied to the mesh.
                             --aurora_mod = aurorawalkmesh()
@@ -461,7 +461,7 @@ fn ImportNWNwk pFile type =
                             update newObj
 
                         ) --End trimesh
-                            
+
                         default:
                         (
                             newObj = dummy name:objName
@@ -479,7 +479,7 @@ fn ImportNWNwk pFile type =
                         newObj.scale.controller = tcb_scale()
                         newObj.position.controller = tcb_position()
                         newObj.rotation.controller = tcb_rotation()
-                        
+
                         -- remove anim on always static mesh
 --                        in coordsys parent
 --                        (
@@ -510,7 +510,7 @@ fn ImportNWNwk pFile type =
                         newObj.scale.controller = tcb_scale()
                         newObj.position.controller = tcb_position()
                         newObj.rotation.controller = tcb_rotation()
-                        
+
                         -- remove anim on always static mesh
 --                        in coordsys parent
 --                        (
@@ -569,7 +569,7 @@ fn nx_LoadWok pFile =
 
         -- Start up model dialog to wait for this processing to complete
         createdialog rl_binmdl modal:true
-        
+
         -- check for ascii model exists
         pFile = pFile + ".ascii"
         if (nx_existFile pFile) == false then
@@ -592,7 +592,7 @@ fn nx_LoadWok pFile =
             tok.SetString (line)
             local idToken = tok.ReadToken()
             if (idToken[1] == "#") then idToken = "#"
-            
+
             case idToken of
             (
                 "beginwalkmeshgeom":
@@ -612,19 +612,19 @@ fn nx_LoadWok pFile =
                     objSelfIllum = color 0 0 0
                     objShine = 0
                     objAlpha = 1
-                    
+
                     parent = ""
                     textureName = ""
-                    
+
                     objPos = [0, 0, 0]
                     objRot = quat 0 0 0 0
                     objScale = [1, 1, 1]
                     objMaterial = undefined
-                    
+
                     objInheritcolor = 0
                     objRotatetexture = 0
                     objTransparencyhint = 0
-                    
+
                     numVerts = 0
                     verts = #()
                     numFaces = 0
@@ -654,12 +654,12 @@ fn nx_LoadWok pFile =
                 "specular": objSpecular = tok.ReadColor()
                 "shininess": objShine = tok.ReadInteger()
                 "alpha": objAlpha = tok.ReadFloat()
-                
+
                 "selfillumcolor": objSelfIllum = tok.ReadColor()
                 -- to cope with a bug in old versions of nwe
                 "setfillumcolor": objSelfIllum = tok.ReadColor()
                 -- bug coping ends
-                
+
                 "bitmap":
                 (
                     textureName = tok.ReadToken()
@@ -742,7 +742,7 @@ fn nx_LoadWok pFile =
                                             wirecolor:objWireColor \
                                             material:objMaterial \
                                             materialIDS:surfacemats
-                            
+
                             -- special post processing to deal with some sort of odd Max vert position distortion
                             for verti = 1 to verts.count do
                             (
@@ -753,7 +753,7 @@ fn nx_LoadWok pFile =
                             -- Assign smoothing groups
                             for i = 1 to smoothGroups.count do
                                 setFaceSmoothGroup newObj i smoothGroups[i]
-                                
+
                             -- We need to process for the appropriate
                             -- modifiers to be applied to the mesh.
                             aurora_mod = aurorawalkmesh()
@@ -764,7 +764,7 @@ fn nx_LoadWok pFile =
                             update newObj
 
                         ) --End trimesh
-                            
+
                         default:
                         (
                             newObj = dummy name:objName
@@ -785,7 +785,7 @@ fn nx_LoadWok pFile =
                         newObj.scale.controller = tcb_scale()
                         newObj.position.controller = tcb_position()
                         newObj.rotation.controller = tcb_rotation()
-                        
+
                         -- remove anim on always static mesh
 --                        in coordsys parent
 --                        (
@@ -830,14 +830,14 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     local MDL_GEOM = 2
     local MDL_ANIM = 3
     local MDL_NOT_IN_MDL = 4
-    
+
     -- temp modifier var
     local aurora_mod
     -- temp helper var
     local aurora_helper
 
     local currentPath = getFilenamePath pFile
-    
+
     -- only progress further if there IS a file available to process
     if not (nx_existFile pFile) then return false
 
@@ -854,7 +854,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
         local pFilePath = getFilenamePath pFile
         local chkLoop
         local bDecompiled = false
-        
+
         if g_ismax then
         (
             local cmdFile
@@ -875,22 +875,22 @@ fn ImportNWNmdl pFile importAnims showWarnings \
             format "Processing ...%" g_delim to:g_strBuffer
             format "\"%\" -d \"%\" \"%\\\" > \"%\"%" g_compiler pFile pFilePath (scriptsPath+"nwmax\\scratch\\decomp.txt") "~\n" to:g_strBuffer
             format "echo \"done\" > \"%\"%" fControl "~\n" to:g_strBuffer
-    
+
             format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\import.bat") "~\n" to:g_strBuffer
             format "\"%\" -d \"%\" \"%\\\" > \"%\"%" g_compiler pFile pFilePath (scriptsPath+"nwmax\\scratch\\decomp.txt") "~\n" to:g_strBuffer
             format "echo \"done\" > \"%\"%" fControl "~\n" to:g_strBuffer
             format "</snoopstart>%" "~\n" to:g_strBuffer
-            
+
             format "<commandstart>%" "~\n" to:g_strBuffer
             format "\"%import.bat\"%" (scriptsPath+"nwmax\\scratch\\") "~\n" to:g_strBuffer
             format "</commandstart>%" "~\n" to:g_strBuffer
-            
+
             format "</snoopstart>%" "~\n" to:g_strBuffer
             format "</snoopend>%" "~" to:g_strBuffer
             if g_delim == "~\n" then format "\r\n" to:g_strBuffer
             nx_FlushBuffer force:true
-            
-    
+
+
             -- Start up model dialog to wait for this processing to complete
             createdialog rl_binmdl modal:true
          )
@@ -905,7 +905,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
     -- make sure we reset base panel status
     setCommandPanelTaskMode mode:#create
-    
+
     -- Open up the file
     local mdlStream = openFile pFile mode:"r"
 
@@ -921,20 +921,20 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     local in_emitter = false
     local bAnimIsThere = false
     local bHadAnimKey = false
-    
+
     -- bounding anim key points for specified anim name on base.
     local lowerbound = 0
     local upperbound = 0
 
-    
-    -- Setup basis for model header    
+
+    -- Setup basis for model header
     local newModelClassification = 1
     local newModelAnimscale = 1.0
     local newModelSupermodel = "NULL"
-    
+
     -- handle to this files model base
     local model_base = undefined
-    
+
     -- Joco 24-Aug-03
     -- to fix having to have all the skinmeshes at the end of the mdl file
     -- we store the relevant data in this array using the structure SkinWeights.
@@ -949,7 +949,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     local bmp
     local texMap
     local texAlphaMap
-    
+
     local objFadingLight
 
     try (
@@ -976,22 +976,22 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
             -- Read the data ID tag
             local idToken = tok.ReadToken()
-            
+
             -- if idToken is a string token the convert to lowercase
             if (isKindOf idToken string) then idToken = nx_lowercase idToken
-            
+
             if (idToken[1] == "#") then idToken = "#"
             if (idToken == "donemodel") then
             (
                 mdl_pos = MDL_NOT_IN_MDL
                 quitEarly = true
             )
-            
+
             -- typo clean ups
             case idToken of (
                 "setfillumcolorkey": idToken = "selfillumcolorkey"
             )
-            
+
             case mdl_pos of (
                 ----------------------------------------------------------------
                 -- Model definition
@@ -1089,12 +1089,12 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             objSelfIllum = color 0 0 0
                             objAlpha = 1
                             objShine = 0
-                            
+
                             objDanglymesh = 0
                             objPeriod = 0.0
                             objTightness = 0.0
                             objDisplacement = 0.0
-                            
+
                             objPos = [0, 0, 0]
                             objRot = quat 0 0 0 0
                             objScale = [1, 1, 1]
@@ -1102,7 +1102,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             objMaterial = undefined
                             textureName = ""
 
-                            
+
                             objTilefadeprop = 1
                             objRender = 1
                             objShadow = 1   -- it appears the default behaviour in the engine is for shadow unless explicitly turned off
@@ -1113,7 +1113,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             --shininess       type:#integer
                             objTransparencyhint = 0
 
-                            
+
                             numVerts = 0
                             verts = #()
                             numFaces = 0
@@ -1127,13 +1127,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             danglyConstraints = #()
                             numWeights = 0
                             weightBuffer = #()
-                            
+
                             -- lens flare var setup
                             a_texturenames = #() -- read multiple strings
                             a_flaresizes = #() -- read multiple floats
                             a_flarepositions = #() -- read multiple floats
                             a_flarecolorshifts = #() -- read multiple colors as point3
-                            
+
                             -- reset any emitter stuff
                             --objRender=undefined
                             --objRender_sel=undefined
@@ -1172,7 +1172,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             --objSplat=undefined
                             --objAffectedbyWind=undefined
                             objTexture=undefined
-                            
+
                             --objTwosidedtext=undefined
                             --objXgrid=undefined
                             --objYgrid=undefined
@@ -1241,11 +1241,11 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "ambient": objAmbient = tok.ReadColor()
                         "diffuse": objDiffuse = tok.ReadColor()
                         "specular": objSpecular = tok.ReadColor()
-                        
+
                         "shininess": objShine = tok.ReadInteger()
-                        
+
                         "transparencyhint": objTransparencyhint = tok.ReadInteger()
-                        
+
                         "tilefade":
                         (
                             objTilefadeprop = tok.ReadInteger()
@@ -1258,15 +1258,15 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 default: objTilefadeprop = 1
                             )
                         )
-                        
+
                         "selfillumcolor": objSelfIllum = tok.ReadColor()
                         "setfillumcolor": objSelfIllum = tok.ReadColor()
-                        
+
                         "danglymesh": objDanglymesh = tok.ReadInteger()
                         "period": objPeriod = tok.ReadFloat()
                         "tightness": objTightness = tok.ReadFloat()
                         "displacement": objDisplacement = tok.ReadFloat()
-                        
+
                         "alpha": objAlpha = tok.ReadFloat()
 
                         "bitmap":
@@ -1357,7 +1357,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 --append TVerts p3
                             )
                         )
-                        
+
                         --
                         -- Emitter key words
                         --
@@ -1439,7 +1439,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "beaming": objBeaming = tok.ReadInteger()
                         "fadinglight": objFadingLight = tok.ReadInteger()
                         -- Light key words end
-                        
+
                         -- Lens Flare key words
                         "lensflares": objLensflares = tok.ReadInteger()
 		    -- bead-v modification: adding the "flare" keyword
@@ -1495,12 +1495,12 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             )
                         )
                         -- Lens Flare keywords end
-                        
+
                         -- Reference key words
                         "refmodel": objRefModel = tok.ReadString()
                         "reattachable": objReattachable = tok.ReadInteger()
                         -- Reference key words end
-                        
+
                         "endnode": -- Done parsing mesh, so create the object
                         (
                             if loadGeom then
@@ -1564,7 +1564,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                         bmp = openBitMap(tgaFilename)
                                                     else
                                                         bmp = openBitMap(bmpFilename)
-                                                    
+
                                                     if loadtiff then
                                                     (
                                                         texMap = BitmapTexture bitmap:(nx_tiff_from_tex bmp) name:textureName
@@ -1584,7 +1584,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 )
                                             )
                                         )
-    
+
                                         -- Make an editable mesh
                                         if (textureName != "") then
                                         (
@@ -1603,16 +1603,16 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                             wirecolor:objWireColor \
                                                             materialIDS:surfacemats
                                         )
-                                        
+
                                         -- special post processing to deal with some sort of odd Max vert position distortion
                                         for verti = 1 to verts.count do
                                         (
                                             setVert newObj verti verts[verti]
                                         )
                                         update newObj
-                                        
+
                                         if DEBUG then format "%BUILD MESH OBJECT: Created type: %\r\n" strIndent1 (classof newObj)
-                                        
+
                                         if DEBUG then format "%BUILD MESH OBJECT: set up smoothing groups\r\n" strIndent1
                                         -- Assign smoothing groups
                                         for i = 1 to smoothGroups.count do
@@ -1641,7 +1641,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 meshop.SetVertColor newObj 0 i c
                                             )
                                         )
-                                        
+
                                         --
                                         -- We need to process for the appropriate
                                         -- modifiers to be applied to the mesh.
@@ -1658,7 +1658,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.tightness = objTightness
                                                 aurora_mod.displacement = objDisplacement
                                                 addModifier newObj aurora_mod
-                                                
+
                                                 -- assume is always a danglymesh
                                                 aurora_mod = auroratrimesh()
                                                 aurora_mod.tilefadeprop = objTilefadeprop
@@ -1709,7 +1709,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 --)
                                                 addModifier newObj aurora_mod
                                             )
-                                            
+
                                             "aabb":
                                             (
                                                 if DEBUG then format "%--> aabb\r\n" strIndent1
@@ -1722,13 +1722,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 addModifier newObj aurora_mod
                                             )
                                         )
-    
+
                                         -- Update the mesh
                                         update newObj
-                                        
-    
+
+
                                     ) --End trimesh, danglymesh, skin, aabb CASE
-    
+
                                     -- Joco 23-Aug-03: Create emitter and make sure
                                     -- only previously defined attributes are applied
                                     (objType == "emitter"):
@@ -1786,7 +1786,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objAlphaStart!=undefined then newObj.alphaStart = objAlphaStart
                                         if objAlphaEnd!=undefined then newObj.alphaEnd = objAlphaEnd
                                         if objSizeStart!=undefined then newObj.sizeStart = objSizeStart
-                                        if objSizeEnd!=undefined then newObj.sizeEnd = objSizeEnd 
+                                        if objSizeEnd!=undefined then newObj.sizeEnd = objSizeEnd
                                         if objSizeStart_y!=undefined then newObj.sizeStart_y = objSizeStart_y
                                         if objSizeEnd_y!=undefined then newObj.sizeEnd_y = objSizeEnd_y
                                         if objBirthrate!=undefined then newObj.birthrate = objBirthrate
@@ -1838,7 +1838,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objGrav!=undefined then newObj.grav = objGrav
                                         if objDrag!=undefined then newObj.drag = objDrag
                                     )
-                                    
+
                                     -- Joco 23-Aug-03: Create light and make sure
                                     -- only previously defined attributes are applied.
                                     (objType == "light"):
@@ -1863,7 +1863,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objBeaming!=undefined then newObj.beaming = objBeaming
                                         if objLensflares!=undefined then newObj.lensflares = objLensflares
                                         if objFadingLight!=undefined then newObj.fadingLight = objFadingLight
-                                        
+
                                         -- load the flare info if there is some
                                         if a_texturenames.count > 0 then
                                         (
@@ -1887,7 +1887,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         a_flarepositions = #()
                                         a_flarecolorshifts = #()
                                     )
-                                    
+
                                     (objType == "reference"):
                                     (
                                         newObj = aurorareference name:objName
@@ -1895,7 +1895,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objRefModel!=undefined then newObj.refModel = objRefModel
                                         if objReattachable!=undefined then newObj.reattachable = objReattachable
                                     )
-    
+
                                     default:
                                     (
                                         if (newModelName == objName) then
@@ -1910,10 +1910,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             newObj.setsupermodel = newModelSupermodel
                                             -- set the export path to be the import path
                                             newObj.export_path = currentPath
-                                            
+
                                             -- trap handle to model base for later use
                                             model_base = newObj
-                                            
+
                                             --objProps += "mdl_root=true\r\n"
                                             -- make the pointer to the front
                                             if g_basepointer == 1 then
@@ -1935,7 +1935,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         )
                                     )
                                 ) --End objType case
-    
+
                                 local itsParent = for p in objects where p.name == parent collect p
                                 if itsParent != undefined and itsParent.count > 0 then
                                 (
@@ -1965,13 +1965,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 setUserPropBuffer newObj objProps
                                 setUserProp newObj "node_type" objType
                                 objProps = ""   -- null object properties string
-    
+
                                 -- Skin modifier must be created after proper positioning.
                                 --
                                 -- PROBLEM!!! This assumes that the bones have been created
                                 -- i.e. that the bones are defined in the mdl before the
                                 -- the skin is.
-                                
+
                                 -- Possible solutions:
                                 -- 1. cache the weights info to an array and apply after mdl file is parsed
                                 -- 2. do multiple passes across the mdl file
@@ -1979,7 +1979,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 --      b. pass 2 does the skin and animation processing
                                 --
                                 -- Option 1 taken for time being.
-                                
+
                                 if ((objType == "skin") and (numWeights == numVerts)) then
                                 (
                                     if DEBUG then format "%SKIN PROCESSING\r\n" strIndent2
@@ -1988,7 +1988,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- I think its a gmax maxscript bug.
                                     addmodifier newObj (skin()) -- Add skin modifier to created obj
                                     --addMDLSkin newObj weightBuffer  -- Apply weight info to the skin modifer
-                                    
+
                                     -- Joco 24-Aug-03
                                     -- Add data to the list of Weights structures
                                     -- for post processing once all the bones
@@ -2003,7 +2003,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         (
                             mdl_pos = MDL_ANIM
                             if (not importAnims) then quitEarly = true;
-                            
+
                             --
                             -- Joco 24-Aug-03
                             -- Now that all the model geometry is done (i.e. all the bones
@@ -2049,9 +2049,9 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 -- as inmroot is undefined we make it use the one we supplied
                                 animRoot = animLoadBase
                             )
-                            
+
                             if DEBUG then format "Anim name = %\r\n" animName
-                            
+
                             animLength = 0
                             --numAnims += 1
                             numEvents = 0
@@ -2059,16 +2059,16 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             --setUserProp animRoot anim_property animName
                             --anim_property = "anim_firstframe_" + (numAnims as string)
                             --setUserProp animRoot anim_property firstFrame
-                            
+
                             bAnimIsThere = false
-                            
-                            
+
+
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
                                 firstFrame = lastFrame + animGap
-                                
--- need to modify to cope with layering animation.
--- we don't want add the anim name in if it alread exists
+
+                                -- need to modify to cope with layering animation.
+                                -- we don't want add the anim name in if it alread exists
                                 -- only add in if name not already there
                                 for an in animRoot.animations do
                                 (
@@ -2082,7 +2082,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         )
                                     )
                                 )
-                                -- Add animation data to animation root                             
+                                -- Add animation data to animation root
                                 if not bAnimIsThere then (
                                     animRoot.animations[animRoot.animations.count+1] = \
                                         animName + " " + (firstFrame as string)
@@ -2092,7 +2092,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "length": -- animtion length
                         (
                             animLength = nx_round((tok.ReadToken() as float) * frameRate) as integer
-                            
+
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
                                 lastFrame = firstFrame + animLength
@@ -2110,7 +2110,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             animTrans = (tok.ReadToken() as float)
                             --anim_property = "anim_transtime_" + (numAnims as string)
                             --setUserProp animRoot anim_property animTrans
-                            
+
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
                                 if not bAnimIsThere then
@@ -2125,7 +2125,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "animroot": -- animation play root
                         (
                            animRootPlay = tok.ReadToken()
-                           
+
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
                                 if not bAnimIsThere then
@@ -2140,7 +2140,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "event": -- animtion event
                         (
                             numEvents += 1
-                            
+
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
                                 local event_frame = nx_round((tok.ReadFloat()*frameRate) + firstFrame)
@@ -2187,7 +2187,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     objName = ""
                                 )
                             )
-                            
+
                             animObj = getNodeByName(objName)
                             if (animObj != undefined) then
                             (
@@ -2215,7 +2215,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             with animate on at time keytime animObj.rotation = zeroRot
                                             -- stop key frame generate
                                             if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" animObj keytime (at time keytime animObj.pos) (at time keytime animObj.rotation)
-        
+
                                             -- move keytime to last frame plus 1.
                                             keytime = (lastFrame + 1)
                                             -- using 'animate on' context generate some key frames
@@ -2228,7 +2228,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     )
                                 )
                             ) -- end if
-                                
+
                         ) -- end 'Node' case
                         "endnode":
                         (
@@ -2260,7 +2260,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 		                            )
 		                            i += 1
 	                            )
-	                            
+
 	                            -- rotation 2nd
 	                            if DEBUG then format "get rot keys count\r\n"
 	                            ksize = animObj.rotation.controller.keys.count
@@ -2286,6 +2286,64 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             )
                             if DEBUG then format "endnode processing END\r\n"
                         )   -- end "endnode"
+                    -- bead-v modification: add bezier controllers
+                        "positionbezierkey":
+                        (
+                            --local newkey
+                            local animObj = getNodeByName(objName)
+                            bHadAnimKey = true
+                            if (animObj != undefined) then
+                            (
+                                if DEBUG then format "positionbezierkey processing START\r\n"
+                                local keyCount = undefined;
+                                -- try and get the key list count
+                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+                                local originalObjPos
+                                in coordsys parent
+                                (
+                                    at time 0 originalObjPos = animObj.pos
+                                    tok.SetString (getNextNonBlankLine mdlStream)
+                                    lineNum += 1
+                                    -- read in the key list (if there are data items) and parse it
+                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
+                                    (
+                                        --ImportActivityBar()
+                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
+                                        local p3 = tok.ReadPoint3()
+                                        local p3in = tok.ReadPoint3()
+                                        local p3out = tok.ReadPoint3()
+                                        if DEBUG then format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
+                                        p3 *= 100
+                                        p3in *= 100
+                                        p3out *= 100
+                                        -- set animatiom obj properties and
+                                        -- generate key frames in the process.
+                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                            --with animate on at time keytime animObj.pos = p3
+                                            local newkey = addNewKey animObj.pos keytime
+                                            newkey.value = p3
+                                            newkey.inTangent = p3in
+                                            newkey.outTangent = p3out
+                                        )
+                                        --format "Key generated\r\n"
+                                        -- stop key frame generation
+                                        -- read in next line from import data stream
+                                        if (keyCount != undefined) then
+                                        (
+                                            keyCount -= 1
+                                            if keyCount > 0 then (
+                                                tok.SetString (getNextNonBlankLine mdlStream)
+                                            )
+                                        ) else (
+                                            tok.SetString (getNextNonBlankLine mdlStream)
+                                        )
+                                        lineNum += 1
+                                    ) -- end while
+                                ) -- end in
+                                if DEBUG then format "positionkey processing END\r\n"
+                            ) -- end if
+                        ) -- end 'positionbezierkey' list case
+                    -- end bead-v modification
                         "positionkey":
                         (
                             --local newkey
@@ -2319,7 +2377,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         --format "Key generated\r\n"
                                         -- stop key frame generation
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2382,7 +2440,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             animObj.pos.keys[existingPosKey].value = existingPos
                                         )
 
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2433,7 +2491,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2477,7 +2535,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2489,7 +2547,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     ) -- end while
                             ) -- end if
                         ) --end of 'selfillumcolorkey' list
-                        
+
 
                         ----------------------------------------------------------------
                         -- Joco 13-Aug-03                                             --
@@ -2532,7 +2590,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2571,7 +2629,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2610,7 +2668,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2649,7 +2707,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2688,7 +2746,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2719,7 +2777,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     lineNum += 1
                                     local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
                                     local this_value = tok.ReadColor()
-                                    
+
                                     if DEBUG then format "line:% keytime:%   color:%\r\n" lineNum keytime this_value
 
                                     -- set animatiom obj properties and
@@ -2731,7 +2789,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- stop key frame generation
 
                                     -- read in next line from import data stream
-                                    if (keyCount != undefined) then 
+                                    if (keyCount != undefined) then
                                     (
                                         keyCount -= 1
                                         if keyCount > 0 then (
@@ -2772,7 +2830,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- stop key frame generation
 
                                     -- read in next line from import data stream
-                                    if (keyCount != undefined) then 
+                                    if (keyCount != undefined) then
                                     (
                                         keyCount -= 1
                                         if keyCount > 0 then (
@@ -2812,7 +2870,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2851,7 +2909,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2890,7 +2948,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2929,7 +2987,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -2968,7 +3026,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3007,7 +3065,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3046,7 +3104,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3085,7 +3143,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3124,7 +3182,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3163,7 +3221,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3202,7 +3260,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3225,7 +3283,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 -- try and get the key list count
                                 if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
                                     tok.SetString (getNextNonBlankLine mdlStream)
-                                    
+
                                     -- read in the key list (if there are data items) and parse it
                                     while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
                                     (
@@ -3241,7 +3299,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3281,7 +3339,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3320,7 +3378,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3359,7 +3417,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3393,7 +3451,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     local this_value = tok.ReadFloat()
 
                                     if DEBUG then format "line:% keytime:%   vel:%\r\n" lineNum keytime this_value
-                                    
+
                                     -- set animatiom obj properties and
                                     -- generate key frames in the process.
                                     if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
@@ -3403,7 +3461,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- stop key frame generation
 
                                     -- read in next line from import data stream
-                                    if (keyCount != undefined) then 
+                                    if (keyCount != undefined) then
                                     (
                                         keyCount -= 1
                                         if keyCount > 0 then (
@@ -3443,7 +3501,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3482,7 +3540,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3521,7 +3579,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3560,7 +3618,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3599,7 +3657,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3638,7 +3696,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3683,7 +3741,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3722,7 +3780,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- stop key frame generation
 
                                         -- read in next line from import data stream
-                                        if (keyCount != undefined) then 
+                                        if (keyCount != undefined) then
                                         (
                                             keyCount -= 1
                                             if keyCount > 0 then (
@@ -3740,7 +3798,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         default: ()
                     ) -- end idtoken case
                 ) -- End MDL_ANIM case
-                
+
                 MDL_NOT_IN_MDL:
                 (
 	                --
@@ -3757,7 +3815,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 				        lastFrame = animationRange.end
 			        )
                 )
-                
+
             ) -- end mdl_pos case statement
         ) -- end while not eof
         --lastFrame += animGap
@@ -3786,15 +3844,15 @@ fn massload pattern:undefined target:undefined anims:true =
         format "Usage:  massload pattern:<filepath\pattern> target:<target dir> {<anims:true|false>}\r\n"
         return 0
     )
-    
+
     if not (nx_existDir target) then
     (
         messageBox "Target directory does not exist"
         return 0
     )
-    
+
     resetMaxFile #noPrompt
-    
+
     -- get all the files to load from the pattern provided
     local filesToLoad = getFiles pattern
     if target[target.count] != "\\" then target += "\\"
@@ -3802,14 +3860,14 @@ fn massload pattern:undefined target:undefined anims:true =
     (
         -- import the file
         ImportNWNmdl file anims false
-        
+
          -- import pwk file if available
         local pwk_file = (getFilenamePath file)+(getFilenameFile  file)+".pwk"
         if ( nx_existFile pwk_file ) then ImportNWNwk pwk_file "pwk"
         -- import dwk file if available
         local dwk_file = (getFilenamePath file)+(getFilenameFile  file)+".dwk"
         if ( nx_existFile dwk_file ) then ImportNWNwk dwk_file "dwk"
-        
+
 		local modelBase
         for h in $helpers do
         (
