@@ -1941,10 +1941,14 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 (
     -- check the controller types are correct!
                                     newObj.parent = itsParent[1]
-                                    newObj.scale.controller = tcb_scale()
+                            -- bead-v modification: we're now making all position controllers bezier controllers
+                                    --newObj.scale.controller = tcb_scale()
                                     --newObj.position.controller = tcb_position()
+                                    --newObj.rotation.controller = tcb_position()
+                                    newObj.scale.controller = linear_scale()
                                     newObj.position.controller = bezier_position()
-                                    newObj.rotation.controller = tcb_rotation()
+                                    newObj.rotation.controller = linear_rotation()
+                            -- end bead-v modification
                                     in coordsys parent
                                     (
                                         --if newModelClassification == 1 then
@@ -2299,16 +2303,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 local keyCount = undefined;
                                 -- try and get the key list count
                                 if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                local originalObjPos
+                                local originalObjPos -- Why is this necessary?
                                 in coordsys parent
                                 (
                                     at time 0 originalObjPos = animObj.pos
-                                    local oldvalue = animObj.pos.controller.value
-                                    if(classof animObj.pos.controller != bezier_position) then
-                                    (
-                                        animObj.pos.controller = bezier_position()
-                                        animObj.pos.controller.value = oldvalue
-                                    )
                                     tok.SetString (getNextNonBlankLine mdlStream)
                                     lineNum += 1
                                     -- read in the key list (if there are data items) and parse it
@@ -2319,11 +2317,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         local p3 = tok.ReadPoint3()
                                         local p3in = tok.ReadPoint3()
                                         local p3out = tok.ReadPoint3()
-                                        --if DEBUG then
-                                        format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
+                                        --if DEBUG then format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
                                         p3 *= 100
-                                        p3in *= 100
-                                        p3out *= 100
+                                        --p3in *= 100
+                                        --p3out *= 100
                                         -- set animatiom obj properties and
                                         -- generate key frames in the process.
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
@@ -2385,7 +2382,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- set animatiom obj properties and
                                         -- generate key frames in the process.
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.pos = p3
+                                    -- bead-v modification: just to keep it compatible with positionbezierkey
+                                            --with animate on at time keytime animObj.pos = p3
+                                            local newkey = addnewkey animObj.pos.controller keytime
+                                            newkey.inTangentType = #linear
+                                            newkey.outTangentType = #linear
+                                            newkey.value = p3
+                                    -- end bead-v modification
                                         )
                                         --format "Key generated\r\n"
                                         -- stop key frame generation
