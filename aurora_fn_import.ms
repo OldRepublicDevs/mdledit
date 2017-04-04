@@ -1942,7 +1942,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     -- check the controller types are correct!
                                     newObj.parent = itsParent[1]
                                     newObj.scale.controller = tcb_scale()
-                                    newObj.position.controller = tcb_position()
+                                    --newObj.position.controller = tcb_position()
+                                    newObj.position.controller = bezier_position()
                                     newObj.rotation.controller = tcb_rotation()
                                     in coordsys parent
                                     (
@@ -2302,6 +2303,12 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 in coordsys parent
                                 (
                                     at time 0 originalObjPos = animObj.pos
+                                    local oldvalue = animObj.pos.controller.value
+                                    if(classof animObj.pos.controller != bezier_position) then
+                                    (
+                                        animObj.pos.controller = bezier_position()
+                                        animObj.pos.controller.value = oldvalue
+                                    )
                                     tok.SetString (getNextNonBlankLine mdlStream)
                                     lineNum += 1
                                     -- read in the key list (if there are data items) and parse it
@@ -2312,7 +2319,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         local p3 = tok.ReadPoint3()
                                         local p3in = tok.ReadPoint3()
                                         local p3out = tok.ReadPoint3()
-                                        if DEBUG then format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
+                                        --if DEBUG then
+                                        format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
                                         p3 *= 100
                                         p3in *= 100
                                         p3out *= 100
@@ -2320,8 +2328,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- generate key frames in the process.
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
                                             --with animate on at time keytime animObj.pos = p3
-                                            local newkey = addNewKey animObj.pos keytime
+                                            local newkey = addnewkey animObj.pos.controller keytime
                                             newkey.value = p3
+                                            newkey.inTangentType = #custom
+                                            newkey.outTangentType = #custom
+                                            newkey.x_locked = false
+                                            newkey.y_locked = false
+                                            newkey.z_locked = false
                                             newkey.inTangent = p3in
                                             newkey.outTangent = p3out
                                         )
@@ -2340,7 +2353,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         lineNum += 1
                                     ) -- end while
                                 ) -- end in
-                                if DEBUG then format "positionkey processing END\r\n"
+                                if DEBUG then format "positionbezierkey processing END\r\n"
                             ) -- end if
                         ) -- end 'positionbezierkey' list case
                     -- end bead-v modification
