@@ -2171,10 +2171,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         (
                             objType = tok.ReadString()
                             bHadAnimKey = false -- start re looking for anim key processing
--- deal with part mapping at this point
--- see if the object name needs to be over-ridden. If there is no mapping table then we do nothing,
--- else we look for a part name to map to. no part name found means a blank string or undefined is
--- assigned. This should result in all the key building code being skipped until the next part is read in.
+                            -- deal with part mapping at this point
+                            -- see if the object name needs to be over-ridden. If there is no mapping table then we do nothing,
+                            -- else we look for a part name to map to. no part name found means a blank string or undefined is
+                            -- assigned. This should result in all the key building code being skipped until the next part is read in.
                             objName = tok.ReadString()
                             bMapped = false
                             -- process mapping table if it is provided
@@ -2192,7 +2192,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     objName = ""
                                 )
                             )
-
+                /*
                             animObj = getNodeByName(objName)
                             if (animObj != undefined) then
                             (
@@ -2233,6 +2233,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     )
                                 )
                             ) -- end if
+                    */
 
                         ) -- end 'Node' case
                         "endnode":
@@ -2440,11 +2441,14 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if DEBUG then format "line:% keytime:%  axis:%  angle:%\r\n" lineNum keytime axis angle
                                         -- build quat value
                                         objRot = quat angle axis
+                                        format "line:% keytime:%  axis:%  angle:% quaternion:%\r\n" lineNum keytime axis angle objRot
                                         local existingPosKey = getKeyIndex animObj.pos.controller keytime
                                         local existingPos
                                         if (existingPosKey > 0) then existingPos = animObj.pos.keys[existingPosKey].value
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.rotation = objRot
+                                            --with animate on at time keytime animObj.rotation = objRot
+                                            local newkey = addnewkey animObj.rotation.controller keytime
+                                            newkey.value = (-1 * objRot)
                                         )
                                         if (existingPosKey == 0) then
                                         (
