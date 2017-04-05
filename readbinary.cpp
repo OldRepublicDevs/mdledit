@@ -134,7 +134,7 @@ void MDL::DecompileModel(bool bMinimal){
             ReadString(Data.MH.Animations[n].sName, &nPos, 3, 32);
 
             Data.MH.Animations[n].nOffsetToRootAnimationNode = ReadInt(&nPos, 6);
-            Data.MH.Animations[n].nNumberOfObjects = ReadInt(&nPos, 1);
+            Data.MH.Animations[n].nNumberOfNames = ReadInt(&nPos, 1);
 
             Data.MH.Animations[n].RuntimeArray1.nOffset = ReadInt(&nPos, 8);
             Data.MH.Animations[n].RuntimeArray1.nCount = ReadInt(&nPos, 8);
@@ -184,7 +184,7 @@ void MDL::DecompileModel(bool bMinimal){
             Vector vFromRoot;
             ParseNode(&(Data.MH.Animations[n].RootAnimationNode), &nNodeCounter, vFromRoot);
             //Data.MH.Animations[n].nNodeCount = nNodeCounter;
-            //std::cout<<string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfObjects);
+            //std::cout<<string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfNames);
             Data.MH.Animations[n].ArrayOfNodes.clear();
             Data.MH.Animations[n].ArrayOfNodes.reserve(Data.MH.Names.size());
             LinearizeAnimations(Data.MH.Animations[n].RootAnimationNode, Data.MH.Animations[n].ArrayOfNodes);
@@ -823,7 +823,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                     // 1,000,000 for skins
                     //10,000,000 for meshes, danglymeshes
             */
-            if(NODE->Mesh.nMdxDataSize > 0 && !Mdx->sBuffer.empty()){
+            if(NODE->Mesh.nMdxDataSize > 0 && Mdx){
                 NODE->Mesh.MDXData.nNameIndex = NODE->Head.nNameIndex;
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToVerticesInMDX;

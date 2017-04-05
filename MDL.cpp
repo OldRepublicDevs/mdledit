@@ -437,6 +437,10 @@ void MDL::CheckPeculiarities(){
         ssReturn<<"\r\n - Header ModelType different than 2!";
         bUpdate = true;
     }
+    if(Data.MH.nUnknown1[2] != 1){
+        ssReturn<<"\r\n - Last classification padding number different than 1!";
+        bUpdate = true;
+    }
     if(Data.MH.nChildModelCount != 0){
         ssReturn<<"\r\n - ChildModelCount has a value!";
         bUpdate = true;
@@ -511,20 +515,35 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 bUpdate = true;
             }
             if(NodeArray[b].Head.ChildrenArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - ChildArray counts differ!";
+                ssAdd<<"\r\n     - Header: ChildArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Head.ControllerArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - ControllerArray counts differ!";
+                ssAdd<<"\r\n     - Header: ControllerArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Head.ControllerDataArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - ControllerDataArray counts differ!";
+                ssAdd<<"\r\n     - Header: ControllerDataArray counts differ!";
                 bUpdate = true;
             }
             for(int c = 0; c < NodeArray[b].Head.Controllers.size(); c++){
                 Controller & ctrl = NodeArray.at(b).Head.Controllers.at(c);
 
+                if( (ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                     ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION) &&
+                    ctrl.nAnimation != -1 &&
+                    ctrl.nUnknown2 == ctrl.nControllerType + 8){}
+                else if(ctrl.nUnknown2 == -1 &&
+                        ( (ctrl.nControllerType != CONTROLLER_HEADER_POSITION &&
+                           ctrl.nControllerType != CONTROLLER_HEADER_ORIENTATION) ||
+                          ctrl.nAnimation == -1) ){}
+                else{
+                    std::string sLoc;
+                    if(ctrl.nAnimation == -1) sLoc = "geometry";
+                    else sLoc = FH->MH.Animations.at(ctrl.nAnimation).sName.c_str();
+                    ssAdd<<"\r\n     - Header: New controller unknown2 value! ("<<ctrl.nUnknown2<<" - "<<ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNameIndex).Head.nType)<<" controller in node "<<FH->MH.Names.at(ctrl.nNameIndex).sName<<" in "<<sLoc<<")";
+                    bUpdate = true;
+                }
                 /***
                     This if for checking controller "padding" values. These numbers are in no way random.
                     Header and light controllers always have 0 for the third number, while emitter and mesh controllers have it greater than 0.
@@ -567,7 +586,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                           GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
                           ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                 else{
-                    ssAdd<<"\r\n     - Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
+                    ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
                     bUpdate = true;
                 }
             }
@@ -578,19 +597,19 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 bUpdate = true;
             }
             if(NodeArray[b].Light.FlareSizeArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - FlareSizeArray counts differ!";
+                ssAdd<<"\r\n     - Light: FlareSizeArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Light.FlarePositionArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - FlarePositionArray counts differ!";
+                ssAdd<<"\r\n     - Light: FlarePositionArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Light.FlareColorShiftArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - FlareColorShiftArray counts differ!";
+                ssAdd<<"\r\n     - Light: FlareColorShiftArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Light.FlareTextureNameArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - FlareTextureNameArray counts differ!";
+                ssAdd<<"\r\n     - Light: FlareTextureNameArray counts differ!";
                 bUpdate = true;
             }
         }
@@ -606,19 +625,19 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 bUpdate = true;
             }
             if(NodeArray[b].Mesh.FaceArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - FaceArray counts differ!";
+                ssAdd<<"\r\n     - Mesh: FaceArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Mesh.IndexCounterArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - IndexCounterArray counts differ!";
+                ssAdd<<"\r\n     - Mesh: IndexCounterArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Mesh.IndexLocationArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - IndexLocationArray counts differ!";
+                ssAdd<<"\r\n     - Mesh: IndexLocationArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Mesh.MeshInvertedCounterArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - MeshInvertedCounterArray counts differ!";
+                ssAdd<<"\r\n     - Mesh: MeshInvertedCounterArray counts differ!";
                 bUpdate = true;
             }
         }
@@ -628,21 +647,21 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 bUpdate = true;
             }
             if(NodeArray[b].Skin.QBoneArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - QBoneArray counts differ!";
+                ssAdd<<"\r\n     - Skin: QBoneArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Skin.TBoneArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - TBoneArray counts differ!";
+                ssAdd<<"\r\n     - Skin: TBoneArray counts differ!";
                 bUpdate = true;
             }
             if(NodeArray[b].Skin.Array8Array.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - Array8Array counts differ!";
+                ssAdd<<"\r\n     - Skin: Array8Array counts differ!";
                 bUpdate = true;
             }
         }
         if(NodeArray[b].Head.nType & NODE_HAS_DANGLY){
             if(NodeArray[b].Dangly.ConstraintArray.GetDoCountsDiffer()){
-                ssAdd<<"\r\n     - ConstraintArray counts differ!";
+                ssAdd<<"\r\n     - Dangly: ConstraintArray counts differ!";
                 bUpdate = true;
             }
         }

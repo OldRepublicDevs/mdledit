@@ -84,3 +84,7 @@ obj/Release/readbinary.o
 obj/Debug/file.o
 
 obj/Debug/editordlg.o
+
+obj/Release/file.o
+
+obj/Release/editordlg.o

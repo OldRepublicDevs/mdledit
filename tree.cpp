@@ -369,17 +369,23 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
     /// Animations ///
     else if(cItem[0] == "Animations"){
-            sPrint << string_format("Animations\r\nOffset to Animation Array: %i\r\nAnimation Count: %i",
-                    Data.MH.AnimationArray.nOffset, Data.MH.AnimationArray.nCount);
+        sPrint << "Animations";
+        sPrint << "\r\nOffset to Animation Array: "<<Data.MH.AnimationArray.nOffset;
+        sPrint << "\r\nAnimation Count: "<<Data.MH.Animations.size();
     }
     else if(cItem[1] == "Animations"){
         Animation * anim = (Animation * ) lParam;
-        sPrint << string_format("Animation %s\r\nOffset: %u\r\nOffset to Root: %u\r\nOwner: %s\r\nNumber of Objects: %u",
-                anim->sName.c_str(), anim->nOffset, anim->nOffsetToRootAnimationNode, anim->sAnimRoot.c_str(), anim->nNumberOfObjects);
-        sPrint << "\r\n\r\nModel Type: "<<(int)anim->nModelType;
-        sPrint << "\r\nPadding?: "<<(int)anim->nPadding[0]<<" "<<(int)anim->nPadding[1]<<" "<<(int)anim->nPadding[2];
-        sPrint << string_format("\r\n\r\nFunction Pointer 0: %u\r\nFunction Pointer 1: %u\r\n",
-                anim->nFunctionPointer0, anim->nFunctionPointer1);
+        sPrint << "Animation "<<anim->sName.c_str();
+        sPrint << "\r\nOffset: "<<anim->nOffset;
+        sPrint << "\r\nOffset to Root: "<<anim->nOffsetToRootAnimationNode;
+        sPrint << "\r\nAnimation Root: "<<anim->sAnimRoot.c_str();
+        sPrint << "\r\nNumber of Names: "<<anim->nNumberOfNames;
+        sPrint << "\r\n";
+        sPrint << "\r\nModel Type: "<<(int)anim->nModelType;
+        sPrint << "\r\nPadding: "<<(int)anim->nPadding[0]<<" "<<(int)anim->nPadding[1]<<" "<<(int)anim->nPadding[2];
+        sPrint << "\r\n";
+        sPrint << "\r\nFunction Pointer 0: "<<anim->nFunctionPointer0;
+        sPrint << "\r\nFunction Pointer 1: "<<anim->nFunctionPointer1;
     }
     else if(cItem[0] == "Length") sPrint << "Length:\r\n" << *((double*) lParam);
     else if(cItem[0] == "Transition") sPrint << "Transition:\r\n" << *((double*) lParam);
@@ -394,30 +400,36 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
     /// Geometry ///
     else if(cItem[0] == "Geometry"){
-            sPrint << string_format("Geometry\r\nOffset to Name Array: %i\r\nOffset to Root Node: %i\r\nOffset to Head Root Node: %i\r\nNode Count: %i\r\nTotal Node Count (with Supermodel): %i",
-                    Data.MH.NameArray.nOffset, Data.MH.GH.nOffsetToRootNode, Data.MH.nOffsetToHeadRootNode, Data.MH.NameArray.nCount, Data.MH.GH.nTotalNumberOfNodes);
+        sPrint << "Geometry";
+        sPrint << "\r\nOffset to Name Array: "<<Data.MH.NameArray.nOffset;
+        sPrint << "\r\nOffset to Root Node: "<<Data.MH.GH.nOffsetToRootNode;
+        sPrint << "\r\nOffset to Head Root Node: "<<Data.MH.nOffsetToHeadRootNode;
+        sPrint << "\r\nName Count: "<<Data.MH.Names.size();
+        sPrint << "\r\nNode Count: "<<Data.MH.nNodeCount;
+        sPrint << "\r\nTotal Node Count (with Supermodel): "<<Data.MH.GH.nTotalNumberOfNodes;
     }
 
     /// Node ///
     else if(((cItem[1] == "Geometry") || (cItem[1] == "Animated Nodes") || (cItem[1] == "Children") || (cItem[1] == "Parent")) && !bWok){
-            Node * node = (Node * ) lParam;
-            //std::cout<<"Current name in problematic position: "<<cItem[0].c_str()<<"\n";
-            sPrint<<node->Head.nType<<" (";
-            if(node->Head.nType & NODE_HAS_DANGLY) sPrint << "danglymesh";
-            else if(node->Head.nType & NODE_HAS_SKIN) sPrint << "skin";
-            else if(node->Head.nType & NODE_HAS_SABER) sPrint << "saber";
-            else if(node->Head.nType & NODE_HAS_AABB) sPrint << "walkmesh";
-            else if(node->Head.nType & NODE_HAS_MESH) sPrint << "mesh";
-            else if(node->Head.nType & NODE_HAS_EMITTER) sPrint << "emitter";
-            else if(node->Head.nType & NODE_HAS_LIGHT) sPrint << "light";
-            else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
-            else sPrint << "unknown - file likely faulty!";
-            sPrint << ") "<<Data.MH.Names[node->Head.nNameIndex].sName.c_str();
-            sPrint << "\r\nOffset: "<<node->nOffset;
-            sPrint << "\r\nOffset to Root: "<<node->Head.nOffsetToRoot;
-            sPrint << "\r\nOffset to Parent: "<<node->Head.nOffsetToParent;
-            sPrint << "\r\nName Index: "<<node->Head.nNameIndex;
-            sPrint << "\r\nID: "<<node->Head.nID1;
+        Node * node = (Node * ) lParam;
+        //std::cout<<"Current name in problematic position: "<<cItem[0].c_str()<<"\n";
+        sPrint<<node->Head.nType<<" (";
+        if(node->Head.nType & NODE_HAS_DANGLY) sPrint << "danglymesh";
+        else if(node->Head.nType & NODE_HAS_SKIN) sPrint << "skin";
+        else if(node->Head.nType & NODE_HAS_SABER) sPrint << "saber";
+        else if(node->Head.nType & NODE_HAS_AABB) sPrint << "walkmesh";
+        else if(node->Head.nType & NODE_HAS_MESH) sPrint << "mesh";
+        else if(node->Head.nType & NODE_HAS_EMITTER) sPrint << "emitter";
+        else if(node->Head.nType & NODE_HAS_LIGHT) sPrint << "light";
+        else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
+        else sPrint << "unknown - file likely faulty!";
+        sPrint << ") "<<Data.MH.Names[node->Head.nNameIndex].sName.c_str();
+        sPrint << "\r\nOffset: "<<node->nOffset;
+        sPrint << "\r\nOffset to Root: "<<node->Head.nOffsetToRoot;
+        sPrint << "\r\nOffset to Parent: "<<node->Head.nOffsetToParent;
+        sPrint << "\r\nName Index: "<<node->Head.nNameIndex;
+        sPrint << "\r\nID: "<<node->Head.nID1;
+        if(node->nAnimation == -1){
             sPrint << "\r\nPosition:";
             sPrint << "\r\n  x: "<<PrepareFloat(node->Head.vPos.fX, 0);
             sPrint << "\r\n  y: "<<PrepareFloat(node->Head.vPos.fY, 0);
@@ -427,6 +439,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.Get(QU_Y), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Y), 1)<<")";
             sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
             sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
+        }
     }/*
     else if(cItem[0] == "Position") sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
     else if(cItem[0] == "Orientation"){
@@ -552,7 +565,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         sPrint << "\r\nsplat:          "<<(*((int*) lParam) & EMITTER_FLAG_SPLAT ? 1 : 0);
         sPrint << "\r\ninherit_part:   "<<(*((int*) lParam) & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
         sPrint << "\r\ndepth_texture?: "<<(*((int*) lParam) & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
-        sPrint << "\r\nrenderorder?:    "<<(*((int*) lParam) & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
+        sPrint << "\r\nrenderorder?:   "<<(*((int*) lParam) & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
     }
 
     /// Mesh ///

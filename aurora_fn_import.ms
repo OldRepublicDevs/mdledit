@@ -1944,7 +1944,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             -- bead-v modification: we're now making all position controllers bezier controllers
                                     --newObj.scale.controller = tcb_scale()
                                     --newObj.position.controller = tcb_position()
-                                    --newObj.rotation.controller = tcb_position()
+                                    --newObj.rotation.controller = tcb_rotation()
                                     newObj.scale.controller = linear_scale()
                                     newObj.position.controller = bezier_position()
                                     newObj.rotation.controller = linear_rotation()

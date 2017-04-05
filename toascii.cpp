@@ -51,8 +51,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
             }
             else{
-                std::cout<<"Writing ASCII WARNING: Headerless (ghost?) node! Offset: "<<node.nOffset<<"\n";
-                sReturn << "\nnode dummy " << mh->Names.at(n).sName;
+                //std::cout<<"Writing ASCII WARNING: Headerless (ghost?) node! Offset: "<<node.nOffset<<"\n";
+                sReturn << "\nname " << mh->Names.at(n).sName;
             }
             if(node.Head.nType & NODE_HAS_AABB){
                 ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
@@ -78,7 +78,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else if(node.Head.nType & NODE_HAS_LIGHT){
                 ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
             }
-            ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
+            if(node.Head.nType != 0) sReturn << "\nendnode";
         }
         sReturn << string_format("\nendmodelgeom %s\n", mh->GH.sName.c_str());
 
@@ -94,16 +94,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  transtime " << PrepareFloat(anim->fTransition, 0);
         sReturn << "\n  animroot " << anim->sAnimRoot.c_str();
         if(anim->Sounds.size() > 0){
-            sReturn << "\n  eventlist " << anim->sName.c_str();
+            sReturn << "\n  eventlist";
             for(int s = 0; s < anim->Sounds.size(); s++){
                 sReturn << "\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
             }
-            sReturn << "\n  endlist " << anim->sName.c_str();
+            sReturn << "\n  endlist";
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
-            ConvertToAscii(CONVERT_ENDNODE, sReturn, (void*) &node);
+            sReturn << "\nendnode";
         }
         sReturn << string_format("\ndoneanim %s %s", anim->sName.c_str(), FH->MH.GH.sName.c_str());
     }
@@ -160,9 +160,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
         }*/
     }
-    else if(nDataType == CONVERT_ENDNODE){
-        sReturn << "\nendnode";
-    }
     else if(nDataType == CONVERT_LIGHT){
         Node * node = (Node*) Data;
         sReturn << "\n  lightpriority " << node->Light.nLightPriority;
@@ -207,7 +204,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  chunkname " << node->Emitter.cChunkName.c_str();
         sReturn << "\n  twosidedtex " << node->Emitter.nTwosidedTex;
         sReturn << "\n  loop " << node->Emitter.nLoop;
-        sReturn << "\n  m_bFrameBlending " << node->Emitter.nFrameBlending;
+        sReturn << "\n  m_bFrameBlending " << (int) node->Emitter.nFrameBlending;
         sReturn << "\n  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
 
         sReturn << "\n  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);

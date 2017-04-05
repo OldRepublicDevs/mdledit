@@ -345,17 +345,16 @@ void MDL::AsciiPostProcess(){
     /// PART 1 ///
     /// Do supernodes
     /// This loads up all the supermodels and calculates the supernode numbers
-    if(Data.MH.cSupermodelName == "NULL") Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size();
-    else{
+    Data.MH.GH.nTotalNumberOfNodes = Data.MH.nNodeCount;
+    if(Data.MH.cSupermodelName != "NULL"){
         std::vector<MDL> Supermodels;
         bool bFoundAll = LoadSupermodel(*this, Supermodels);
         //First, update the TotalNodeCount
-        if(Supermodels.size() == 0 || !bFoundAll) Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size();
-        else{
+        if(Supermodels.size() != 0 && bFoundAll){
             int nTotalSupermodelNodes = Supermodels.front().GetFileData()->MH.GH.nTotalNumberOfNodes;
             std::cout<<"Total Supermodel Nodes: "<<nTotalSupermodelNodes<<"\n";
             if(nTotalSupermodelNodes > 0)
-                Data.MH.GH.nTotalNumberOfNodes = Data.MH.ArrayOfNodes.size() + 1 + nTotalSupermodelNodes;
+                Data.MH.GH.nTotalNumberOfNodes += 1 + nTotalSupermodelNodes;
 
             //Next we need the largest supernode number. The largest is definitely in the first supermodel, right? right?!
             short nMaxSupernode = 0;
@@ -661,7 +660,6 @@ bool MDL::Compile(){
     WriteInt(0xFFFFFFFF, 6);
 
     //Don't overwrite, we've already got this value.
-    //Data->MH.GH.nTotalNumberOfNodes = Data->MH.ArrayOfNodes.size(); //This number is sometimes greater, possibly including supermodel nodes?
     WriteInt(Data->MH.GH.nTotalNumberOfNodes, 1);
 
     //Unknown empty bytes
@@ -762,8 +760,8 @@ bool MDL::Compile(){
         WriteString(anim.sName, 3);
         int PHnOffsetToFirstNode = nPosition;
         WriteInt(0xFFFFFFFF, 6);
-        anim.nNumberOfObjects = Data->MH.ArrayOfNodes.size();
-        WriteInt(anim.nNumberOfObjects, 1);
+        anim.nNumberOfNames = Data->MH.Names.size();
+        WriteInt(anim.nNumberOfNames, 1);
 
         WriteInt(0, 8); //Unknown constant zeroes
         WriteInt(0, 8);

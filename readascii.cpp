@@ -60,22 +60,17 @@ bool ASCII::Read(MDL & Mdl){
     nPosition = 0;
     bool bStop = false;
     while(nPosition < sBuffer.size() && !bStop){
-        //std::cout<<"The name indexing while(), nPosition="<<nPosition<<".\n";
         ReadUntilText(sID);
-        while(sID != "node" && nPosition < sBuffer.size() && !bStop){
-            //std::cout<<"The node checking while(), nPosition="<<nPosition<<".\n";
-            //std::cout<<"Not a node, skipping line, nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
+        while(sID != "node" && sID != "name" && nPosition < sBuffer.size() && !bStop){
             SkipLine();
-            //std::cout<<"No throw in SkipLine(), nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             ReadUntilText(sID);
-            //std::cout<<"No throw in ReadUntilText(), nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
             if(sID == "endmodelgeom") bStop = true;
         }
         if(nPosition < sBuffer.size() && !bStop){
             //Once we get here, we have found a node. The name is only a keyword's strlen away!
-            ReadUntilText(sID); //Get keyword
+            if(sID == "node") ReadUntilText(sID); //Get keyword
             ReadUntilText(sID, false); //Get name
-            //std::cout<<"Found a node! ("<<sID<<") At nPosition="<<nPosition<<" of "<<sBuffer.size()<<".\n";
+
             //Got it! Now to save it the name array.
             Name name; //our new name
             name.sName = sID;
@@ -1353,6 +1348,10 @@ bool ASCII::Read(MDL & Mdl){
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                        ctrl.nUnknown2 = ctrl.nControllerType + 8;
+                    }
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
                        Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
@@ -1450,6 +1449,10 @@ bool ASCII::Read(MDL & Mdl){
                     ctrl.nControllerType = ReturnController(safesubstr(sID, 0, sID.length()-3));
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
+                    if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                       ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                        ctrl.nUnknown2 = ctrl.nControllerType + 8;
+                    }
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
@@ -1636,6 +1639,7 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "endmodelgeom"){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bGeometry = false;
+                    FH->MH.nNodeCount = nNodeCounter;
                     nNodeCounter = 0;
                     SkipLine();
 
@@ -1726,6 +1730,7 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "specular") SkipLine();
                 else if(sID == "wirecolor") SkipLine();
                 else if(sID == "shininess") SkipLine();
+                else if(sID == "name") SkipLine();
                 else{
                     std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
                     SkipLine();

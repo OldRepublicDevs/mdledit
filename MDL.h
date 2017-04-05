@@ -1120,7 +1120,7 @@ struct Animation{
     unsigned int nFunctionPointer1 = 0;
     std::string sName;
     unsigned int nOffsetToRootAnimationNode = 0;
-    unsigned int nNumberOfObjects = 0;
+    unsigned int nNumberOfNames = 0;
     ArrayHead RuntimeArray1; //Always 0
     ArrayHead RuntimeArray2; //Always 0
     unsigned int nRefCount = 0; //Always 0
@@ -1185,6 +1185,7 @@ struct ModelHeader{
     int nTotalTangent2Count = 0;
     int nTotalTangent3Count = 0;
     int nTotalTangent4Count = 0;
+    int nNodeCount = 0; //Only the nodes that actually exist, and only the ones in this model
     GeometryHeader GH;
     Node RootNode;
     std::vector<Animation> Animations;
