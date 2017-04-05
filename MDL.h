@@ -30,7 +30,6 @@
      - short nPadding1 in NodeHeader
      - 3 int32s in SkinHeader
      - K2 unknown 2 in MeshHeader
-     - zero1 and zero2 in EmitterHeader
      - -1 -1 0 Array in MeshHeader
 
 /**/
@@ -362,24 +361,33 @@ class Orientation{
     void ConvertToQuaternions(){
         if(!bAA) std::cout<<"Orientation::ConvertToQuaternions(): Calculating with invalid AA values\n";
         double a = fAngle / 2.0;
-        qW = cosf(a);
-        qX = fX * sinf(a);
-        qY = fY * sinf(a);
-        qZ = fZ * sinf(a);
+        qW = cos(a);
+        qX = fX * sin(a);
+        qY = fY * sin(a);
+        qZ = fZ * sin(a);
         bQuaternion = true;
     }
     void ConvertToAA(){
         if(!bQuaternion) std::cout<<"Orientation::ConvertToAA(): Calculating with invalid quaternion values\n";
         if(qW > 1.0){
             //Normalize
+            double fNorm = qX*qX + qY*qY + qZ*qZ + qW*qW;
+            fNorm = sqrt(fNorm);
+            qX/=fNorm;
+            qY/=fNorm;
+            qZ/=fNorm;
+            qW/=fNorm;
         }
-        fAngle = 2.0 * acosf(qW);
-        double s = sqrtf( (1.0 - powf(qW, 2.0)));
+
+        //if(qW + 1.0 < 0.001) fAngle = 0.0;
+        fAngle = 2.0 * acos(qW);
+
+        double s = sqrt( (1.0 - qW * qW));
         if(s < 0.001){
             //Without normalization
             // if it is important that axis is normalised then replace with x=1; y=z=0;
             // MDLOps turns them into 0,0,0. Need to check what the best solution for NWMax is (maybe it's irrelevant)
-            fX = 1.0; //qX;
+            fX = 0.0; //qX;
             fY = 0.0; //qY;
             fZ = 0.0; //yZ;
         }
@@ -425,6 +433,7 @@ class Orientation{
             /// x^2 / fSq + y^2 / fSq + z^2 / fSq + 0.0 == 1
             /// x^2 + y^2 + z^2 == fSq (which is the definition of fSquare)
         }
+        std::cout<<"Decompressed Q: "<<qX<<" "<<qY<<" "<<qZ<<" "<<qW<<"\n";
         bQuaternion = true;
         bAA = false;
         ConvertToAA();
