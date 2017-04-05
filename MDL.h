@@ -367,37 +367,7 @@ class Orientation{
         qZ = fZ * sin(a);
         bQuaternion = true;
     }
-    void ConvertToAA(){
-        if(!bQuaternion) std::cout<<"Orientation::ConvertToAA(): Calculating with invalid quaternion values\n";
-        if(qW > 1.0){
-            //Normalize
-            double fNorm = qX*qX + qY*qY + qZ*qZ + qW*qW;
-            fNorm = sqrt(fNorm);
-            qX/=fNorm;
-            qY/=fNorm;
-            qZ/=fNorm;
-            qW/=fNorm;
-        }
-
-        //if(qW + 1.0 < 0.001) fAngle = 0.0;
-        fAngle = 2.0 * acos(qW);
-
-        double s = sqrt( (1.0 - qW * qW));
-        if(s < 0.001){
-            //Without normalization
-            // if it is important that axis is normalised then replace with x=1; y=z=0;
-            // MDLOps turns them into 0,0,0. Need to check what the best solution for NWMax is (maybe it's irrelevant)
-            fX = 0.0; //qX;
-            fY = 0.0; //qY;
-            fZ = 0.0; //yZ;
-        }
-        else{
-            fX = qX / s;
-            fY = qY / s;
-            fZ = qZ / s;
-        }
-        bAA = true;
-    }
+    void ConvertToAA();
     void Decompress(unsigned int nCompressed){
         //Special compressed quaternion - from MDLOps
         /// Get only the first 11 bits (max value 0x07FF or 2047)

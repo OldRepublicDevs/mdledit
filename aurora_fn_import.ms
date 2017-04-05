@@ -2440,6 +2440,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         angle = RadToDeg (tok.ReadFloat())
                                         if DEBUG then format "line:% keytime:%  axis:%  angle:%\r\n" lineNum keytime axis angle
                                         -- build quat value
+                                        local objRotAA = angleaxis angle axis
                                         objRot = quat angle axis
                                         format "line:% keytime:%  axis:%  angle:% quaternion:%\r\n" lineNum keytime axis angle objRot
                                         local existingPosKey = getKeyIndex animObj.pos.controller keytime
@@ -2448,7 +2449,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
                                             --with animate on at time keytime animObj.rotation = objRot
                                             local newkey = addnewkey animObj.rotation.controller keytime
-                                            newkey.value = (-1 * objRot)
+                                            newkey.value = (objRotAA)
                                         )
                                         if (existingPosKey == 0) then
                                         (

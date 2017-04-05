@@ -88,3 +88,7 @@ obj/Debug/editordlg.o
 obj/Release/file.o
 
 obj/Release/editordlg.o
+
+obj/Debug/geometry.o
+
+geometry.cpp
