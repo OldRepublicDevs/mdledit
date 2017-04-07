@@ -109,7 +109,7 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = tcb_rotation()
-			    		o.pos.controller = tcb_position()
+			    		--o.pos.controller = tcb_position()
 			    		o.scale.controller = tcb_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
@@ -118,7 +118,7 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = linear_rotation()
-			    		o.pos.controller = linear_position()
+			    		--o.pos.controller = linear_position()
 			    		o.scale.controller = linear_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
