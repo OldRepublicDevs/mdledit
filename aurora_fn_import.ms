@@ -1946,7 +1946,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     --newObj.position.controller = tcb_position()
                                     --newObj.rotation.controller = tcb_rotation()
                                     newObj.scale.controller = linear_scale()
-                                    newObj.position.controller = bezier_position()
+                                    newObj.position.controller = linear_position()
                                     newObj.rotation.controller = linear_rotation()
                             -- end bead-v modification
                                     in coordsys parent
@@ -2301,6 +2301,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             if (animObj != undefined) then
                             (
                                 if DEBUG then format "positionbezierkey processing START\r\n"
+
+                                if(classof animObj.pos.controller != position_bezier)
+                                then animObj.pos.controller = position_bezier()
+
                                 local keyCount = undefined;
                                 -- try and get the key list count
                                 if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
@@ -2320,8 +2324,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         local p3out = tok.ReadPoint3()
                                         --if DEBUG then format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
                                         p3 *= 100
-                                        --p3in *= 100
-                                        --p3out *= 100
                                         -- set animatiom obj properties and
                                         -- generate key frames in the process.
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
@@ -2386,8 +2388,11 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- bead-v modification: just to keep it compatible with positionbezierkey
                                             --with animate on at time keytime animObj.pos = p3
                                             local newkey = addnewkey animObj.pos.controller keytime
-                                            newkey.inTangentType = #linear
-                                            newkey.outTangentType = #linear
+                                            if(classof animObj.pos.controller == position_bezier) then
+                                            (
+                                                newkey.inTangentType = #linear
+                                                newkey.outTangentType = #linear
+                                            )
                                             newkey.value = p3
                                     -- end bead-v modification
                                         )

@@ -47,7 +47,7 @@ global g_ModelName
 global g_expprog	-- holds export progress by node/animation
 
 --------------------------------------------------------------------------------
--- Dialogs          
+-- Dialogs
 --------------------------------------------------------------------------------
 rollout nx_dlg_progress "Export Progress"
 (
@@ -55,20 +55,20 @@ rollout nx_dlg_progress "Export Progress"
 	local total
 	label lbl_status "Exporting Geometry"
 	progressBar prg_exporting align:#center
-	
+
 	fn reset s =
 	(
 		cnt = 0.0
 		total = s
 		prg_exporting.value = 0
 	)
-	
+
 	fn increment=
 	(
 		cnt += 1.0
 		prg_exporting.value = (((cnt*100)/total) as integer)
 	)
-	
+
 	fn status s =
 	(
 		lbl_status.text = s
@@ -129,18 +129,18 @@ fn nx_materialbitmapname mat =
           mat = mat.bakedMaterial
 
      -- if the bakedmaterial is a multimaterial, we're looking at a walkmesh; no texture needed
-       if classof mat == MultiMaterial then 
+       if classof mat == MultiMaterial then
 	(
 		return "NULL"
 	)
 
     -- end modification
-	
+
 	if (mat.diffusemap== undefined or mat.diffusemap.filename==undefined) then
 	(
 		return (mat.name)
 	)
-	
+
 	return (getfilenamefile mat.diffusemap.filename)
 )
 
@@ -165,7 +165,7 @@ fn nx_materiallightmapname mat =
 	(
 		return "NULL"
 	)
-	
+
 	return (getfilenamefile mat.ambientmap.filename)
 )
 -- end modification
@@ -181,17 +181,17 @@ fn nx_copyTextureFiles nodeMaterial node exportdir = (
 	if (retval == true) then
 	(
 		local work
-	
+
 		-- get path of texture
 		tex = nodeMaterial.diffusemap.filename
 
 		if (BitMapNameCheck(node) == 0) then return 0
-	
+
 		-- get filename of texture
 		filename = nx_lowercase( filenameFromPath tex )
 
 		-- check to make sure source and target aren't the same
-		if (tex != (exportdir+"\\"+filename)) then 
+		if (tex != (exportdir+"\\"+filename)) then
 		(
 			-- convert from windows path to MAX path
 			--tex = convertslash tex
@@ -205,9 +205,9 @@ fn nx_copyTextureFiles nodeMaterial node exportdir = (
 				-- check to see if date modified is the same
 				if ((getfilemoddate tex) != (getfilemoddate (work+"/"+filename))) then
 				(
-					str = "The texture \"" + work+"/"+filename + "\"\n"+ 
+					str = "The texture \"" + work+"/"+filename + "\"\n"+
 					"already exists.  Do you want to replace it?"
-					
+
 					if ((queryBox str title:"File Exists" beep:true) == false) then
 					(
 						return 0
@@ -217,7 +217,7 @@ fn nx_copyTextureFiles nodeMaterial node exportdir = (
 				)
 			)
 			copyFile (tex) (work+"/"+filename)
-		)		 
+		)
 	)
 )
 
@@ -226,11 +226,11 @@ fn nx_copyTextureFiles nodeMaterial node exportdir = (
 -- export directory, a dialog will ask the user if they wish to overwrite it.  If
 -- the modified date of both files match, then it will skip over that file.
 
-fn nx_getTextures node modelbase = 
+fn nx_getTextures node modelbase =
 (
 	-- verify that the current node has a material applied to it
 	local texture_exportpath = modelbase.export_path
-	
+
 	-- if we are also going to do the dds thing then we want a tga specific dir
 	if modelbase.tga2dds == 1 then
 	(
@@ -247,7 +247,7 @@ fn nx_getTextures node modelbase =
 			)
 		)
 	)
-	
+
 	if (node.material != undefined) then
 	(
 		-- verify that the material uses a bitmap for the diffusemap
@@ -372,7 +372,7 @@ function nx_ExDanglymesh node = (
 			-- A zero value causes discontinuities in the physics calculations,
 			-- therefore we can ignore that case. Also only use one color value
 			-- for the constraint. Have picked the first one in the rgb triplet.
-			
+
 -- Setting this to 1 when it should be 0 seems to have undesired results. 0 is
 -- used to STOP dangly activity so setting to 1 defeats that purpose.
 --			if (curcolour.red == 0) then
@@ -400,9 +400,9 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
         MessageBox("AABB Generation: Maximum recursion level reached.  Check for duplicate verticies and/or faces.")
         return 0
     )
-    
-    local aabbLine = ""    
-    
+
+    local aabbLine = ""
+
     -- Calculate the size of the bounding box for the face list
     local bot_left = point3 100000.0 100000.0 100000.0
     local top_right = point3 -100000.0 -100000.0 -100000.0
@@ -511,14 +511,14 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
             axis += 1
             if (axis > 3) then axis = 1
         )
-        
+
         if DEBUG then format "DEBUG: PROCESS SPLIT LOOP%" g_delim to:g_strBuffer
 
         local leftside = true
         local good_split = false
         local leftlist = #()
         local rightlist = #()
-        
+
         -- work out the split for the tree: left and right branches
         local axiscnt = 1
         while (not good_split) do
@@ -526,7 +526,7 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
 	        if DEBUG then format "DEBUG: No good split found yet%" g_delim to:g_strBuffer
             leftlist = #()
             rightlist = #()
-            
+
             -- split out the faces in facelist to the left and right tree
             -- branches. The split is based on split axis value
             for i=1 to facelist.count do
@@ -544,7 +544,7 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
                 else
                     append rightlist facelist[i]
             )
-            
+
             -- This code tries to make a split that is not down one branch only.
             -- This is probably causing more problems than it is worth.
 --            good_split = true   -- force a good split
@@ -571,7 +571,7 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
 	                    append aabbData ("#  face: "+(f as string))
                     )
                     append aabbData "#ERROR-END"
-                    
+
                     --messageBox ("ERROR: aabb tree unable to get a split down both branches.")
                     return 0
                 )
@@ -579,15 +579,15 @@ fn BuildAABBTreeNode node facemids facelist level aabbData verbose =
         )
 
         if DEBUG then format "Recursive calls%" g_delim to:g_strBuffer
-        
+
         -- Flush buffer before diving down tree
         nx_FlushBuffer()
-        
+
         -- Recursive calls
         BuildAABBTreeNode node facemids leftlist (level+1) aabbData verbose
         BuildAABBTreeNode node facemids rightlist (level+1) aabbData verbose
     )
-        
+
 )
 
 fn WriteAABBTree node verbose:false =
@@ -619,7 +619,7 @@ fn WriteAABBTree node verbose:false =
 fn ExportAABBTree node =
 (
     if SPEEDT then nx_startStopWatch txt:"ExportAABBTree"
-    
+
 	local aabbmod = node.modifiers["AuroraWalkmesh"]
 	if (aabbmod == undefined) then (
 		str =  "ERROR: no AuroraWalkmesh modifier found on: " + node.name
@@ -629,7 +629,7 @@ fn ExportAABBTree node =
 	if (aabbmod.ig_recalc == 1) and (aabbmod.ig_multimode == 0) then (
 		local b = WriteAABBTree node verbose:false
 		aabbmod.ig_boxes = #()
-		aabbmod.ig_boxes.count=0 
+		aabbmod.ig_boxes.count=0
 		local p
 		for p in b do (
 			aabbmod.ig_boxes[aabbmod.ig_boxes.count+1] = p
@@ -646,7 +646,7 @@ fn ExportAABBTree node =
 	(
     	WriteAABBTree node verbose:true
 	)
-	
+
     if SPEEDT then nx_stopStopWatch txt:"ExportAABBTree"
 )
 
@@ -655,12 +655,12 @@ fn Ex3DOrientation node =
 (
     if DEBUG then format "Ex3DOrientation::do %%" node.name g_delim to:g_strBuffer
     -- From Wayland's original script
-    
+
     if DEBUG then (
         format "Data before 'in coordsys parent block'%" g_delim to:g_strBuffer
         format "objPos=%%" (at time 0 node.pos) g_delim to:g_strBuffer
     )
-    
+
     in coordsys parent
     (
         if DEBUG then (
@@ -690,7 +690,7 @@ fn Ex3DOrientation node =
         --format "%scale %\r\n" strIndent1 objScale.x
     )
     if DEBUG then format "Ex3DOrientation::End%" g_delim to:g_strBuffer
-    
+
     nx_FlushBuffer()
 )
 
@@ -701,10 +701,10 @@ fn ExAuroraPoly node =
     -- We only do anything for aurora trimesh modifiers here.
     -- Helpers get their props dumped in another function.
     if DEBUG then format "#ExAuroraPoly%" g_delim to:g_strBuffer
-    
+
     -- material prop over-ride list
     mat_prop_over_ride = #("ambient","diffuse","specular","shininess")
-    
+
 	for modifier in node.modifiers do
 	(
 		if (modifier.name=="AuroraTrimesh") or \
@@ -755,7 +755,7 @@ fn ExAuroraPoly node =
         		(
         			format "%% %%" strIndent1 (thisProp as string) (nx_fprints (getproperty modifier thisProp)) g_delim to:g_strBuffer
     			)
-    			
+
     			nx_FlushBuffer()
         	) -- end for 'thisprop'
 		) -- end if
@@ -892,7 +892,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 
     -- end modification
 
-    
+
 	local i,v,f;
 	local bitmapname
 	local lightmapname
@@ -994,7 +994,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 
 		format  "%% % %  %  % % %  %  % % %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid l0 l1 l2 g_delim to:g_strBuffer
 		-- format  "%% % %  %  % % %  %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid g_delim to:g_strBuffer
-                
+
                 -- end modification
 
 		nx_FlushBuffer()
@@ -1138,14 +1138,14 @@ function do_dummy node iswalkmesh:false =
 	if((nx_strclassof node) != "aurorabase") then
 	(
     	if DEBUG then format "node pos=%%" (at time 0 node.pos) g_delim to:g_strBuffer
-    	
+
 		Ex3DOrientation node
 		local wcolor = node.wirecolor
 		format "%wirecolor %%"  strIndent1 (nx_fprints wcolor) g_delim to:g_strBuffer
 	)
 	nx_FlushBuffer()
 	ExAuroraPoly node
-	
+
 	if DEBUG then format "#do_dummy::End%" g_delim to:g_strBuffer
 ) -- end fn
 
@@ -1180,7 +1180,7 @@ function dump_node_properties node =
 				  	(
 					  	format "%% %%" strIndent1 propStr (nx_fprints (degtorad propVal)) g_delim to:g_strBuffer
 				  	)
-				  	
+
 				  	(propStr == "chunkName"):
 				  	(
 					  	-- we only put out chunkName if it is not a "NULL" value
@@ -1188,7 +1188,7 @@ function dump_node_properties node =
 						  	format "%% %%" strIndent1 propStr (nx_fprints propVal) g_delim to:g_strBuffer
 					  	)
 				  	)
-				  	
+
 				  	default: format "%% %%" strIndent1 propStr (nx_fprints propVal) g_delim to:g_strBuffer
 			  	)
 			)
@@ -1209,7 +1209,7 @@ function do_trimesh node wkmesh:false =
     -- Code from Bioware's scripts with some enhancements/corrections
     -- based on data from Wayland's scripts and my own checking.
     if DEBUG then format "#do_trimesh%" g_delim to:g_strBuffer
-    
+
     local tmod = node.modifiers["AuroraTrimesh"]
     local mat_over_ride = 0
     if tmod != undefined then
@@ -1217,7 +1217,7 @@ function do_trimesh node wkmesh:false =
 	    mat_over_ride = tmod.extra_mat_data
     )
 
-	-- Verts in 'node' are in worldspace but 'node.mesh' gives a mesh 
+	-- Verts in 'node' are in worldspace but 'node.mesh' gives a mesh
 	-- in object space which we use to export
 	local mat = node.material
 
@@ -1256,7 +1256,7 @@ function do_trimesh node wkmesh:false =
 		format "%shininess %%"  strIndent1 (nx_fprints sh) g_delim to:g_strBuffer
 		-- self illum is now driven only from the trimesh modifier
 		--format "%selfillumcolor %%" strIndent1 (nx_fprints illum) g_delim to:g_strBuffer
-		
+
         --local alpha = mat.opacity / 100.0
 		-- alpha is driven from the trimesh modifier on export
         --format "%alpha %%" strIndent1 alpha g_delim to:g_strBuffer
@@ -1285,7 +1285,7 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
     -- for the code later in this function
     if dnode.rotation.controller != linear_rotation() then dnode.rotation.controller = linear_rotation()
     if dnode.pos.controller != linear_position() then dnode.pos.controller = linear_position()
-    
+
     -- Code from Bioware's scripts
     -- Takes care of sparkly-bit removal for tiles. It basically
     -- removes all rotations from the object and applies them directly
@@ -1297,7 +1297,7 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 	local p = dnode.controller.position
 
 	p = nx_roundp3 p
-	
+
 	deltaPos = dnode.controller.position - p
 	deltaPos = deltaPos + parentDeltaPos
 	deltaRot = dnode.controller.rotation + parentRot
@@ -1336,7 +1336,7 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 			format "%%%" strIndent2 (nx_materialbitmapname(m)) g_delim to:g_strBuffer
 			nx_FlushBuffer()
 		)
-		
+
 		-- we should work out what the correct material is based on the vertex.
 		-- We use the first face in the mesh and get that mat id as the index
 		-- into the multimaterial.
@@ -1361,13 +1361,13 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 		format "%shininess %%" strIndent1 (nx_fprints sh) g_delim to:g_strBuffer
 		-- selfillum is now driven solely from the trimesh modifier
 		--format "%selfillumcolor %%" strIndent1 (nx_fprints illum) g_delim to:g_strBuffer
-		
+
 		-- alpha is driven from the trimesh modifier on export. See ExAuroraPoly
         --local alpha = mat.opacity / 100.0
         --format "  alpha %%" alpha g_delim to:g_strBuffer
         nx_FlushBuffer()
 	)
-	
+
     -- The following is essentially standard mesh exporting with
     -- some modifications for Tile specific stuff
     if DEBUG then format "#do_tiletrimesh: mesh exporting%" g_delim to:g_strBuffer
@@ -1383,20 +1383,20 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 		v = in coordsys local getvert nodeMesh i
 		v = v + deltaPos
 		if (deltaRot.angle != 0.0) then	v = v * deltaRot
-		
+
 		-- round
 		v = nx_roundp3 v
 		x = v.x
 		y = v.y
 		z = v.z
-		-- convert to application unit length (meters) 
-		x = x * 0.01 
+		-- convert to application unit length (meters)
+		x = x * 0.01
 		y = y * 0.01
 		z = z * 0.01
 		format "%% % %%" strIndent2 x y z g_delim to:g_strBuffer
 		nx_FlushBuffer()
 	)
-	
+
 	format "%faces %%" strIndent1 nodeMesh.numfaces g_delim to:g_strBuffer
 	for i=1 to nodeMesh.numfaces do (
 		local f, v0, v1, v2 ,s ,t0,t1,t2,matid
@@ -1420,7 +1420,7 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 		format  "%% % %  %  % % %  %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid g_delim to:g_strBuffer
 		nx_FlushBuffer()
 	)
-	
+
 	-- determine uv coordinate correction
 	local clipu,clipv,clipw,cliph
 	clipu=0
@@ -1446,11 +1446,11 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 			nx_FlushBuffer()
 		)
 	)
-	
+
 	/*
 	not sure of this is needed as not in other scripts. Will keep around just in
 	case ...
-	
+
 	if (nodeMesh.numcpvverts > 0) then
 	(
 		-- Taken from the MAXscript docs....
@@ -1477,9 +1477,9 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 			format "     % % %\r\n" (colourVerts[i].red/255.0) (colourVerts[i].green/255.0) (colourVerts[i].blue/255.0)
 	)
 	*/
-	
+
 	if DEBUG then format "#END: do_tiletrimesh%" g_delim to:g_strBuffer
-	
+
     -- Return the the delta data to the caller for reuse in subsequent calls
     return (parentPosRot deltaPos deltaRot)
 ) -- end fn
@@ -1491,7 +1491,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
 (
     /*
        A mix of My, Waylands and Bioware's code.
-       
+
        Must deal with all the node types. These include:
        * dummy's (dummy, lights, emitters, references)
        * skin
@@ -1513,7 +1513,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
     -- if we have the data then package it up for later use by tile exporting functions
     if prntDeltaPos != unsupplied and prntRot != unsupplied then
         struc_parentPosRot = parentPosRot prntDeltaPos prntRot
-    
+
 	--
 	-- Work out what type of node we have here
 	--
@@ -1615,24 +1615,24 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             do_dummy node
             -- lights have all their data held on the helper obj
             -- so process for it. Color is a special case that we deal with here
-                
+
         	local c = node.rgb
         	local r = node.radius * 0.01
-        
+
         	format "  radius %%" r g_delim to:g_strBuffer
         	format "  multiplier %%" node.multiplier g_delim to:g_strBuffer
             if node.negativeLight == 1 then
 	            format "  color %%" (nx_fprints -c) g_delim to:g_strBuffer
             else
                 format "  color %%" (nx_fprints c) g_delim to:g_strBuffer
-                
+
     		format "  ambientonly %%" node.ambientOnly g_delim to:g_strBuffer
     		format "  nDynamicType %%" node.nDynamicType g_delim to:g_strBuffer
     		format "  affectDynamic %%" node.affectDynamic g_delim to:g_strBuffer
     		format "  shadow %%" node.Shadow g_delim to:g_strBuffer
     		format "  lightpriority %%" node.lightpriority g_delim to:g_strBuffer
     		format "  fadingLight %%" node.fadingLight g_delim to:g_strBuffer
-    		
+
     		--used??
 --    		format "  lensflares %\r\n" node.lensflares
 
@@ -1698,14 +1698,14 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             -- the only times this should be processed is when
             -- exporting a Tile mdl
             local objController     -- not sure if need this? To be deleted?
-            
+
         	format "node % %%" node_type node.name g_delim to:g_strBuffer
             do_dummy node
-            
+
             -- In the interests of greater control I have moved all the
             -- desparkle processing to a seperate manually initiated process,
             -- please see the Speed-Bar.
-            
+
             do_trimesh node
             -- could be replaced with sraight dump of aabb data from the modifier
             --WriteAABBTree node
@@ -1794,7 +1794,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             -- close node entry
             format "endnode%" g_delim to:g_strBuffer
         )
-        
+
         ((node_type=="trimesh")and(type=="mdl")and isTile):
         (
             format "#Tile trimesh node%" g_delim to:g_strBuffer
@@ -1816,7 +1816,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             -- close node entry
             format "endnode%" g_delim to:g_strBuffer
         )
-        
+
         ((node_type=="animmesh")and(type=="mdl")):
         (
         	format "node % %%" node_type node.name g_delim to:g_strBuffer
@@ -1831,7 +1831,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
 
     -- After all this printing make sure we do a buffer flush
     nx_FlushBuffer()
-	
+
 	-- There is a special case of processing that is defined in the Aura
 	-- scripts and talked about in the Bioware Tile Creation docs.
 	-- Per the Bioware Tile Docs:
@@ -1845,7 +1845,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
 	animation on. Then we call it the exact same name as the Aurabase
 	itself, with the suffix "a" (for animation). We link it to the
 	Aurabase, and then link all our dynamic, animated objects to
-	this dummy. 
+	this dummy.
 	*/
 	-- So what we do is to follow a similar approach to the Bioware
 	-- scripts. When we encountered a dummy node that is exactly the
@@ -1895,7 +1895,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
       )
     )
     nx_FlushBuffer()
-    
+
     if DEBUG then format "#Node_Geometry: End%" g_delim to:g_strBuffer
 )
 
@@ -1943,9 +1943,9 @@ fn ExAuroraWalkmesh node =
    ) else (
    	format "</snoopstart>%" g_delim to:g_strBuffer
 	)
-	
+
 	nx_FlushBuffer()
-	
+
     if SPEEDT then nx_stopStopWatch txt:"ExAuroraWalkmesh"
 )
 
@@ -1957,9 +1957,9 @@ fn ExAuroraTile node =
 	format "beginmodelgeom %%" node.name g_delim to:g_strBuffer
 	Node_Geometry node isTile:true prntDeltaPos:(point3 0.0 0.0 0.0) prntRot:(quat 0.0 0.0 0.0 1.0)
 	format "endmodelgeom %%" node.name g_delim to:g_strBuffer
-	
+
 	nx_FlushBuffer()
-	
+
     if DEBUG then format "#ExAuroraTile:: End%" g_delim to:g_strBuffer
 )
 
@@ -1972,9 +1972,9 @@ fn ExAuroraGeometry node =
 	format "beginmodelgeom %%" node.name g_delim to:g_strBuffer
     Node_Geometry node
 	format "endmodelgeom %%" node.name g_delim to:g_strBuffer
-	
+
 	nx_FlushBuffer()
-	
+
     if DEBUG then format "#ExAuroraGeometry:: End%" g_delim to:g_strBuffer
 )
 
@@ -2012,7 +2012,7 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
         if DEBUG then format "    #DEBUG: node not valid - exit DynBuildKeyList fn%" g_delim to:g_strBuffer
         return false
     )
-    
+
     gblDynBuildList_Node = node
     -- using dynamic code obtain controller object
     try (
@@ -2023,7 +2023,7 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
     )
 
     if DEBUG then format "    #DEBUG: objController=% %" objController g_delim to:g_strBuffer
-        
+
     local keycount = 0
     -- test to ensure that the controller is defined
     if objController != undefined then
@@ -2048,7 +2048,8 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                 objVal = execute("gblDynBuildList_Node."+keyname)
             )
             key_time = ((t-firstframe) as float) / (frameRate as float);
-            
+            local key_index = getKeyIndex objController t
+
             -- some special case unit conversion as needed
             case keyname of
             (
@@ -2058,7 +2059,7 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                     objVal = objVal * 0.01
                 )
             )
-            
+
             -- out put keys by data type
             case datatype of
             (
@@ -2084,6 +2085,13 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                     )
                     format "            % % % %%" key_time objPos.x objPos.y objPos.z g_delim to:g_strBuffer
                 )
+                "positionbezier":
+                (
+                    local objPos = objController.keys[key_index].value * 0.01
+                    local objIn = objController.keys[key_index].inTangent
+                    local objOut = objController.keys[key_index].outTangent
+                    format "            % % % % % % % % % %%" key_time objPos.x objPos.y objPos.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
+                )
                 "orientation":
                 (
                     --local rotVector = normalize (point3 -objVal.x -objVal.y -objVal.z)
@@ -2095,11 +2103,14 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         -- apply it to the orientation animation data as well
                         objVal += quat -180 (point3 1 0 0);
                     )
-                    
-                    rotVector = point3 -objVal.x -objVal.y -objVal.z
-                    
+
+                    --rotVector = point3 -objVal.x -objVal.y -objVal.z
+            -- bead-v modification: getting rid of the minus signs that are flipping our original values
+                    rotVector = point3 objVal.x objVal.y objVal.z
+            -- end bead-v modification
+
                     --format "# raw  %" rotVector
-                    
+
                     --
                     -- Normalising a [0,0,0] vector results in [1,0,0].
                     -- The desired result is [0,0,0].
@@ -2111,7 +2122,10 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         --format "  N  "
                         rotVector = normalize (rotVector)
                     )
-                    local angle = -DegToRad(objVal.angle)
+                    --local angle = -DegToRad(objVal.angle)
+            -- bead-v modification: getting rid of the minus signs that are flipping our original values
+                    local angle = DegToRad(objVal.angle)
+            -- end bead-v modification
                     format "            % % % % %%" key_time rotVector.x rotVector.y rotVector.z angle g_delim to:g_strBuffer
                 )
                 default:    format "#ERROR - keylist data type not defined in code. Contact the author for support. %"
@@ -2120,9 +2134,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
         nx_FlushBuffer()
     )
     if (keycount > 0) then format "        endlist%" g_delim to:g_strBuffer
-    
+
     nx_FlushBuffer()
-    
+
     -- Just do a tidy up. Not really necessary.  :-)
     gblDynBuildList_Node = undefined
 )
@@ -2150,9 +2164,9 @@ fn ExportAnimKeys node firstframe lastframe=
 
     local node_class = (nx_strclassof node)
     local node_superclass = ((superclassof node) as string)
-    
+
     if DEBUG then format "  #DEBUG: node: %  type: %  superclass: % %" node.name node_class node_superclass g_delim to:g_strBuffer
-    
+
     case of
     (
     	((node_class == "auroralight") or (node_class == "auroraDlight")): node_type = "light"
@@ -2196,13 +2210,13 @@ fn ExportAnimKeys node firstframe lastframe=
     */
     to_export = true	-- set base premise TO export the node
 
-	
+
 	-- only supress skinmesh nodes at this point - not happy that this is correct.
 	-- Is this just a toolset issue?
     if node_type == "skin" then (
 	    to_export = false
     )
-	    
+
     if to_export then
     (
 	    -- build the start of the animation node
@@ -2211,30 +2225,40 @@ fn ExportAnimKeys node firstframe lastframe=
 	        format "        parent %%" (node.parent.name) g_delim to:g_strBuffer
 	    else
 	        format "        parent NULL%" g_delim to:g_strBuffer
-	        
+
 	    nx_FlushBuffer()
-	
+
 	--    messagebox ("node.name=" + node.name)
 	--    messagebox ("firstframe=" + (firstframe as string))
 	--    messagebox ("lastframe=" + (lastframe as string))
-	
+
 	    local t
 	    local keycount
 	    local key_time
-	
+
 	    --
 	    -- build position keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build position list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionkey"
-	
+	    --DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionkey"
+-- bead-v modification: add bezierkey possibility
+        if(classof node.pos.controller == bezier_position) then
+        (
+            DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionbezierkey"
+        )
+        else
+        (
+            DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionkey"
+        )
+-- end bead-v modification
+
 	    --
 	    -- build orientation keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build orientation list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "orientation" "rotation" mdlname:"orientationkey" nodetype:node_type
-	
-	    
+
+
 	    ----------------------------------------------------------------
 	    -- Joco 31-Mar-04: Modifer properties                         --
 	    ----------------------------------------------------------------
@@ -2255,14 +2279,14 @@ fn ExportAnimKeys node firstframe lastframe=
 	    --) else (
 	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "float" "alpha" mdlname:"alphakey"
 	    --)
-	    
+
 	    --
 	    -- build selfillumcolor from trimesh modifier
 	    --
 	    if DEBUG then format "        #DEBUG: Build selfillumcolor list%" g_delim to:g_strBuffer
 	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "color" "selfillumcolor" mdlname:"selfillumcolorkey"
-	    
-    
+
+
 	    ----------------------------------------------------------------
 	    -- Joco 14-Aug-03: Emitter export code                        --
 	    --                                                            --
@@ -2276,103 +2300,103 @@ fn ExportAnimKeys node firstframe lastframe=
 	    --
 	    if DEBUG then format "        #DEBUG: Build alpha list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "alpha" mdlname:"alphakey"
-	
+
 	    --
 	    -- build alphaStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build alphaStart list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "alphaStart" mdlname:"alphaStartkey"
-	
+
 	    --
 	    -- build alphaEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build alphaEnd list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "alphaEnd" mdlname:"alphaEndkey"
-	
+
 	    --
 	    -- build birthrate keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build birthrate list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "birthrate" mdlname:"birthratekey"
-	
+
 	    --
 	    -- build bounce_co keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build bounce_co list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "bounce_co" mdlname:"bounce_cokey"
-	
+
 	    --
 	    -- build colorStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build colorStart list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "color" "colorStart" mdlname:"colorStartkey"
-	
+
 	    --
 	    -- build colorEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build colorEnd list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "color" "colorEnd" mdlname:"colorEndkey"
-	
+
 	    --
 	    -- build combinetime keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build combinetime list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "combinetime" mdlname:"combinetimekey"
-	
+
 	    --
 	    -- build drag keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build drag list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "drag" mdlname:"dragkey"
-	
+
 	    --
 	    -- build fps keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build fps list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "integer" "fps" mdlname:"fpskey"
-	
+
 	    --
 	    -- build frameStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build frameStart list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "integer" "frameStart" mdlname:"frameStartkey"
-	
+
 	    --
 	    -- build frameEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build frameEnd list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "integer" "frameEnd" mdlname:"frameEndkey"
-	
+
 	    --
 	    -- build grav keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build grav list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "grav" mdlname:"gravkey"
-	
+
 	    --
 	    -- build lifeExp keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lifeExp list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "lifeExp" mdlname:"lifeExpkey"
-	
+
 	    --
 	    -- build lightningDelay keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningDelay list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "lightningDelay" mdlname:"lightningDelaykey"
-	
+
 	    --
 	    -- build lightningRadius keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningRadius list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "lightningRadius" mdlname:"lightningRadiuskey"
-	
+
 	    --
 	    -- build lightningScale keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningScale list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "lightningScale" mdlname:"lightningScalekey"
-	
+
 	    --
 	    -- build lightningSubDiv keylist
 	    --
@@ -2384,79 +2408,79 @@ fn ExportAnimKeys node firstframe lastframe=
 	    --
 	    if DEBUG then format "        #DEBUG: Build blurlength list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "blurlength" mdlname:"blurlengthkey"
-	    	
+
 	    --
 	    -- build sizeStart_y keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeStart_y list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "sizeStart_y" mdlname:"sizeStart_ykey"
-	    
+
 	    --
 	    -- build sizeEnd_y keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeEnd_y list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd_y" mdlname:"sizeEnd_ykey"
-	    
+
 	    --
 	    -- build mass keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build mass list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "mass" mdlname:"masskey"
-	
+
 	    --
 	    -- build p2p_bezier2 keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build p2p_bezier2 list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier2" mdlname:"p2p_bezier2key"
-	
+
 	    --
 	    -- build p2p_bezier3 keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build p2p_bezier3 list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier3" mdlname:"p2p_bezier3key"
-	
+
 	    --
 	    -- build particleRot keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build particleRot list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "particleRot" mdlname:"particleRotkey"
-	
+
 	    --
 	    -- build randvel keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build randvel list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "randvel" mdlname:"randvelkey"
-	
+
 	    --
 	    -- build sizeStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeStart list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "sizeStart" mdlname:"sizeStartkey"
-	
+
 	    --
 	    -- build sizeEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeEnd list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd" mdlname:"sizeEndkey"
-	
+
 	    --
 	    -- build spread keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build spread list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "spread" mdlname:"spreadkey"
-	
+
 	    --
 	    -- build velocity keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build velocity list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "velocity" mdlname:"velocitykey"
-	
+
 	    --
 	    -- build xsize keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build xsize list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "xsize" mdlname:"xsizekey"
-	
+
 	    --
 	    -- build ysize keylist
 	    --
@@ -2465,8 +2489,8 @@ fn ExportAnimKeys node firstframe lastframe=
 	    -----------------------------
 	    -- END Emitter export code --
 	    -----------------------------
-	
-	
+
+
 	    ----------------------------------------------------------------
 	    -- Joco 19-Aug-03: Light export code                          --
 	    --                                                            --
@@ -2480,24 +2504,24 @@ fn ExportAnimKeys node firstframe lastframe=
 	    --
 	    if DEBUG then format "        #DEBUG: Build color list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "color" "rgb" mdlname:"colorkey"
-	
+
 	    --
 	    -- build radius keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build radius list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "radius" mdlname:"radiuskey"
-	    
+
 	    --
 	    -- build multiplier keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build multiplier list%" g_delim to:g_strBuffer
 	    DynBuildKeyList node firstframe lastframe "float" "multiplier" mdlname:"multiplierkey"
-	    
+
 	    -----------------------------
 	    -- END Light export code   --
 	    -----------------------------
-	
-	    
+
+
 	    ----------------------------------------------------------------
 	    -- Animation Mesh                                             --
 	    -- This needs some special processing hence the code block    --
@@ -2510,21 +2534,21 @@ fn ExportAnimKeys node firstframe lastframe=
 	    (
 	    	-- Change slider range to range of animation, otherwise samples won't export properly
 	    	local Oldanimrange = animationrange
-	    	animationrange =(interval (firstframe) (lastframe))	
-	    
+	    	animationrange =(interval (firstframe) (lastframe))
+
 	    	curTime = sliderTime
 	    	sliderTime = firstframe
-	    
-	    	if ((animIndex == 0) or (animIndex == undefined)) then 
+
+	    	if ((animIndex == 0) or (animIndex == undefined)) then
 	    		animIndex = 1
 			-- Dumps properties on nodes/Mods but in this case don't think
-			-- it is really needed?  May need to do own property/key dump! 
+			-- it is really needed?  May need to do own property/key dump!
 	    	--node_anim_trimesh n animstart animend
 	    	-- export out the mesh
 	    	ExAuroraTrimesh node.mesh node.name node.material
 	    	mod = node.modifiers["AuroraAnimesh"]
 	    	samples = mod.animMeshSamples[animIndex]
-	    
+
 	    	if ((samples != undefined) and ((samples as integer) > 0)) then
 	    	(
 	    		samples = samples as integer
@@ -2537,29 +2561,29 @@ fn ExportAnimKeys node firstframe lastframe=
 	    		period = (numframes/framerate/(samples-1)) as float
 	    		format "    sampleperiod %%" period g_delim to:g_strBuffer
 	    		format "    animverts %%" (node.numverts*samples) g_delim to:g_strBuffer
-	    
+
 	    		interval = (lastframe - firstframe)/(samples-1)
 	    		--format "#interval = %%" interval
-	    		
-	    		for i = 1 to samples do 
+
+	    		for i = 1 to samples do
 	    		(
 	        		if DEBUG then format "#Sample: %%" i g_delim to:g_strBuffer
 	        		if DEBUG then format "#sliderTime = %%" sliderTime g_delim to:g_strBuffer
-	        		
-	    			for j = 1 to node.numverts do 
+
+	    			for j = 1 to node.numverts do
 	    			(
 	    				v = getvert node.mesh j
 	    				v *= 0.01  -- convert to meters
 	    				format "      % % %%" v.x v.y v.z g_delim to:g_strBuffer
 	    				nx_FlushBuffer()
 	    			)
-	    			
+
 	    			sliderTime += interval
-	    			if ((sliderTime > lastframe) or (i == (samples))) then 
+	    			if ((sliderTime > lastframe) or (i == (samples))) then
 	    				sliderTime = lastframe
 	    		)
-	    	
-	    	
+
+
 	    		-- ===== Export texture coordinates =====
 	    		sliderTime = firstframe
 	    		--
@@ -2576,10 +2600,10 @@ fn ExportAnimKeys node firstframe lastframe=
 	    			clipv = mat.diffusemap.clipv
 	    			clipw = mat.diffusemap.clipw
 	    			cliph = mat.diffusemap.cliph
-	    			-- it might be upside down since 
+	    			-- it might be upside down since
 	    			-- from the aura exporter we had a line like the following:
 	    			clipv = 1 - clipv - cliph
-	    			
+
 	    			format "clipu %%" clipu g_delim to:g_strBuffer
 	    			format "clipv %%" clipv g_delim to:g_strBuffer
 	    			format "clipw %%" clipw g_delim to:g_strBuffer
@@ -2589,32 +2613,32 @@ fn ExportAnimKeys node firstframe lastframe=
 	    			if(mat == undefined) then format "#animmesh tverts: no material for %%" name g_delim to:g_strBuffer
 	    			format "#animmesh tverts: no bitmap for object %%" name g_delim to:g_strBuffer
 	    		)
-	    		--		
-	    		--	
+	    		--
+	    		--
 	    		if node.numtverts != 0 then
-	    		(	
+	    		(
 	    			format "    animtverts %%" (node.numtverts*samples) g_delim to:g_strBuffer
-	    			for i = 1 to samples do 
+	    			for i = 1 to samples do
 	    			(
-	    				for j = 1 to node.numtverts do 
+	    				for j = 1 to node.numtverts do
 	    				(
 	    					v = gettvert node.mesh j
 	    					format "     % % 0%" (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
 	    					nx_FlushBuffer()
 	    				)
-	    			
+
 	    				sliderTime += interval
-	    				if ((sliderTime > lastframe) or (i == (samples))) then 
+	    				if ((sliderTime > lastframe) or (i == (samples))) then
 	    					sliderTime = lastframe
 	    			)
 	    		)
-	    	
+
 	    		sliderTime = curTime
 	    		format "    endlist%" g_delim to:g_strBuffer
 	    		nx_FlushBuffer()
 	    	) else (
 	    		format "    verts %%" node.numverts g_delim to:g_strBuffer
-	    		for i=1 to node.numverts do 
+	    		for i=1 to node.numverts do
 	    		(
 	    			local v
 	    			v = getvert node.mesh i
@@ -2623,13 +2647,13 @@ fn ExportAnimKeys node firstframe lastframe=
 	    			nx_FlushBuffer()
 	    		)
 	    	)
-	    	
+
 	    	nx_FlushBuffer()
-	    	
+
 	    	-- Restore anim slider range
 	    	animationrange = Oldanimrange
 	    )
-	    
+
 	    format "    endnode%" g_delim to:g_strBuffer
 	)	-- endif  to_export
     nx_FlushBuffer()
@@ -2667,7 +2691,7 @@ fn ExAuroraAnimations node =
 	-- From Wayland's original script
 	-- Modified by Joco to suit MDL Tool structure
 	if (node == undefined) then return
-	
+
 	local anim_data
 	local name
 	local firstframe
@@ -2743,7 +2767,7 @@ fn ExAuroraMDL node anim:true =
     if (nx_strclassof node) != "aurorabase" then return 0
     -- 2. so we have an aurorabase, but does it have any children?
     if not (node.children.count > 0) then return 0
-    
+
     -- make sure we are exporting starting at frame 0
     local currentFrame = sliderTime
     sliderTime = 0
@@ -2752,11 +2776,11 @@ fn ExAuroraMDL node anim:true =
     if SPEEDT then nx_startStopWatch txt:"ExAuroraMDL"
     -- set the global name for the model. Used for pwk/dwk etc processing
     g_ModelName = node.name
-    
+
     -- Deal with wok file creation if the model is a Tile
 	if (node.classification == "Tile") then
 		ExAuroraWalkmesh node
-	
+
 	format "# Exported from NWmax % at %%" gblVersion localtime g_delim to:g_strBuffer
 	format "# mdl file%" g_delim to:g_strBuffer
 	format "#%" g_delim to:g_strBuffer
@@ -2770,7 +2794,7 @@ fn ExAuroraMDL node anim:true =
     	format "#local file: %%" (maxfilepath + maxfilename) g_delim to:g_strBuffer
     	format "filedependancy %%" maxfilename g_delim to:g_strBuffer
  	)
- 	
+
 	format "newmodel %%" node.name g_delim to:g_strBuffer
 	-- Output the SuperModel of this model:
 	local sm = "NULL"
@@ -2779,14 +2803,14 @@ fn ExAuroraMDL node anim:true =
 	then (
 		sm = (filterstring node.setsupermodel " ")[1]
 	)
-	
+
 	format "setsupermodel % %%" node.name sm g_delim to:g_strBuffer
 	format "classification %%" node.classification g_delim to:g_strBuffer
 	if (node.classification == "Character") then
 	(
 		format "setanimationscale %%" node.setanimationscale g_delim to:g_strBuffer
 	)
-	
+
 	nx_FlushBuffer()
 
 	if (node.classification == "Tile")  then
@@ -2804,12 +2828,12 @@ fn ExAuroraMDL node anim:true =
     format "donemodel %%" node.name g_delim to:g_strBuffer
 
 	if DEBUG then format "#ExAuroraMDL: End%" g_delim to:g_strBuffer
-	
+
 	nx_FlushBuffer force:true
 
 	-- restore slider time
 	sliderTime = currentFrame
-		
+
 	-- do a general clean up as we eat some memory in these scripts
 	gc()
     if SPEEDT then nx_stopStopWatch txt:"ExAuroraMDL"
@@ -2818,7 +2842,7 @@ fn ExAuroraMDL node anim:true =
 -------------------------------------------------
 -- Mass export function
 -------------------------------------------------
-function ExportAll = 
+function ExportAll =
 (
     -- Strictly speaking is based on Bioware's code but at the end of the
     -- day there are only so many ways to do this sensibly and they will all
@@ -2835,7 +2859,7 @@ function ExportAll =
 	local percentComplete = 0
 	local continueExport=true
 
-	
+
 	-- before doing anything check for prescence of skins in scene
 	for s in $objects do
 	(
@@ -2848,10 +2872,10 @@ function ExportAll =
 			return 0
 		)
 	)
-	
-		
+
+
 	--progressStart "Exporting all AuraBases..."
-	
+
 	bases = #()
 	if selection.count == 0 then
 	(
@@ -2868,19 +2892,19 @@ function ExportAll =
     		    append bases s
 	    )
 	)
-	
+
 	unfreeze $geometry
 	unfreeze bases
 
 	clearListener()
 
 	if not g_ismax then format "<snoopstart file=%batchexport.txt>%" "c:\\" g_delim to:g_strBuffer
-	for obj in bases do 
+	for obj in bases do
 	(
     	-- Check to see if we should be continuing with the export
 		if (continueExport == false) then
 			continue
-		if ((nx_strclassof obj) == "aurorabase") and (not (matchPattern obj.name pattern:"*	")) then 
+		if ((nx_strclassof obj) == "aurorabase") and (not (matchPattern obj.name pattern:"*	")) then
 		(
     		-- Only do something if there are some children.
 			if (obj.children.count > 0) then
@@ -2912,7 +2936,7 @@ function ExportAll =
         		) else (
 	           		format "</snoopstart>%" g_delim to:g_strBuffer
         		)
-				if (bSanityCheck != 0) then 
+				if (bSanityCheck != 0) then
 				(
         			select obj
         			max modify mode
@@ -2931,12 +2955,12 @@ function ExportAll =
 	   				)
 					models += (obj.name + " ")
 					count = count +1
-				) 
-				else 
+				)
+				else
 					passSanityCheck = false
-					
+
 				if not g_ismax then format "</snoopstart>%" g_delim to:g_strBuffer
-				
+
 				-- do we need to compile this model?
         		if obj.export_binary == 1 then
         		(
@@ -2955,10 +2979,10 @@ function ExportAll =
 					DOSCommand (scriptsPath+"nwmax\\scratch\\export.bat")
            		) else
            		(
-                  format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\export.bat") g_delim to:g_strBuffer    
+                  format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\export.bat") g_delim to:g_strBuffer
                   format "\"%\" -c \"%%%\" \"%\\\" > %%" g_compiler obj.export_path obj.name ".mdl.ascii" obj.export_path (scriptsPath+"nwmax\\scratch\\compile_"+obj.name+".txt") g_delim to:g_strBuffer
                   format "</snoopstart>%" g_delim to:g_strBuffer
-                  
+
                   format "<commandstart>%" g_delim to:g_strBuffer
                   format "\"%export.bat\"%" (scriptsPath+"nwmax\\scratch\\") g_delim to:g_strBuffer
                   format "</commandstart>%" g_delim to:g_strBuffer
@@ -2990,7 +3014,7 @@ function ExportAll =
 	   	format "</snoopstart>%" g_delim to:g_strBuffer
 	   	format "</snoopend>%" g_delim to:g_strBuffer
 	)
-	
+
 	if (passSanityCheck == false) then (
 		str = "SanityCheck failed for some models.  See the sanity check file for each model."
 		messageBox str title:"Failed Sanity Check" beep:true
@@ -3012,13 +3036,13 @@ fn massexport pattern:undefined target:undefined anims:true =
 		format "Limitations: The total size the accumulated mdl data must be less than 3.6MB.\r\n"
 		return 0
 	)
-	
+
 	if not (nx_existDir target) then
 	(
 		messageBox "Target directory does not exist"
 		return 0
 	)
-	
+
     -- get all the files to load from the pattern provided
     local modelBase
     local filesToLoad = getFiles pattern
