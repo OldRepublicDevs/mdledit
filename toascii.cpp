@@ -103,13 +103,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
-            sReturn << "\nendnode";
+            sReturn << "\n    endnode";
         }
         sReturn << string_format("\ndoneanim %s %s", anim->sName.c_str(), FH->MH.GH.sName.c_str());
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
-        sReturn << "\nnode ";
+        sReturn << "\n    node ";
         if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
         else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
         else if(node->Head.nType & NODE_HAS_SKIN) sReturn << "skin ";
@@ -119,7 +119,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
         else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
         sReturn << MakeUniqueName(node->Head.nNameIndex);//FH->MH.Names[node->Head.nNameIndex].sName.c_str();
-        sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
@@ -451,14 +451,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node & geonode = GetNodeByNameIndex(ctrl->nNameIndex);
         Location loc = geonode.GetLocation();
         Node & node = GetNodeByNameIndex(ctrl->nNameIndex, ctrl->nAnimation);
-        sReturn<<"\n"<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
+        sReturn<<"\n      "<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
         if(ctrl->nColumnCount > 16) sReturn<<"bezierkey";
         else sReturn<<"key";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
-            ///TO-DO: add the geometry value
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 Orientation CtrlOrient;
                 ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
                 CtrlOrient.Decompress(ByteBlock4.ui);
@@ -468,9 +467,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
-            ///TO-DO: add the geometry value
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 Orientation CtrlOrient;
                 double fQX = node.Head.ControllerData[ctrl->nDataStart + n*4 + 0];
                 double fQY = node.Head.ControllerData[ctrl->nDataStart + n*4 + 1];
@@ -480,25 +478,28 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 CtrlOrient.ConvertToAA();
                 sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
             }
-        }/*
+        }
         /// positionbezierkey
         else if(ctrl->nColumnCount > 16 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
-            std::cout<<"Warning! Converting positionbezierkey to ascii positionkey. The bezier data is lost.\n";
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
-                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*9 + (0 + 2)], 0);
-                sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*9 + (3 + 2)], 0);
-                sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*9 + (6 + 2)], 0);
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0);
+                sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*9 + (0)], 0);
+                sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*9 + (1)], 0);
+                sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*9 + (2)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (3)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (4)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (5)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (6)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (7)], 0);
+                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (8)], 0);
             }
-        }*/
+        }
         /// regular bezierkey
         else if(ctrl->nColumnCount > 16){
             //bezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 for(int i = 0; i < (ctrl->nColumnCount - 16) * 3; i++){
                     sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*((ctrl->nColumnCount - 16) * 3) + i], 0);
                     if(i < (ctrl->nColumnCount - 16) * 3 - 1) sReturn << " ";
@@ -509,7 +510,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount == 3 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //normal position
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + 0], 0);
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + 1], 0);
@@ -522,7 +523,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
             //default parser
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n  "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
                 for(int i = 0; i < ctrl->nColumnCount; i++){
                     sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + i], 0);
                     if(i < ctrl->nColumnCount - 1) sReturn << " ";
@@ -537,7 +538,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
-        sReturn << "\nendlist";
+        sReturn << "\n      endlist";
     }
     else if(nDataType == CONVERT_CONTROLLER_SINGLE){
         Controller * ctrl = (Controller*) Data;

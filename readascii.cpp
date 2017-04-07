@@ -151,13 +151,27 @@ bool ASCII::Read(MDL & Mdl){
                         node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
                         node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
                     }
-                    else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION && ctrl.nColumnCount < 16){
+                    else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
                         else bError = true;
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fY);
                         else bError = true;
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fZ);
                         else bError = true;
+                        if(ctrl.nColumnCount > 16){
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                            if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert);
+                            else bError = true;
+                        }
                     }
                     else{
                         bFound = true;
