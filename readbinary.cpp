@@ -200,6 +200,7 @@ void MDL::DecompileModel(bool bMinimal){
         nNodeCounter = 0;
         Vector vFromRoot;
         ParseNode(&(Data.MH.RootNode), &nNodeCounter, vFromRoot, bMinimal);
+        Data.MH.nNodeCount = nNodeCounter;
         //std::cout<<string_format("Node count for the Geometry: %i, compared to the number in the header, %i.\n", nNodeCounter, Data.MH.GH.nNumberOfNodes);
         //Data.MH.ArrayOfNodes.clear();
         Data.MH.ArrayOfNodes.resize(Data.MH.Names.size());
@@ -333,6 +334,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         if(NODE->Head.ChildrenArray.nCount > 0){
             //We gots children!
             NODE->Head.Children.resize(NODE->Head.ChildrenArray.nCount);
+            NODE->Head.ChildIndices.clear();
             int n = 0;
             nPosData = MDL_OFFSET + NODE->Head.ChildrenArray.nOffset;
             while(n < NODE->Head.ChildrenArray.nCount){
@@ -340,6 +342,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Head.Children[n].nAnimation = NODE->nAnimation;
                 NODE->Head.Children[n].Head.nParentIndex = NODE->Head.nNameIndex;
                 ParseNode(&NODE->Head.Children[n], nNodeCounter, vFromRoot, bMinimal);
+                NODE->Head.ChildIndices.push_back(NODE->Head.Children[n].Head.nNameIndex);
                 n++;
             }
         }

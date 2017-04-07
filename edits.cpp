@@ -642,9 +642,9 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
 }
 
 void Edits::UpdateStatusPositionMdx(){
-    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDX.\n";
-    char cPrint [255];
     if(!Model.GetFileData()) return;
+    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDX.\n";
+    std::stringstream ssPrint;
     FileHeader & FH = *(Model.GetFileData());
     int nPos = ptHover.y * 16 + (ptHover.x) / 3;
     int nMin;
@@ -661,54 +661,54 @@ void Edits::UpdateStatusPositionMdx(){
            }
     }
     if(nPos >= Model.GetBuffer().size()){
-        sprintf(cPrint, "");
+        //nothing
     }
     else if(NODE != nullptr){
         nMin = NODE->Mesh.nOffsetIntoMdx;
-        //std::cout<<string_format("Calculatin (%i - %i) / %i = %i \n", nPos, nMin, NODE->Mesh.nMdxDataSize, (nPos - nMin) / (NODE->Mesh.nMdxDataSize));
         if((nPos - nMin) / (NODE->Mesh.nMdxDataSize) == NODE->Mesh.nNumberOfVerts){
-            sprintf(cPrint, "MDX > %s > Extra Data", FH.MH.Names[NODE->Head.nNameIndex].sName.c_str());
+            ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNameIndex).sName.c_str()<<" > Extra Data";
         }
-        else sprintf(cPrint, "MDX > %s > Vertex %i", FH.MH.Names[NODE->Head.nNameIndex].sName.c_str(), (nPos - nMin) / (NODE->Mesh.nMdxDataSize));
+        else ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNameIndex).sName.c_str()<<" > Vertex "<<(nPos - nMin) / (NODE->Mesh.nMdxDataSize);
     }
     else{
-        sprintf(cPrint, "MDX > Unknown");
+        ssPrint<<"MDX > Unknown";
     }
 
     //Change text
-    char cGet [255];
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cGet);
-    if(!BVstrcmp(cGet, cPrint)){
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cPrint);
+    std::string sGet ((size_t) 255, '\0');
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    if(std::string(sGet.c_str()) != ssPrint.str()){
+        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
     }
 }
 
 void Edits::UpdateStatusPositionModel(){
-    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDL.\n";
-    char cPrint [255];
     if(!Model.GetFileData()) return;
+    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDL.\n";
+    //char cPrint [255];
+    std::stringstream ssPrint;
     FileHeader & FH = *(Model.GetFileData());
     int nPos = ptHover.y * 16 + (ptHover.x) / 3;
     int nMin;
 
     if(nPos >= Model.GetBuffer().size()){
-        sprintf(cPrint, "");
+        //nothing
     }
     else if(nPos < 208){
         //We are in Header
-        sprintf(cPrint, "Header");
+        ssPrint<<"Header";
     }
     else if(nPos < FH.MH.AnimationArray.nOffset + 12){
         //We are in Names
-        if(nPos < FH.MH.Names[0].nOffset + 12){
+        if(nPos < FH.MH.Names.at(0).nOffset + 12){
             nMin = 208;
-            sprintf(cPrint, "Name Array > Pointers > Pointer %i", (nPos - nMin)/4);
+            ssPrint<<"Name Array > Pointers > Pointer "<<(nPos - nMin)/4;
         }
         else{
             int n = 1;
             bool bFound = false;
             while(!bFound){
-                if(nPos < FH.MH.Names[n].nOffset + 12) bFound = true;
+                if(nPos < FH.MH.Names.at(n).nOffset + 12) bFound = true;
                 else if(n + 1 == FH.MH.NameArray.nCount2){
                     bFound = true;
                     n++;
@@ -719,14 +719,14 @@ void Edits::UpdateStatusPositionModel(){
                 else n++;
             }
             int nName = n - 1;
-            sprintf(cPrint, "Name Array > Strings > \"%s\"", FH.MH.Names[nName].sName.c_str());
+            ssPrint<<"Name Array > Strings > \""<<FH.MH.Names.at(nName).sName.c_str()<<"\"";
         }
     }
     else if(nPos < FH.MH.GH.nOffsetToRootNode + 12){
         //We are in Animations
         if(nPos < FH.MH.Animations[0].nOffset + 12){
             nMin = FH.MH.AnimationArray.nOffset + 12;
-            sprintf(cPrint, "Animations > Pointers > Pointer %i", (nPos - nMin)/4);
+            ssPrint<<"Animations > Pointers > Pointer"<<(nPos - nMin)/4;
         }
         else{
             int n = 1;
@@ -745,7 +745,7 @@ void Edits::UpdateStatusPositionModel(){
             int nAnimation = n - 1;
             nMin = FH.MH.Animations.at(nAnimation).nOffset + 12;
             if(nPos < nMin + ANIM_OFFSET){
-                sprintf(cPrint, "Animations > %s > Header", FH.MH.Animations.at(nAnimation).sName.c_str());
+                ssPrint<<"Animations > "<<FH.MH.Animations.at(nAnimation).sName.c_str()<<" > Header";
             }
             else{
                 Node * NODE = nullptr;
@@ -767,30 +767,30 @@ void Edits::UpdateStatusPositionModel(){
                     }
                 }
                 if(NODE == nullptr){
-                    sprintf(cPrint, "Animations > %s > Unknown", FH.MH.Animations[nAnimation].sName.c_str());
+                    ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > Unknown";
                 }
                 else{
                     int nNode = NODE->Head.nNameIndex;
                     nMin += ANIM_OFFSET;
                     if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
                         if(nPos < NODE->nOffset + 12 + NODE_SIZE_HEADER){
-                            sprintf(cPrint, "Animations > %s > %s > Header", FH.MH.Animations[nAnimation].sName.c_str(), FH.MH.Names[nNode].sName.c_str());
+                            ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header";
                         }
                         else{
                             nMin = NODE->nOffset + 12 + NODE_SIZE_HEADER;
-                            sprintf(cPrint, "Animations > %s > %s > Child Pointers > Pointer %i", FH.MH.Animations[nAnimation].sName.c_str(), FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                            ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Child Pointers > Pointer "<<(nPos - nMin)/4;
                         }
                     }
                     else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
                         nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                        sprintf(cPrint, "Animations > %s > %s > Controller Data > Float %i", FH.MH.Animations[nAnimation].sName.c_str(), FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Controller Data > Float "<<(nPos - nMin)/4;
                     }
                     else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
                         nMin = NODE->Head.ControllerArray.nOffset + 12;
-                        sprintf(cPrint, "Animations > %s > %s > Controllers > Controller %i", FH.MH.Animations[nAnimation].sName.c_str(), FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/16);
+                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Controllers > Controller "<<(nPos - nMin)/16;
                     }
                     else{
-                        sprintf(cPrint, "Animations > %s > %s > Unknown", FH.MH.Animations[nAnimation].sName.c_str(), FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Unknown";
                     }
                 }
             }
@@ -818,7 +818,7 @@ void Edits::UpdateStatusPositionModel(){
         }
 
         if(NODE == NULL){
-            sprintf(cPrint, "Geometry > Unknown");
+            ssPrint<<"Geometry > Unknown";
         }
         else{
             int nNode = NODE->Head.nNameIndex;
@@ -829,63 +829,63 @@ void Edits::UpdateStatusPositionModel(){
                 if(nType & NODE_HAS_HEADER && !bFound){
                     nHeaderSize += NODE_SIZE_HEADER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Basic", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Basic";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_LIGHT && !bFound){
                     nHeaderSize += NODE_SIZE_LIGHT;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Light", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Light";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_EMITTER && !bFound){
                     nHeaderSize += NODE_SIZE_EMITTER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Emitter", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Emitter";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_MESH && !bFound){
                     nHeaderSize += NODE_SIZE_MESH;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Mesh", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Mesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_SKIN && !bFound){
                     nHeaderSize += NODE_SIZE_SKIN;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Skin", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Skin";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_DANGLY && !bFound){
                     nHeaderSize += NODE_SIZE_DANGLY;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Danglymesh", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Danglymesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_AABB && !bFound){
                     nHeaderSize += NODE_SIZE_AABB;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Walkmesh", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Walkmesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_SABER && !bFound){
                     nHeaderSize += NODE_SIZE_SABER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        sprintf(cPrint, "Geometry > %s > Header > Saber", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Saber";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_HEADER && !bFound){
                     if(nPos >= NODE->Head.ChildrenArray.nOffset + 12){
                         nMin = NODE->Head.ChildrenArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Child Array > Pointer %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Child Array > Pointer "<<(nPos - nMin)/4;
                         bFound = true;
                     }
                 }
@@ -898,109 +898,110 @@ void Edits::UpdateStatusPositionModel(){
                 if(nType & NODE_HAS_MESH && !bFound){
                     if(nPos >= NODE->Mesh.nVertIndicesLocation + 12 && NODE->Mesh.IndexLocationArray.nCount > 0){
                         nMin = NODE->Mesh.nVertIndicesLocation + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Vert Indices > Face %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/6);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Indices > Face "<<(nPos - nMin)/6;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.MeshInvertedCounterArray.nOffset + 12){
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Inverted Counter", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Inverted Counter";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.IndexLocationArray.nOffset + 12){
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Pointer to Vert Indices", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Pointer to Vert Indices";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.nOffsetToVertArray + 12){
                         nMin = NODE->Mesh.nOffsetToVertArray + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Vert Coordinates > Vert %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Coordinates > Vert "<<(nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.IndexCounterArray.nOffset + 12){
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Pointer to Vert Number", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Pointer to Vert Number";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.FaceArray.nOffset + 12){
                         nMin = NODE->Mesh.FaceArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Mesh > Faces > Face %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/32);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Faces > Face "<<(nPos - nMin)/32;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_SKIN && !bFound){
                     if(nPos >= NODE->Skin.Array8Array.nOffset + 12){
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > Array8 (unused)", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Array8 (unused)";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.TBoneArray.nOffset + 12){
                         nMin = NODE->Skin.TBoneArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > T-Bones > %s", FH.MH.Names[nNode].sName.c_str(), FH.MH.Names[(nPos - nMin)/4].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > T-Bones > "<<FH.MH.Names.at((nPos - nMin)/12).sName.c_str();
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.QBoneArray.nOffset + 12){
                         nMin = NODE->Skin.QBoneArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > Q-Bones > %s", FH.MH.Names[nNode].sName.c_str(), FH.MH.Names[(nPos - nMin)/4].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Q-Bones > "<<FH.MH.Names.at((nPos - nMin)/16).sName.c_str();
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.nOffsetToBonemap + 12){
                         nMin = NODE->Skin.nOffsetToBonemap + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Skin > Bonemap > %s", FH.MH.Names[nNode].sName.c_str(), FH.MH.Names[(nPos - nMin)/4].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Bonemap > "<<FH.MH.Names.at((nPos - nMin)/4).sName.c_str();
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_DANGLY && !bFound){
                     if(nPos >= NODE->Dangly.nOffsetToData2 + 12){
                         nMin = NODE->Dangly.nOffsetToData2 + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Data2 > Vertex %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Danglymesh > Data2 > Vertex "<<(nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Dangly.ConstraintArray.nOffset + 12){
                         nMin = NODE->Dangly.ConstraintArray.nOffset + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Danglymesh > Constraints > Constraint %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Danglymesh > Constraints > Constraint "<<(nPos - nMin)/4;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_AABB && !bFound){
                     if(nPos >= NODE->Walkmesh.nOffsetToAabb + 12){
                         nMin = NODE->Walkmesh.nOffsetToAabb + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Walkmesh > AABB Tree > Aabb %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/40);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Walkmesh > AABB Tree > Aabb "<<(nPos - nMin)/40;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HAS_SABER && !bFound){
                     if(nPos >= NODE->Saber.nOffsetToSaberData2 + 12){
                         nMin = NODE->Saber.nOffsetToSaberData2 + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Saber > Data2 > Member %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/8);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data2 > Member "<<(nPos - nMin)/8;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Saber.nOffsetToSaberData3 + 12){
                         nMin = NODE->Saber.nOffsetToSaberData3 + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Saber > Data3 > Member %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data3 > Member "<<(nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Saber.nOffsetToSaberData1 + 12){
                         nMin = NODE->Saber.nOffsetToSaberData1 + 12;
-                        sprintf(cPrint, "Geometry > %s > Data > Saber > Data1 > Member %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/12);
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data1 > Member "<<(nPos - nMin)/12;
                         bFound = true;
                     }
                 }
                 if(!bFound){
-                        sprintf(cPrint, "Geometry > %s > Data > Unknown", FH.MH.Names[nNode].sName.c_str());
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Unknown";
                 }
             }
             else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
                 nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                sprintf(cPrint, "Geometry > %s > Data > Controller Data > Float %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/4);
+                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Controller Data > Float "<<(nPos - nMin)/4;
             }
             else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
                 nMin = NODE->Head.ControllerArray.nOffset + 12;
-                sprintf(cPrint, "Geometry > %s > Data > Controllers > Controller %i", FH.MH.Names[nNode].sName.c_str(), (nPos - nMin)/16);
+                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Controllers > Controller "<<(nPos - nMin)/16;
             }
             else{
-                sprintf(cPrint, "Geometry > %s > Unknown", FH.MH.Names[nNode].sName.c_str());
+                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Unknown";
             }
         }
     }
-    char cGet [255];
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cGet);
-    if(!BVstrcmp(cGet, cPrint)){
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cPrint);
+
+    std::string sGet ((size_t) 255, '\0');
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    if(std::string(sGet.c_str()) != ssPrint.str()){
+        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
     }
 }

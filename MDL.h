@@ -1260,11 +1260,13 @@ class MDL: public BinaryFile{
     bool HeadLinked();
     bool NodeExists(const std::string & sNodeName);
     int GetNameIndex(std::string sName);
+    void UpdateTexture(Node & node, const std::string & sNew, int nTex);
 
     //Loaders
     bool Compile();
     void DecompileModel(bool bMinimal = false);
     void AsciiPostProcess();
+    void CalculateMeshData();
     void CheckPeculiarities();
     void FlushData();
     void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);

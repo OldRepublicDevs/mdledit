@@ -19,6 +19,7 @@ MDL Model;
 WOK Walkmesh;
 HANDLE hThread;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
+DWORD WINAPI ThreadReprocess(LPVOID lpParam);
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
 
@@ -355,8 +356,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     if(Model.bK2){
                         if(Model.GetFileData()){
                             int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
-                            if(nResult == MB_OK){
+                            if(nResult == IDOK){
                                 Model.bK2 = false;
+                                Model.Compile();
+                                Edit1.LoadData();
                             }
                         }
                         else{
@@ -379,8 +382,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     if(!Model.bK2){
                         if(Model.GetFileData()){
                             int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
-                            if(nResult == MB_OK){
+                            if(nResult == IDOK){
                                 Model.bK2 = true;
+                                Model.Compile();
+                                Edit1.LoadData();
                             }
                         }
                         else{
@@ -408,6 +413,18 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_SETTINGS:
                 {
                     DialogBoxParam(NULL, MAKEINTRESOURCE(DLG_SETTINGS), hwnd, SettingsProc, (LPARAM) &Model);
+                }
+                break;
+                case IDM_EDIT_TEXTURES:
+                {
+                    if(2 == DialogBoxParam(NULL, MAKEINTRESOURCE(DLG_EDIT_TEXTURES), hwnd, TexturesProc, (LPARAM) &Model)){
+                        std::cout<<"Cause model reprocessing!\n";
+                        TreeView_DeleteAllItems(hTree);
+                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 3);
+                    }
+                    Edit1.UpdateEdit();
+                    HTREEITEM hSel = TreeView_GetSelection(hTree);
+                    if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                 }
                 break;
                 case IDPM_TV_FOLD:
@@ -692,7 +709,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     }
                 }
                 else{                    PathStripPath(&cMdx.front());
-                    Warning("Could not find "+cMdx+" in the same directory. Will load the without the MDX data.");
+                    Warning("Could not find "+std::string(cMdx.c_str())+" in the same directory. Will load without the MDX data.");
                 }
 
                 //Open and process .wok if it exists
@@ -739,6 +756,7 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
             if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
             else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessBinary, hwnd, 0, NULL);
+            else if(lParam == 3) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadReprocess, hwnd, 0, NULL);
             else EndDialog(hwnd, NULL);
         }
         break;
@@ -754,18 +772,42 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
     return TRUE;
 }
 
-DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
-    Model.AsciiPostProcess();
+DWORD WINAPI ThreadReprocess(LPVOID lpParam){
+    Model.CalculateMeshData();
     //This should bring us to a state where all the practical data is ready,
-    //but not the binary file-specific data, such as offsets, etc..
+    //but not the binary-file-specific data, such as offsets, etc..
 
     Model.Compile();
     //This should bring us to a state where all data is ready,
-    //even the binary file-specific data
+    //even the binary-file-specific data
 
+    //Load the data
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
     BuildTree(Model); //Fills the TreeView control
+    std::cout<<"Data loaded!\n";
+
+    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
+}
+
+DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
+    Model.AsciiPostProcess();
+    //This should bring us to a state where all the ascii data is interpreted,
+    //though there are still calculations to be done for the binary version.
+
+    Model.CalculateMeshData();
+    //This should bring us to a state where all the practical data is ready,
+    //but not the binary-file-specific data, such as offsets, etc..
+
+    Model.Compile();
+    //This should bring us to a state where all data is ready,
+    //even the binary-file-specific data
+
+    //Load the data
+    SetWindowText(hDisplayEdit, "");
+    Edit1.LoadData(); //Loads up the binary file onto the screen
+    BuildTree(Model); //Fills the TreeView control
+    std::cout<<"Data loaded!\n";
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }
@@ -779,7 +821,7 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     Edit1.LoadData();
     BuildTree(Model);
     if(!Walkmesh.empty()) BuildTree(Walkmesh);
-    std::cout<<string_format("Data loaded!\n");
+    std::cout<<"Data loaded!\n";
 
     Model.CheckPeculiarities(); //Finally, check for peculiarities
 

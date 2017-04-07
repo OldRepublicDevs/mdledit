@@ -99,6 +99,42 @@ bool MDL::LinkHead(bool bLink){
     return true;
 }
 
+void MDL::UpdateTexture(Node & node, const std::string & sNew, int nTex){
+    std::string sNewTex = sNew.c_str();
+    if(nTex == 1){
+        node.Mesh.cTexture1 = sNewTex;
+        sNewTex.resize(32);
+        int nPos = node.nOffset + 12 + 168;
+        for(int n = 0; n < sNewTex.size(); n++){
+            sBuffer.at(nPos + n) = sNewTex.at(n);
+        }
+    }
+    else if(nTex == 2){
+        node.Mesh.cTexture2 = sNewTex;
+        sNewTex.resize(32);
+        int nPos = node.nOffset + 12 + 200;
+        for(int n = 0; n < sNewTex.size(); n++){
+            sBuffer.at(nPos + n) = sNewTex.at(n);
+        }
+    }
+    else if(nTex == 3){
+        node.Mesh.cTexture3 = sNewTex;
+        sNewTex.resize(12);
+        int nPos = node.nOffset + 12 + 232;
+        for(int n = 0; n < sNewTex.size(); n++){
+            sBuffer.at(nPos + n) = sNewTex.at(n);
+        }
+    }
+    else if(nTex == 4){
+        node.Mesh.cTexture4 = sNewTex;
+        sNewTex.resize(12);
+        int nPos = node.nOffset + 12 + 244;
+        for(int n = 0; n < sNewTex.size(); n++){
+            sBuffer.at(nPos + n) = sNewTex.at(n);
+        }
+    }
+}
+
 void MDL::WriteUintToPlaceholder(unsigned int nUint, int nOffset){
     WriteIntToPH(nUint, nOffset, nUint);
 }

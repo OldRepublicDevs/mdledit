@@ -4,6 +4,8 @@
     Functions:
     ASCII::Read()
     ASCII::BuildAabb()
+    MDL::GatherChildren()
+    MDL::AsciiPostProcess()
 /**/
 
 bool ASCII::Read(MDL & Mdl){
@@ -1744,7 +1746,7 @@ bool ASCII::Read(MDL & Mdl){
         return false;
     }
 
-    //Seems best to take care of aabb first
+    //Seems best to take care of aabb immediately
     for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
         Node & node = FH->MH.ArrayOfNodes[n];
         if(node.Head.nType & NODE_HAS_AABB){
@@ -1773,4 +1775,266 @@ void ASCII::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCount
         AABB.nChild1 = 0;
         AABB.nChild2 = 0;
     }
+}
+
+void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector vFromRoot){
+    node.Head.ChildIndices.resize(0); //Reset child array
+    node.Head.ChildIndices.reserve(ArrayOfNodes.size());
+
+    if(node.Head.nType & NODE_HAS_MESH){
+        /// Let's do the transformations/translations here. First orientation, then translation.
+        Location loc = node.GetLocation();
+        vFromRoot.Rotate(loc.oOrientation);
+        vFromRoot+= loc.vPosition;
+
+        node.Head.vFromRoot = vFromRoot;
+    }
+
+    //Update the animation node IDs
+    if(node.nAnimation != -1){
+        node.Head.nID1 = GetNodeByNameIndex(node.Head.nNameIndex).Head.nID1;
+    }
+
+    for(int n = 0; n < ArrayOfNodes.size(); n++){
+        if(ArrayOfNodes[n].Head.nParentIndex == node.Head.nNameIndex){
+            //The nodes with this index is a child, adopt it
+            //node.Head.Children.push_back(ArrayOfNodes[n]);
+            node.Head.ChildIndices.push_back(ArrayOfNodes[n].Head.nNameIndex);
+            GatherChildren(ArrayOfNodes[n], ArrayOfNodes, vFromRoot);
+        }
+    }
+    node.Head.ChildIndices.shrink_to_fit();
+}
+
+void MDL::AsciiPostProcess(){
+    std::cout<<"Ascii post-processing...\n";
+    FileHeader & Data = *FH;
+
+    /// PART 0 ///
+    /// Get rid of the duplication marks
+    for(int n = 0; n < Data.MH.Names.size(); n++){
+        std::string & sNode = Data.MH.Names.at(n).sName;
+        for(int i = 0; i < 4 && sNode.length() > 5 + i; i++){
+            if(safesubstr(sNode, sNode.length() - 5 - i, 5) == "__dpl"){
+                    sNode = safesubstr(sNode, 0, sNode.length() - 5 - i);
+                    i = 6;
+            }
+        }
+    }
+
+    /// PART 1 ///
+    /// Do supernodes
+    /// This loads up all the supermodels and calculates the supernode numbers
+    Data.MH.GH.nTotalNumberOfNodes = Data.MH.nNodeCount;
+    if(Data.MH.cSupermodelName != "NULL"){
+        std::vector<MDL> Supermodels;
+        bool bFoundAll = LoadSupermodel(*this, Supermodels);
+        //First, update the TotalNodeCount
+        if(Supermodels.size() != 0 && bFoundAll){
+            int nTotalSupermodelNodes = Supermodels.front().GetFileData()->MH.GH.nTotalNumberOfNodes;
+            std::cout<<"Total Supermodel Nodes: "<<nTotalSupermodelNodes<<"\n";
+            if(nTotalSupermodelNodes > 0)
+                Data.MH.GH.nTotalNumberOfNodes += 1 + nTotalSupermodelNodes;
+
+            //Next we need the largest supernode number. The largest is definitely in the first supermodel, right? right?!
+            short nMaxSupernode = 0;
+            for(int n = 0; n < Supermodels.front().GetFileData()->MH.ArrayOfNodes.size(); n++){
+                nMaxSupernode = std::max(nMaxSupernode, Supermodels.front().GetFileData()->MH.ArrayOfNodes.at(n).Head.nID1);
+            }
+            short nCurrentSupernode = nMaxSupernode + 1;
+
+            //Update the supernode number for every node
+            for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+                Node & node = Data.MH.ArrayOfNodes.at(n);
+                //If Name Index is 0, then supernode is zero. But this is the default situation, so we just need to exclude that case.
+                if(node.Head.nNameIndex != 0){
+                    std::string & sNodeName = Data.MH.Names.at(node.Head.nNameIndex).sName;
+                    std::string & sParentName = Data.MH.Names.at(node.Head.nParentIndex).sName;
+                    bool bFound = false;
+                    for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                        MDL & supermdl = Supermodels.at(m);
+                        FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                        for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                            if(Data2.MH.Names.at(s).sName == sNodeName){
+                                if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                                    //Both the name and the parent name are equal. We really are dealing with the matching node. Get its supernode.
+                                    node.Head.nID1 = supermdl.GetNodeByNameIndex(s).Head.nID1;
+                                    bFound = true;
+                                }
+                            }
+                        }
+                    }
+                    if(!bFound){
+                        //I'm reusing the variable, but we're looking for the parent now
+                        bFound = false;
+                        if(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex != 0){
+                            std::string & sNodeName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nNameIndex).sName;
+                            std::string & sParentName2 = Data.MH.Names.at(Data.MH.ArrayOfNodes.at(node.Head.nParentIndex).Head.nParentIndex).sName;
+                            for(int m = 0; m < Supermodels.size() && !bFound; m++){
+                                MDL & supermdl = Supermodels.at(m);
+                                FileHeader & Data2 = *Supermodels.at(m).GetFileData();
+                                for(int s = 0; s < Data2.MH.Names.size() && !bFound; s++){
+                                    if(Data2.MH.Names.at(s).sName == sNodeName2){
+                                        if(Data2.MH.Names.at(supermdl.GetNodeByNameIndex(s).Head.nParentIndex).sName == sParentName2 || supermdl.GetNodeByNameIndex(s).Head.nParentIndex == 0){
+                                            //Both the name and the parent name are equal. We really are dealing with the matching node.
+                                            bFound = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else bFound = true;
+                        if(bFound){
+                            //This means that the parent is also present in the supermodel. In this case, we just give it the next supernode number.
+                            node.Head.nID1 = nCurrentSupernode;
+                            nCurrentSupernode++;
+                        }
+                        else{
+                            //If we couldn't find the parent, it must be new. So, we have a different algorithm for the ID.
+                            node.Head.nID1 += nTotalSupermodelNodes + 1;
+                        }
+                    }
+                }
+            }
+        }
+        Supermodels.clear();
+        Supermodels.shrink_to_fit();
+    }
+
+    /// PART 2 ///
+    /// Gather all the children (the indices!!!)
+    /// This part means going from every node only specifying its parent to everyone node also specifying its children
+    // 1. Gather children for animations
+    for(int i = 0; i < Data.MH.Animations.size(); i++){
+        Animation & anim = Data.MH.Animations[i];
+        for(int n = 0; n < anim.ArrayOfNodes.size(); n++){
+            if(anim.ArrayOfNodes[n].Head.nParentIndex == -1){
+                //anim.RootAnimationNode = anim.ArrayOfNodes[n];
+                GatherChildren(anim.ArrayOfNodes[n], anim.ArrayOfNodes, Vector());
+                n = anim.ArrayOfNodes.size();
+            }
+        }
+    }
+    // 2. Gather children for geometry
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        if(Data.MH.ArrayOfNodes[n].Head.nParentIndex == -1){
+            //Data.MH.RootNode = Data.MH.ArrayOfNodes[n];
+            GatherChildren(Data.MH.ArrayOfNodes[n], Data.MH.ArrayOfNodes, Vector());
+            n = Data.MH.ArrayOfNodes.size();
+        }
+    }
+
+    /// PART 3 ///
+    /// Interpret ascii data
+    /// This constructs the Mesh.Vertices, Mesh.VertIndices, Dangly.Data2, Dangly.Constraints and Saber.SaberData structures.
+    /// And not to forget the weights.
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
+            for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                Face & face = node.Mesh.Faces.at(f);
+                for(int i = 0; i < 3; i++){
+                    if(!face.bProcessed[i]){
+                        bool bIgnoreVert = true, bIgnoreTvert = true, bIgnoreTvert1 = true, bIgnoreTvert2 = true, bIgnoreTvert3 = true;
+                        Vertex vert;
+                        SaberDataStruct saberdata;
+                        vert.MDXData.nNameIndex = node.Head.nNameIndex;
+
+                        if(node.Mesh.TempVerts.size() > 0){
+                            bIgnoreVert = false;
+                            vert.assign(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
+
+                            vert.vFromRoot = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
+                            vert.vFromRoot.Rotate(node.GetLocation().oOrientation);
+                            vert.vFromRoot+=node.Head.vFromRoot;
+
+                            vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
+
+                            if(node.Head.nType & NODE_HAS_DANGLY){
+                                node.Dangly.Data2.push_back(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
+                                node.Dangly.Constraints.push_back(node.Dangly.TempConstraints.at(face.nIndexVertex[i]));
+                            }
+
+                            if(node.Head.nType & NODE_HAS_SKIN){
+                                vert.MDXData.Weights = node.Skin.TempWeights.at(face.nIndexVertex[i]);
+                            }
+                        }
+                        if(node.Mesh.TempTverts.size() > 0 && face.nTextureCount >= 1){
+                            bIgnoreTvert = false;
+                            vert.MDXData.vUV1 = node.Mesh.TempTverts.at(face.nIndexTvert[i]);
+                        }
+                        //We simply ignore the other three UVs if this is a saber
+                        if(node.Mesh.TempTverts1.size() > 0 && face.nTextureCount >= 2){
+                            bIgnoreTvert1 = false;
+                            vert.MDXData.vUV2 = node.Mesh.TempTverts1.at(face.nIndexTvert1[i]);
+                        }
+                        if(node.Mesh.TempTverts2.size() > 0 && face.nTextureCount >= 3){
+                            bIgnoreTvert2 = false;
+                            vert.MDXData.vUV3 = node.Mesh.TempTverts2.at(face.nIndexTvert2[i]);
+                        }
+                        if(node.Mesh.TempTverts3.size() > 0 && face.nTextureCount >= 4){
+                            bIgnoreTvert3 = false;
+                            vert.MDXData.vUV4 = node.Mesh.TempTverts3.at(face.nIndexTvert3[i]);
+                        }
+
+                        //Find identical verts
+                        for(int f2 = f; f2 < node.Mesh.Faces.size(); f2++){
+                            Face & face2 = node.Mesh.Faces.at(f2);
+                            for(int i2 = 0; i2 < 3; i2++){
+                                //Make sure that we're only changing what's past our current position if we are in the same face.
+                                if(f2 != f || i2 > i){
+                                    if( (face2.nIndexVertex[i2] == face.nIndexVertex[i] || bIgnoreVert) &&
+                                        (face2.nIndexTvert[i2] == face.nIndexTvert[i] || bIgnoreTvert) &&
+                                        (face2.nIndexTvert1[i2] == face.nIndexTvert1[i] || bIgnoreTvert1) &&
+                                        (face2.nIndexTvert2[i2] == face.nIndexTvert2[i] || bIgnoreTvert2) &&
+                                        (face2.nIndexTvert3[i2] == face.nIndexTvert3[i] || bIgnoreTvert3) &&
+                                        !face2.bProcessed[i2] )
+                                    {
+                                        //If we find a reference to the exact same vert, we have to link to it
+                                        //Actually we only need to link vert indexes, the correct UV are now already included in the Vertex struct
+                                        face2.nIndexVertex[i2] = node.Mesh.Vertices.size();
+                                        face2.bProcessed[i2] = true;
+                                    }
+                                }
+                            }
+                        }
+
+                        //Now we're allowed to link the original vert as well
+                        face.nIndexVertex[i] = node.Mesh.Vertices.size();
+                        face.bProcessed[i] = true;
+
+                        //Put the new vert into the array
+                        node.Mesh.Vertices.push_back(std::move(vert));
+                    }
+                }
+                VertIndicesStruct vertindex;
+                vertindex.nValues[0] = face.nIndexVertex[0];
+                vertindex.nValues[1] = face.nIndexVertex[1];
+                vertindex.nValues[2] = face.nIndexVertex[2];
+                node.Mesh.VertIndices.push_back(std::move(vertindex));
+            }
+            node.Mesh.TempVerts.resize(0);
+            node.Mesh.TempTverts.resize(0);
+            node.Mesh.TempTverts1.resize(0);
+            node.Mesh.TempTverts2.resize(0);
+            node.Mesh.TempTverts3.resize(0);
+            node.Dangly.TempConstraints.resize(0);
+            node.Skin.TempWeights.resize(0);
+            node.Mesh.TempVerts.shrink_to_fit();
+            node.Mesh.TempTverts.shrink_to_fit();
+            node.Mesh.TempTverts1.shrink_to_fit();
+            node.Mesh.TempTverts2.shrink_to_fit();
+            node.Mesh.TempTverts3.shrink_to_fit();
+            node.Dangly.TempConstraints.shrink_to_fit();
+            node.Skin.TempWeights.shrink_to_fit();
+        }
+        else if(node.Head.nType & NODE_HAS_SABER){
+
+            ///Saber interpretation goes here.
+
+        }
+    }
+
+    /// DONE ///
+    std::cout<<"Done post-processing ascii...\n";
 }

@@ -18,6 +18,14 @@ BEGIN
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
 END
 
+DLG_EDIT_TEXTURES DIALOGEX  100, 50, 316, 172
+STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Edit Textures"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Click on a selected texture to rename it. Check the checkbox to enable bumpmapping.", DLG_ID_STATIC, 8, 5, 308, 8
+END
+
 DLG_PROGRESS DIALOGEX  0, 0, 200, 25
 STYLE WS_POPUP | WS_BORDER | DS_CENTER
 BEGIN
@@ -47,6 +55,7 @@ BEGIN
     POPUP " &Options "
         BEGIN
         MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
+        MENUITEM "&Edit textures...", IDM_EDIT_TEXTURES
         MENUITEM "&Settings...", IDM_SETTINGS
         END
     POPUP " &Game "

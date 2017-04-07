@@ -34,6 +34,7 @@
 #define IDM_EDITOR_DLG      125
 #define IDM_GAME_K1         126
 #define IDM_GAME_K2         127
+#define IDM_EDIT_TEXTURES   128
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -50,6 +51,10 @@
 #define IDC_EDIT_DISPLAY 211
 #define IDC_TREEVIEW     212
 #define IDD_EDITOR_DLG   213
+#define IDC_TEXTURE_LISTVIEW1  214
+#define IDC_TEXTURE_LISTVIEW2  215
+#define IDC_TEXTURE_LISTVIEW3  216
+#define IDC_TEXTURE_LISTVIEW4  217
 
 #define IDC_SBS_SBH      230
 #define IDC_SBS_SBV      231
@@ -73,6 +78,7 @@
 #define DLG_ID_ANGLE_WEIGHT  403
 #define DLG_ID_STATIC        404
 #define DLG_PROGRESS         405
+#define DLG_EDIT_TEXTURES    406
 
 #define IDDB_EDIT                   500
 #define IDDB_SAVE                   501
