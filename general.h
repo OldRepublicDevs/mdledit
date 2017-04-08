@@ -52,7 +52,7 @@
 #define ME_DISPLAY_OFFSET_Y         71
 #define ME_DISPLAY_SIZE_Y           205
 
-#define DEBUG_LEVEL 0
+#define DEBUG_LEVEL 7
 
 template<typename ... Args> std::string string_format( const std::string& format, Args ... args ){
     size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'

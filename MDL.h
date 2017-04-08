@@ -375,25 +375,24 @@ class Orientation{
         /// Subtract from 1.0 so we get values in range from 1.0 to -1.0
         /// This also seems to invert it, previously the highest number
         /// is now the lowest.
-        qX = 1.0 - ((double) (nCompressed&0x07FF) / 1023.0);
+        qX = ((double) (nCompressed&0x07FF) / 1023.0) - 1.0;
         /// Move the bits by 11 and repeat
-        qY = 1.0 - ((double) ((nCompressed>>11)&0x07FF) / 1023.0);
+        qY = ((double) ((nCompressed>>11)&0x07FF) / 1023.0) - 1.0;
         /// Move the bits again and repeat
         /// This time, there are only 10 bits left, so our division number
         /// is smaller (511). Also since these are the only bits left
         /// there is no need to use & to clear higher bits,
         /// because they're 0 anyway, per >>.
-        qZ = 1.0 - ((double) (nCompressed>>22) / 511.0);
+        qZ = ((double) (nCompressed>>22) / 511.0) - 1.0;
         /// Now we get the w from the other three through the formula:
         /// x^2 + y^2 + z^2 + w^2 == 1 (unit)
         double fSquares = powf(qX, 2.0) + powf(qY, 2.0) + powf(qZ, 2.0);
         if(fSquares < 1.0){
-            /// -1.0 to invert it like the coordinates are also inverted?
-            qW = -1.0 * sqrtf(1.0 - fSquares);
+            qW = sqrtf(1.0 - fSquares);
         }
         else{
             /// If the sum is more than 1.0, we'd get a complex number for w
-            /// Instead, set w to 0.0, then recalculate the vector accordingly
+            /// Instead, set w to 0.0, then recalculate the vector (renormalize the quaternion?) accordingly
             qW = 0.0;
             qX /= sqrtf(fSquares);
             qY /= sqrtf(fSquares);

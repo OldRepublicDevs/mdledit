@@ -1390,14 +1390,17 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     bFound = true;
                     while(bFound){
-                        if(ReadFloat(fConvert)){
-                            nDataCounter++;
+                        if(!EmptyRow() || nDataCounter > 0){
+                            if(ReadFloat(fConvert, sID)){
+                                nDataCounter++;
+                            }
+                            else{
+                                std::cout<<"This is not a float: "<<sID<<".\n";
+                                bError = true;
+                            }
+                            if(EmptyRow()) bFound = false;
                         }
-                        else{
-                            std::cout<<"This is not a float: "<<sID<<".\n";
-                            bError = true;
-                        }
-                        if(EmptyRow()) bFound = false;
+                        else SkipLine();
                     }
                     if(nDataCounter == 0){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
@@ -1492,14 +1495,17 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     bFound = true;
                     while(bFound){
-                        if(ReadFloat(fConvert)){
-                            nDataCounter++;
+                        if(!EmptyRow() || nDataCounter > 0){
+                            if(ReadFloat(fConvert, sID)){
+                                nDataCounter++;
+                            }
+                            else{
+                                std::cout<<"This is not a float: "<<sID<<".\n";
+                                bError = true;
+                            }
+                            if(EmptyRow()) bFound = false;
                         }
-                        else{
-                            std::cout<<"This is not a float: "<<sID<<".\n";
-                            bError = true;
-                        }
-                        if(EmptyRow()) bFound = false;
+                        else SkipLine();
                     }
                     if(nDataCounter == 0){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
