@@ -1941,7 +1941,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 (
     -- check the controller types are correct!
                                     newObj.parent = itsParent[1]
-                            -- bead-v modification: we're now making all position controllers bezier controllers
+                            -- bead-v modification: we're now making all controllers linear from the get go
                                     --newObj.scale.controller = tcb_scale()
                                     --newObj.position.controller = tcb_position()
                                     --newObj.rotation.controller = tcb_rotation()
@@ -2192,7 +2192,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     objName = ""
                                 )
                             )
-                /*
                             animObj = getNodeByName(objName)
                             if (animObj != undefined) then
                             (
@@ -2225,15 +2224,16 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             keytime = (lastFrame + 1)
                                             -- using 'animate on' context generate some key frames
                                             -- Sets a key frame at the last frame + 1
-                                            with animate on at time keytime animObj.pos = zeroPos
-                                            with animate on at time keytime animObj.rotation = zeroRot
+                                -- bead-v modification: do not create last frame here
+                                            --with animate on at time keytime animObj.pos = zeroPos
+                                            --with animate on at time keytime animObj.rotation = zeroRot
+                                -- end bead-v modification
                                             -- stop key frame generate
                                             if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" animObj keytime (at time keytime animObj.pos) (at time keytime animObj.rotation)
                                         )
                                     )
                                 )
                             ) -- end if
-                    */
 
                         ) -- end 'Node' case
                         "endnode":
@@ -2244,13 +2244,17 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             if (bHadAnimKey == false) and (animObj != undefined) then
                             (
 	                            -- want to remove the redundant rot and pos keys created at the start of node processing.
+	                            -- bead-v: currently only position and orientation are removed. What about scale?
+
 	                            -- position 1st
 	                            if DEBUG then format "get pos keys count\r\n"
 	                            ksize = animObj.pos.controller.keys.count
 	                            got_lower = false
 	                            got_upper = false
 	                            i = 1
-	                            while (i <= ksize) and (got_lower == false) and (got_upper == false) do
+                    -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
+	                            while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
+                    -- end bead-v modification
 	                            (
 		                            if (animObj.pos.controller.keys[i].time == lowerbound) then
 		                            (
@@ -2273,7 +2277,9 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 	                            got_lower = false
 	                            got_upper = false
 	                            i = 1
-	                            while (i <= ksize) and (got_lower == false) and (got_upper == false) do
+                    -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
+	                            while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
+                    -- end bead-v modification
 	                            (
 		                            if (animObj.rotation.controller.keys[i].time == lowerbound) then
 		                            (
@@ -2315,6 +2321,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     tok.SetString (getNextNonBlankLine mdlStream)
                                     lineNum += 1
                                     -- read in the key list (if there are data items) and parse it
+                                    local newkey  -- bead-v: defined here so that the last key is saved after the while is done
                                     while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
                                     (
                                         --ImportActivityBar()
@@ -2328,7 +2335,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- generate key frames in the process.
                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
                                             --with animate on at time keytime animObj.pos = p3
-                                            local newkey = addnewkey animObj.pos.controller keytime
+                                            newkey = addnewkey animObj.pos.controller keytime
                                             newkey.value = p3
                                             newkey.inTangentType = #custom
                                             newkey.outTangentType = #custom
@@ -2352,6 +2359,17 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         )
                                         lineNum += 1
                                     ) -- end while
+                        -- bead-v modification: Write last extra key
+                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
+                                    lastkey.value = newkey.value
+                                    lastkey.inTangentType = newkey.inTangentType
+                                    lastkey.outTangentType = newkey.outTangentType
+                                    lastkey.x_locked = newkey.x_locked
+                                    lastkey.y_locked = newkey.y_locked
+                                    lastkey.z_locked = newkey.z_locked
+                                    lastkey.inTangent = newkey.inTangent
+                                    lastkey.outTangent = newkey.outTangent
+                        -- end bead-v modification
                                 ) -- end in
                                 if DEBUG then format "positionbezierkey processing END\r\n"
                             ) -- end if
@@ -2410,6 +2428,15 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         )
                                         lineNum += 1
                                     ) -- end while
+                        -- bead-v modification: Write last extra key
+                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
+                                    lastkey.value = newkey.value
+                                    if(classof animObj.pos.controller == position_bezier) then
+                                    (
+                                        lastkey.inTangentType = newkey.inTangentType
+                                        lastkey.outTangentType = newkey.outTangentType
+                                    )
+                        -- end bead-v modification
                                 ) -- end in
                                 if DEBUG then format "positionkey processing END\r\n"
                             ) -- end if
@@ -2476,6 +2503,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             tok.SetString (getNextNonBlankLine mdlStream)
                                         )
                                     )
+                        -- bead-v modification: Write last extra key
+                                    local lastkey = addNewKey animObj.rotation.controller (lastFrame + 1)
+                                    lastkey.value = newkey.value
+                        -- end bead-v modification
                                 )
                                 if DEBUG then format "orientationkey processing END\r\n"
                             )
