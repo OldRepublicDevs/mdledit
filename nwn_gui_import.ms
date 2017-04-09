@@ -51,7 +51,7 @@ fn nx_importer =
     	        ) else (
         	        insertpoint = ImportRollout.spn_startframe.value
     	        )
-    	        
+
 	            -- check to make sure we have only a model base selected
 	            if (nx_strclassof selection[1]) != "aurorabase" then
 	            (
@@ -63,7 +63,7 @@ fn nx_importer =
 	            )
 	       )
     )
-    
+
     if (not nx_existFile mdlFileName) then
     (
         MessageBox ("Model not imported.  " + mdlFileName + " does not exist.") title:"File does not exist"
@@ -91,7 +91,7 @@ fn nx_importer =
             insertpoint:insertpoint \
             showprogress:true \
             location:[ImportRollout.spn_loc_x.value, ImportRollout.spn_loc_y.value, 0]
-            
+
         -- import pwk file if available
         local pwk_file = (getFilenamePath mdlFileName)+(getFilenameFile  mdlFileName)+".pwk"
         if ( nx_existFile pwk_file ) then ImportNWNwk pwk_file "pwk"
@@ -109,7 +109,7 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = tcb_rotation()
-			    		--o.pos.controller = tcb_position()
+			    		o.pos.controller = tcb_position()
 			    		o.scale.controller = tcb_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
@@ -118,19 +118,19 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = linear_rotation()
-			    		--o.pos.controller = linear_position()
+			    		o.pos.controller = linear_position()
 			    		o.scale.controller = linear_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
 					)
 					progressEnd()
         )
-        
+
         -- Redraw gmax viewports
         clearSelection()
         max tool zoomextents all
         max views redraw
-        
+
         ImportRollout.progress.value = 0
         percent = 0
 
@@ -141,7 +141,7 @@ fn nx_importer =
 
 rollout ImportRollout "MDL Loading" width:162 height:250
 (
-	Group "Filename" 
+	Group "Filename"
 	(
 		edittext import_filename_edit "" width:128 height:16
 		button import_browse_button "Browse" width:70 height:24
@@ -158,7 +158,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		spinner spn_loc_y "Import Loc Y:" range:[0,1000000,0]
 	)
 	button import_button "Import" width:144 height:24
-	
+
 	group "Specialist Tools"
 	(
 		button btn_removepointer "Del Base Pointer" width:144 height:18
@@ -166,12 +166,12 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		button btn_masstileload "Mass Tile Load" width:144 height:18
 	)
 
-	progressBar progress "" width:136 height:14 
-	
+	progressBar progress "" width:136 height:14
+
  	on btn_loadgrp pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_loadgrp.ms")) catch() )
- 	
+
  	on btn_masstileload pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_masstileload.ms")) catch() )
- 	
+
 	on rdo_options changed val do
 	(
 		if val == 3 then (
@@ -184,7 +184,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 			spn_startframe.enabled = false
 		)
 	)
-	
+
 	on btn_removepointer pressed do
 	(
 		for obj in $objects do
@@ -195,7 +195,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 			)
 		)
 	)
-	
+
 	on import_browse_button pressed do
 	(
 	    local filename = getOpenFileName caption:"Import mdl" types:"NWN mdl (*.mdl)|*.mdl|NWN ASCII Model (*.ascii)|*.ascii|All Files (*.*)|*.*|"
