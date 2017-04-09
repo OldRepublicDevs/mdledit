@@ -144,12 +144,11 @@ bool ASCII::Read(MDL & Mdl){
                         if(ReadFloat(fConvert)) fA = fConvert;
                         else bError = true;
                         Orientation NewOrientKey;
-                        NewOrientKey.AA(fX, fY, fZ, fA);
-                        NewOrientKey.ConvertToQuaternions();
-                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_X));
-                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Y));
-                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_Z));
-                        node.Head.ControllerData.push_back(NewOrientKey.Get(QU_W));
+                        NewOrientKey.SetAxisAngle(fX, fY, fZ, fA);
+                        node.Head.ControllerData.push_back(NewOrientKey.GetQuaternion().vAxis.fX);
+                        node.Head.ControllerData.push_back(NewOrientKey.GetQuaternion().vAxis.fY);
+                        node.Head.ControllerData.push_back(NewOrientKey.GetQuaternion().vAxis.fZ);
+                        node.Head.ControllerData.push_back(NewOrientKey.GetQuaternion().fW);
                     }
                     else if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
                         if(ReadFloat(fConvert)) node.Head.ControllerData.push_back(fConvert - loc.vPosition.fX);
@@ -640,7 +639,7 @@ bool ASCII::Read(MDL & Mdl){
                     //Initialize node <-- This is now mostly taken care of in the struct definitions, so no need for anything but the default values here.
                     if(nType & NODE_HAS_HEADER){
                         node.Head.vPos.Set(0.0, 0.0, 0.0);
-                        node.Head.oOrient.Quaternion(0.0, 0.0, 0.0, 1.0);
+                        node.Head.oOrient.SetQuaternion(0.0, 0.0, 0.0, 1.0);
                     }
                     if(nType & NODE_HAS_EMITTER){
                         node.Emitter.cDepthTextureName = "NULL";
@@ -1386,10 +1385,18 @@ bool ASCII::Read(MDL & Mdl){
                     int nSavePos = nPosition; //Save position
 
                     //To continue let's first get the column count
+                    nDataMax = -1;
+                    if(!EmptyRow()){
+                        if(ReadInt(nConvert)) nDataMax = nConvert;
+                        else{
+                            std::cout<<"Something weird is going on after the controller keyword.\n";
+                            bError = true;
+                        }
+                    }
                     SkipLine();
                     nDataCounter = 0;
                     bFound = true;
-                    while(bFound){
+                    while(bFound && nDataMax != 0){
                         if(!EmptyRow() || nDataCounter > 0){
                             if(ReadFloat(fConvert, sID)){
                                 nDataCounter++;
@@ -1416,7 +1423,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     bFound = true;
                     int nSavePos2;
-                    while(bFound){
+                    while(bFound && (nDataMax != 0 || nDataCounter < nDataMax)){
                         //std::cout<<"Looking.. Position="<<nPosition<<".\n";
                         if(EmptyRow()) SkipLine();
                         else{
@@ -1491,10 +1498,18 @@ bool ASCII::Read(MDL & Mdl){
                     int nSavePos = nPosition; //Save position
 
                     //To continue let's first get the column count
+                    nDataMax = -1;
+                    if(!EmptyRow()){
+                        if(ReadInt(nConvert)) nDataMax = nConvert;
+                        else{
+                            std::cout<<"Something weird is going on after the controller keyword.\n";
+                            bError = true;
+                        }
+                    }
                     SkipLine();
                     nDataCounter = 0;
                     bFound = true;
-                    while(bFound){
+                    while(bFound && nDataMax != 0){
                         if(!EmptyRow() || nDataCounter > 0){
                             if(ReadFloat(fConvert, sID)){
                                 nDataCounter++;
@@ -1521,7 +1536,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     bFound = true;
                     int nSavePos2;
-                    while(bFound){
+                    while(bFound && (nDataMax != 0 || nDataCounter < nDataMax)){
                         if(EmptyRow()) SkipLine();
                         else{
                             nSavePos2 = nPosition;
@@ -1545,7 +1560,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     if(nDataCounter == 0){
                         std::cout<<"keyed controller error: no data at all in the first line after the token line.\n";
-                        bError = true;
+                        //bError = true;
                     }
                     ctrl.nValueCount = nDataCounter;
                     ctrl.nDataStart = node.Head.ControllerData.size();
@@ -1615,12 +1630,11 @@ bool ASCII::Read(MDL & Mdl){
                         else bError = true;
                         if(ReadFloat(fConvert)) fAngle = fConvert;
                         else bError = true;
-                        node.Head.oOrient.AA(fX, fY, fZ, fAngle);
-                        node.Head.oOrient.ConvertToQuaternions();
-                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_X));
-                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_Y));
-                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_Z));
-                        node.Head.ControllerData.push_back(node.Head.oOrient.Get(QU_W));
+                        node.Head.oOrient.SetAxisAngle(fX, fY, fZ, fAngle);
+                        node.Head.ControllerData.push_back(node.Head.oOrient.GetQuaternion().vAxis.fX);
+                        node.Head.ControllerData.push_back(node.Head.oOrient.GetQuaternion().vAxis.fY);
+                        node.Head.ControllerData.push_back(node.Head.oOrient.GetQuaternion().vAxis.fZ);
+                        node.Head.ControllerData.push_back(node.Head.oOrient.GetQuaternion().fW);
                         ctrl.nColumnCount = 4;
                     }
                     else{
@@ -1804,7 +1818,7 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
     if(node.Head.nType & NODE_HAS_MESH){
         /// Let's do the transformations/translations here. First orientation, then translation.
         Location loc = node.GetLocation();
-        vFromRoot.Rotate(loc.oOrientation);
+        vFromRoot.Rotate(loc.oOrientation.GetQuaternion());
         vFromRoot+= loc.vPosition;
 
         node.Head.vFromRoot = vFromRoot;
@@ -1965,7 +1979,7 @@ void MDL::AsciiPostProcess(){
                             vert.assign(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
 
                             vert.vFromRoot = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
-                            vert.vFromRoot.Rotate(node.GetLocation().oOrientation);
+                            vert.vFromRoot.Rotate(node.GetLocation().oOrientation.GetQuaternion());
                             vert.vFromRoot+=node.Head.vFromRoot;
 
                             vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);

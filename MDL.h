@@ -1,8 +1,9 @@
 #ifndef MDL_H_INCLUDED
 #define MDL_H_INCLUDED
 
-#include "file.h"
 #include "general.h"
+#include "file.h"
+#include "geometry.h"
 
 /**
     UNKNOWNS:
@@ -248,22 +249,9 @@ struct SaberDataStruct;
 struct VertIndicesStruct;
 struct MDXDataStruct;
 struct Vertex;
-struct Matrix22;
-struct Vector;
 struct Color;
 struct Triples;
 struct Bone;
-
-//Orientation class
-extern const char QU_X;
-extern const char QU_Y;
-extern const char QU_Z;
-extern const char QU_W;
-extern const char AA_X;
-extern const char AA_Y;
-extern const char AA_Z;
-extern const char AA_A;
-class Orientation;
 
 //Node structs
 struct Node;
@@ -283,8 +271,6 @@ struct ModelHeader;
 struct FileHeader;
 
 //File structs
-class File;
-class BinaryFile;
 class MDL;
 class MDX;
 class WOK;
@@ -294,303 +280,6 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
 
 
 /**** DATA STRUCTS ****/
-
-struct Matrix22{
-    double f11 = 0.0;
-    double f12 = 0.0;
-    double f21 = 0.0;
-    double f22 = 0.0;
-
-    Matrix22(const double & f1, const double & f2, const double & f3, const double & f4){
-        f11 = f1;
-        f12 = f2;
-        f21 = f3;
-        f22 = f4;
-    }
-};
-
-class Orientation{
-    //unsigned int nCompressed = 0; //Since it is compressed, best to get it in a neutral type
-    double qX;
-    double qY;
-    double qZ;
-    double qW;
-    double fX;
-    double fY;
-    double fZ;
-    double fAngle;
-    bool bQuaternion, bAA;
-
-  public:
-    Orientation(){
-        qX = 0.0;
-        qY = 0.0;
-        qZ = 0.0;
-        qW = 1.0;
-        bQuaternion = true;
-        bAA = false;
-        ConvertToAA();
-    }
-    Orientation(const double & f1, const double & f2, const double & f3, const double & f4){
-        qX = f1;
-        qY = f2;
-        qZ = f3;
-        qW = f4;
-        bQuaternion = true;
-        bAA = false;
-        ConvertToAA();
-    }
-    void Quaternion(const double & f1, const double & f2, const double & f3, const double & f4){
-        qX = f1;
-        qY = f2;
-        qZ = f3;
-        qW = f4;
-        bQuaternion = true;
-        bAA = false;
-        ConvertToAA();
-    }
-    void AA(const double & f1, const double & f2, const double & f3, const double & f4){
-        fX = f1;
-        fY = f2;
-        fZ = f3;
-        fAngle = f4;
-        bQuaternion = false;
-        bAA = true;
-        ConvertToQuaternions();
-    }
-    void ConvertToQuaternions(){
-        if(!bAA) std::cout<<"Orientation::ConvertToQuaternions(): Calculating with invalid AA values\n";
-        double a = fAngle / 2.0;
-        qW = cos(a);
-        qX = fX * sin(a);
-        qY = fY * sin(a);
-        qZ = fZ * sin(a);
-        bQuaternion = true;
-    }
-    void ConvertToAA();
-    void Decompress(unsigned int nCompressed){
-        //Special compressed quaternion - from MDLOps
-        /// Get only the first 11 bits (max value 0x07FF or 2047)
-        /// Divide by half to get values in range from 0.0 to 2.0
-        /// Subtract from 1.0 so we get values in range from 1.0 to -1.0
-        /// This also seems to invert it, previously the highest number
-        /// is now the lowest.
-        qX = ((double) (nCompressed&0x07FF) / 1023.0) - 1.0;
-        /// Move the bits by 11 and repeat
-        qY = ((double) ((nCompressed>>11)&0x07FF) / 1023.0) - 1.0;
-        /// Move the bits again and repeat
-        /// This time, there are only 10 bits left, so our division number
-        /// is smaller (511). Also since these are the only bits left
-        /// there is no need to use & to clear higher bits,
-        /// because they're 0 anyway, per >>.
-        qZ = ((double) (nCompressed>>22) / 511.0) - 1.0;
-        /// Now we get the w from the other three through the formula:
-        /// x^2 + y^2 + z^2 + w^2 == 1 (unit)
-        double fSquares = powf(qX, 2.0) + powf(qY, 2.0) + powf(qZ, 2.0);
-        if(fSquares < 1.0){
-            qW = sqrtf(1.0 - fSquares);
-        }
-        else{
-            /// If the sum is more than 1.0, we'd get a complex number for w
-            /// Instead, set w to 0.0, then recalculate the vector (renormalize the quaternion?) accordingly
-            qW = 0.0;
-            qX /= sqrtf(fSquares);
-            qY /= sqrtf(fSquares);
-            qZ /= sqrtf(fSquares);
-            /// Now the equation still holds:
-            /// (x / sqrt(fSq))^2 + (y / sqrt(fSq))^2 + (z / sqrt(fSq))^2 + 0.0^2 == 1
-            /// x^2 / fSq + y^2 / fSq + z^2 / fSq + 0.0 == 1
-            /// x^2 + y^2 + z^2 == fSq (which is the definition of fSquare)
-        }
-        std::cout<<"Decompressed Q: "<<qX<<" "<<qY<<" "<<qZ<<" "<<qW<<"\n";
-        bQuaternion = true;
-        bAA = false;
-        ConvertToAA();
-    }
-    void Compress(){
-
-    }
-    Orientation & operator*=(const Orientation & o){
-        if(!bQuaternion) std::cout<<"Orientation::operator*=(): Calculating with invalid quaternion values\n";
-        double fTempX =  qX * o.Get(QU_W) + qW * o.Get(QU_X) - qZ * o.Get(QU_Y) + qY * o.Get(QU_Z);
-        double fTempY =  qY * o.Get(QU_W) + qZ * o.Get(QU_X) + qW * o.Get(QU_Y) - qX * o.Get(QU_Z);
-        double fTempZ =  qZ * o.Get(QU_W) - qY * o.Get(QU_X) + qX * o.Get(QU_Y) + qW * o.Get(QU_Z);
-        double fTempW =  qW * o.Get(QU_W) - qX * o.Get(QU_X) - qY * o.Get(QU_Y) - qZ * o.Get(QU_Z);
-        qX = std::move(fTempX);
-        qY = std::move(fTempY);
-        qZ = std::move(fTempZ);
-        qW = std::move(fTempW);
-        ConvertToAA();
-        return *this;
-    }
-    Orientation & ReverseW(){
-        if(!bQuaternion) std::cout<<"Orientation::ReverseW(): Calculating with invalid quaternion values\n";
-        qW = - qW;
-        return *this;
-    }
-    Orientation & Reverse(){
-        if(!bQuaternion) std::cout<<"Orientation::Reverse(): Calculating with invalid quaternion values\n";
-        qX = - qX;
-        qY = - qY;
-        qZ = - qZ;
-        qW = - qW;
-        return *this;
-    }
-    const double & Get(const char cID) const {
-        if(cID == 0){
-            std::cout<<"Orientation::Get(): invalid ID\n";
-            return 0.0;
-        }
-        else if(cID <= QU_W && !bQuaternion){
-            std::cout<<"Orientation::Get(): trying to get quaternion value ("<<(int)cID<<") when it's not set!\n";
-            return 0.0;
-        }
-        else if(cID == QU_X) return qX;
-        else if(cID == QU_Y) return qY;
-        else if(cID == QU_Z) return qZ;
-        else if(cID == QU_W) return qW;
-        else if(cID <= AA_A && !bAA){
-            std::cout<<"Orientation::Get(): trying to get AA value ("<<(int)cID<<") when it's not set!\n";
-            return 0.0;
-        }
-        else if(cID == AA_X) return fX;
-        else if(cID == AA_Y) return fY;
-        else if(cID == AA_Z) return fZ;
-        else if(cID == AA_A) return fAngle;
-        else{
-            std::cout<<"Orientation::Get(): invalid ID\n";
-            return 0.0;
-        }
-    }
-};
-
-struct Vector{
-    double fX;
-    double fY;
-    double fZ;
-
-    Vector(const double & f1, const double & f2, const double & f3){
-        fX = f1;
-        fY = f2;
-        fZ = f3;
-    }
-    void Set(const double & f1, const double & f2, const double & f3){
-        fX = f1;
-        fY = f2;
-        fZ = f3;
-    }
-
-    std::string Print(){
-        std::stringstream ss;
-        ss<<"("<<fX<<", "<<fY<<", "<<fZ<<")";
-        return ss.str();
-    }
-
-    void print(const std::string & sMsg){
-        std::cout<<sMsg<<" fX="<<fX<<", fY="<<fY<<".\n";
-    }
-
-    Vector(const POINT & pt){
-        fX = pt.x;
-        fY = pt.y;
-        fZ = 0.0;
-    }
-
-    Vector(){
-        fX = 0.0;
-        fY = 0.0;
-        fZ = 0.0;
-    }
-    Vector(const double & f1, const double & f2){
-        fX = f1;
-        fY = f2;
-        fZ = 0.0;
-    }
-    Vector & operator*=(const Matrix22 & m){
-        fX = m.f11 * fX + m.f12 * fY;
-        fY = m.f21 * fX + m.f22 * fY;
-        return *this;
-    }
-    Vector & operator*=(const double & f){
-        fX *= f;
-        fY *= f;
-        fZ *= f;
-        return *this;
-    }
-    Vector & operator/=(const double & f){
-        fX /= f;
-        fY /= f;
-        fZ /= f;
-        return *this;
-    }
-    Vector & operator+=(const Vector & v){
-        fX += v.fX;
-        fY += v.fY;
-        fZ += v.fZ;
-        return *this;
-    }
-    Vector & operator-=(const Vector & v){
-        fX -= v.fX;
-        fY -= v.fY;
-        fZ -= v.fZ;
-        return *this;
-    }
-    Vector & operator/=(const Vector & v){ //cross product
-        double fcrossx = fY * v.fZ - fZ * v.fY;
-        double fcrossy = fZ * v.fX - fX * v.fZ;
-        double fcrossz = fX * v.fY - fY * v.fX;
-        fX = std::move(fcrossx);
-        fY = std::move(fcrossy);
-        fZ = std::move(fcrossz);
-        return *this;
-    }
-    Vector & Rotate(const Orientation & o){
-        if(fX == 0.0 && fY == 0.0 && fZ == 0.0) return *this;
-
-        double fTempX = fX * (o.Get(QU_W) * o.Get(QU_W) + o.Get(QU_X) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_Z))
-                     + fY * 2.0 * (o.Get(QU_X) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_W))
-                     + fZ * 2.0 * (o.Get(QU_X) * o.Get(QU_Z) + o.Get(QU_Y) * o.Get(QU_W));
-        double fTempY = fX * 2.0 * (o.Get(QU_Y) * o.Get(QU_X) + o.Get(QU_Z) * o.Get(QU_W))
-                     + fY * (o.Get(QU_W) * o.Get(QU_W) - o.Get(QU_X) * o.Get(QU_X) + o.Get(QU_Y) * o.Get(QU_Y) - o.Get(QU_Z) * o.Get(QU_Z))
-                     + fZ * 2.0 * (o.Get(QU_Y) * o.Get(QU_Z) - o.Get(QU_X) * o.Get(QU_W));
-        double fTempZ = fX * 2.0 * (o.Get(QU_Z) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_W))
-                     + fY * 2.0 * (o.Get(QU_Z) * o.Get(QU_Y) + o.Get(QU_X) * o.Get(QU_W))
-                     + fZ * (o.Get(QU_W) * o.Get(QU_W) - o.Get(QU_X) * o.Get(QU_X) - o.Get(QU_Y) * o.Get(QU_Y) + o.Get(QU_Z) * o.Get(QU_Z));
-        fX = std::move(fTempX);
-        fY = std::move(fTempY);
-        fZ = std::move(fTempZ);
-        return *this;
-    }
-    Vector & Reverse(){
-        fX = - fX;
-        fY = - fY;
-        fZ = - fZ;
-        return *this;
-    }
-    double GetLength() const {
-        return sqrtf(powf(fX, 2.0) + powf(fY, 2.0) + powf(fZ, 2.0));
-    }
-    void Normalize(){
-        double fNorm = GetLength();
-        if(fNorm == 0.0){
-            /// 1.0 0.0 0.0 based on vanilla normals (in 003ebof for example) ?????????
-            *this = Vector(0.0, 0.0, 0.0);
-        }
-        else *this /= fNorm;
-    }
-    bool Compare(const Vector & v1, double fDiff = 0.00001){
-        if(abs(fX - v1.fX) < fDiff &&
-           abs(fY - v1.fY) < fDiff &&
-           abs(fZ - v1.fZ) < fDiff ) return true;
-        else return false;
-    }
-    bool Null(double fDiff = 0.0){
-        if(abs(fX) <= fDiff &&
-           abs(fY) <= fDiff &&
-           abs(fZ) <= fDiff ) return true;
-        else return false;
-    }
-};
 
 struct Location{
     Vector vPosition;
@@ -1317,17 +1006,6 @@ class WOK: public BinaryFile{
     friend void BuildTree(WOK & Walkmesh);
 };
 
-Vector operator*(Vector v, const Matrix22 & m);
-Vector operator*(Vector v, const double & f);
-Vector operator/(Vector v, const double & f);
-Vector operator*(const double & f, Vector v);
-double operator*(const Vector & v, const Vector & v2); //dot product
-Vector operator/(Vector v, const Vector & v2); //cross product
-Vector operator+(Vector v, const Vector & v2);
-Vector operator-(Vector v, const Vector & v2);
-double Angle(const Vector & v, const Vector & v2);
-Orientation operator*(Orientation o1, const Orientation & o2);
-double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3);
 
 int ReturnController(std::string sController);
 std::string ReturnClassificationName(int nClassification);

@@ -24,22 +24,26 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
     }
     if(node.Head.nType & NODE_HAS_SKIN){
         //First, declare our empty location as a starting point
-        Location loc;
+        Vector vPos;
+        Quaternion qOrient;
 
         //Now we need to construct a path by adding all the locations from this node through all its parents to the root
         int nIndex = node.Head.nNameIndex;
+        Vector vCurPosition;
+        Quaternion qCurOrientation;
         while(nIndex != -1){
             Node & curnode = GetNodeByNameIndex(nIndex);
 
             //Construct base location
             Location locNode = curnode.GetLocation();
-            locNode.vPosition.Reverse();
-            locNode.oOrientation.ReverseW();
-            locNode.vPosition.Rotate(locNode.oOrientation);
+            vCurPosition = locNode.vPosition * -1.0;
+            qCurOrientation = locNode.oOrientation.GetQuaternion();
+            qCurOrientation = qCurOrientation.reverse();
+            vCurPosition.Rotate(qCurOrientation);
 
             //Add parent location to main location
-            loc.vPosition += locNode.vPosition;
-            loc.oOrientation *= locNode.oOrientation;
+            vPos += vCurPosition;
+            qOrient *= qCurOrientation;
             //On the first round, because loc is initialized with the identity orientation, locNode orientation is simply copied
 
             nIndex = curnode.Head.nParentIndex;
@@ -49,7 +53,8 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
 
         //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
         for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
-            Location lRecord = loc; //Make a copy of loc
+            Vector vRecord = vPos; //Make copy
+            Quaternion qRecord = qOrient; //Make copy
             Node & curnode = FH->MH.ArrayOfNodes.at(n);
 
             nIndex = curnode.Head.nNameIndex;
@@ -61,24 +66,25 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
             }
             //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
             for(int a = Indexes.size() - 1; a >= 0; a--){
-                //std::cout<<"Our current a is: "<<a<<".\n";
-                //std::cout<<"Our current index is: "<<Indexes.at(a)<<".\n";
                 Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
                 Location locNode = curnode2.GetLocation();
-                locNode.vPosition.Rotate(lRecord.oOrientation); //Note: rotating with the Record rotation!
-                lRecord.vPosition += locNode.vPosition;
-                lRecord.oOrientation *= locNode.oOrientation;
+                vCurPosition = locNode.vPosition;
+                qCurOrientation = locNode.oOrientation.GetQuaternion();
+                vCurPosition.Rotate(qRecord); //Note: rotating with the Record rotation!
+                vRecord += vCurPosition;
+                qRecord *= qCurOrientation;
             }
 
             //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
-            lRecord.vPosition.Reverse();
-            lRecord.oOrientation.ReverseW();
-            lRecord.vPosition.Rotate(lRecord.oOrientation);
+            vRecord *= -1.0;
+            qRecord = qRecord.reverse();
+            vRecord.Rotate(qRecord);
 
             //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
-            node.Skin.Bones.at(n).TBone = lRecord.vPosition;
-            node.Skin.Bones.at(n).QBone = lRecord.oOrientation;
+            node.Skin.Bones.at(n).TBone = vRecord;
+            node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
         }
+
     }
     if(node.Head.nType & NODE_HAS_MESH){
         if(!(node.Head.nType & NODE_HAS_SABER)){
@@ -634,11 +640,10 @@ void MDL::WriteNodes(Node & node){
     WriteFloat(node.Head.vPos.fZ, 2);
 
     //Write orientation - convert first
-    node.Head.oOrient.ConvertToQuaternions();
-    WriteFloat(node.Head.oOrient.Get(QU_W), 2);
-    WriteFloat(node.Head.oOrient.Get(QU_X), 2);
-    WriteFloat(node.Head.oOrient.Get(QU_Y), 2);
-    WriteFloat(node.Head.oOrient.Get(QU_Z), 2);
+    WriteFloat(node.Head.oOrient.GetQuaternion().fW, 2);
+    WriteFloat(node.Head.oOrient.GetQuaternion().vAxis.fX, 2);
+    WriteFloat(node.Head.oOrient.GetQuaternion().vAxis.fY, 2);
+    WriteFloat(node.Head.oOrient.GetQuaternion().vAxis.fZ, 2);
 
     //Children Array
     int PHnOffsetToChildren = nPosition;
@@ -990,10 +995,10 @@ void MDL::WriteNodes(Node & node){
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToQBones, node.Skin.QBoneArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToQBones, node.Skin.QBoneArray.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_W), 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_X), 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_Y), 2);
-            WriteFloat(node.Skin.Bones.at(d).QBone.Get(QU_Z), 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().fW, 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fX, 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fY, 2);
+            WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fZ, 2);
         }
         node.Skin.TBoneArray.ResetToSize(node.Skin.Bones.size());
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToTBones, node.Skin.TBoneArray.nOffset);

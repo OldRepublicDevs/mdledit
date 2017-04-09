@@ -267,8 +267,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         double fQX = ReadFloat(&nPos, 2);
         double fQY = ReadFloat(&nPos, 2);
         double fQZ = ReadFloat(&nPos, 2);
-        NODE->Head.oOrient.Quaternion(fQX, fQY, fQZ, fQW);
-        NODE->Head.oOrient.ConvertToAA(); // just convert from quaternions right away
+        NODE->Head.oOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
 
         NODE->Head.ChildrenArray.nOffset = ReadInt(&nPos, 6);
         NODE->Head.ChildrenArray.nCount = ReadInt(&nPos, 1);
@@ -326,7 +325,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         /// Let's do the transformations/translations here. First orientation, then translation.
         Location loc = NODE->GetLocation();
         //vFromRoot.Rotate(NODE->Head.oOrient); //Why am I not rotating with loc's orientation??? Let's try it
-        vFromRoot.Rotate(loc.oOrientation);
+        vFromRoot.Rotate(loc.oOrientation.GetQuaternion());
         vFromRoot+= loc.vPosition;
 
         NODE->Head.vFromRoot = vFromRoot;
@@ -518,7 +517,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         ByteBlock4.bytes[3] = NODE->Mesh.nSaberUnknown4;
         Orientation oSaber;
         oSaber.Decompress(ByteBlock4.ui);
-        std::cout<<"Saber orient ("<<ByteBlock4.ui<<"): x="<<oSaber.Get(AA_X)<<", y="<<oSaber.Get(AA_Y)<<", z="<<oSaber.Get(AA_Z)<<", A="<<oSaber.Get(AA_A)<<".\n";
+        std::cout<<"Saber orient ("<<ByteBlock4.ui<<"): x="<<oSaber.GetAxisAngle().vAxis.fX<<", y="<<oSaber.GetAxisAngle().vAxis.fY<<", z="<<oSaber.GetAxisAngle().vAxis.fZ<<", A="<<oSaber.GetAxisAngle().fAngle<<".\n";
         */
 
         NODE->Mesh.nAnimateUV = ReadInt(&nPos, 4);
@@ -706,7 +705,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 double fQX = ReadFloat(&nPosData2, 2);
                 double fQY = ReadFloat(&nPosData2, 2);
                 double fQZ = ReadFloat(&nPosData2, 2);
-                NODE->Skin.Bones[n].QBone.Quaternion(fQX, fQY, fQZ, fQW);
+                NODE->Skin.Bones[n].QBone.SetQuaternion(fQX, fQY, fQZ, fQW);
 
                 NODE->Skin.Bones[n].TBone.fX = ReadFloat(&nPosData3, 2);
                 NODE->Skin.Bones[n].TBone.fY = ReadFloat(&nPosData3, 2);
@@ -735,7 +734,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Mesh.Vertices[n].fZ = ReadFloat(&nPosData, 2);
 
                 NODE->Mesh.Vertices[n].vFromRoot = NODE->Mesh.Vertices[n];
-                NODE->Mesh.Vertices[n].vFromRoot.Rotate(NODE->GetLocation().oOrientation);
+                NODE->Mesh.Vertices[n].vFromRoot.Rotate(NODE->GetLocation().oOrientation.GetQuaternion());
                 NODE->Mesh.Vertices[n].vFromRoot += vFromRoot;
 
                 NODE->Mesh.Vertices[n].MDXData.nNameIndex = NODE->Head.nNameIndex;

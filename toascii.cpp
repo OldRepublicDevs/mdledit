@@ -85,7 +85,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         for(int n = 0; n < mh->Animations.size(); n++){
             ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
         }
-        sReturn << string_format("\ndonemodel %s\n", mh->GH.sName.c_str());
+        sReturn << string_format("\n\ndonemodel %s\n", mh->GH.sName.c_str());
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
@@ -145,11 +145,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
                 sReturn << string_format("\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
                 if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                    sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
+                    sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX, 0), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY, 1), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ, 2), PrepareFloat(node->Head.Orient.GetQuaternion().fW, 3));
                 }
             }
             else if(node->Head.Controllers[1].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
+                sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX, 0), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY, 1), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ, 2), PrepareFloat(node->Head.Orient.GetQuaternion().fW, 3));
             }*/
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers[n]));
@@ -157,7 +157,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }/*
         else{
             sReturn << string_format("\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX, 0), PrepareFloat(node->Head.Pos.fY, 1), PrepareFloat(node->Head.Pos.fZ, 2));
-            sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.Get(QU_X), 0), PrepareFloat(node->Head.Orient.Get(QU_Y), 1), PrepareFloat(node->Head.Orient.Get(QU_Z), 2), PrepareFloat(node->Head.Orient.Get(QU_W), 3));
+            sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX, 0), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY, 1), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ, 2), PrepareFloat(node->Head.Orient.GetQuaternion().fW, 3));
         }*/
     }
     else if(nDataType == CONVERT_LIGHT){
@@ -452,17 +452,32 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Location loc = geonode.GetLocation();
         Node & node = GetNodeByNameIndex(ctrl->nNameIndex, ctrl->nAnimation);
         sReturn<<"\n      "<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
-        if(ctrl->nColumnCount > 16) sReturn<<"bezierkey";
-        else sReturn<<"key";
+        if(ctrl->nColumnCount > 16) sReturn<<"bezier";
+        sReturn<<"key";
+        double PI = 3.14159;
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
+            Quaternion qPrevious;
+            AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
-                Orientation CtrlOrient;
                 ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
-                CtrlOrient.Decompress(ByteBlock4.ui);
-                CtrlOrient.ConvertToAA();
-                sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
+                aaCurrent = AxisAngle(DecompressQuaternion(ByteBlock4.ui));
+                if(n > 0){
+                    aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                    std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
+                    if(abs(aaDiff.fAngle) - PI > 0.0001){
+                        std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
+                        if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
+                        else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
+                        //aaCurrent.vAxis *= -1.0;
+                        //aaCurrent *= -1.0;
+                        std::cout<<"to "<<aaCurrent.Print()<<".\n";
+                        //aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                    }
+                }
+                qPrevious = Quaternion(aaCurrent);
+                sReturn << PrepareFloat(aaCurrent.vAxis.fX, 0) << " " << PrepareFloat(aaCurrent.vAxis.fY, 1) << " " << PrepareFloat(aaCurrent.vAxis.fZ, 2) << " " << PrepareFloat(aaCurrent.fAngle, 3);
             }
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
@@ -474,9 +489,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 double fQY = node.Head.ControllerData[ctrl->nDataStart + n*4 + 1];
                 double fQZ = node.Head.ControllerData[ctrl->nDataStart + n*4 + 2];
                 double fQW = node.Head.ControllerData[ctrl->nDataStart + n*4 + 3];
-                CtrlOrient.Quaternion(fQX, fQY, fQZ, fQW);
-                CtrlOrient.ConvertToAA();
-                sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
+                CtrlOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
+                sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX, 0) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY, 1) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ, 2) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle, 3);
             }
         }
         /// positionbezierkey
@@ -550,11 +564,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n  "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<"  ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
-            Orientation CtrlOrient;
             ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart];
-            CtrlOrient.Decompress(ByteBlock4.ui);
-            CtrlOrient.ConvertToAA();
-            sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
+            Orientation CtrlOrient(DecompressQuaternion(ByteBlock4.ui));
+            sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX, 0) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY, 1) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ, 2) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle, 3);
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
@@ -563,9 +575,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             double fQY = node.Head.ControllerData[ctrl->nDataStart + 1];
             double fQZ = node.Head.ControllerData[ctrl->nDataStart + 2];
             double fQW = node.Head.ControllerData[ctrl->nDataStart + 3];
-            CtrlOrient.Quaternion(fQX, fQY, fQZ, fQW);
-            CtrlOrient.ConvertToAA();
-            sReturn << PrepareFloat(CtrlOrient.Get(AA_X), 0) << " " << PrepareFloat(CtrlOrient.Get(AA_Y), 1) << " " << PrepareFloat(CtrlOrient.Get(AA_Z), 2) << " " << PrepareFloat(CtrlOrient.Get(AA_A), 3);
+            CtrlOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
+            sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX, 0) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY, 1) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ, 2) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle, 3);
         }
     /*  else if(ctrl->nColumnCount == 19 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey

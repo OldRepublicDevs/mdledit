@@ -435,10 +435,10 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n  y: "<<PrepareFloat(node->Head.vPos.fY, 0);
             sPrint << "\r\n  z: "<<PrepareFloat(node->Head.vPos.fZ, 0);
             sPrint << "\r\nOrientation:";
-            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.oOrient.Get(QU_X), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_X), 1)<<")";
-            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.Get(QU_Y), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Y), 1)<<")";
-            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.Get(QU_Z), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_Z), 1)<<")";
-            sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.Get(QU_W), 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.Get(AA_A), 1)<<")";
+            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fX, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fX, 1)<<")";
+            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fY, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fY, 1)<<")";
+            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fZ, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fZ, 1)<<")";
+            sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().fW, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().fAngle, 1)<<")";
         }
     }/*
     else if(cItem[0] == "Position") sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);
@@ -787,10 +787,10 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         sPrint << "\r\n\r\nTBone: "<<PrepareFloat(bone->TBone.fX, 0);
         sPrint << "\r\n       "<<PrepareFloat(bone->TBone.fY, 0);
         sPrint << "\r\n       "<<PrepareFloat(bone->TBone.fZ, 0);
-        sPrint << "\r\n\r\nQBone: "<<PrepareFloat(bone->QBone.Get(QU_X), 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_Y), 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_Z), 0);
-        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.Get(QU_W), 0);
+        sPrint << "\r\n\r\nQBone: "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fX, 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fY, 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fZ, 0);
+        sPrint << "\r\n       "<<PrepareFloat(bone->QBone.GetQuaternion().fW, 0);
         //sPrint << "\r\n\r\nArray8: "<<PrepareFloat(bone->fArray8, 0);
     }
     else if((cItem[0] == "MDX Data Pointers") && (cItem[1] == "Skin")){

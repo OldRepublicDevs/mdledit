@@ -157,6 +157,7 @@ bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
        sBuffer[nPosition] == 0x0D ||
        sBuffer[nPosition] == 0x0A)
     {
+        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -165,6 +166,7 @@ bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
            sBuffer[nPosition] == 0x0D ||
            sBuffer[nPosition] == 0x0A)
         {
+            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
             return false;
         }
     }
@@ -201,6 +203,7 @@ bool TextFile::ReadFloat(double & fNew, bool bPrint){
        sBuffer[nPosition] == 0x0D ||
        sBuffer[nPosition] == 0x0A)
     {
+        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -209,6 +212,7 @@ bool TextFile::ReadFloat(double & fNew, bool bPrint){
            sBuffer[nPosition] == 0x0D ||
            sBuffer[nPosition] == 0x0A)
         {
+            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
             return false;
         }
     }
@@ -244,6 +248,7 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
        sBuffer[nPosition] == 0x0D ||
        sBuffer[nPosition] == 0x0A)
     {
+        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -252,6 +257,7 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
            sBuffer[nPosition] == 0x0D ||
            sBuffer[nPosition] == 0x0A)
         {
+            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
             return false;
         }
     }

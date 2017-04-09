@@ -198,9 +198,8 @@ Location Node::GetLocation(){
                                                 Head.ControllerData.at(orictrl.nDataStart + 3));
         }
         else if(orictrl.nColumnCount == 2){
-            location.oOrientation.Decompress((unsigned int) Head.ControllerData.at(orictrl.nDataStart));
+            location.oOrientation.SetQuaternion(DecompressQuaternion((unsigned int) Head.ControllerData.at(orictrl.nDataStart)));
         }
-        location.oOrientation.ConvertToAA();
     }
 
     return location;
@@ -209,71 +208,6 @@ Location Node::GetLocation(){
 const std::string MDL::sClassName = "MDL";
 const std::string MDX::sClassName = "MDX";
 const std::string WOK::sClassName = "WOK";
-
-const char QU_X = 0x01;
-const char QU_Y = 0x02;
-const char QU_Z = 0x03;
-const char QU_W = 0x04;
-const char AA_X = 0x05;
-const char AA_Y = 0x06;
-const char AA_Z = 0x07;
-const char AA_A = 0x08;
-
-Vector operator*(Vector v, const Matrix22 & m){
-    v *= m;
-    return v;
-}
-
-Vector operator*(Vector v, const double & f){
-    v *= f;
-    return v;
-}
-
-Vector operator/(Vector v, const double & f){
-    v /= f;
-    return v;
-}
-
-Vector operator*(const double & f, Vector v){
-    v *= f;
-    return v;
-}
-
-double operator*(const Vector & v, const Vector & v2){ //dot product
-    return (v.fX * v2.fX + v.fY * v2.fY + v.fZ * v2.fZ);
-}
-
-double Angle(const Vector & v, const Vector & v2){
-    return acos((v*v2)/(v.GetLength() * v2.GetLength()));
-}
-
-Vector operator/(Vector v, const Vector & v2){ //cross product
-    v /= v2;
-    return v;
-}
-
-Vector operator-(Vector v, const Vector & v2){
-    v -= v2;
-    return v;
-}
-
-Vector operator+(Vector v, const Vector & v2){
-    v += v2;
-    return v;
-}
-
-Orientation operator*(Orientation o1, const Orientation & o2){
-    o1 *= o2;
-    return o1;
-}
-
-double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3){
-    double fA = e1.GetLength();
-    double fB = e2.GetLength();
-    double fC = e3.GetLength();
-    double fS = (fA + fB + fC) / 2.0;
-    return sqrt(fS * (fS - fA) * (fS - fB) * (fS - fC));
-}
 
 bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
     std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName;
