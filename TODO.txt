@@ -1,7 +1,7 @@
 
 
 TO DO:
- - Add more stuff to editordlg (texture names, controller data, for example)
+ - Add more stuff to editordlg (texture names, controller data, for example) OR maybe not
 
  - NWMax scripts: see if it's possible to import channels 2,3,4 and export channels 3,4.
 

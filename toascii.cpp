@@ -465,15 +465,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 aaCurrent = AxisAngle(DecompressQuaternion(ByteBlock4.ui));
                 if(n > 0){
                     aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
-                    std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
+                    //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
                     if(abs(aaDiff.fAngle) - PI > 0.0001){
-                        std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
+                        //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
                         if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
                         else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
-                        //aaCurrent.vAxis *= -1.0;
-                        //aaCurrent *= -1.0;
-                        std::cout<<"to "<<aaCurrent.Print()<<".\n";
-                        //aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                        //std::cout<<"to "<<aaCurrent.Print()<<".\n";
                     }
                 }
                 qPrevious = Quaternion(aaCurrent);
@@ -482,15 +479,26 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
+            Quaternion qPrevious;
+            AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
-                Orientation CtrlOrient;
-                double fQX = node.Head.ControllerData[ctrl->nDataStart + n*4 + 0];
-                double fQY = node.Head.ControllerData[ctrl->nDataStart + n*4 + 1];
-                double fQZ = node.Head.ControllerData[ctrl->nDataStart + n*4 + 2];
-                double fQW = node.Head.ControllerData[ctrl->nDataStart + n*4 + 3];
-                CtrlOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
-                sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX, 0) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY, 1) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ, 2) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle, 3);
+                aaCurrent = AxisAngle(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]);
+                if(n > 0){
+                    aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                    //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
+                    if(abs(aaDiff.fAngle) - PI > 0.0001){
+                        //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
+                        if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
+                        else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
+                        //std::cout<<"to "<<aaCurrent.Print()<<".\n";
+                    }
+                }
+                qPrevious = Quaternion(aaCurrent);
+                sReturn << PrepareFloat(aaCurrent.vAxis.fX, 0) << " " << PrepareFloat(aaCurrent.vAxis.fY, 1) << " " << PrepareFloat(aaCurrent.vAxis.fZ, 2) << " " << PrepareFloat(aaCurrent.fAngle, 3);
             }
         }
         /// positionbezierkey
