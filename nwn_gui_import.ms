@@ -152,7 +152,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		label lbl_animname "Anim name to load:" enabled:false
 		edittext edt_animname enabled:false
 		spinner spn_startframe "Insert Frame:" type:#integer range:[0,100000,0] enabled:false
-		checkbox chk_resetctrl "Reset Controllers" checked:true
+		checkbox chk_resetctrl "Reset Controllers" checked:false
 		checkbox warn_checkbox "Show warnings" width:128 height:16
 		spinner spn_loc_x "Import Loc X:" range:[0,1000000,0]
 		spinner spn_loc_y "Import Loc Y:" range:[0,1000000,0]
