@@ -831,6 +831,7 @@ fn ExAuroraPoly node =
 	if uprop != undefined then format "%m_sDepthTextureName %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "depth_texture"
 	if uprop != undefined then format "%depth_texture %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
+	/*
         uprop = getUserProp node "animateuv"
 	if uprop != undefined then format "%animateuv %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "uvdirectionx"
@@ -855,6 +856,7 @@ fn ExAuroraPoly node =
 	if uprop != undefined then format "%hologram_donotdraw %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "tangentspace"
 	if uprop != undefined then format "%tangentspace %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
+	*/
     -- end bead-v modification
 
     if DEBUG then format "#ExAuroraPoly:: End%" g_delim to:g_strBuffer

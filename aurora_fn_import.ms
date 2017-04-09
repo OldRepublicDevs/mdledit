@@ -1268,6 +1268,20 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "displacement": objDisplacement = tok.ReadFloat()
 
                         "alpha": objAlpha = tok.ReadFloat()
+                -- bead-v modification: added kotor props
+                        "animateuv": objAnimateuv = tok.ReadInteger()
+                        "uvdirectionx": objUvdirectionx = tok.ReadFloat()
+                        "uvdirectiony": objUvdirectiony = tok.ReadFloat()
+                        "uvjitter": objUvjitter = tok.ReadFloat()
+                        "uvjitterspeed": objUvjitterspeed = tok.ReadFloat()
+                        "lightmapped": objLightmapped = tok.ReadInteger()
+                        "backgroundgeometry": objBackgroundgeometry = tok.ReadInteger()
+                        "dirt_enabled": objDirt_enabled = tok.ReadInteger()
+                        "dirt_texture": objDirt_texture = tok.ReadInteger()
+                        "dirt_worldspace": objDirt_worldspace = tok.ReadInteger()
+                        "hologram_donotdraw": objHologram_donotdraw = tok.ReadInteger()
+                        "tangentspace": objTangentspace = tok.ReadInteger()
+                -- end bead-v modification
 
                         "bitmap":
                         (
@@ -1345,16 +1359,16 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 tok.SetString (getNextNonBlankLine mdlStream)
                                 lineNum += 1
 
-                        	-- bead-v modification: only read two floats for the UVs
-				local bv1 = tok.ReadFloat()
-				local bv2 = tok.ReadFloat()
-				local p3 = [bv1, bv2, 0]
-				append TVerts p3
-                        	-- bead-v end modification
+                    -- bead-v modification: only read two floats for the UVs
+                                local bv1 = tok.ReadFloat()
+                                local bv2 = tok.ReadFloat()
+                                local p3 = [bv1, bv2, 0]
 
-				-- Old code:
+                            -- Old code:
                                 --local p3 = tok.ReadPoint3()
-                                --append TVerts p3
+                    -- bead-v end modification
+
+                                append TVerts p3
                             )
                         )
 
@@ -1675,6 +1689,20 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.diffuse = objDiffuse
                                                 aurora_mod.specular = objSpecular
                                                 aurora_mod.shininess = objShine
+                                        -- bead-v modification: added kotor props
+                                                aurora_mod.animateuv = objAnimateuv
+                                                aurora_mod.uvdirectionx = objUvdirectionx
+                                                aurora_mod.uvdirectiony = objUvdirectiony
+                                                aurora_mod.uvjitter = objUvjitter
+                                                aurora_mod.uvjitterspeed = objUvjitterspeed
+                                                aurora_mod.lightmapped = objLightmapped
+                                                aurora_mod.backgroundgeometry = objBackgroundgeometry
+                                                aurora_mod.dirt_enabled = objDirt_enabled
+                                                aurora_mod.dirt_texture = objDirt_texture
+                                                aurora_mod.dirt_worldspace = objDirt_worldspace
+                                                aurora_mod.hologram_donotdraw = objHologram_donotdraw
+                                                aurora_mod.tangentspace = objTangentspace
+                                        -- end bead-v modification
                                                 -- we now force extra data to always be true
                                                 --if newObj.material == undefined then
                                                 --(
@@ -1702,6 +1730,20 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.diffuse = objDiffuse
                                                 aurora_mod.specular = objSpecular
                                                 aurora_mod.shininess = objShine
+                                        -- bead-v modification: added kotor props
+                                                aurora_mod.animateuv = objAnimateuv
+                                                aurora_mod.uvdirectionx = objUvdirectionx
+                                                aurora_mod.uvdirectiony = objUvdirectiony
+                                                aurora_mod.uvjitter = objUvjitter
+                                                aurora_mod.uvjitterspeed = objUvjitterspeed
+                                                aurora_mod.lightmapped = objLightmapped
+                                                aurora_mod.backgroundgeometry = objBackgroundgeometry
+                                                aurora_mod.dirt_enabled = objDirt_enabled
+                                                aurora_mod.dirt_texture = objDirt_texture
+                                                aurora_mod.dirt_worldspace = objDirt_worldspace
+                                                aurora_mod.hologram_donotdraw = objHologram_donotdraw
+                                                aurora_mod.tangentspace = objTangentspace
+                                        -- end bead-v modification
                                                 -- we now force extra data to always be true
                                                 --if newObj.material == undefined then
                                                 --(
@@ -2349,8 +2391,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         local p3out = tok.ReadPoint3()
                                         --if DEBUG then
                                         format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
-                                        if p3in = undefined then p3in = [0, 0, 0]
-                                        if p3out = undefined then p3out = [0, 0, 0]
+                                        if p3in == undefined then p3in = [0, 0, 0]
+                                        if p3out == undefined then p3out = [0, 0, 0]
                                         p3 *= 100
                                         -- set animatiom obj properties and
                                         -- generate key frames in the process.
