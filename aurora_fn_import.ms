@@ -2211,7 +2211,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             zeroPos = at time 0 animObj.pos
                                             zeroRot = at time 0 animObj.rotation
                                             if DEBUG then format "zeroPos=% zeroRot=%\r\n" zeroPos zeroRot
-                                            keytime = 0
+                                            --keytime = 0
                                             keytime = (firstFrame - 1)
                                             -- using 'animate on' context generate some key frames
                                             if DEBUG then format "zeroPos = %, zeroRot = %\r\n" zeroPos zeroRot
@@ -2220,6 +2220,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             -- stop key frame generate
                                             if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" animObj keytime (at time keytime animObj.pos) (at time keytime animObj.rotation)
 
+                                            /*
                                             -- move keytime to last frame plus 1.
                                             keytime = (lastFrame + 1)
                                             -- using 'animate on' context generate some key frames
@@ -2230,6 +2231,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 -- end bead-v modification
                                             -- stop key frame generate
                                             if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" animObj keytime (at time keytime animObj.pos) (at time keytime animObj.rotation)
+                                            */
                                         )
                                     )
                                 )
@@ -2253,21 +2255,30 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 	                            got_upper = false
 	                            i = 1
                     -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
-	                            while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
+	                            --while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
                     -- end bead-v modification
+	                            while (i <= ksize) and ((got_lower == false) and (got_upper == false)) do
 	                            (
-		                            if (animObj.pos.controller.keys[i].time == lowerbound) then
-		                            (
-			                            if DEBUG then format "delete lower\r\n"
-			                            got_lower = true
-			                            deleteKey animObj.pos.controller.keys i
-		                            )
-		                            if (animObj.pos.controller.keys[i].time == upperbound) then
-		                            (
-			                            if DEBUG then format "delete upper\r\n"
-			                            got_upper = true
-			                            deleteKey animObj.pos.controller.keys i
-		                            )
+                                    if(numKeys animObj.pos.controller > 0) then
+                                    (
+                                        if (animObj.pos.controller.keys[i].time == lowerbound) then
+                                        (
+                                            if DEBUG then format "delete lower\r\n"
+                                            got_lower = true
+                                            if DEBUG then format "deleting lower\r\n"
+                                            deleteKey animObj.pos.controller.keys i
+                                            if DEBUG then format "deleted lower\r\n"
+                                        )
+                                        else
+                                        (
+                                            if (animObj.pos.controller.keys[i].time == upperbound) then
+                                            (
+                                                if DEBUG then format "delete upper\r\n"
+                                                got_upper = true
+                                                deleteKey animObj.pos.controller.keys i
+                                            )
+                                        )
+                                    )
 		                            i += 1
 	                            )
 
@@ -2278,21 +2289,28 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 	                            got_upper = false
 	                            i = 1
                     -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
-	                            while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
+	                            --while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
                     -- end bead-v modification
+	                            while (i <= ksize) and ((got_lower == false) and (got_upper == false)) do
 	                            (
-		                            if (animObj.rotation.controller.keys[i].time == lowerbound) then
-		                            (
-			                            if DEBUG then format "delete lower\r\n"
-			                            got_lower = true
-			                            deleteKey animObj.rotation.controller.keys i
-		                            )
-		                            if (animObj.rotation.controller.keys[i].time == upperbound) then
-		                            (
-			                            if DEBUG then format "delete upper\r\n"
-			                            got_upper = true
-			                            deleteKey animObj.rotation.controller.keys i
-		                            )
+                                    if(numKeys animObj.rotation.controller > 0) then
+                                    (
+                                        if (animObj.rotation.controller.keys[i].time == lowerbound) then
+                                        (
+                                            if DEBUG then format "delete lower (rot)\r\n"
+                                            got_lower = true
+                                            deleteKey animObj.rotation.controller.keys i
+                                        )
+                                        else
+                                        (
+                                            if (animObj.rotation.controller.keys[i].time == upperbound) then
+                                            (
+                                                if DEBUG then format "delete upper\r\n"
+                                                got_upper = true
+                                                deleteKey animObj.rotation.controller.keys i
+                                            )
+                                        )
+                                    )
 		                            i += 1
 	                            )
                             )
@@ -2483,6 +2501,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             local newkey = addnewkey animObj.rotation.controller keytime
                                             newkey.value = (objRotAA)
                                         )
+
                                         if (existingPosKey == 0) then
                                         (
                                             local newPosKey = getKeyIndex animObj.pos.controller keytime
@@ -2492,6 +2511,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         (
                                             animObj.pos.keys[existingPosKey].value = existingPos
                                         )
+
 
                                         if (keyCount != undefined) then
                                         (
