@@ -1275,7 +1275,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "uvjitter": objUvjitter = tok.ReadFloat()
                         "uvjitterspeed": objUvjitterspeed = tok.ReadFloat()
                         "lightmapped": objLightmapped = tok.ReadInteger()
-                        "backgroundgeometry": objBackgroundgeometry = tok.ReadInteger()
+                        "m_blsbackgroundgeometry": objBackgroundgeometry = tok.ReadInteger()
                         "dirt_enabled": objDirt_enabled = tok.ReadInteger()
                         "dirt_texture": objDirt_texture = tok.ReadInteger()
                         "dirt_worldspace": objDirt_worldspace = tok.ReadInteger()
@@ -1439,11 +1439,39 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "p2p_bezier3": objP2p_bezier3 = tok.ReadFloat()
                         "grav": objGrav = tok.ReadFloat()
                         "drag": objDrag = tok.ReadFloat()
+             -- bead-v modification: add kotor props
+                        "lightningzigzag": objLightningzigzag = tok.ReadFloat()
+                        "colorMid": objColorMid = tok.ReadFloat()
+                        "alphaMid": objAlphaMid = tok.ReadFloat()
+                        "sizeMid": objSizeMid = tok.ReadFloat()
+                        "sizeMid_y": objSizeMid_y = tok.ReadFloat()
+                        "percentStart": objPercentStart = tok.ReadFloat()
+                        "percentMid": objPercentMid = tok.ReadFloat()
+                        "percentEnd": objPercentEnd = tok.ReadFloat()
+                        "m_fRandomBirthRate": objRandomBirthRate = tok.ReadFloat()
+                        "targetsize": objTargetsize = tok.ReadFloat()
+                        "numcontrolpts": objNumcontrolpts = tok.ReadFloat()
+                        "controlptradius": objControlptradius = tok.ReadFloat()
+                        "controlptdelay": objControlptdelay = tok.ReadFloat()
+                        "tangentspread": objTangentspread = tok.ReadFloat()
+                        "tangentlength": objTangentlength = tok.ReadFloat()
+                        "detonate": objDetonate = tok.ReadFloat()
+                        "numBranches": objNumBranches = tok.ReadFloat()
+                        "controlptsmoothing": objControlptsmoothing = tok.ReadFloat()
+                        "m_bFrameBlending": objFrameBlending = tok.ReadFloat()
+                        "depth_texture": objDepth_texture = tok.ReadFloat()
+                        "m_sDepthTextureName": objDepthTextureName = tok.ReadFloat()
+             -- end bead-v modification
                         -- Emitter key words end
 
                         -- Light key words
                         "radius": objRadius = tok.ReadFloat()
                         "multiplier": objMultiplier = tok.ReadFloat()
+             -- bead-v modification: add kotor props
+                        "shadowradius": objShadowRadius = tok.ReadFloat()
+                        "verticaldisplacement": objVerticalDisplacement = tok.ReadFloat()
+             -- end bead-v modification
+
                         "lightpriority": objLightpriority = tok.ReadInteger()
                         "ndynamictype": objNdynamictype = tok.ReadInteger()
                         "color": objLight_color = tok.ReadPoint3()      -- was "light_color"
@@ -1696,7 +1724,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.uvjitter = objUvjitter
                                                 aurora_mod.uvjitterspeed = objUvjitterspeed
                                                 aurora_mod.lightmapped = objLightmapped
-                                                aurora_mod.backgroundgeometry = objBackgroundgeometry
+                                                aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
                                                 aurora_mod.dirt_enabled = objDirt_enabled
                                                 aurora_mod.dirt_texture = objDirt_texture
                                                 aurora_mod.dirt_worldspace = objDirt_worldspace
@@ -1737,7 +1765,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.uvjitter = objUvjitter
                                                 aurora_mod.uvjitterspeed = objUvjitterspeed
                                                 aurora_mod.lightmapped = objLightmapped
-                                                aurora_mod.backgroundgeometry = objBackgroundgeometry
+                                                aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
                                                 aurora_mod.dirt_enabled = objDirt_enabled
                                                 aurora_mod.dirt_texture = objDirt_texture
                                                 aurora_mod.dirt_worldspace = objDirt_worldspace
@@ -1860,6 +1888,29 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objLightningRadius!=undefined then newObj.lightningRadius = objLightningRadius
                                         if objLightningSubDiv!=undefined then newObj.lightningSubDiv = objLightningSubDiv
                                         if objLightningScale!=undefined then newObj.lightningScale = objLightningScale
+                             -- bead-v modification: add kotor props
+                                        if objLightningzigzag!=undefined then newObj.lightningzigzag = objLightningzigzag
+                                        if objColorMid!=undefined then newObj.colorMid = objColorMid
+                                        if objAlphaMid!=undefined then newObj.alphaMid = objAlphaMid
+                                        if objSizeMid!=undefined then newObj.sizeMid = objSizeMid
+                                        if objSizeMid_y!=undefined then newObj.sizeMid_y = objSizeMid_y
+                                        if objPercentStart!=undefined then newObj.percentStart = objPercentStart
+                                        if objPercentMid!=undefined then newObj.percentMid = objPercentMid
+                                        if objPercentEnd!=undefined then newObj.percentEnd = objPercentEnd
+                                        if objRandomBirthRate!=undefined then newObj.m_fRandomBirthRate = objRandomBirthRate
+                                        if objTargetsize!=undefined then newObj.targetsize = objTargetsize
+                                        if objNumcontrolpts!=undefined then newObj.numcontrolpts = objNumcontrolpts
+                                        if objControlptradius!=undefined then newObj.controlptradius = objControlptradius
+                                        if objControlptdelay!=undefined then newObj.controlptdelay = objControlptdelay
+                                        if objTangentspread!=undefined then newObj.tangentspread = objTangentspread
+                                        if objTangentlength!=undefined then newObj.tangentlength = objTangentlength
+                                        if objDetonate!=undefined then newObj.detonate = objDetonate
+                                        if objNumBranches!=undefined then newObj.numBranches = objNumBranches
+                                        if objControlptsmoothing!=undefined then newObj.controlptsmoothing = objControlptsmoothing
+                                        if objFrameBlending!=undefined then newObj.m_bFrameBlending = objFrameBlending
+                                        if objDepth_texture!=undefined then newObj.depth_texture = objDepth_texture
+                                        if objDepthTextureName!=undefined then newObj.m_sDepthTextureName = objDepthTextureName
+                             -- end bead-v modification
                                         if objBlastRadius!=undefined then newObj.blastRadius = objBlastRadius
                                         if objBlastLength!=undefined then newObj.blastLength = objBlastLength
                                         if objOpacity!=undefined then newObj.opacity = objOpacity
@@ -1889,6 +1940,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         newObj.delegate.boxsize = [10,10,10]
                                         newObj.wirecolor = objWireColor
                                         if objRadius!=undefined then newObj.radius = objRadius * 100
+                            -- bead-v modification: add kotor props
+                                        if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius
+                                        if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement
+                            -- end bead-v modification
                                         if objMultiplier!=undefined then newObj.multipler = objMultiplier
                                         if objLightpriority!=undefined then newObj.lightpriority = objLightpriority
                                         if objNdynamictype!=undefined then newObj.nDynamicType = objNdynamictype

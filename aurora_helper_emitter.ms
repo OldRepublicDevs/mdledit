@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------\
 
     MDL Emitter Helper Object
- 
+
     Credits:
     Wayland Reid :-
         Extends Wayland's Import/Export script with rewrites as needed
@@ -31,8 +31,8 @@ format "load: aurora_helper_emitter.ms\r\n"
 nx_progressPlus()
 
 plugin helper auroraemitter
-name:"AuroraEmitter" 
-classID:#(0xa6d521dc, 0xb8417188) 
+name:"AuroraEmitter"
+classID:#(0xa6d521dc, 0xb8417188)
 version:3
 extends:Cone_Angle
 replaceUI:true
@@ -43,8 +43,8 @@ invisible:true
     --
 	local update_ui
 	local myrect = undefined
-	
-	parameters EmitStyle rollout:EmitStyleRollout 
+
+	parameters EmitStyle rollout:EmitStyleRollout
 	(
     	-- update
     	update_sel  type:#integer animatable:false ui:radio_update default:1
@@ -100,7 +100,7 @@ invisible:true
 	    	spawnType = val - 1
     	)
 	)
-	
+
 	parameters EmitParam rollout:EmitParamRollout
 	(
     	-- display
@@ -121,20 +121,28 @@ invisible:true
     	deadspace       type:#float animatable:false ui:spn_deadspace default:0.0
     	opacity         type:#float animatable:true ui:spn_opacity  default:0.5
 	)
-	
+
 	parameters EmitParticles rollout:EmitParticlesRollout
 	(
     	-- start/end
     	colorStart  type:#color animatable:true ui:colorPicker_colorStart
+    	colorMid    type:#color animatable:true                                  -- bead-v modification: add kotor props
     	colorEnd    type:#color animatable:true ui:colorPicker_colorEnd
     	alphaStart  type:#float animatable:true ui:spn_alphaStart default:1.0
+    	alphaMid    type:#float animatable:true default:1.0                      -- bead-v modification: add kotor props
     	alphaEnd    type:#float animatable:true ui:spn_alphaEnd default:1.0
+    	percentStart type:#float animatable:true                                 -- bead-v modification: add kotor props
+    	percentMid  type:#float animatable:true                                  -- bead-v modification: add kotor props
+    	percentEnd  type:#float animatable:true                                  -- bead-v modification: add kotor props
     	sizeStart   type:#float animatable:true ui:spn_sizeStart default:0.00
+    	sizeMid     type:#float animatable:true default:0.00                     -- bead-v modification: add kotor props
     	sizeEnd     type:#float animatable:true ui:spn_sizeEnd default:0.00
     	sizeStart_y type:#float animatable:true ui:spn_sizeStart_y default:0.00
+    	sizeMid_y   type:#float animatable:true default:0.00                     -- bead-v modification: add kotor props
     	sizeEnd_y   type:#float animatable:true ui:spn_sizeEnd_y default:0.00
-    	
+
     	birthrate   type:#integer animatable:true ui:spn_birthrate default:0
+    	m_fRandomBirthRate   type:#float animatable:true default:0.0             -- bead-v modification: add kotor props
     	lifeExp     type:#float animatable:true ui:spn_lifeExp default:0.0
     	mass        type:#float animatable:true ui:spn_mass default:0.0
     	spread      type:#float animatable:true ui:spn_spread default:0.0
@@ -143,14 +151,16 @@ invisible:true
     	randvel     type:#float animatable:false ui:spn_randvel default:0.0
     	bounce_co   type:#float animatable:true ui:spn_bounce_co default:0.0
     	blurlength  type:#float animatable:true ui:spn_blurlength default:10.0
-    	
+
+
+
     	loop        type:#integer animatable:false ui:box_loop default:0
     	bounce      type:#integer animatable:false ui:box_bounce default:0
     	m_isTinted  type:#integer animatable:false ui:box_m_isTinted default:0
     	splat       type:#integer animatable:false ui:box_Splat default:0
     	affectedByWind type:#boolean animatable:false ui:box_affectedbyWind default:false
 	)
-	
+
 	parameters EmitTextChunk rollout:EmitTextChunkRollout
 	(
     	-- texture
@@ -164,13 +174,13 @@ invisible:true
     	frameStart  type:#integer animatable:true		ui:spn_frameStart default:0
     	frameEnd    type:#integer animatable:true		ui:spn_frameEnd default:0
     	random      type:#integer animatable:false	ui:box_random default:0
-    	
+
     	-- chunk
     	chunky		type:#integer default:0		ui:chk_chunk
     	chunkName   type:#string  default:"NULL"
     	chunk		type:#string	-- for compatability, but is wrong
 	)
-	
+
 	parameters EmitAdv rollout:EmitAdvRollout
 	(
     	-- lightning props
@@ -178,9 +188,27 @@ invisible:true
     	lightningRadius     type:#float animatable:true ui:spn_lightningRadius default:0.0
     	lightningSubDiv		type:#integer animatable:true ui:spn_lightningSubDiv default:0
     	lightningScale		type:#float animatable:true ui:spn_lightningScale default:0
+    	lightningzigzag     type:#float animatable: true default:0.0 -- bead-v modification: add kotor props
+
     	-- blast props
     	blastRadius         type:#float animatable:false ui:spn_blastRadius default:0
     	blastLength         type:#float animatable:false ui:spn_blastLength default:0
+
+    	-- new props -- bead-v modification: add kotor props
+    	targetsize          type:#float animatable:true default:0.0
+    	numcontrolpts       type:#float animatable:true default:0.0
+    	controlptradius     type:#float animatable:true default:0.0
+    	controlptdelay      type:#float animatable:true default:0.0
+    	tangentspread       type:#float animatable:true default:0.0
+    	tangentlength       type:#float animatable:true default:0.0
+    	detonate            type:#float animatable:true default:0.0
+    	numBranches         type:#integer animatable:false default:0
+    	controlptsmoothing  type:#float animatable:false default:0.0
+    	m_bFrameBlending    type:#integer animatable:false default:0
+    	depth_texture       type:#integer animatable:false default:0
+    	m_sDepthTextureName type:#string animatable:false default:0
+    	-- end bead-v modification
+
     	-- p2p props
     	p2p                 type:#integer animatable:false ui:box_p2p default:0
     	p2p_type            type:#string animatable:false default:"Bezier"
@@ -189,7 +217,7 @@ invisible:true
     	p2p_bezier3         type:#float animatable:true ui:spn_p2p_bezier3 default:0
     	grav                type:#float animatable:true ui:spn_grav default:0
     	drag                type:#float animatable:true ui:spn_drag default:0
-    	
+
     	on p2p_sel set val do
     	(
         	case val of
@@ -202,11 +230,11 @@ invisible:true
 
 	rollout EmitStyleRollout "Emitter Style" width:162 height:321
     (
-    	group "Update" 
+    	group "Update"
 		(
     		radiobuttons radio_update "" align:#left labels:#("Fountain", "Single", "Explosion", "Lightning") columns:1
         )
-    	group "Render" 
+    	group "Render"
 		(
 	    	radiobuttons radio_render "" align:#left labels:#("Normal", "Linked", "Billboard to Local Z", "Billboard to World Z", "Aligned to World Z", "Aligned to Particle", "Motion Blur") columns:1
         )
@@ -222,23 +250,23 @@ invisible:true
     	(
 	    	format "EmitStyleRollout opened\r\n"
     	)
-    	
+
     	on radio_update changed state do update_ui()
-    	    	
+
     	--on radio_spawnType changed state do
     	--(
     	--    spawnType = state - 1
     	--)
-    	
+
     	on radio_Blend changed state do update_ui()
     )
-    
+
     rollout EmitParamRollout "Emitter Parameters" width:162 height:293
     (
     	-- GroupBox grp1 "Display"  width:154 height:41
 		label lbl_iconsize "Display Icon Size:" across:2
-    	spinner spn_iconSize ""  fieldwidth:48 height:16        
-        
+    	spinner spn_iconSize ""  fieldwidth:48 height:16
+
     	-- GroupBox grp2 "Emitter Size (cm)"  width:154 height:62
 		Label lbl_emittersize "Emitter Size (cm)" align:#left
     	spinner spn_xSize "X:" fieldwidth:38 height:16 range:[0,36000,0] scale:1.0 across:2
@@ -250,7 +278,7 @@ invisible:true
 		---- CAN`T HAVE ALL PROPERTIES AT ONCE
 		---- BUT ONLY ONE
 		----
-    	group "Inherit Properties"  
+    	group "Inherit Properties"
 		(
 	    	checkbox box_inherit "Inherit"  width:53 height:15 across:2
 	    	checkbox box_inherit_local "Local"  width:50 height:15
@@ -271,9 +299,9 @@ invisible:true
 			label lbl_deadspace "Deadspace:" align:#left across:2
 	    	spinner spn_deadspace "" fieldwidth:40 height:16
 			label lbl_opacity "Opacity" align:#left align:#left across:2
-	    	spinner spn_opacity "" fieldwidth:40 height:16			
+	    	spinner spn_opacity "" fieldwidth:40 height:16
 		)
-		
+
     	fn create_rectangle o =
 		(
 			-- try
@@ -293,7 +321,7 @@ invisible:true
 				myrect = undefined
 			)
 		)
-		
+
 		fn destroy_rectangle o =
 		(
 			if myrect != undefined then
@@ -302,7 +330,7 @@ invisible:true
 				myrect = undefined
 			)
 		)
-		
+
 		fn update_rectangle =
 		(
 			if myrect != undefined then
@@ -311,7 +339,7 @@ invisible:true
 				myrect.width = spn_Xsize.value
 			)
 		)
-		
+
 		on spn_Xsize changed val do
 		(
 			update_rectangle()
@@ -331,29 +359,29 @@ invisible:true
 			destroy_rectangle $
 		)
     )
-    
-    
+
+
     rollout EmitParticlesRollout "Emitter Particles" -- width:162 height:431
     (
     	--GroupBox grp1 "Start and End"  width:154 height:171
 		group "Start and End"
 		(
 			label lbl_dummy1 across:3
-			label lbl_start "Start" 
+			label lbl_start "Start"
 			label lbl_end "End"
 			label lbl_dummy2 across:3
 	    	colorPicker colorPicker_colorStart ""  height:20 color:[255,255,255]
 	    	colorPicker colorPicker_colorEnd ""   height:20 color:[255,255,255]
 	    	checkbox box_m_isTinted "Allow Color Tint"  height:15 align:#left
-	
+
 			label lbl_alpha "Alpha:" across:3
 			spinner spn_alphaStart ""  fieldwidth:34 height:16 range:[0,1,0] --align:#left
 	    	spinner spn_alphaEnd "" fieldwidth:34 height:16 range:[0,1,0] --align:#right
-			
+
 			label lbl_sizex "Size X:" across:3
 	    	spinner spn_sizeStart ""  fieldwidth:34 height:16 range:[0,255,0] -- align:#left
 	    	spinner spn_sizeEnd "" fieldwidth:34 height:16 range:[0,255,0] --align:#right
-	    	
+
 			label lbl_sizey "Size Y:" across:3
 			spinner spn_sizeStart_y ""  fieldwidth:34 height:16 range:[0,255,0] --align:#left
 	    	spinner spn_sizeEnd_y "" fieldwidth:34 height:16 range:[0,255,0] --align:#right
@@ -374,21 +402,21 @@ invisible:true
     	spinner spn_randvel ""  fieldwidth:40 height:16 range:[0,1000,0]
 		label lbl_9 "Blur Length:" align:#left across:2
     	spinner spn_blurlength "" fieldwidth:40 height:16
-		
+
     	checkbox box_bounce "Bounce"  width:61 height:15
 		label lbl_8 "Bounce Coef:" align:#left across:2
     	spinner spn_bounce_co ""  fieldwidth:40 height:16
-		--- WHAT IS THIS FOR 'Loop' ?        
+		--- WHAT IS THIS FOR 'Loop' ?
     	checkbox box_loop "Loop"  height:15
     	checkbox box_Splat "Splat" height:15
     	checkbox box_affectedbyWind "Affected By Wind" height:15
-    	
+
 		on EmitParticlesRollout open do
 		(
 			format "EmitParticlesRollout opened\r\n"
 		)
     )
-    
+
 	rollout EmitTextChunkRollout "Emitter Texture/Chunk" width:162 height:270
 	(
 		group "Texture"
@@ -396,12 +424,12 @@ invisible:true
 			edittext edit_texture height:17
 			checkbox box_twosidedtex "Two-Sided Texture" height:15
 			label lbl_animation "Texture Animation" align:#left
-		
+
 			-- label lbl_textgrid "Texture Grid"
 			label lbl_a1 "Grid:" align:#left across:3
 			spinner spn_xgrid "x" fieldwidth:28 height:16 type:#integer
 			spinner spn_ygrid "y" fieldwidth:28 height:16 type:#integer
-			
+
 			label lbl_a2 "Speed (fps):" align:#left across:2
 			spinner spn_fps "" fieldwidth:40 height:16 range:[0,1000,0] type:#integer
 			label lbl_a3 "First Frame:" align:#left across:2
@@ -415,7 +443,7 @@ invisible:true
 			checkbox chk_chunk "Chunky Particles" align:#left
 			edittext edit_chunk height:17 enabled:false
 		)
-		
+
 		on EmitTextChunkRollout open do
 		(
 			format "EmitTextChunkRollout opened\r\n"
@@ -426,7 +454,7 @@ invisible:true
 				edit_chunk.text = chunkName
 			)
 		)
-		
+
 		on chk_chunk changed val do
 		(
 			if chk_chunk.checked then
@@ -434,7 +462,7 @@ invisible:true
 			else
 				edit_chunk.enabled = false
 		)
-		
+
 		on edit_chunk changed val do
 		(
 			-- put new data into the parameters
@@ -442,10 +470,10 @@ invisible:true
 			update_ui()
 		)
 	)
-    
+
     rollout EmitAdvRollout "Emitter Advanced" width:162 height:369
     (
-    	group "Lightning Properties" 
+    	group "Lightning Properties"
 		(
 			label lbl_l1 "Delay (s):" align:#left across:2
 	    	spinner spn_lightningDelay "" fieldwidth:40 height:16 range:[0,1000,0]
@@ -480,19 +508,19 @@ invisible:true
         (
 			update_ui()
     	)
-    	
+
     	on radio_p2p_type changed state do
     	(
         	update_ui()
     	)
-    	
+
     	on EmitAdvRollout open do
     	(
 	    	format "EmitAdvRollout opened\r\n"
         	update_ui()
     	)
     )
-    
+
     --
     -- Event handling code.  Specifically around making sure interdependent
     -- options have effect on various things.
@@ -501,8 +529,8 @@ invisible:true
     local oldBirth = -1.0
     local oldMass = 0.0
     local lockAxes = 1
-    
-    
+
+
     fn update_ui=
     (
 	    --format "Update Emitter UI\r\n"
@@ -515,7 +543,7 @@ invisible:true
             box_spawnType.checked=false
             spawnType=0
         )
-*/        
+*/
         if update_sel == 2 then
         (
             -- not sure about what goes in here
@@ -524,7 +552,7 @@ invisible:true
         (
             -- not sure what goes in here
         )
-        
+
         /*
         if update_sel < 3 then
             EmitAdvRollout.box_p2p.enabled = true
@@ -536,7 +564,7 @@ invisible:true
             --update_ui()
         )
         */
-        
+
         if update_sel == 3 then
             EmitParticlesRollout.box_loop.enabled = true
         else
@@ -545,14 +573,14 @@ invisible:true
             EmitParticlesRollout.box_loop.enabled = false
             EmitParticlesRollout.box_loop.checked = false
         )
-        
+
         if update_sel == 4 then
         (
             EmitStyleRollout.radio_render.state = 2
             render_sel = 2
             EmitStyleRollout.radio_render.enabled = false
             EmitTextChunkRollout.edit_chunk.enabled = false
-            
+
             EmitParticlesRollout.spn_spread.enabled = false
             EmitParticlesRollout.spn_particleRot.enabled = false
             EmitParticlesRollout.spn_velocity.enabled = false
@@ -560,19 +588,19 @@ invisible:true
             EmitParticlesRollout.spn_lifeExp.enabled = false
             EmitParticlesRollout.spn_mass.enabled = false
             EmitParticlesRollout.spn_birthrate.enabled = false
-            
+
             EmitParticlesRollout.box_affectedbyWind.enabled = false
             oldLife = lifeExp
             lifeExp = 1
             -- save old birthrate
             oldBirth = birthrate
             birthrate = 2^lightningSubDiv + 1
-            
+
             EmitParamRollout.box_inheritvel.enabled = false
             EmitParticlesRollout.box_bounce.checked = false
             EmitParticlesRollout.box_bounce.enabled = false
             EmitParticlesRollout.spn_bounce_co.enabled = false
-            
+
             EmitAdvRollout.spn_lightningDelay.enabled = true
             EmitAdvRollout.spn_lightningRadius.enabled = true
             EmitAdvRollout.spn_lightningSubDiv.enabled = true
@@ -583,7 +611,7 @@ invisible:true
             --render_sel = 1
             EmitStyleRollout.radio_render.enabled = true
             EmitTextChunkRollout.edit_chunk.enabled = true
-            
+
             EmitParticlesRollout.spn_spread.enabled = true
             EmitParticlesRollout.spn_particleRot.enabled = true
             EmitParticlesRollout.spn_velocity.enabled = true
@@ -591,15 +619,15 @@ invisible:true
             EmitParticlesRollout.spn_lifeExp.enabled = true
             EmitParticlesRollout.spn_mass.enabled = true
             EmitParticlesRollout.spn_birthrate.enabled = true
-            
+
             EmitParticlesRollout.box_affectedbyWind.enabled = true
             if (oldLife != -1) then lifeExp = oldLife
             if (oldBirth != -1) then birthrate = oldBirth
-            
+
             EmitParamRollout.box_inheritvel.enabled = true
             EmitParticlesRollout.box_bounce.enabled = true
             EmitParticlesRollout.spn_bounce_co.enabled = true
-            
+
             EmitAdvRollout.spn_lightningDelay.enabled = false
             EmitAdvRollout.spn_lightningRadius.enabled = false
             EmitAdvRollout.spn_lightningSubDiv.enabled = false
@@ -627,9 +655,9 @@ invisible:true
             EmitTextChunkRollout.spn_ygrid.enabled = true
             EmitStyleRollout.radio_spawnType.enabled = true
         )
-        
-        -- 
-        
+
+        --
+
         -- p2p rules
         if (EmitAdvRollout.box_p2p.checked == true) then
         (
@@ -667,13 +695,13 @@ name:"AuroraEmitter"
 	local objCone
 	tool create
 	(
-		
+
 		on mousePoint click do
 		(
 			print mouse.buttonStates
 			if click > 1 then	-- ignore first click, rest are releases
 			(
-				in coordsys grid 
+				in coordsys grid
 				(
 					objCone = auroraemitter pos:[0,0,0]
 					objCone.delegate.Angle = 15

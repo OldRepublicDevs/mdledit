@@ -78,7 +78,7 @@ version:1
         uvjitter                    type:#float     default: 0.0
         uvjitterspeed               type:#float     default: 0.0
         lightmapped                 type:#integer   default: 0
-        backgroundgeometry          type:#integer   default: 0
+        m_blsBackgroundGeometry     type:#integer   default: 0
         dirt_enabled                type:#integer   default: 0
         dirt_texture                type:#integer   default: 1
         dirt_worldspace             type:#integer   default: 1

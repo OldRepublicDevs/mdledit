@@ -783,6 +783,7 @@ fn ExAuroraPoly node =
 
     -- bead-v modification: Also append user props
 	local uprop
+	/*
         uprop = getUserProp node "lightningzigzag"
 	if uprop != undefined then format "%lightningzigzag %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "alphamid"
@@ -824,14 +825,13 @@ fn ExAuroraPoly node =
         uprop = getUserProp node "numbranches"
 	if uprop != undefined then format "%numBranches %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "controlptsmoothing"
-	if uprop != undefined then format "%controlprsmoothing %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
+	if uprop != undefined then format "%controlptsmoothing %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "m_bframeblending"
 	if uprop != undefined then format "%m_bFrameBlending %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "m_sdepthtexturename"
 	if uprop != undefined then format "%m_sDepthTextureName %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "depth_texture"
 	if uprop != undefined then format "%depth_texture %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-	/*
         uprop = getUserProp node "animateuv"
 	if uprop != undefined then format "%animateuv %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
         uprop = getUserProp node "uvdirectionx"
