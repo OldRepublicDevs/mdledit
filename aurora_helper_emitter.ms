@@ -186,7 +186,7 @@ invisible:true
     	-- lightning props
     	lightningDelay      type:#float animatable:true ui:spn_lightningDelay default:0.0
     	lightningRadius     type:#float animatable:true ui:spn_lightningRadius default:0.0
-    	lightningSubDiv		type:#integer animatable:true ui:spn_lightningSubDiv default:0
+    	lightningSubDiv		type:#integer animatable:false ui:spn_lightningSubDiv default:0
     	lightningScale		type:#float animatable:true ui:spn_lightningScale default:0
     	lightningzigzag     type:#float animatable: true default:0.0 -- bead-v modification: add kotor props
 
@@ -206,7 +206,7 @@ invisible:true
     	controlptsmoothing  type:#float animatable:false default:0.0
     	m_bFrameBlending    type:#integer animatable:false default:0
     	depth_texture       type:#integer animatable:false default:0
-    	m_sDepthTextureName type:#string animatable:false default:0
+    	m_sDepthTextureName type:#string animatable:false default:"NULL"
     	-- end bead-v modification
 
     	-- p2p props

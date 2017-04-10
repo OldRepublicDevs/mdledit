@@ -809,6 +809,9 @@ fn nx_LoadWok pFile =
    if mdlStream != undefined then close mdlStream
 )
 
+-- bead-v modification: hopefully solving some problems with animation controllers
+global gblDynBuildList_Node
+-- end bead-v modification
 
 --------------------------------------------------------------------------------
 -- Import MDL file
@@ -1008,7 +1011,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             tok.ReadToken();
                             if tok.PeekToken() != undefined then
 	                            newModelSupermodel = tok.ReadString()
-                            else
+                            else --1
 	                            newModelSupermodel = "NULL"
                         )
                         "classification":
@@ -1448,7 +1451,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "percentStart": objPercentStart = tok.ReadFloat()
                         "percentMid": objPercentMid = tok.ReadFloat()
                         "percentEnd": objPercentEnd = tok.ReadFloat()
-                        "m_fRandomBirthRate": objRandomBirthRate = tok.ReadFloat()
+                        "m_frandombirthrate": objRandomBirthRate = tok.ReadFloat()
                         "targetsize": objTargetsize = tok.ReadFloat()
                         "numcontrolpts": objNumcontrolpts = tok.ReadFloat()
                         "controlptradius": objControlptradius = tok.ReadFloat()
@@ -1456,11 +1459,11 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "tangentspread": objTangentspread = tok.ReadFloat()
                         "tangentlength": objTangentlength = tok.ReadFloat()
                         "detonate": objDetonate = tok.ReadFloat()
-                        "numBranches": objNumBranches = tok.ReadFloat()
+                        "numbranches": objNumBranches = tok.ReadInteger()
                         "controlptsmoothing": objControlptsmoothing = tok.ReadFloat()
-                        "m_bFrameBlending": objFrameBlending = tok.ReadFloat()
-                        "depth_texture": objDepth_texture = tok.ReadFloat()
-                        "m_sDepthTextureName": objDepthTextureName = tok.ReadFloat()
+                        "m_bframeblending": objFrameBlending = tok.ReadInteger()
+                        "depth_texture": objDepth_texture = tok.ReadInteger()
+                        "m_sdepthtexturename": objDepthTextureName = tok.ReadString()
              -- end bead-v modification
                         -- Emitter key words end
 
@@ -1604,7 +1607,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 (
                                                     if (nx_existFile tgaFilename) then
                                                         bmp = openBitMap(tgaFilename)
-                                                    else
+                                                    else --2
                                                         bmp = openBitMap(bmpFilename)
 
                                                     if loadtiff then
@@ -1619,7 +1622,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     objMaterial.mapEnables[2] = true;
                                                     showTextureMap objMaterial texMap true
                                                 )
-                                                else
+                                                else --3
                                                 (
                                                     format "#Missing texture file: %\r\n" textureName
                                                     if (showWarnings) then messagebox ("Missing texture file: " + textureName)
@@ -1944,7 +1947,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius
                                         if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement
                             -- end bead-v modification
-                                        if objMultiplier!=undefined then newObj.multipler = objMultiplier
+                                        if objMultiplier!=undefined then newObj.multiplier = objMultiplier -- bead-v: fixed multipler to multiplier
                                         if objLightpriority!=undefined then newObj.lightpriority = objLightpriority
                                         if objNdynamictype!=undefined then newObj.nDynamicType = objNdynamictype
                                         if objLight_color!=undefined then
@@ -2038,12 +2041,12 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 (
     -- check the controller types are correct!
                                     newObj.parent = itsParent[1]
-                            -- bead-v modification: we're now making all controllers linear from the get go
+                            -- bead-v modification: we're now making all controllers bezier from the get go, except orientation is linear
                                     --newObj.scale.controller = tcb_scale()
                                     --newObj.position.controller = tcb_position()
                                     --newObj.rotation.controller = tcb_rotation()
-                                    newObj.scale.controller = linear_scale()
-                                    newObj.position.controller = linear_position()
+                                    newObj.scale.controller = bezier_scale()
+                                    newObj.position.controller = bezier_position()
                                     newObj.rotation.controller = linear_rotation()
                             -- end bead-v modification
                                     in coordsys parent
@@ -2136,6 +2139,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                 MDL_ANIM:
                 (
                     if DEBUG then format "MDL_ANIM:  Line:% :: %\r\n" lineNum idToken
+
                     case idToken of
                     (
                         "#": () -- ignore comments
@@ -2241,7 +2245,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         )
                         "event": -- animtion event
                         (
-                            numEvents += 1
+                            --numEvents += 1 -- bead-v: moved further down
 
                             if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
                             (
@@ -2259,9 +2263,49 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 -- Add event data to animation root
                                 if not bDupEvent then
                                 (
+                                    numEvents += 1 -- bead-v: move this here, as it makes more sense
                                     animRoot.events[animRoot.events.count+1] = \
                                         event_name + " " + (event_frame as string)
                                 )
+                            )
+                        )
+                        "eventlist": -- bead-v modification
+                        (
+                            local keyCount = undefined;
+                            if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                            tok.SetString (getNextNonBlankLine mdlStream)
+
+                            while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+                                if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then
+                                (
+                                    local event_frame = nx_round((tok.ReadFloat()*frameRate) + firstFrame)
+                                    local event_name = tok.ReadString()
+                                    local bDupEvent = false
+                                    -- test to see if this event is already at this frame
+                                    for ev in animRoot.events do
+                                    (
+                                        strev = filterString ev " "
+                                        if strev == (event_name + " " + (event_frame as string)) then (
+                                            bDupEvent = true
+                                        )
+                                    )
+                                    -- Add event data to animation root
+                                    if not bDupEvent then
+                                    (
+                                        numEvents += 1
+                                        animRoot.events[animRoot.events.count+1] = \
+                                            event_name + " " + (event_frame as string)
+                                    )
+                                )
+
+                                -- read in next line from import data stream
+                                if (keyCount != undefined) then(
+                                    keyCount -= 1
+                                    if keyCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                                )
+                                else
+                                    tok.SetString (getNextNonBlankLine mdlStream)
                             )
                         )
                         "node":
@@ -2312,7 +2356,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             keytime = (firstFrame - 1)
                                             -- using 'animate on' context generate some key frames
                                             if DEBUG then format "zeroPos = %, zeroRot = %\r\n" zeroPos zeroRot
-                                            with animate on at time keytime animObj.pos = zeroPos
+                                            local newkey = addNewKey animObj.pos.controller keytime
+                                            newkey.value = zeroPos
+                                            if(classof animObj.pos.controller == bezier_position) then(
+                                                newkey.inTangentType = #linear
+                                                newkey.outTangentType = #linear
+                                            )
+                                            --with animate on at time keytime animObj.pos = zeroPos
                                             with animate on at time keytime animObj.rotation = zeroRot
                                             -- stop key frame generate
                                             if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" animObj keytime (at time keytime animObj.pos) (at time keytime animObj.rotation)
@@ -2366,7 +2416,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             deleteKey animObj.pos.controller.keys i
                                             if DEBUG then format "deleted lower\r\n"
                                         )
-                                        else
+                                        else --4
                                         (
                                             if (animObj.pos.controller.keys[i].time == upperbound) then
                                             (
@@ -2398,7 +2448,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             got_lower = true
                                             deleteKey animObj.rotation.controller.keys i
                                         )
-                                        else
+                                        else --5
                                         (
                                             if (animObj.rotation.controller.keys[i].time == upperbound) then
                                             (
@@ -2413,1566 +2463,552 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             )
                             if DEBUG then format "endnode processing END\r\n"
                         )   -- end "endnode"
-                    -- bead-v modification: add bezier controllers
-                        "positionbezierkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "positionbezierkey processing START\r\n"
-
-                                if(classof animObj.pos.controller != bezier_position)
-                                then animObj.pos.controller = bezier_position()
-
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                local originalObjPos -- Why is this necessary?
-                                in coordsys parent
-                                (
-                                    at time 0 originalObjPos = animObj.pos
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-                                    lineNum += 1
-                                    -- read in the key list (if there are data items) and parse it
-                                    local newkey  -- bead-v: defined here so that the last key is saved after the while is done
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        --ImportActivityBar()
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local p3 = tok.ReadPoint3()
-                                        local p3in = tok.ReadPoint3()
-                                        local p3out = tok.ReadPoint3()
-                                        --if DEBUG then
-                                        format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
-                                        if p3in == undefined then p3in = [0, 0, 0]
-                                        if p3out == undefined then p3out = [0, 0, 0]
-                                        p3 *= 100
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            --with animate on at time keytime animObj.pos = p3
-                                            newkey = addnewkey animObj.pos.controller keytime
-                                            newkey.value = p3
-                                            newkey.inTangentType = #custom
-                                            newkey.outTangentType = #custom
-                                            newkey.x_locked = false
-                                            newkey.y_locked = false
-                                            newkey.z_locked = false
-                                            newkey.inTangent = p3in
-                                            newkey.outTangent = p3out
-                                        )
-                                        --format "Key generated\r\n"
-                                        -- stop key frame generation
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                        lineNum += 1
-                                    ) -- end while
-                        -- bead-v modification: Write last extra key
-                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
-                                    lastkey.value = newkey.value
-                                    lastkey.inTangentType = newkey.inTangentType
-                                    lastkey.outTangentType = newkey.outTangentType
-                                    lastkey.x_locked = newkey.x_locked
-                                    lastkey.y_locked = newkey.y_locked
-                                    lastkey.z_locked = newkey.z_locked
-                                    lastkey.inTangent = newkey.inTangent
-                                    lastkey.outTangent = newkey.outTangent
-                        -- end bead-v modification
-                                ) -- end in
-                                if DEBUG then format "positionbezierkey processing END\r\n"
-                            ) -- end if
-                        ) -- end 'positionbezierkey' list case
-                    -- end bead-v modification
-                        "positionkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "positionkey processing START\r\n"
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                local originalObjPos
-                                in coordsys parent
-                                (
-                                    at time 0 originalObjPos = animObj.pos
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-                                    lineNum += 1
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        --ImportActivityBar()
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local p3 = tok.ReadPoint3()
-                                        if DEBUG then format "line:% keytime:%   p3:%\r\n" lineNum keytime p3
-                                        p3 *= 100
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                    -- bead-v modification: just to keep it compatible with positionbezierkey
-                                            --with animate on at time keytime animObj.pos = p3
-                                            local newkey = addnewkey animObj.pos.controller keytime
-                                            if(classof animObj.pos.controller == bezier_position) then
-                                            (
-                                                newkey.inTangentType = #linear
-                                                newkey.outTangentType = #linear
-                                            )
-                                            newkey.value = p3
-                                    -- end bead-v modification
-                                        )
-                                        --format "Key generated\r\n"
-                                        -- stop key frame generation
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                        lineNum += 1
-                                    ) -- end while
-                        -- bead-v modification: Write last extra key
-                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
-                                    lastkey.value = newkey.value
-                                    if(classof animObj.pos.controller == bezier_position) then
-                                    (
-                                        lastkey.inTangentType = newkey.inTangentType
-                                        lastkey.outTangentType = newkey.outTangentType
-                                    )
-                        -- end bead-v modification
-                                ) -- end in
-                                if DEBUG then format "positionkey processing END\r\n"
-                            ) -- end if
-                        ) -- end 'positionkey' list case
-                        "orientationkey":
-                        (
-                            local keytime
-                            local axis
-                            local angle
-                            local objRot
-                            --local newkey
-                            local originalObjRot
-                            local animObj = getNodeByName(objName)
-                            bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "orientationkey processing START\r\n"
-                                local keyCount = undefined
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                in coordsys parent
-                                (
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        --ImportActivityBar()
-                                        lineNum += 1
-                                        keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        -- get the orientation vector (axis point)
-                                        axis = tok.ReadPoint3()
-                                        -- get the angle as degrees
-                                        angle = RadToDeg (tok.ReadFloat())
-                                        if DEBUG then format "line:% keytime:%  axis:%  angle:%\r\n" lineNum keytime axis angle
-                                        -- build quat value
-                                        local objRotAA = angleaxis angle axis
-                                        objRot = quat angle axis
-                                        format "line:% keytime:%  axis:%  angle:% quaternion:%\r\n" lineNum keytime axis angle objRot
-                                        local existingPosKey = getKeyIndex animObj.pos.controller keytime
-                                        local existingPos
-                                        if (existingPosKey > 0) then existingPos = animObj.pos.keys[existingPosKey].value
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            --with animate on at time keytime animObj.rotation = objRot
-                                            local newkey = addnewkey animObj.rotation.controller keytime
-                                            newkey.value = (objRotAA)
-                                        )
-
-                                        if (existingPosKey == 0) then
-                                        (
-                                            local newPosKey = getKeyIndex animObj.pos.controller keytime
-                                            if (newPosKey != 0) then deleteKey animObj.pos.controller newPosKey
-                                        )
-                                        else
-                                        (
-                                            animObj.pos.keys[existingPosKey].value = existingPos
-                                        )
-
-
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    )
-                        -- bead-v modification: Write last extra key
-                                    local lastkey = addNewKey animObj.rotation.controller (lastFrame + 1)
-                                    lastkey.value = newkey.value
-                        -- end bead-v modification
-                                )
-                                if DEBUG then format "orientationkey processing END\r\n"
-                            )
-                        ) -- end 'orientationkey' list case
-                        "scalekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                -- if this object is in fact a trimesh we need to be working
-                                -- on the trimesh modifier NOT the mesh itself. Given that we
-                                -- make animObj point to the modifier not the object
-                                if (classof animObj) == Editable_mesh then
-                                (
-                                    -- we have a trimesh and not a emitter
-                                    animObj = animObj.modifiers["AuroraTrimesh"]
-                                )
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        -- alphakey relates to the animation of the alpha value
-                                        -- on an auroratrimesh
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.scale = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'scalekey' case
-                        "selfillumcolorkey":
-                        (
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                -- this object is in fact a trimesh we need to be working
-                                -- on the trimesh modifier NOT the mesh itself. Given that we
-                                -- make animObj point to the modifier not the object
-                                animObj = animObj.modifiers["AuroraTrimesh"]
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadColor()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        -- alphakey relates to the animation of the alpha value
-                                        -- on an auroratrimesh
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.selfillumcolor = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) --end of 'selfillumcolorkey' list
-
-
-                        ----------------------------------------------------------------
-                        -- Joco 13-Aug-03                                             --
-                        -- Emitter specific keylist parsing                           --
-                        ----------------------------------------------------------------
-                        "alphakey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                -- if this object is in fact a trimesh we need to be working
-                                -- on the trimesh modifier NOT the mesh itself. Given that we
-                                -- make animObj point to the modifier not the object
-                                if (classof animObj) == Editable_mesh then
-                                (
-                                    -- we have a trimesh and not a emitter
-                                    animObj = animObj.modifiers["AuroraTrimesh"]
-                                )
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        -- alphakey relates to the animation of the alpha value
-                                        -- on an auroratrimesh
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.alpha = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'alphakey' case
-                        "alphastartkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.alphaStart = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'alphaStartkey' case
-                        "alphaendkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.alphaEnd = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'birthratekey' case
-                        "birthratekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.birthrate = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'birthratekey' case
-                        "bounce_cokey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.bounce_co = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'bounce_cokey' case
-                        "colorstartkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "colorstartkey processing START\r\n"
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                tok.SetString (getNextNonBlankLine mdlStream)
-
-                                -- read in the key list (if there are data items) and parse it
-                                while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                (
-                                    lineNum += 1
-                                    local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                    local this_value = tok.ReadColor()
-
-                                    if DEBUG then format "line:% keytime:%   color:%\r\n" lineNum keytime this_value
-
-                                    -- set animatiom obj properties and
-                                    -- generate key frames in the process.
-                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                        with animate on at time keytime animObj.colorStart = this_value
-                                    )
-                                    --format "Key generated\r\n"
-                                    -- stop key frame generation
-
-                                    -- read in next line from import data stream
-                                    if (keyCount != undefined) then
-                                    (
-                                        keyCount -= 1
-                                        if keyCount > 0 then (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) else (
-                                        tok.SetString (getNextNonBlankLine mdlStream)
-                                    )
-                                ) -- end while
-                                if DEBUG then format "colorstartkey processing End\r\n"
-                            ) -- end if
-                        ) -- end 'colorStartkey' case
-                        "colorendkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "colorendkey processing START\r\n"
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                tok.SetString (getNextNonBlankLine mdlStream)
-
-                                -- read in the key list (if there are data items) and parse it
-                                while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                (
-                                    lineNum += 1
-                                    local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                    local this_value = tok.ReadColor()
-
-                                    -- set animatiom obj properties and
-                                    -- generate key frames in the process.
-                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                        with animate on at time keytime animObj.colorEnd = this_value
-                                    )
-                                    -- stop key frame generation
-
-                                    -- read in next line from import data stream
-                                    if (keyCount != undefined) then
-                                    (
-                                        keyCount -= 1
-                                        if keyCount > 0 then (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) else (
-                                        tok.SetString (getNextNonBlankLine mdlStream)
-                                    )
-                                ) -- end while
-                                if DEBUG then format "colorstartkey processing END\r\n"
-                            ) -- end if
-                        ) -- end 'colorStartkey' case
-                        "combinetimekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.combinetime = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'combinetimekey' case
-                        "dragkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.drag = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'dragkey' case
-                        "fpskey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadInteger()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.fps = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'fpskey' case
-                        "framestartkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadInteger()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.frameStart = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'frameStartkey' case
-                        "frameendkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadInteger()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.frameEnd = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'frameEndkey' case
-                        "gravkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.grav = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'gravkey' case
-                        "lifeexpkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.lifeExp = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'gravkey' case
-                        "lightningdelaykey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.lightningDelay = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'lightningDelaykey' case
-                        "lightningradiuskey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.lightningRadius = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'lightningRadiuskey' case
-                        "lightningscalekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.lightningScale = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'lightningScalekey' case
-                        "lightningsubdivkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.lightningSubDiv = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'lightningSubDivkey' case
-                        "masskey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.mass = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'masskey' case
-                        --"orientationkey": ()  covered above.
-                        "p2p_bezier2key":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.p2p_bezier2 = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'p2p_bezier2key' case
-                        "p2p_bezier3key":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.p2p_bezier3 = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'p2p_bezier3key' case
-                        "particlerotkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.particleRot = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'particleRotkey' case
-                        --"positionkey": ()  covered above.
-                        "randvelkey":
-                         (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                if DEBUG then format "randvelkey processing START\r\n"
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                tok.SetString (getNextNonBlankLine mdlStream)
-
-                                -- read in the key list (if there are data items) and parse it
-                                while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                (
-                                    lineNum += 1
-                                    local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                    local this_value = tok.ReadFloat()
-
-                                    if DEBUG then format "line:% keytime:%   vel:%\r\n" lineNum keytime this_value
-
-                                    -- set animatiom obj properties and
-                                    -- generate key frames in the process.
-                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                        with animate on at time keytime animObj.randvel = this_value
-                                    )
-                                    --format "Key generated\r\n"
-                                    -- stop key frame generation
-
-                                    -- read in next line from import data stream
-                                    if (keyCount != undefined) then
-                                    (
-                                        keyCount -= 1
-                                        if keyCount > 0 then (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) else (
-                                        tok.SetString (getNextNonBlankLine mdlStream)
-                                    )
-                                ) -- end while
-                                if DEBUG then format "randvelkey processing END\r\n"
-                            ) -- end if
-                        ) -- end 'randvelkey' case
-                        "sizestartkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.sizeStart = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'sizeStartkey' case
-                        "sizeendkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.sizeEnd = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'sizeEndkey' case
-                        "spreadkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.spread = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'spreadkey' case
-                        "velocitykey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.velocity = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'velocitykey' case
-                        "xsizekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.xsize = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'xsizekey' case
-                        "ysizekey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadFloat()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.ysize = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'ysizekey' case
-                        -- end Emitters
-
-                        --
-                        -- Joco 19-Aug-03
-                        -- Light specific keylist parsing
-                        --
-                        "colorkey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = tok.ReadColor()
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.rgb = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'colorkey' case
-                        "radiuskey":
-                        (
-                            --local newkey
-                            local animObj = getNodeByName(objName)
-                            --bHadAnimKey = true
-                            if (animObj != undefined) then
-                            (
-                                local keyCount = undefined;
-                                -- try and get the key list count
-                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
-                                    tok.SetString (getNextNonBlankLine mdlStream)
-
-                                    -- read in the key list (if there are data items) and parse it
-                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do
-                                    (
-                                        lineNum += 1
-                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
-                                        local this_value = (tok.ReadFloat()) * 100
-
-                                        -- set animatiom obj properties and
-                                        -- generate key frames in the process.
-                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                            with animate on at time keytime animObj.radius = this_value
-                                        )
-                                        -- stop key frame generation
-
-                                        -- read in next line from import data stream
-                                        if (keyCount != undefined) then
-                                        (
-                                            keyCount -= 1
-                                            if keyCount > 0 then (
-                                                tok.SetString (getNextNonBlankLine mdlStream)
-                                            )
-                                        ) else (
-                                            tok.SetString (getNextNonBlankLine mdlStream)
-                                        )
-                                    ) -- end while
-                            ) -- end if
-                        ) -- end 'radiuskey' case
-                        -- End lights
-
                         "doneanim": ()
-                        default: ()
+                        "parent": ()
+                        default:
+                        (
+                            local str_token = idToken as string
+                            local str_length = str_token.count
+                            format "%, length=%\n" str_token str_length
+                            if (str_length > 3) then
+                            (
+                                local objAnim = getNodeByName(objName)
+                                format "% == key, objAnim = %\n" (substring str_token (str_length - 2) 3) objAnim
+                                if((substring str_token (str_length - 2) 3) == "key" and (objAnim != undefined)) then
+                                (
+                                    -- if we get here, then we're definitely parsing a controller with a valid objAnim
+                                    str_token = substring str_token 1 (str_length-3)
+                                    str_length = str_token.count
+                                    local bBezier = false
+
+                                    -- Determine whether we have a bezier controller on our hands
+                                    if(str_length > 6) then
+                                    (
+                                        if((substring str_token (str_length - 5) 6) == "bezier") then
+                                        (
+                                            str_token = substring str_token 1 (str_length-6)
+                                            str_length = str_token.count
+                                            bBezier = true
+                                        )
+                                    )
+
+                                    -- Get correct objAnim
+                                    if(str_token == "scale" or
+                                       str_token == "alpha" or
+                                       str_token == "selfillumcolor") then(
+                                        if (classof animObj) == Editable_mesh then (
+                                            -- we have a trimesh and not a emitter
+                                            animObj = animObj.modifiers["AuroraTrimesh"]
+                                        )
+                                    )
+
+                                    local ctrl_data = "float"
+                                    local objController
+                                    case str_token of
+                                    (
+                                        -- pos & orient
+                                        --- header
+                                        "position": (
+                                            ctrl_data = "position"
+                                            if(objAnim.position.controller == undefined) then objAnim.position.controller = bezier_position()
+                                            objController = objAnim.position.controller
+                                        )
+                                        "orientation": (
+                                            ctrl_data = "rotation"
+                                            if(objAnim.rotation.controller == undefined) then objAnim.rotation.controller = linear_rotation()
+                                            objController = objAnim.rotation.controller
+                                        )
+
+                                        -- colors
+                                        --- mesh
+                                        "selfillumcolor": (
+                                            ctrl_data = "color"
+                                            if(objAnim.selfillumcolor.controller == undefined) then objAnim.selfillumcolor.controller = bezier_color()
+                                            objController = objAnim.selfillumcolor.controller
+                                        )
+                                        --- light
+                                        "color": (
+                                            ctrl_data = "color"
+                                            if(objAnim.rgb.controller == undefined) then objAnim.rgb.controller = bezier_color()
+                                            objController = objAnim.rgb.controller
+                                        )
+                                        --- emitter
+                                        "colorstart": (
+                                            ctrl_data = "color"
+                                            if(objAnim.colorStart.controller == undefined) then objAnim.colorStart.controller = bezier_color()
+                                            objController = objAnim.colorStart.controller
+                                        )
+                                        "colormid": (
+                                            ctrl_data = "color"
+                                            if(objAnim.colorMid.controller == undefined) then objAnim.colorMid.controller = bezier_color()
+                                            objController = objAnim.colorMid.controller
+                                        )
+                                        "colorend": (
+                                            ctrl_data = "color"
+                                            if(objAnim.colorEnd.controller == undefined) then objAnim.colorEnd.controller = bezier_color()
+                                            objController = objAnim.colorEnd.controller
+                                        )
+
+                                        -- floats
+                                        --- header
+                                        "scale": (
+                                            if(objAnim.scale.controller == undefined) then objAnim.scale.controller = bezier_float()
+                                            objController = objAnim.scale.controller
+                                        )
+                                        --- mesh
+                                        "alpha": (
+                                            if(objAnim.alpha.controller == undefined) then objAnim.alpha.controller = bezier_float()
+                                            objController = objAnim.alpha.controller
+                                        )
+                                        --- light
+                                        "radius": (
+                                            if(objAnim.radius.controller == undefined) then objAnim.radius.controller = bezier_float()
+                                            objController = objAnim.radius.controller
+                                        )
+                                        "shadowradius": (
+                                            if(objAnim.shadowradius.controller == undefined) then objAnim.shadowradius.controller = bezier_float()
+                                            objController = objAnim.shadowradius.controller
+                                        )
+                                        "verticaldisplacement": (
+                                            if(objAnim.verticaldisplacement.controller == undefined) then objAnim.verticaldisplacement.controller = bezier_float()
+                                            objController = objAnim.verticaldisplacement.controller
+                                        )
+                                        "multiplier": (
+                                            if(objAnim.multiplier.controller == undefined) then objAnim.multiplier.controller = bezier_float()
+                                            objController = objAnim.multiplier.controller
+                                        )
+                                        --- emitter
+                                        "alphastart": (
+                                            if(objAnim.alphaStart.controller == undefined) then objAnim.alphaStart.controller = bezier_float()
+                                            objController = objAnim.alphaStart.controller
+                                        )
+                                        "alphamid": (
+                                            if(objAnim.alphaMid.controller == undefined) then objAnim.alphaMid.controller = bezier_float()
+                                            objController = objAnim.alphaMid.controller
+                                        )
+                                        "alphaend": (
+                                            if(objAnim.alphaEnd.controller == undefined) then objAnim.alphaEnd.controller = bezier_float()
+                                            objController = objAnim.alphaEnd.controller
+                                        )
+                                        "percentstart": (
+                                            if(objAnim.percentStart.controller == undefined) then objAnim.percentStart.controller = bezier_float()
+                                            objController = objAnim.percentStart.controller
+                                        )
+                                        "percentmid": (
+                                            if(objAnim.percentMid.controller == undefined) then objAnim.percentMid.controller = bezier_float()
+                                            objController = objAnim.percentMid.controller
+                                        )
+                                        "percentend": (
+                                            if(objAnim.percentEnd.controller == undefined) then objAnim.percentEnd.controller = bezier_float()
+                                            objController = objAnim.percentEnd.controller
+                                        )
+                                        "sizestart": (
+                                            if(objAnim.sizeStart.controller == undefined) then objAnim.sizeStart.controller = bezier_float()
+                                            objController = objAnim.sizeStart.controller
+                                        )
+                                        "sizemid": (
+                                            if(objAnim.sizeMid.controller == undefined) then objAnim.sizeMid.controller = bezier_float()
+                                            objController = objAnim.sizeMid.controller
+                                        )
+                                        "sizeend": (
+                                            if(objAnim.sizeEnd.controller == undefined) then objAnim.sizeEnd.controller = bezier_float()
+                                            objController = objAnim.sizeEnd.controller
+                                        )
+                                        "sizestart_y": (
+                                            if(objAnim.sizeStart_y.controller == undefined) then objAnim.sizeStart_y.controller = bezier_float()
+                                            objController = objAnim.sizeStart_y.controller
+                                        )
+                                        "sizemid_y": (
+                                            if(objAnim.sizeMid_y.controller == undefined) then objAnim.sizeMid_y.controller = bezier_float()
+                                            objController = objAnim.sizeMid_y.controller
+                                        )
+                                        "sizeend_y": (
+                                            if(objAnim.sizeEnd_y.controller == undefined) then objAnim.sizeEnd_y.controller = bezier_float()
+                                            objController = objAnim.sizeEnd_y.controller
+                                        )
+                                        "framestart": (
+                                            if(objAnim.frameStart.controller == undefined) then objAnim.frameStart.controller = bezier_float()
+                                            objController = objAnim.frameStart.controller
+                                        )
+                                        "frameend": (
+                                            if(objAnim.frameEnd.controller == undefined) then objAnim.frameEnd.controller = bezier_float()
+                                            objController = objAnim.frameEnd.controller
+                                        )
+                                        "fps": (
+                                            if(objAnim.fps.controller == undefined) then objAnim.fps.controller = bezier_float()
+                                            objController = objAnim.fps.controller
+                                        )
+                                        "lightningdelay": (
+                                            if(objAnim.lightningDelay.controller == undefined) then objAnim.lightningDelay.controller = bezier_float()
+                                            objController = objAnim.lightningDelay.controller
+                                        )
+                                        "lightningradius": (
+                                            if(objAnim.lightningRadius.controller == undefined) then objAnim.lightningRadius.controller = bezier_float()
+                                            objController = objAnim.lightningRadius.controller
+                                        )
+                                        "lightningscale": (
+                                            if(objAnim.lightningScale.controller == undefined) then objAnim.lightningScale.controller = bezier_float()
+                                            objController = objAnim.lightningScale.controller
+                                        )
+                                        "lightningsubdiv": (
+                                            if(objAnim.lightningSubDiv.controller == undefined) then objAnim.lightningSubDiv.controller = bezier_float()
+                                            objController = objAnim.lightningSubDiv.controller
+                                        )
+                                        "lightningzigzag": (
+                                            if(objAnim.lightningzigzag.controller == undefined) then objAnim.lightningzigzag.controller = bezier_float()
+                                            objController = objAnim.lightningzigzag.controller
+                                        )
+                                        "birthrate": (
+                                            if(objAnim.birthrate.controller == undefined) then objAnim.birthrate.controller = bezier_float()
+                                            objController = objAnim.birthrate.controller
+                                        )
+                                        "m_frandombirthrate": (
+                                            if(objAnim.m_fRandomBirthRate.controller == undefined) then objAnim.m_fRandomBirthRate.controller = bezier_float()
+                                            objController = objAnim.m_fRandomBirthRate.controller
+                                        )
+                                        "lifeexp": (
+                                            if(objAnim.lifeExp.controller == undefined) then objAnim.lifeExp.controller = bezier_float()
+                                            objController = objAnim.lifeExp.controller
+                                        )
+                                        "mass": (
+                                            if(objAnim.mass.controller == undefined) then objAnim.mass.controller = bezier_float()
+                                            objController = objAnim.mass.controller
+                                        )
+                                        "spread": (
+                                            if(objAnim.spread.controller == undefined) then objAnim.spread.controller = bezier_float()
+                                            objController = objAnim.spread.controller
+                                        )
+                                        "particlerot": (
+                                            if(objAnim.particleRot.controller == undefined) then objAnim.particleRot.controller = bezier_float()
+                                            objController = objAnim.particleRot.controller
+                                        )
+                                        "velocity": (
+                                            if(objAnim.velocity.controller == undefined) then objAnim.velocity.controller = bezier_float()
+                                            objController = objAnim.velocity.controller
+                                        )
+                                        "randvel": (
+                                            if(objAnim.randvel.controller == undefined) then objAnim.randvel.controller = bezier_float()
+                                            objController = objAnim.randvel.controller
+                                        )
+                                        "bounce_co": (
+                                            if(objAnim.bounce_co.controller == undefined) then objAnim.bounce_co.controller = bezier_float()
+                                            objController = objAnim.bounce_co.controller
+                                        )
+                                        "blurlength": (
+                                            if(objAnim.blurlength.controller == undefined) then objAnim.blurlength.controller = bezier_float()
+                                            objController = objAnim.blurlength.controller
+                                        )
+                                        "targetsize": (
+                                            if(objAnim.targetsize.controller == undefined) then objAnim.targetsize.controller = bezier_float()
+                                            objController = objAnim.targetsize.controller
+                                        )
+                                        "numcontrolpts": (
+                                            if(objAnim.numcontrolpts.controller == undefined) then objAnim.numcontrolpts.controller = bezier_float()
+                                            objController = objAnim.numcontrolpts.controller
+                                        )
+                                        "controlptradius": (
+                                            if(objAnim.controlptradius.controller == undefined) then objAnim.controlptradius.controller = bezier_float()
+                                            objController = objAnim.controlptradius.controller
+                                        )
+                                        "controlptdelay": (
+                                            if(objAnim.controlptdelay.controller == undefined) then objAnim.controlptdelay.controller = bezier_float()
+                                            objController = objAnim.controlptdelay.controller
+                                        )
+                                        "tangentspread": (
+                                            if(objAnim.tangentspread.controller == undefined) then objAnim.tangentspread.controller = bezier_float()
+                                            objController = objAnim.tangentspread.controller
+                                        )
+                                        "tangentlength": (
+                                            if(objAnim.tangentlength.controller == undefined) then objAnim.tangentlength.controller = bezier_float()
+                                            objController = objAnim.tangentlength.controller
+                                        )
+                                        "detonate": (
+                                            if(objAnim.detonate.controller == undefined) then objAnim.detonate.controller = bezier_float()
+                                            objController = objAnim.detonate.controller
+                                        )
+                                        "p2p_bezier2": (
+                                            if(objAnim.p2p_bezier2.controller == undefined) then objAnim.p2p_bezier2.controller = bezier_float()
+                                            objController = objAnim.p2p_bezier2.controller
+                                        )
+                                        "p2p_bezier3": (
+                                            if(objAnim.p2p_bezier3.controller == undefined) then objAnim.p2p_bezier3.controller = bezier_float()
+                                            objController = objAnim.p2p_bezier3.controller
+                                        )
+                                        "grav": (
+                                            if(objAnim.grav.controller == undefined) then objAnim.grav.controller = bezier_float()
+                                            objController = objAnim.grav.controller
+                                        )
+                                        "drag": (
+                                            if(objAnim.drag.controller == undefined) then objAnim.drag.controller = bezier_float()
+                                            objController = objAnim.drag.controller
+                                        )
+                                        "xsize": (
+                                            if(objAnim.xsize.controller == undefined) then objAnim.xsize.controller = bezier_float()
+                                            objController = objAnim.xsize.controller
+                                        )
+                                        "ysize": (
+                                            if(objAnim.ysize.controller == undefined) then objAnim.ysize.controller = bezier_float()
+                                            objController = objAnim.ysize.controller
+                                        )
+                                        "threshold": (
+                                            if(objAnim.threshold.controller == undefined) then objAnim.threshold.controller = bezier_float()
+                                            objController = objAnim.threshold.controller
+                                        )
+                                        "combinetime": (
+                                            if(objAnim.combinetime.controller == undefined) then objAnim.combinetime.controller = bezier_float()
+                                            objController = objAnim.combinetime.controller
+                                        )
+                                    )
+
+                                    if(objController != undefined) then(
+                                        format "About to read %\n" ctrl_data
+                                        case ctrl_data of
+                                        (
+                                            "position":(
+                                                bHadAnimKey = true
+
+                                                local keyCount = undefined;
+                                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                                                in coordsys parent(
+                                                    tok.SetString (getNextNonBlankLine mdlStream)
+                                                    lineNum += 1
+
+                                                    local newkey  -- bead-v: defined here so that the last key is saved after the while is done
+                                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+
+                                                        local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
+
+                                                        local p3 = tok.ReadPoint3()
+                                                        p3 *= 100
+                                                        local p3in
+                                                        local p3out
+                                                        if(bBezier) then (
+                                                            local p3in = tok.ReadPoint3()
+                                                            local p3out = tok.ReadPoint3()
+                                                            if p3in == undefined then p3in = [0, 0, 0]
+                                                            if p3out == undefined then p3out = [0, 0, 0]
+                                                        )
+                                                        if DEBUG then format "line:% keytime:%   p3:% in:% out:%\r\n" lineNum keytime p3 p3in p3out
+
+                                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                            newkey = addnewkey animObj.pos.controller keytime
+                                                            newkey.value = p3
+                                                            if(bBezier) then (
+                                                                newkey.inTangentType = #custom
+                                                                newkey.outTangentType = #custom
+                                                                newkey.x_locked = false
+                                                                newkey.y_locked = false
+                                                                newkey.z_locked = false
+                                                                newkey.inTangent = p3in
+                                                                newkey.outTangent = p3out
+                                                            )
+                                                            else(
+                                                                newkey.inTangentType = #linear
+                                                                newkey.outTangentType = #linear
+                                                            )
+                                                        )
+
+                                                        -- read in next line from import data stream
+                                                        if (keyCount != undefined) then (
+                                                            keyCount -= 1
+                                                            if keyCount > 0 then
+                                                            (
+                                                                tok.SetString (getNextNonBlankLine mdlStream)
+                                                             )
+                                                        ) else
+                                                        (
+                                                            tok.SetString (getNextNonBlankLine mdlStream)
+                                                        )
+                                                        lineNum += 1
+                                                    ) -- end while
+
+                                                    -- Write last two extra keys
+                                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
+                                                    lastkey.value = newkey.value
+                                                    lastkey.inTangentType = newkey.inTangentType
+                                                    lastkey.outTangentType = newkey.outTangentType
+                                                    lastkey.x_locked = newkey.x_locked
+                                                    lastkey.y_locked = newkey.y_locked
+                                                    lastkey.z_locked = newkey.z_locked
+                                                    lastkey.inTangent = newkey.inTangent
+                                                    lastkey.outTangent = newkey.outTangent
+
+                                                    lastkey = addNewKey animObj.pos.controller (lastFrame + 2)
+                                                    lastkey.value = zeroPos
+                                                    lastkey.inTangentType = #linear
+                                                    lastkey.outTangentType = #linear
+                                                )
+                                            )
+                                            "rotation":(
+                                                local keytime
+                                                local axis
+                                                local angle
+                                                local objRot
+                                                local originalObjRot
+                                                bHadAnimKey = true
+
+                                                local keyCount = undefined
+                                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                                                in coordsys parent(
+
+                                                    tok.SetString (getNextNonBlankLine mdlStream)
+
+                                                    while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+                                                        lineNum += 1
+                                                        keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
+
+                                                        axis = tok.ReadPoint3()
+                                                        angle = RadToDeg (tok.ReadFloat())
+                                                        objRot = quat angle axis
+
+                                                        if DEBUG then format "line:% keytime:%  axis:%  angle:% quaternion:%\r\n" lineNum keytime axis angle objRot
+
+                                                        local existingPosKey = getKeyIndex animObj.pos.controller keytime
+                                                        local existingPos
+                                                        if (existingPosKey > 0) then existingPos = animObj.pos.keys[existingPosKey].value
+
+                                                        if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                            --with animate on at time keytime animObj.rotation = objRot
+                                                            local newkey = addnewkey animObj.rotation.controller keytime
+                                                            newkey.value = objRot
+                                                        )
+
+                                                        if (existingPosKey == 0) then(
+                                                            local newPosKey = getKeyIndex animObj.pos.controller keytime
+                                                            if (newPosKey != 0) then
+                                                            (
+                                                                deleteKey animObj.pos.controller newPosKey
+                                                            )
+                                                        )
+                                                        else
+                                                            animObj.pos.keys[existingPosKey].value = existingPos
+
+
+                                                        if (keyCount != undefined) then (
+                                                            keyCount -= 1
+                                                            if keyCount > 0 then
+                                                            (
+                                                                tok.SetString (getNextNonBlankLine mdlStream)
+                                                             )
+                                                        )
+                                                        else
+                                                            tok.SetString (getNextNonBlankLine mdlStream)
+                                                    )
+
+                                                    local lastkey = addNewKey animObj.rotation.controller (lastFrame + 1)
+                                                    lastkey.value = newkey.value
+                                                    lastkey = addNewKey animObj.rotation.controller (lastFrame + 2)
+                                                    lastkey.value = zeroRot
+                                                )
+                                            )
+                                            "color":(
+                                                -- Get key count
+                                                local keyCount = undefined;
+                                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                                                -- Go to first row
+                                                tok.SetString (getNextNonBlankLine mdlStream)
+
+                                                while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+                                                    lineNum += 1
+
+                                                    local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
+
+                                                    local this_value = tok.ReadColor()
+                                                    local in_value
+                                                    local out_value
+                                                    if(bBezier) then(
+                                                        in_value = tok.ReadPoint3()
+                                                        out_value = tok.ReadPoint3()
+                                                    )
+
+                                                    if DEBUG then format "line:% keytime:%   color:%\r\n" lineNum keytime this_value
+
+                                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                        newkey = addNewKey objController keytime
+                                                        newkey.value = this_value
+                                                        if(bBezier) then(
+                                                            newkey.inTangentType = #custom
+                                                            newkey.outTangentType = #custom
+                                                            newkey.x_locked = false
+                                                            newkey.inTangent = in_value
+                                                            newkey.outTangent = out_value
+
+                                                        )
+                                                        else(
+                                                            newkey.inTangentType = #linear
+                                                            newkey.outTangentType = #linear
+                                                        )
+                                                    )
+
+                                                    if (keyCount != undefined) then (
+                                                        keyCount -= 1
+                                                        if (keyCount > 0) then tok.SetString (getNextNonBlankLine mdlStream)
+                                                    )
+                                                    else
+                                                        tok.SetString (getNextNonBlankLine mdlStream)
+                                                )
+                                            )
+                                            "float":(
+                                                -- set bHadAnimKey if scale (presumably for the main animation track)
+                                                if(str_token == "scale") then bHadAnimKey = true
+
+                                                -- Get key count
+                                                local keyCount = undefined;
+                                                if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                                                -- Go to first row
+                                                tok.SetString (getNextNonBlankLine mdlStream)
+
+                                                local newkey
+                                                while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+                                                    lineNum += 1
+                                                    local keytime = nx_round(firstFrame + (frameRate*tok.ReadFloat()))
+
+                                                    local this_value = tok.ReadFloat()
+                                                    if str_token == "radius" then this_value *= 100
+                                                    local in_value
+                                                    local out_value
+                                                    if(bBezier) then(
+                                                        in_value = tok.ReadFloat()
+                                                        out_value = tok.ReadFloat()
+                                                    )
+                                                    format "Adding float % (bezier % %) at time %\n" this_value in_value out_value keytime
+
+                                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                        newkey = addnewkey objController keytime
+                                                        newkey.value = this_value
+                                                        if(bBezier) then(
+                                                            newkey.inTangentType = #custom
+                                                            newkey.outTangentType = #custom
+                                                            newkey.x_locked = false
+                                                            newkey.inTangent = in_value
+                                                            newkey.outTangent = out_value
+
+                                                        )
+                                                        else
+                                                        (
+                                                            newkey.inTangentType = #linear
+                                                            newkey.outTangentType = #linear
+                                                        )
+                                                    )
+
+                                                    -- read in next line from import data stream
+                                                    if (keyCount != undefined) then(
+                                                        keyCount -= 1
+                                                        if keyCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                                                    )
+                                                    else
+                                                        tok.SetString (getNextNonBlankLine mdlStream)
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
                     ) -- end idtoken case
                 ) -- End MDL_ANIM case
 

@@ -43,8 +43,10 @@ invisible:true
 		rgb 			type:#color     animatable:true default:(color 255 255 255) ui:colorpicker_color
 		radius			type:#float     animatable:true ui:spn_radius
 		multiplier		type:#float 	animatable:true default:1.0 ui:spn_multiplier
-		shadowradius    type #float     animatable:true default:0.0
+    -- bead-v modification: add kotor props
+		shadowradius         type:#float animatable:true default:0.0
 		verticaldisplacement type:#float animatable:true default:0.0
+    -- end bead-v modification
 		lightpriority	type:#integer	animatable:false default:5 ui:spn_lightpriority
 		nDynamicType	type:#integer	animatable:false ui:box_isdynamic
 
@@ -252,6 +254,10 @@ replaceUI:true
 		rgb 			type:#color default:(color 255 255 255) ui:colorpicker_color
 		radius			type:#float ui:spn_radius
 		multiplier		type:#float 	animatable:true default:1.0 ui:spn_multiplier
+    -- bead-v modification: add kotor props
+		shadowradius         type:#float animatable:true default:0.0
+		verticaldisplacement type:#float animatable:true default:0.0
+    -- end bead-v modification
 		lightpriority	type:#integer	animatable:false default:5 ui:spn_lightpriority
 		nDynamicType	type:#integer	animatable:false ui:box_isdynamic
 
@@ -269,7 +275,7 @@ replaceUI:true
 	(
 		flareRadius 	type:#float default:5000 ui:spn_flareRadius
 		-- lens_flares is a list of flares with in which the string encodes the
-		-- flare information. This makes it realatively easy to see the total number
+		-- flare information. This makes it relatively easy to see the total number
 		-- of flares and to delete those you don't want
 		-- The flare data is held in the order:
 		-- texture, flare size, position, colour shift

@@ -1634,6 +1634,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
     		format "  shadow %%" node.Shadow g_delim to:g_strBuffer
     		format "  lightpriority %%" node.lightpriority g_delim to:g_strBuffer
     		format "  fadingLight %%" node.fadingLight g_delim to:g_strBuffer
+      		format "  flare %\r\n" node.lensflares -- bead-v: add flare
 
     		--used??
 --    		format "  lensflares %\r\n" node.lensflares
@@ -2027,110 +2028,161 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
     if DEBUG then format "    #DEBUG: objController=% %" objController g_delim to:g_strBuffer
 
     local keycount = 0
+    local bBezier = true;
     -- test to ensure that the controller is defined
-    if objController != undefined then
-    for t = firstframe to lastframe do
-    (
-        -- show the user that we are doing something
-        --ExportActivityBar()
-        if ((getKeyIndex objController t) > 0) then
+    if objController != undefined then(
+        if(classof objController != bezier_position and datatype == "position") then bBezier = false
+        else if(classof objController != bezier_color and datatype == "color") then bBezier = false
+        else if(classof objController != bezier_point3 and datatype == "point3") then bBezier = false
+        else if(datatype == "orientation") then bBezier = false
+        else (
+            t = firstframe
+            while(t < lastframe and bBezier) do (
+                if ((getKeyIndex objController t) > 0) then(
+                    try(
+                        ourkey = getKey objController (getKeyIndex objController t)
+                        if(ourkey.inTangentType == #linear and ourkey.outTangentType == #linear) then bBezier = false
+                    )
+                    catch(
+                        bBezier = false
+                    )
+                )
+                t += 1
+            )
+        )
+        for t = firstframe to lastframe do
         (
-            -- we have an obj index > 0 so add a keylist entry
-            if mdlname != "" then
-                strMdlName = mdlname
-            else
-                strMdlName = keyname
-            if (keycount == 0) then
+            -- show the user that we are doing something
+            --ExportActivityBar()
+            if ((getKeyIndex objController t) > 0) then
             (
-            	format "        %%" strMdlName g_delim to:g_strBuffer
-        	)
-            keycount += 1;
-            at time t in coordsys parent
-            (
-                objVal = execute("gblDynBuildList_Node."+keyname)
-            )
-            key_time = ((t-firstframe) as float) / (frameRate as float);
-            local key_index = getKeyIndex objController t
-
-            -- some special case unit conversion as needed
-            case keyname of
-            (
-                "radius":
+                -- we have an obj index > 0 so add a keylist entry
+                if mdlname != "" then
+                    strMdlName = mdlname
+                else
+                    strMdlName = keyname
+                if (keycount == 0) then
                 (
-                    -- convert radius into meters
-                    objVal = objVal * 0.01
+                    format "        %" strMdlName to:g_strBuffer
+                    if (bBezier) then format "bezier" to:g_strBuffer
+                    format "key%" g_delim to:g_strBuffer
                 )
-            )
-
-            -- out put keys by data type
-            case datatype of
-            (
-                "float":    format "            % % %" key_time objVal g_delim to:g_strBuffer
-                "integer":  format "            % % %" key_time objVal g_delim to:g_strBuffer
-                "color":
+                keycount += 1;
+                at time t in coordsys parent
                 (
-                    -- deal with potential for animated negative light
-                    try ( bIsNegLight = nx_itob(node.negativeLight) ) catch ( bIsNegLight = false )
-                    if bIsNegLight then
-                        format "            % -% -% -% %" key_time (objVal.r / 255) (objVal.g / 255) (objVal.b / 255) g_delim to:g_strBuffer
-                    else
-                        format "            % % % % %" key_time (objVal.r / 255) (objVal.g / 255) (objVal.b / 255) g_delim to:g_strBuffer
+                    objVal = execute("gblDynBuildList_Node."+keyname)
                 )
-                "point3":   format "            % % % % %" key_time objVal.x objVal.y objVal.z g_delim to:g_strBuffer
-                "point4":   format "            % % % % % %" key_time objVal.x objVal.y objVal.z objVal.r g_delim to:g_strBuffer
-                "position":
+                key_time = ((t-firstframe) as float) / (frameRate as float);
+                local key_index = getKeyIndex objController t
+
+                -- some special case unit conversion as needed
+                case keyname of
                 (
-                    at time t in coordsys parent
+                    "radius":
                     (
-                        objVal = execute("gblDynBuildList_Node."+keyname)
-                        local objPos = objVal * 0.01
+                        -- convert radius into meters
+                        objVal = objVal * 0.01
                     )
-                    format "            % % % %%" key_time objPos.x objPos.y objPos.z g_delim to:g_strBuffer
                 )
-                "positionbezier":
+
+                -- out put keys by data type
+                case datatype of
                 (
-                    local objPos = objController.keys[key_index].value * 0.01
-                    local objIn = objController.keys[key_index].inTangent
-                    local objOut = objController.keys[key_index].outTangent
-                    format "            % % % % % % % % % %%" key_time objPos.x objPos.y objPos.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
-                )
-                "orientation":
-                (
-                    --local rotVector = normalize (point3 -objVal.x -objVal.y -objVal.z)
-                    --local rotVector = point3 objVal.x objVal.y objVal.z   -- negative convserion not consistemt with Bioware files?
-                    local rotVector
-                    if nodetype == "emitter" then
+                    "float":
                     (
-                        -- to be consistent with the 180' rotation we apply to the orientation in normal export
-                        -- apply it to the orientation animation data as well
-                        objVal += quat -180 (point3 1 0 0);
+                        local objIn
+                        local objOut
+                        if(bBezier) then objIn = objController.keys[key_index].inTangent
+                        if(bBezier) then objOut = objController.keys[key_index].outTangent
+                        if(not bBezier) then format "            % % %" key_time objVal g_delim to:g_strBuffer
+                        else             format "            % % % % %" key_time objVal objIn objOut g_delim to:g_strBuffer
                     )
-
-                    --rotVector = point3 -objVal.x -objVal.y -objVal.z
-            -- bead-v modification: getting rid of the minus signs that are flipping our original values
-                    rotVector = point3 objVal.x objVal.y objVal.z
-            -- end bead-v modification
-
-                    --format "# raw  %" rotVector
-
-                    --
-                    -- Normalising a [0,0,0] vector results in [1,0,0].
-                    -- The desired result is [0,0,0].
-
-                    -- Due to some VERY strange behaviour with MAXScript the only way to get correct
-                    -- behaviour on the below boolean test is to work with strings!
-                    if (rotVector as string) != "[0,0,0]" then
+                    "integer":
                     (
-                        --format "  N  "
-                        rotVector = normalize (rotVector)
+                        local objIn
+                        local objOut
+                        if(bBezier) then objIn = objController.keys[key_index].inTangent
+                        if(bBezier) then objOut = objController.keys[key_index].outTangent
+                        if(not bBezier) then format "            % % %" key_time objVal g_delim to:g_strBuffer
+                        else             format "            % % % % %" key_time objVal objIn objOut g_delim to:g_strBuffer
                     )
-                    --local angle = -DegToRad(objVal.angle)
-            -- bead-v modification: getting rid of the minus signs that are flipping our original values
-                    local angle = DegToRad(objVal.angle)
-            -- end bead-v modification
-                    format "            % % % % %%" key_time rotVector.x rotVector.y rotVector.z angle g_delim to:g_strBuffer
+                    "color":
+                    (
+                        -- deal with potential for animated negative light
+                        try ( bIsNegLight = nx_itob(node.negativeLight) ) catch ( bIsNegLight = false )
+
+                        copyVal = [objVal.r, objVal.g, objVal.b] as color
+                        if bIsNegLight then copyVal *= -1
+                        local objIn
+                        local objOut
+                        if(bBezier) then objIn = objController.keys[key_index].inTangent
+                        if(bBezier) then objOut = objController.keys[key_index].outTangent
+
+                        if(not bBezier) then format "            % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) g_delim to:g_strBuffer
+                        else             format "            % % % % % % % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) objIn.r objIn.g objIn.b objOut.r objOut.g objOut.b g_delim to:g_strBuffer
+                    )
+                    "point3":
+                    (
+                        local objIn
+                        local objOut
+                        if(bBezier) then objIn = objController.keys[key_index].inTangent
+                        if(bBezier) then objOut = objController.keys[key_index].outTangent
+                        if(not bBezier) then format "            % % % % %" key_time objVal.x objVal.y objVal.z g_delim to:g_strBuffer
+                        else             format "            % % % % % % % % % % %" key_time objVal.x objVal.y objVal.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
+                    )
+                    "point4":   format "            % % % % % %" key_time objVal.x objVal.y objVal.z objVal.r g_delim to:g_strBuffer
+                    "position":
+                    (
+                        at time t in coordsys parent
+                        (
+                            objVal = execute("gblDynBuildList_Node."+keyname)
+                            local objPos = objVal * 0.01
+                            local objIn
+                            local objOut
+                            if(bBezier) then objIn = objController.keys[key_index].inTangent
+                            if(bBezier) then objOut = objController.keys[key_index].outTangent
+                        )
+                        if(not bBezier) then format "            % % % %%" key_time objPos.x objPos.y objPos.z g_delim to:g_strBuffer
+                        else             format "            % % % % % % % % % %%" key_time objPos.x objPos.y objPos.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
+                    )
+                    "orientation":
+                    (
+                        --local rotVector = normalize (point3 -objVal.x -objVal.y -objVal.z)
+                        --local rotVector = point3 objVal.x objVal.y objVal.z   -- negative convserion not consistemt with Bioware files?
+                        local rotVector
+                        if nodetype == "emitter" then
+                        (
+                            -- to be consistent with the 180' rotation we apply to the orientation in normal export
+                            -- apply it to the orientation animation data as well
+                            objVal += quat -180 (point3 1 0 0);
+                        )
+
+                        --rotVector = point3 -objVal.x -objVal.y -objVal.z
+                -- bead-v modification: getting rid of the minus signs that are flipping our original values
+                        rotVector = point3 objVal.x objVal.y objVal.z
+                -- end bead-v modification
+
+                        --format "# raw  %" rotVector
+
+                        --
+                        -- Normalising a [0,0,0] vector results in [1,0,0].
+                        -- The desired result is [0,0,0].
+
+                        -- Due to some VERY strange behaviour with MAXScript the only way to get correct
+                        -- behaviour on the below boolean test is to work with strings!
+                        if (rotVector as string) != "[0,0,0]" then
+                        (
+                            --format "  N  "
+                            rotVector = normalize (rotVector)
+                        )
+                        --local angle = -DegToRad(objVal.angle)
+                -- bead-v modification: getting rid of the minus signs that are flipping our original values
+                        local angle = DegToRad(objVal.angle)
+                -- end bead-v modification
+                        format "            % % % % %%" key_time rotVector.x rotVector.y rotVector.z angle g_delim to:g_strBuffer
+                    )
+                    default:    format "#ERROR - keylist data type not defined in code. Contact the author for support. %"
                 )
-                default:    format "#ERROR - keylist data type not defined in code. Contact the author for support. %"
             )
         )
         nx_FlushBuffer()
@@ -2242,23 +2294,13 @@ fn ExportAnimKeys node firstframe lastframe=
 	    -- build position keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build position list%" g_delim to:g_strBuffer
-	    --DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionkey"
--- bead-v modification: add bezierkey possibility
-        if(classof node.pos.controller == bezier_position) then
-        (
-            DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionbezierkey"
-        )
-        else
-        (
-            DynBuildKeyList node firstframe lastframe "position" "pos" mdlname:"positionkey"
-        )
--- end bead-v modification
+	    DynBuildKeyList node firstframe lastframe "position" "position"
 
 	    --
 	    -- build orientation keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build orientation list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "orientation" "rotation" mdlname:"orientationkey" nodetype:node_type
+	    DynBuildKeyList node firstframe lastframe "orientation" "rotation" mdlname:"orientation" nodetype:node_type
 
 
 	    ----------------------------------------------------------------
@@ -2268,7 +2310,7 @@ fn ExportAnimKeys node firstframe lastframe=
 	    -- build scale from trimesh modifier
 	    --
 	    if DEBUG then format "        #DEBUG: Build scale list%" g_delim to:g_strBuffer
-	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "float" "scale" mdlname:"scalekey"
+	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "float" "scale"
 
 	    --
 	    -- build alpha from trimesh modifier
@@ -2279,14 +2321,14 @@ fn ExportAnimKeys node firstframe lastframe=
 	    --if node.mat != undefined then (
 		--    DynBuildKeyList node.mat firstframe lastframe "float" "opacity" mdlname:"alphakey"
 	    --) else (
-	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "float" "alpha" mdlname:"alphakey"
+	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "float" "alpha"
 	    --)
 
 	    --
 	    -- build selfillumcolor from trimesh modifier
 	    --
 	    if DEBUG then format "        #DEBUG: Build selfillumcolor list%" g_delim to:g_strBuffer
-	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "color" "selfillumcolor" mdlname:"selfillumcolorkey"
+	    DynBuildKeyList (node.modifiers["AuroraTrimesh"]) firstframe lastframe "color" "selfillumcolor"
 
 
 	    ----------------------------------------------------------------
@@ -2301,193 +2343,301 @@ fn ExportAnimKeys node firstframe lastframe=
 	    -- build alpha keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build alpha list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "alpha" mdlname:"alphakey"
+	    DynBuildKeyList node firstframe lastframe "float" "alpha"
 
 	    --
 	    -- build alphaStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build alphaStart list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "alphaStart" mdlname:"alphaStartkey"
+	    DynBuildKeyList node firstframe lastframe "float" "alphaStart"
+
+	    --
+	    -- build alphaMid keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build alphaMid list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "alphaMid"
 
 	    --
 	    -- build alphaEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build alphaEnd list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "alphaEnd" mdlname:"alphaEndkey"
+	    DynBuildKeyList node firstframe lastframe "float" "alphaEnd"
+
+	    --
+	    -- build percentStart keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build percentStart list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "percentStart"
+
+	    --
+	    -- build percentMid keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build percentMid list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "percentMid"
+
+	    --
+	    -- build percentEnd keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build percentEnd list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "percentEnd"
 
 	    --
 	    -- build birthrate keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build birthrate list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "birthrate" mdlname:"birthratekey"
+	    DynBuildKeyList node firstframe lastframe "float" "birthrate"
+
+	    --
+	    -- build m_fRandomBirthRate keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build m_fRandomBirthRate list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "m_fRandomBirthRate"
 
 	    --
 	    -- build bounce_co keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build bounce_co list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "bounce_co" mdlname:"bounce_cokey"
+	    DynBuildKeyList node firstframe lastframe "float" "bounce_co"
 
 	    --
 	    -- build colorStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build colorStart list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "color" "colorStart" mdlname:"colorStartkey"
+	    DynBuildKeyList node firstframe lastframe "color" "colorStart"
+
+	    --
+	    -- build colorMid keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build colorMid list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "color" "colorMid"
 
 	    --
 	    -- build colorEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build colorEnd list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "color" "colorEnd" mdlname:"colorEndkey"
+	    DynBuildKeyList node firstframe lastframe "color" "colorEnd"
 
 	    --
 	    -- build combinetime keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build combinetime list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "combinetime" mdlname:"combinetimekey"
+	    DynBuildKeyList node firstframe lastframe "float" "combinetime"
 
 	    --
 	    -- build drag keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build drag list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "drag" mdlname:"dragkey"
+	    DynBuildKeyList node firstframe lastframe "float" "drag"
 
 	    --
 	    -- build fps keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build fps list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "integer" "fps" mdlname:"fpskey"
+	    DynBuildKeyList node firstframe lastframe "integer" "fps"
 
 	    --
 	    -- build frameStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build frameStart list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "integer" "frameStart" mdlname:"frameStartkey"
+	    DynBuildKeyList node firstframe lastframe "integer" "frameStart"
 
 	    --
 	    -- build frameEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build frameEnd list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "integer" "frameEnd" mdlname:"frameEndkey"
+	    DynBuildKeyList node firstframe lastframe "integer" "frameEnd"
 
 	    --
 	    -- build grav keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build grav list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "grav" mdlname:"gravkey"
+	    DynBuildKeyList node firstframe lastframe "float" "grav"
 
 	    --
 	    -- build lifeExp keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lifeExp list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "lifeExp" mdlname:"lifeExpkey"
+	    DynBuildKeyList node firstframe lastframe "float" "lifeExp"
 
 	    --
 	    -- build lightningDelay keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningDelay list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "lightningDelay" mdlname:"lightningDelaykey"
+	    DynBuildKeyList node firstframe lastframe "float" "lightningDelay"
 
 	    --
 	    -- build lightningRadius keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningRadius list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "lightningRadius" mdlname:"lightningRadiuskey"
+	    DynBuildKeyList node firstframe lastframe "float" "lightningRadius"
 
 	    --
 	    -- build lightningScale keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build lightningScale list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "lightningScale" mdlname:"lightningScalekey"
+	    DynBuildKeyList node firstframe lastframe "float" "lightningScale"
 
 	    --
 	    -- build lightningSubDiv keylist
 	    --
 	    --if DEBUG then format "        #DEBUG: Build lightningSubDiv list%" g_delim to:g_strBuffer
-	    --DynBuildKeyList node firstframe lastframe "float" "lightningSubDiv" mdlname:"lightningSubDivkey"
+	    --DynBuildKeyList node firstframe lastframe "float" "lightningSubDiv"
+
+	    --
+	    -- build lightningzigzag keylist
+	    --
+	    --if DEBUG then format "        #DEBUG: Build lightningzigzag list%" g_delim to:g_strBuffer
+	    --DynBuildKeyList node firstframe lastframe "float" "lightningzigzag"
 
 	    --
 	    -- build blurlength keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build blurlength list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "blurlength" mdlname:"blurlengthkey"
+	    DynBuildKeyList node firstframe lastframe "float" "blurlength"
 
 	    --
 	    -- build sizeStart_y keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeStart_y list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "sizeStart_y" mdlname:"sizeStart_ykey"
+	    DynBuildKeyList node firstframe lastframe "float" "sizeStart_y"
+
+	    --
+	    -- build sizeMid_y keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build sizeMid_y list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "sizeMid_y"
 
 	    --
 	    -- build sizeEnd_y keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeEnd_y list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd_y" mdlname:"sizeEnd_ykey"
+	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd_y"
 
 	    --
 	    -- build mass keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build mass list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "mass" mdlname:"masskey"
+	    DynBuildKeyList node firstframe lastframe "float" "mass"
 
 	    --
 	    -- build p2p_bezier2 keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build p2p_bezier2 list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier2" mdlname:"p2p_bezier2key"
+	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier2"
 
 	    --
 	    -- build p2p_bezier3 keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build p2p_bezier3 list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier3" mdlname:"p2p_bezier3key"
+	    DynBuildKeyList node firstframe lastframe "float" "p2p_bezier3"
 
 	    --
 	    -- build particleRot keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build particleRot list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "particleRot" mdlname:"particleRotkey"
+	    DynBuildKeyList node firstframe lastframe "float" "particleRot"
 
 	    --
 	    -- build randvel keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build randvel list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "randvel" mdlname:"randvelkey"
+	    DynBuildKeyList node firstframe lastframe "float" "randvel"
 
 	    --
 	    -- build sizeStart keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeStart list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "sizeStart" mdlname:"sizeStartkey"
+	    DynBuildKeyList node firstframe lastframe "float" "sizeStart"
+
+	    --
+	    -- build sizeMid keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build sizeMid list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "sizeMid"
 
 	    --
 	    -- build sizeEnd keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build sizeEnd list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd" mdlname:"sizeEndkey"
+	    DynBuildKeyList node firstframe lastframe "float" "sizeEnd"
 
 	    --
 	    -- build spread keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build spread list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "spread" mdlname:"spreadkey"
+	    DynBuildKeyList node firstframe lastframe "float" "spread"
 
 	    --
 	    -- build velocity keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build velocity list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "velocity" mdlname:"velocitykey"
+	    DynBuildKeyList node firstframe lastframe "float" "velocity"
 
 	    --
 	    -- build xsize keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build xsize list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "xsize" mdlname:"xsizekey"
+	    DynBuildKeyList node firstframe lastframe "float" "xsize"
 
 	    --
 	    -- build ysize keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build ysize list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "ysize" mdlname:"ysizekey"
+	    DynBuildKeyList node firstframe lastframe "float" "ysize"
+
+	    --
+	    -- build threshold keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build threshold list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "threshold"
+
+	    --
+	    -- build targetsize keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build targetsize list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "targetsize"
+
+	    --
+	    -- build numcontrolpts keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build numcontrolpts list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "numcontrolpts"
+
+	    --
+	    -- build controlptradius keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build controlptradius list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "controlptradius"
+
+	    --
+	    -- build controlptdelay keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build controlptdelay list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "controlptdelay"
+
+	    --
+	    -- build tangentlength keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build tangentlength list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "tangentlength"
+
+	    --
+	    -- build tangentspread keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build tangentspread list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "tangentspread"
+
+	    --
+	    -- build detonate keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build detonate list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "detonate"
+
+	    --
+	    -- build replace keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build replace list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "replace"
 	    -----------------------------
 	    -- END Emitter export code --
 	    -----------------------------
@@ -2505,19 +2655,31 @@ fn ExportAnimKeys node firstframe lastframe=
 	    -- build color keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build color list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "color" "rgb" mdlname:"colorkey"
+	    DynBuildKeyList node firstframe lastframe "color" "rgb" mdlname:"color"
 
 	    --
 	    -- build radius keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build radius list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "radius" mdlname:"radiuskey"
+	    DynBuildKeyList node firstframe lastframe "float" "radius"
+
+	    --
+	    -- build shadowradius keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build shadowradius list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "shadowradius"
+
+	    --
+	    -- build verticaldisplacement keylist
+	    --
+	    if DEBUG then format "        #DEBUG: Build verticaldisplacement list%" g_delim to:g_strBuffer
+	    DynBuildKeyList node firstframe lastframe "float" "verticaldisplacement"
 
 	    --
 	    -- build multiplier keylist
 	    --
 	    if DEBUG then format "        #DEBUG: Build multiplier list%" g_delim to:g_strBuffer
-	    DynBuildKeyList node firstframe lastframe "float" "multiplier" mdlname:"multiplierkey"
+	    DynBuildKeyList node firstframe lastframe "float" "multiplier"
 
 	    -----------------------------
 	    -- END Light export code   --
