@@ -633,10 +633,12 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
             return RGB(100, 100, 200);
         case 7: //byte
             return RGB(165, 103, 16);
-        case 8: //Possibly constant/meaningless/padding
+        case 8: //Possibly constant/meaningless/padding, but not random data
             return RGB(232, 232, 232);
         case 9: //function pointer - it can make the beginning certain structures stand out more
             return RGB(255, 160, 80);
+        case 11: //Padding/unused portions filled with random data
+            return RGB(162, 177, 90);
     }
     return RGB(0, 0, 0);
 }

@@ -1751,6 +1751,30 @@ bool ASCII::Read(MDL & Mdl){
                     bEventlist = true;
                     SkipLine();
                 }
+                else if(sID == "event" && bAnimation){
+                    Sound sound; //New sound
+                    if(ReadFloat(fConvert)) sound.fTime = fConvert;
+                    else bError = true;
+                    bFound = ReadUntilText(sID, false);
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() Sound name is missing!\n";
+                        bError = true;
+                    }
+                    else if(sID.size() > 32){
+                        Error("Sound name larger than the limit, 32 characters! Will truncate and continue.");
+                        sID.resize(32);
+                    }
+                    else if(sID.size() > 16){
+                        Warning("Sound name larger than 16 characters! This may cause problems in the game.");
+                    }
+                    sound.sName = sID;
+                    if(bFound){
+                        Animation & anim = FH->MH.Animations.back();
+                        anim.Sounds.push_back(sound);
+                    }
+                    else bError = true;
+                    SkipLine();
+                }
                 else if(sID == "doneanim" && bAnimation){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bAnimation = false;

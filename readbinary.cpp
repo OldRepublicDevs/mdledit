@@ -54,7 +54,7 @@ void MDL::DecompileModel(bool bMinimal){
     MarkBytes(nPos, 1, 7);
     Data.MH.GH.nModelType = sBuffer[nPos];
     nPos++;
-    MarkBytes(nPos, 3, 10);
+    MarkBytes(nPos, 3, 11);
     Data.MH.GH.nPadding[0] = sBuffer[nPos];
     nPos++;
     Data.MH.GH.nPadding[1] = sBuffer[nPos];
@@ -66,9 +66,10 @@ void MDL::DecompileModel(bool bMinimal){
     MarkBytes(nPos, 1, 7);
     Data.MH.nClassification = sBuffer[nPos];
     nPos++;
-    MarkBytes(nPos, 3, 10);
+    MarkBytes(nPos, 1, 10);
     Data.MH.nUnknown1[0] = sBuffer[nPos];
     nPos++;
+    MarkBytes(nPos, 2, 7);
     Data.MH.nUnknown1[1] = sBuffer[nPos];
     nPos++;
     Data.MH.nUnknown1[2] = sBuffer[nPos];
@@ -147,7 +148,7 @@ void MDL::DecompileModel(bool bMinimal){
             MarkBytes(nPos, 1, 7);
             Data.MH.Animations[n].nModelType = sBuffer[nPos];
             nPos++;
-            MarkBytes(nPos, 3, 10);
+            MarkBytes(nPos, 3, 11);
             Data.MH.Animations[n].nPadding[0] = sBuffer[nPos];
             nPos++;
             Data.MH.Animations[n].nPadding[1] = sBuffer[nPos];
@@ -711,7 +712,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Skin.Bones[n].TBone.fY = ReadFloat(&nPosData3, 2);
                 NODE->Skin.Bones[n].TBone.fZ = ReadFloat(&nPosData3, 2);
 
-                MarkBytes(nPosData4, 4, 8);
+                MarkBytes(nPosData4, 4, 11);
                 nPosData4+=4;
                 //NODE->Skin.Bones[n].fArray8 = ReadFloat(&nPosData4, 2);
 

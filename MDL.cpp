@@ -407,8 +407,12 @@ void MDL::CheckPeculiarities(){
         ssReturn<<"\r\n - Header ModelType different than 2!";
         bUpdate = true;
     }
+    if(Data.MH.nUnknown1[1] != 0){
+        ssReturn<<"\r\n - Second classification padding number different than 0!";
+        bUpdate = true;
+    }
     if(Data.MH.nUnknown1[2] != 1){
-        ssReturn<<"\r\n - Last classification padding number different than 1!";
+        ssReturn<<"\r\n - Third classification padding number different than 1!";
         bUpdate = true;
     }
     if(Data.MH.nChildModelCount != 0){

@@ -353,14 +353,24 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
     /// Header ///
     else if(cItem[0] == "Header"){
-            sPrint << string_format("Header\r\nModel Name: %s\r\nModel Type: %i\r\nClassification: %s\r\nSupermodel: %s",
-                    Data.MH.GH.sName.c_str(), Data.MH.GH.nModelType, ReturnClassificationName(Data.MH.nClassification).c_str(),
-                    Data.MH.cSupermodelName.c_str()/*, Data.MH.nChildModelCount*/);
+            std::string sModelType;
+            if(Data.MH.GH.nModelType == 1) sModelType = "geometry";
+            else if(Data.MH.GH.nModelType == 2) sModelType = "model";
+            else if(Data.MH.GH.nModelType == 5) sModelType = "animation";
+            else sModelType = "unknown";
+            sPrint << "Header";
+            sPrint << "\r\nModel Name: "<<Data.MH.GH.sName.c_str();
+            sPrint << "\r\nModel Type: "<<Data.MH.GH.nModelType<<" ("<<sModelType<<")";
+            sPrint << "\r\n   Padding: "<<(int)Data.MH.GH.nPadding[0]<<" "<<(int)Data.MH.GH.nPadding[1]<<" "<<(int)Data.MH.GH.nPadding[2];
+            sPrint << "\r\nClassification: "<<ReturnClassificationName(Data.MH.nClassification).c_str();
+            sPrint << "\r\n   Classification numbers: "<<(int)Data.MH.nUnknown1[0]<<" "<<(int)Data.MH.nUnknown1[1]<<" "<<(int)Data.MH.nUnknown1[2];
+            sPrint << "\r\nSupermodel: "<<Data.MH.cSupermodelName.c_str();
             sPrint << "\r\nSupermodel Reference: "<<Data.MH.nSupermodelReference;
-            sPrint << "\r\n\r\nPadding? (Model Type): "<<(int)Data.MH.GH.nPadding[0]<<" "<<(int)Data.MH.GH.nPadding[1]<<" "<<(int)Data.MH.GH.nPadding[2];
-            sPrint << "\r\nPadding? (Classification): "<<(int)Data.MH.nUnknown1[0]<<" "<<(int)Data.MH.nUnknown1[1]<<" "<<(int)Data.MH.nUnknown1[2];
-            sPrint << string_format("\r\n\r\nMDL Length: %i\r\nMDX Length: %i\r\nFunction Pointer 0: %i\r\nFunction Pointer 1: %i",
-                    Data.nMdlLength, Data.nMdxLength, Data.MH.GH.nFunctionPointer0, Data.MH.GH.nFunctionPointer1);
+            sPrint << "\r\n";
+            sPrint << "\r\nMDL Length: "<<Data.nMdlLength;
+            sPrint << "\r\nMDX Length: "<<Data.nMdxLength;
+            sPrint << "\r\nFunction Pointer 0: "<<Data.MH.GH.nFunctionPointer0;
+            sPrint << "\r\nFunction Pointer 1: "<<Data.MH.GH.nFunctionPointer1;
     }
     else if(cItem[0] == "Bounding Box Min") sPrint << "Bounding Box Min:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
     else if(cItem[0] == "Bounding Box Max") sPrint << "Bounding Box Max:"<<"\r\nx: "<<((Vector*) lParam)->fX<<"\r\ny: "<<((Vector*) lParam)->fY<<"\r\nz: "<<((Vector*) lParam)->fZ;
@@ -375,13 +385,18 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
     }
     else if(cItem[1] == "Animations"){
         Animation * anim = (Animation * ) lParam;
+        std::string sModelType;
+        if(anim->nModelType == 1) sModelType = "geometry";
+        else if(anim->nModelType == 2) sModelType = "model";
+        else if(anim->nModelType == 5) sModelType = "animation";
+        else sModelType = "unknown";
         sPrint << "Animation "<<anim->sName.c_str();
         sPrint << "\r\nOffset: "<<anim->nOffset;
         sPrint << "\r\nOffset to Root: "<<anim->nOffsetToRootAnimationNode;
         sPrint << "\r\nAnimation Root: "<<anim->sAnimRoot.c_str();
         sPrint << "\r\nNumber of Names: "<<anim->nNumberOfNames;
         sPrint << "\r\n";
-        sPrint << "\r\nModel Type: "<<(int)anim->nModelType;
+        sPrint << "\r\nModel Type: "<<(int)anim->nModelType<<" ("<<sModelType<<")";
         sPrint << "\r\nPadding: "<<(int)anim->nPadding[0]<<" "<<(int)anim->nPadding[1]<<" "<<(int)anim->nPadding[2];
         sPrint << "\r\n";
         sPrint << "\r\nFunction Pointer 0: "<<anim->nFunctionPointer0;
@@ -435,10 +450,10 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n  y: "<<PrepareFloat(node->Head.vPos.fY, 0);
             sPrint << "\r\n  z: "<<PrepareFloat(node->Head.vPos.fZ, 0);
             sPrint << "\r\nOrientation:";
-            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fX, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fX, 1)<<")";
-            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fY, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fY, 1)<<")";
-            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fZ, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fZ, 1)<<")";
-            sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().fW, 0)<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().fAngle, 1)<<")";
+            sPrint << "\r\n  x: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fX, 0);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fX, 1)<<")";
+            sPrint << "\r\n  y: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fY, 0);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fY, 1)<<")";
+            sPrint << "\r\n  z: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fZ, 0);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fZ, 1)<<")";
+            sPrint << "\r\n  w: "<<PrepareFloat(node->Head.oOrient.GetQuaternion().fW, 0);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().fAngle, 1)<<")";
         }
     }/*
     else if(cItem[0] == "Position") sPrint << string_format("Position: \r\nx: %f\r\ny: %f\r\nz: %f", ((double*) lParam)[0], ((double*) lParam)[1], ((double*) lParam)[2]);

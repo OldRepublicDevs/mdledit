@@ -439,15 +439,15 @@ bool MDL::Compile(){
     WriteInt(0, 8); //Ref. count
 
     WriteByte(Data->MH.GH.nModelType, 7); //Model type
-    WriteByte(Data->MH.GH.nPadding[0], 10); //Unknown, padding?
-    WriteByte(Data->MH.GH.nPadding[1], 10);
-    WriteByte(Data->MH.GH.nPadding[2], 10);
+    WriteByte(Data->MH.GH.nPadding[0], 11); //padding
+    WriteByte(Data->MH.GH.nPadding[1], 11);
+    WriteByte(Data->MH.GH.nPadding[2], 11);
 
     //Model header
     WriteByte(Data->MH.nClassification, 7); //Classification
-    WriteByte(Data->MH.nUnknown1[0], 10); //Unknown, padding?
-    WriteByte(Data->MH.nUnknown1[1], 10);
-    WriteByte(Data->MH.nUnknown1[2], 10);
+    WriteByte(Data->MH.nUnknown1[0], 10); //Unknown
+    WriteByte(Data->MH.nUnknown1[1], 7);
+    WriteByte(Data->MH.nUnknown1[2], 7);
 
     WriteInt(0, 8); //Child model count
 
@@ -538,9 +538,9 @@ bool MDL::Compile(){
         WriteInt(0, 8);
 
         WriteByte(anim.nModelType, 7);
-        WriteByte(anim.nPadding[0], 10); //unknown, padding?
-        WriteByte(anim.nPadding[1], 10);
-        WriteByte(anim.nPadding[2], 10);
+        WriteByte(anim.nPadding[0], 11); //unknown, padding?
+        WriteByte(anim.nPadding[1], 11);
+        WriteByte(anim.nPadding[2], 11);
 
         WriteFloat(anim.fLength, 2);
         WriteFloat(anim.fTransition, 2);
@@ -1012,7 +1012,7 @@ void MDL::WriteNodes(Node & node){
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         else WriteIntToPH(0, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteInt(0, 4); //This array is not in use, might as well fill it with zeros
+            WriteInt(0, 9); //This array is not in use, might as well fill it with zeros
         }
     }
 
