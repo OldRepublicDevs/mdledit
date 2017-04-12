@@ -2469,11 +2469,11 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         (
                             local str_token = idToken as string
                             local str_length = str_token.count
-                            format "%, length=%\n" str_token str_length
+                            --format "%, length=%\n" str_token str_length
                             if (str_length > 3) then
                             (
                                 local objAnim = getNodeByName(objName)
-                                format "% == key, objAnim = %\n" (substring str_token (str_length - 2) 3) objAnim
+                                --format "% == key, objAnim = %\n" (substring str_token (str_length - 2) 3) objAnim
                                 if((substring str_token (str_length - 2) 3) == "key" and (objAnim != undefined)) then
                                 (
                                     -- if we get here, then we're definitely parsing a controller with a valid objAnim
@@ -2761,7 +2761,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     )
 
                                     if(objController != undefined) then(
-                                        format "About to read %\n" ctrl_data
+                                        --format "About to read %\n" ctrl_data
                                         case ctrl_data of
                                         (
                                             "position":(
@@ -2975,7 +2975,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                         in_value = tok.ReadFloat()
                                                         out_value = tok.ReadFloat()
                                                     )
-                                                    format "Adding float % (bezier % %) at time %\n" this_value in_value out_value keytime
+                                                    --format "Adding float % (bezier % %) at time %\n" this_value in_value out_value keytime
 
                                                     if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
                                                         newkey = addnewkey objController keytime

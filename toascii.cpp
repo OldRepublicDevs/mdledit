@@ -94,11 +94,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  transtime " << PrepareFloat(anim->fTransition, 0);
         sReturn << "\n  animroot " << anim->sAnimRoot.c_str();
         if(anim->Sounds.size() > 0){
+            /** old MDLOps list format
             sReturn << "\n  eventlist";
             for(int s = 0; s < anim->Sounds.size(); s++){
                 sReturn << "\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
             }
             sReturn << "\n  endlist";
+            /**/
+            for(int s = 0; s < anim->Sounds.size(); s++){
+                sReturn << "\n  event " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
+            }
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
@@ -132,7 +137,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
         else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
         else if(node->Head.nType & NODE_HAS_SKIN) sReturn << "skin ";
-        else if(node->Head.nType & NODE_HAS_SABER) sReturn << "trimesh 2081__"; /// Official keyword: lightsaber
+        else if(node->Head.nType & NODE_HAS_SABER) sReturn << "trimesh ";//2081__"; /// Official keyword: lightsaber
         else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh ";
         else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
         else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
@@ -269,11 +274,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << node->Mesh.Faces[n].nIndexVertex[0];
             sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
             sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
-            sReturn << " " << node->Mesh.Faces[n].nSmoothingGroup;
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[0];
+            sReturn << "  " << node->Mesh.Faces[n].nSmoothingGroup;
+            sReturn << "  " << node->Mesh.Faces[n].nIndexVertex[0];
             sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
             sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
-            sReturn << " " << node->Mesh.Faces[n].nMaterialID;
+            sReturn << "  " << node->Mesh.Faces[n].nMaterialID;
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
             sReturn << "\n  tverts "<<node->Mesh.Vertices.size();
@@ -283,6 +288,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+            sReturn << "\n  texindices1 "<<node->Mesh.Faces.size();
+            for(int n = 0; n < node->Mesh.Faces.size(); n++){
+                sReturn << "\n    ";
+                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            }
             sReturn << "\n  tverts1 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fX, 0);
@@ -290,6 +302,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+            sReturn << "\n  texindices2 "<<node->Mesh.Faces.size();
+            for(int n = 0; n < node->Mesh.Faces.size(); n++){
+                sReturn << "\n    ";
+                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            }
             sReturn << "\n  tverts2 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fX, 0);
@@ -297,6 +316,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+            sReturn << "\n  texindices3 "<<node->Mesh.Faces.size();
+            for(int n = 0; n < node->Mesh.Faces.size(); n++){
+                sReturn << "\n    ";
+                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
+                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+            }
             sReturn << "\n  tverts3 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fX, 0);
@@ -410,21 +436,37 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             vOut = node->Saber.SaberData.at(91).vVertex - vDiff;
             sReturn << "\n    "<<PrepareFloat(vOut.fX, 0)<<" "<<PrepareFloat(vOut.fY, 1)<<" "<<PrepareFloat(vOut.fZ, 2);
 
-            sReturn << "\n  faces 12";
-            sReturn << "\n    5 4 0 1 5 4 0 0";
-            sReturn << "\n    0 1 5 1 0 1 5 0";
-            sReturn << "\n    13 8 12 1 13 8 12 0";
-            sReturn << "\n    8 13 9 1 8 13 9 0";
-            sReturn << "\n    6 5 1 1 6 5 1 0";
-            //sReturn << "\n    2 6 5 1 2 6 5 0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    1 2 6 1 1 2 6 0";
-            //sReturn << "\n    1 2 5 1 1 2 5 0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    10 9 13 1 10 9 13 0";
-            sReturn << "\n    13 14 10 1 13 14 10 0";
-            sReturn << "\n    3 6 2 1 3 6 2 0";
-            sReturn << "\n    6 3 7 1 6 3 7 0";
-            sReturn << "\n    15 11 14 1 15 11 14 0";
-            sReturn << "\n    10 14 11 1 10 14 11 0";
+            sReturn << "\n  faces 24";
+            /// SIDE 1
+            sReturn << "\n    5 4 0  1  5 4 0  0";
+            sReturn << "\n    0 1 5  1  0 1 5  0";
+            sReturn << "\n    13 8 12  1  13 8 12  0";
+            sReturn << "\n    8 13 9  1  8 13 9  0";
+            sReturn << "\n    6 5 1  1  6 5 1  0";
+            //sReturn << "\n    2 6 5  1  2 6 5  0"; //Correct faces, but not what they are in the game
+            sReturn << "\n    1 2 6  1  1 2 6  0";
+            //sReturn << "\n    1 2 5  1  1 2 5  0"; //Correct faces, but not what they are in the game
+            sReturn << "\n    10 9 13  1  10 9 13  0";
+            sReturn << "\n    13 14 10  1  13 14 10  0";
+            sReturn << "\n    3 6 2  1  3 6 2  0";
+            sReturn << "\n    6 3 7  1  6 3 7  0";
+            sReturn << "\n    15 11 14  1  15 11 14  0";
+            sReturn << "\n    10 14 11  1  10 14 11  0";
+            /// SIDE 2
+            sReturn << "\n    4 5 0  1  4 5 0  0";
+            sReturn << "\n    1 0 5  1  1 0 5  0";
+            sReturn << "\n    8 13 12  1  8 13 12  0";
+            sReturn << "\n    13 8 9  1  13 8 9  0";
+            sReturn << "\n    5 6 1  1  5 6 1  0";
+            //sReturn << "\n    6 2 5  1  6 2 5  0"; //Correct faces, but not what they are in the game
+            sReturn << "\n    2 1 6  1  2 1 6  0";
+            //sReturn << "\n    2 1 5  1  2 1 5  0"; //Correct faces, but not what they are in the game
+            sReturn << "\n    9 10 13  1  9 10 13  0";
+            sReturn << "\n    14 13 10  1  14 13 10  0";
+            sReturn << "\n    6 3 2  1  6 3 2  0";
+            sReturn << "\n    3 6 7  1  3 6 7  0";
+            sReturn << "\n    11 15 14  1  11 15 14  0";
+            sReturn << "\n    14 10 11  1  14 10 11  0";
 
             sReturn << "\n  tverts 16";
             sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fX, 0)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fY, 1)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fZ, 2);
@@ -483,10 +525,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0)<<" ";
-                aaCurrent = AxisAngle(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]);
+                aaCurrent = AxisAngle(Quaternion(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
+                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
+                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
+                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]));
                 if(n > 0){
                     aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
@@ -505,7 +547,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount > 16 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0);
+                sReturn << "\n        " <<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n], 0);
                 sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*9 + (0)], 0);
                 sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*9 + (1)], 0);
                 sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*9 + (2)], 0);

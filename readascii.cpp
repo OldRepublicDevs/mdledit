@@ -1,9 +1,10 @@
 #include "MDL.h"
+#include <algorithm>
 
 /**
     Functions:
     ASCII::Read()
-    ASCII::BuildAabb()
+    MDL::BuildAabb()
     MDL::GatherChildren()
     MDL::AsciiPostProcess()
 /**/
@@ -32,8 +33,11 @@ bool ASCII::Read(MDL & Mdl){
     bool bVerts = false;
     bool bFaces = false;
     bool bTverts = false;
+    bool bTexIndices1 = false;
     bool bTverts1 = false;
+    bool bTexIndices2 = false;
     bool bTverts2 = false;
+    bool bTexIndices3 = false;
     bool bTverts3 = false;
     bool bWeights = false;
     bool bAabb = false;
@@ -43,6 +47,7 @@ bool ASCII::Read(MDL & Mdl){
     bool bFlarePositions = false;
     bool bFlareSizes = false;
     bool bFlareColorShifts = false;
+    bool bMagnusll = false;
     unsigned int nNodeCounter = 0;
     Node * PreviousNode;
     unsigned int nDataMax;
@@ -93,8 +98,11 @@ bool ASCII::Read(MDL & Mdl){
         else if(bVerts) lpbList = &bVerts;
         else if(bFaces) lpbList = &bFaces;
         else if(bTverts) lpbList = &bTverts;
+        else if(bTexIndices1) lpbList = &bTexIndices1;
         else if(bTverts1) lpbList = &bTverts1;
+        else if(bTexIndices2) lpbList = &bTexIndices2;
         else if(bTverts2) lpbList = &bTverts2;
+        else if(bTexIndices3) lpbList = &bTexIndices3;
         else if(bTverts3) lpbList = &bTverts3;
         else if(bConstraints) lpbList = &bConstraints;
         else if(bFlarePositions) lpbList = &bFlarePositions;
@@ -272,22 +280,10 @@ bool ASCII::Read(MDL & Mdl){
                     if(ReadInt(nConvert)) face.nMaterialID = nConvert;
                     else bFound = false;
 
-                    int ntv1ind1, ntv1ind2, ntv1ind3;
-                    //bitmap2
-                    bool bTry = true;
-                    if(ReadInt(nConvert)) ntv1ind1 = nConvert;
-                    else bTry = false;
-                    if(ReadInt(nConvert)) ntv1ind2 = nConvert;
-                    else bTry = false;
-                    if(ReadInt(nConvert)) ntv1ind3 = nConvert;
-                    else bTry = false;
-                    if(bTry){
-                        face.nIndexTvert1[0] = ntv1ind1;
-                        face.nIndexTvert1[1] = ntv1ind2;
-                        face.nIndexTvert1[2] = ntv1ind3;
-                        face.nTextureCount++;
-
-                        //texture0
+                    if(bMagnusll){ //read tverts magnusll style
+                        int ntv1ind1, ntv1ind2, ntv1ind3;
+                        //bitmap2
+                        bool bTry = true;
                         if(ReadInt(nConvert)) ntv1ind1 = nConvert;
                         else bTry = false;
                         if(ReadInt(nConvert)) ntv1ind2 = nConvert;
@@ -295,12 +291,12 @@ bool ASCII::Read(MDL & Mdl){
                         if(ReadInt(nConvert)) ntv1ind3 = nConvert;
                         else bTry = false;
                         if(bTry){
-                            face.nIndexTvert2[0] = ntv1ind1;
-                            face.nIndexTvert2[1] = ntv1ind2;
-                            face.nIndexTvert2[2] = ntv1ind3;
+                            face.nIndexTvert1[0] = ntv1ind1;
+                            face.nIndexTvert1[1] = ntv1ind2;
+                            face.nIndexTvert1[2] = ntv1ind3;
                             face.nTextureCount++;
 
-                            //texture1
+                            //texture0
                             if(ReadInt(nConvert)) ntv1ind1 = nConvert;
                             else bTry = false;
                             if(ReadInt(nConvert)) ntv1ind2 = nConvert;
@@ -308,10 +304,24 @@ bool ASCII::Read(MDL & Mdl){
                             if(ReadInt(nConvert)) ntv1ind3 = nConvert;
                             else bTry = false;
                             if(bTry){
-                                face.nIndexTvert3[0] = ntv1ind1;
-                                face.nIndexTvert3[1] = ntv1ind2;
-                                face.nIndexTvert3[2] = ntv1ind3;
+                                face.nIndexTvert2[0] = ntv1ind1;
+                                face.nIndexTvert2[1] = ntv1ind2;
+                                face.nIndexTvert2[2] = ntv1ind3;
                                 face.nTextureCount++;
+
+                                //texture1
+                                if(ReadInt(nConvert)) ntv1ind1 = nConvert;
+                                else bTry = false;
+                                if(ReadInt(nConvert)) ntv1ind2 = nConvert;
+                                else bTry = false;
+                                if(ReadInt(nConvert)) ntv1ind3 = nConvert;
+                                else bTry = false;
+                                if(bTry){
+                                    face.nIndexTvert3[0] = ntv1ind1;
+                                    face.nIndexTvert3[1] = ntv1ind2;
+                                    face.nIndexTvert3[2] = ntv1ind3;
+                                    face.nTextureCount++;
+                                }
                             }
                         }
                     }
@@ -334,6 +344,27 @@ bool ASCII::Read(MDL & Mdl){
                     if(bFound) node.Mesh.TempTverts.push_back(vUV);
                     else bError = true;
                 }
+                else if(bTexIndices1){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    if(nDataCounter < node.Mesh.Faces.size()){
+                        Face & face = node.Mesh.Faces.at(nDataCounter);
+
+                        if(ReadInt(nConvert)) face.nIndexTvert1[0] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert1[1] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert1[2] = nConvert;
+                        else bFound = false;
+                        face.nTextureCount++;
+                    }
+                    else{
+                        std::cout<<"Warning! There are more texindices1 than faces!\n";
+                        nDataCounter = nDataMax;
+                    }
+
+                    if(!bFound) bError = true;
+                }
                 else if(bTverts1){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -347,6 +378,27 @@ bool ASCII::Read(MDL & Mdl){
                     if(bFound) node.Mesh.TempTverts1.push_back(vUV);
                     else bError = true;
                 }
+                else if(bTexIndices2){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Face & face = node.Mesh.Faces.at(nDataCounter);
+
+                    if(nDataCounter < node.Mesh.Faces.size()){
+                        if(ReadInt(nConvert)) face.nIndexTvert2[0] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert2[1] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert2[2] = nConvert;
+                        else bFound = false;
+                        face.nTextureCount++;
+                    }
+                    else{
+                        std::cout<<"Warning! There are more texindices2 than faces!\n";
+                        nDataCounter = nDataMax;
+                    }
+
+                    if(!bFound) bError = true;
+                }
                 else if(bTverts2){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -359,6 +411,27 @@ bool ASCII::Read(MDL & Mdl){
 
                     if(bFound) node.Mesh.TempTverts2.push_back(vUV);
                     else bError = true;
+                }
+                else if(bTexIndices3){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = true;
+                    Face & face = node.Mesh.Faces.at(nDataCounter);
+
+                    if(nDataCounter < node.Mesh.Faces.size()){
+                        if(ReadInt(nConvert)) face.nIndexTvert3[0] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert3[1] = nConvert;
+                        else bFound = false;
+                        if(ReadInt(nConvert)) face.nIndexTvert3[2] = nConvert;
+                        else bFound = false;
+                        face.nTextureCount++;
+                    }
+                    else{
+                        std::cout<<"Warning! There are more texindices3 than faces!\n";
+                        nDataCounter = nDataMax;
+                    }
+
+                    if(!bFound) bError = true;
                 }
                 else if(bTverts3){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading tverts data"<<""<<".\n";
@@ -645,7 +718,6 @@ bool ASCII::Read(MDL & Mdl){
                         node.Emitter.cDepthTextureName = "NULL";
                     }
                     if(nType & NODE_HAS_MESH){
-                        node.Mesh.nTextureNumber = 1;
                         node.Mesh.nSaberUnknown1 = 3;
                         node.Mesh.nMdxDataBitmap = MDX_FLAG_VERTEX | MDX_FLAG_HAS_NORMAL;
                     }
@@ -1020,6 +1092,7 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
+                        if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
                         if(sID.size() > 32){
                             Error("Bitmap name larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
@@ -1036,6 +1109,7 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
+                        if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
                         if(sID.size() > 32){
                             Error("Bitmap2 name larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
@@ -1052,9 +1126,10 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
-                        if(sID.size() > 16){
-                            Error("Texture0 name larger than the limit, 16 characters! Will truncate and continue.");
-                            sID.resize(16);
+                        if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                        if(sID.size() > 12){
+                            Error("Texture0 name larger than the limit, 12 characters! Will truncate and continue.");
+                            sID.resize(12);
                         }
                         node.Mesh.cTexture3 = sID;
                     }
@@ -1065,9 +1140,10 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
-                        if(sID.size() > 16){
-                            Error("Texture1 name larger than the limit, 16 characters! Will truncate and continue.");
-                            sID.resize(16);
+                        if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                        if(sID.size() > 12){
+                            Error("Texture1 name larger than the limit, 12 characters! Will truncate and continue.");
+                            sID.resize(12);
                         }
                         node.Mesh.cTexture4 = sID;
                     }
@@ -1078,6 +1154,8 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
                     if(bFound){
+                        bMagnusll = true;
+                        if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
                         if(sID.size() > 32){
                             Error("Lightmap name larger than the limit, 32 characters! Will truncate and continue.");
                             sID.resize(32);
@@ -1262,11 +1340,32 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
+                else if(sID == "texindices1" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTexIndices1 = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV2;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
                 else if(sID == "lightmaptverts" && nNode & NODE_HAS_MESH || sID == "tverts1" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTverts1 = true;
+                    if(sID == "lightmaptverts") bMagnusll = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV2;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "texindices2" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTexIndices2 = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV3;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else nDataMax = -1;
                     nDataCounter = 0;
@@ -1277,6 +1376,16 @@ bool ASCII::Read(MDL & Mdl){
                     bTverts2 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV3;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "texindices3" && nNode & NODE_HAS_MESH){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bTexIndices3 = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_UV4;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else nDataMax = -1;
                     nDataCounter = 0;
@@ -1668,6 +1777,7 @@ bool ASCII::Read(MDL & Mdl){
                 /// General ending tokens
                 else if(sID == "endnode" && nNode > 0){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bMagnusll = false;
                     nNode = 0;
                     nCurrentIndex = -1;
                     SkipLine();
@@ -1804,6 +1914,9 @@ bool ASCII::Read(MDL & Mdl){
         return false;
     }
 
+    return true;
+}
+/* Binary tree reading
     //Seems best to take care of aabb immediately
     for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
         Node & node = FH->MH.ArrayOfNodes[n];
@@ -1834,7 +1947,7 @@ void ASCII::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCount
         AABB.nChild2 = 0;
     }
 }
-
+*/
 void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector vFromRoot){
     node.Head.ChildIndices.resize(0); //Reset child array
     node.Head.ChildIndices.reserve(ArrayOfNodes.size());
@@ -1991,11 +2104,11 @@ void MDL::AsciiPostProcess(){
         if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
+                face.nID = f;
                 for(int i = 0; i < 3; i++){
                     if(!face.bProcessed[i]){
                         bool bIgnoreVert = true, bIgnoreTvert = true, bIgnoreTvert1 = true, bIgnoreTvert2 = true, bIgnoreTvert3 = true;
                         Vertex vert;
-                        SaberDataStruct saberdata;
                         vert.MDXData.nNameIndex = node.Head.nNameIndex;
 
                         if(node.Mesh.TempVerts.size() > 0){
@@ -2021,7 +2134,6 @@ void MDL::AsciiPostProcess(){
                             bIgnoreTvert = false;
                             vert.MDXData.vUV1 = node.Mesh.TempTverts.at(face.nIndexTvert[i]);
                         }
-                        //We simply ignore the other three UVs if this is a saber
                         if(node.Mesh.TempTverts1.size() > 0 && face.nTextureCount >= 2){
                             bIgnoreTvert1 = false;
                             vert.MDXData.vUV2 = node.Mesh.TempTverts1.at(face.nIndexTvert1[i]);
@@ -2046,7 +2158,8 @@ void MDL::AsciiPostProcess(){
                                         (face2.nIndexTvert1[i2] == face.nIndexTvert1[i] || bIgnoreTvert1) &&
                                         (face2.nIndexTvert2[i2] == face.nIndexTvert2[i] || bIgnoreTvert2) &&
                                         (face2.nIndexTvert3[i2] == face.nIndexTvert3[i] || bIgnoreTvert3) &&
-                                        !face2.bProcessed[i2] )
+                                        !face2.bProcessed[i2] &&
+                                        face.nSmoothingGroup & face2.nSmoothingGroup)
                                     {
                                         //If we find a reference to the exact same vert, we have to link to it
                                         //Actually we only need to link vert indexes, the correct UV are now already included in the Vertex struct
@@ -2070,6 +2183,19 @@ void MDL::AsciiPostProcess(){
                 vertindex.nValues[1] = face.nIndexVertex[1];
                 vertindex.nValues[2] = face.nIndexVertex[2];
                 node.Mesh.VertIndices.push_back(std::move(vertindex));
+
+                if(node.Head.nType & NODE_HAS_AABB){
+                    face.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
+                    face.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+                    for(int i = 0; i < 3; i++){
+                        face.vBBmax.fX = std::max(face.vBBmax.fX, node.Mesh.Vertices.at(face.nIndexVertex[i]).fX);
+                        face.vBBmax.fY = std::max(face.vBBmax.fY, node.Mesh.Vertices.at(face.nIndexVertex[i]).fY);
+                        face.vBBmax.fZ = std::max(face.vBBmax.fZ, node.Mesh.Vertices.at(face.nIndexVertex[i]).fZ);
+                        face.vBBmin.fX = std::min(face.vBBmin.fX, node.Mesh.Vertices.at(face.nIndexVertex[i]).fX);
+                        face.vBBmin.fY = std::min(face.vBBmin.fY, node.Mesh.Vertices.at(face.nIndexVertex[i]).fY);
+                        face.vBBmin.fZ = std::min(face.vBBmin.fZ, node.Mesh.Vertices.at(face.nIndexVertex[i]).fZ);
+                    }
+                }
             }
             node.Mesh.TempVerts.resize(0);
             node.Mesh.TempTverts.resize(0);
@@ -2089,10 +2215,177 @@ void MDL::AsciiPostProcess(){
         else if(node.Head.nType & NODE_HAS_SABER){
 
             ///Saber interpretation goes here.
-
+            if(node.Mesh.TempVerts.size() >= 16 && node.Mesh.TempTverts.size() >= 16){
+                node.Saber.SaberData.reserve(50);
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(0), node.Mesh.TempTverts.at(0)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(1), node.Mesh.TempTverts.at(1)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(2), node.Mesh.TempTverts.at(2)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(3), node.Mesh.TempTverts.at(3)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(5), node.Mesh.TempTverts.at(5)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(6), node.Mesh.TempTverts.at(6)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(7), node.Mesh.TempTverts.at(7)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(8), node.Mesh.TempTverts.at(8)));
+                for(int r = 0; r < 20; r++){
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(0), node.Mesh.TempTverts.at(0)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(1), node.Mesh.TempTverts.at(1)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(2), node.Mesh.TempTverts.at(2)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(3), node.Mesh.TempTverts.at(3)));
+                }
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(9), node.Mesh.TempTverts.at(9)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(10), node.Mesh.TempTverts.at(10)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(11), node.Mesh.TempTverts.at(11)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(12), node.Mesh.TempTverts.at(12)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(13), node.Mesh.TempTverts.at(13)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(14), node.Mesh.TempTverts.at(14)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(15), node.Mesh.TempTverts.at(15)));
+                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(16), node.Mesh.TempTverts.at(16)));
+                for(int r = 0; r < 20; r++){
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(9), node.Mesh.TempTverts.at(9)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(10), node.Mesh.TempTverts.at(10)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(11), node.Mesh.TempTverts.at(11)));
+                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(12), node.Mesh.TempTverts.at(12)));
+                }
+            }
+            else std::cout<<"Warning! Requirements for saber mesh not met! The saber mesh will remain empty.\n";
+        }
+        if(node.Head.nType & NODE_HAS_AABB){
+            std::vector<Face*> allfaces;
+            for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                allfaces.push_back(&node.Mesh.Faces.at(f));
+            }
+            BuildAabb(node.Walkmesh.RootAabb, allfaces);
         }
     }
 
     /// DONE ///
     std::cout<<"Done post-processing ascii...\n";
+}
+
+void MDL::BuildAabb(Aabb & aabb, const std::vector<Face*> & faces){
+    if(faces.size() == 1){
+        //This is the leaf
+        Face & face = *faces.front();
+        aabb.nID = face.nID;
+        aabb.vBBmax = face.vBBmax;
+        aabb.vBBmin = face.vBBmin;
+        aabb.nProperty = 0;
+        aabb.nChild1 = 0;
+        aabb.nChild2 = 0;
+        std::cout<<"Wrote leaf: "<<aabb.nID<<"\n";
+    }
+    else{
+        std::cout<<"Processing non-leaf, faces: "<<faces.size()<<"\n";
+        aabb.nID = -1;
+        aabb.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
+        aabb.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+        for(int f = 0; f < faces.size(); f++){
+            Face & face = *faces.at(f);
+            aabb.vBBmax.fX = std::max(aabb.vBBmax.fX, face.vBBmax.fX);
+            aabb.vBBmax.fY = std::max(aabb.vBBmax.fY, face.vBBmax.fY);
+            aabb.vBBmax.fZ = std::max(aabb.vBBmax.fZ, face.vBBmax.fZ);
+            aabb.vBBmin.fX = std::min(aabb.vBBmin.fX, face.vBBmin.fX);
+            aabb.vBBmin.fY = std::min(aabb.vBBmin.fY, face.vBBmin.fY);
+            aabb.vBBmin.fZ = std::min(aabb.vBBmin.fZ, face.vBBmin.fZ);
+        }
+        std::cout<<"Bounding box: "<<aabb.vBBmin.fX<<", "<<aabb.vBBmin.fY<<", "<<aabb.vBBmin.fZ<<", "<<aabb.vBBmax.fX<<", "<<aabb.vBBmax.fY<<", "<<aabb.vBBmax.fZ<<"\n";
+        if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fY - aabb.vBBmin.fY)){
+            if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fZ - aabb.vBBmin.fZ)){
+                //Diff in X is definitely the largest
+                aabb.nProperty = AABB_POSITIVE_X;
+            }
+            else{
+                //Diff in Z could be considered largest, though it might be equal to that of X
+                aabb.nProperty = AABB_POSITIVE_Z;
+            }
+        }
+        else if((aabb.vBBmax.fZ - aabb.vBBmin.fZ) > (aabb.vBBmax.fY - aabb.vBBmin.fY)){
+            //Diff in Z is definitely the largest
+            aabb.nProperty = AABB_POSITIVE_Z;
+        }
+        else{
+            //Diff in Y could be considered largest, though it might be equal to that of either X or Z or both X and Z
+            aabb.nProperty = AABB_POSITIVE_Y;
+        }
+
+        std::vector<Face*> half1;
+        std::vector<Face*> half2;
+        if(faces.size() == 2){
+            half1.push_back(faces.front());
+            half2.push_back(faces.back());
+        }
+        else{
+            double fMedian = 0.0;
+            std::vector<double> centroids;
+            centroids.reserve(faces.size());
+            double fCentroid = 0.0;
+            bool bSkip;
+            for(int f = 0; f < faces.size(); f++){
+                Face & face = *faces.at(f);
+                if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
+                else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
+                else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
+                else{
+                    Error("Aabb significant plane not assigned!");
+                    return;
+                }
+                /*
+                bSkip = false;
+                for(int c = 0; c < centroids.size() && !bSkip; c++){
+                    if(centroids.at(c) == fCentroid) bSkip = true;
+                }
+                */
+                //if(!bSkip){
+                    centroids.push_back(fCentroid);
+                    std::cout<<"Current centroid: "<<centroids.back()<<" (face "<<face.nID<<")\n";
+                //}
+                //else std::cout<<"Skipped centroid: "<<fCentroid<<" (face "<<face.nID<<")\n";
+            }
+            sort(centroids.begin(), centroids.end());
+            bool bEven = (centroids.size() % 2 == 0);
+            int nIndex;
+            if(bEven) nIndex = centroids.size() / 2 - 1;
+            else nIndex = centroids.size() / 2;
+            fMedian = centroids.at(nIndex);
+            if(bEven){
+                fMedian = (fMedian + centroids.at(nIndex + 1)) / 2;
+            }
+            std::cout<<"Median: "<<fMedian<<"\n";
+
+            for(int f = 0; f < faces.size(); f++){
+                Face & face = *faces.at(f);
+                if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
+                else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
+                else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
+                else{
+                    Error("Aabb significant plane not assigned after median!");
+                    return;
+                }
+                if(fCentroid < fMedian) half1.push_back(&face);
+                else if(fCentroid > fMedian) half2.push_back(&face);
+                else{
+                    //They are equal
+                    if(centroids.at(nIndex + 1) == fMedian){
+                        half2.push_back(&face);
+                    }
+                    else if(centroids.at(nIndex - 1) == fMedian){
+                        half1.push_back(&face);
+                    }
+                    else{
+                        //default default, go with 1
+                        half1.push_back(&face);
+                    }
+                }
+            }
+            centroids.resize(0);
+            centroids.shrink_to_fit();
+        }
+
+        if(!half1.empty() && !half2.empty()){
+            aabb.Child1.resize(1);
+            BuildAabb(aabb.Child1.front(), half1);
+            aabb.Child2.resize(1);
+            BuildAabb(aabb.Child2.front(), half2);
+        }
+        else Error("AABB tree: One of the halves is empty!");
+    }
 }

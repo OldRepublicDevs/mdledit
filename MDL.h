@@ -313,6 +313,9 @@ struct Face{
     double fAreaUV = 0.0;
     Vector vTangent;
     Vector vBitangent;
+    Vector vBBmin;
+    Vector vBBmax;
+    short nID = -1;
 };
 
 
@@ -364,6 +367,8 @@ struct SaberDataStruct{
     Vector vVertex;
     Vector vUV;
     Vector vNormal;
+    SaberDataStruct(){}
+    SaberDataStruct(const Vector & v1, const Vector & v2): vVertex(v1), vUV(v2) {}
 };
 
 struct VertIndicesStruct{
@@ -888,7 +893,6 @@ class MDX: public BinaryFile{
 };
 
 class ASCII: public TextFile{
-    void BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter);
   public:
     bool Read(MDL & Mdl);
 };
@@ -921,6 +925,7 @@ class MDL: public BinaryFile{
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
                            std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
+    void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces);
     std::string MakeUniqueName(int nNameIndex);
 
     //Getters

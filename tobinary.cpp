@@ -538,7 +538,7 @@ bool MDL::Compile(){
         WriteInt(0, 8);
 
         WriteByte(anim.nModelType, 7);
-        WriteByte(anim.nPadding[0], 11); //unknown, padding?
+        WriteByte(anim.nPadding[0], 11);
         WriteByte(anim.nPadding[1], 11);
         WriteByte(anim.nPadding[2], 11);
 

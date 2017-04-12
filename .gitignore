@@ -92,3 +92,5 @@ obj/Release/editordlg.o
 obj/Debug/geometry.o
 
 geometry.cpp
+
+obj/Release/geometry.o

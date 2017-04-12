@@ -914,7 +914,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 	else
 		lightmapname = nx_materiallightmapname(mat)
 
-	format "%lightmap %%" strIndent1 lightmapname g_delim to:g_strBuffer
+	format "%bitmap2 %%" strIndent1 lightmapname g_delim to:g_strBuffer
 
         -- end modification
 
@@ -968,12 +968,14 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 			t2 = (tvf.z as integer) - 1
 		)
 
-                -- MagnusLL modification
+    /*
+        -- MagnusLL modification
+    -- old solution for lightmaps
 
-                local l0, l1, l2
-                l0=0
-                l1=0
-                l2=0
+        local l0, l1, l2
+        l0=0
+        l1=0
+        l2=0
 
 
      -- bead-v modification: check if there are more than the default number of channels (2)
@@ -995,12 +997,43 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
      -- end bead-v modification
 
 		format  "%% % %  %  % % %  %  % % %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid l0 l1 l2 g_delim to:g_strBuffer
-		-- format  "%% % %  %  % % %  %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid g_delim to:g_strBuffer
+    -- old solution for lightmaps
+    */
+		format  "%% % %  %  % % %  %%" strIndent2 v0 v1 v2  s  t0 t1 t2 matid g_delim to:g_strBuffer
 
                 -- end modification
 
 		nx_FlushBuffer()
 	)
+
+
+	-- bead-v modification: texindices1 -style export	-- build faces entry
+	format "%texindices1 %%" strIndent1 mesh.numfaces g_delim to:g_strBuffer
+	for i=1 to mesh.numfaces do(
+        local l0, l1, l2
+        l0=0
+        l1=0
+        l2=0
+
+        -- bead-v: check if there are more than the default number of channels (2)
+        if (meshop.getNumMaps mesh > 2) then
+        (
+            if(meshop.getNumMapFaces mesh 2 > 0) do
+            (
+                local l
+                tvl = meshop.getMapFace mesh 2 i
+                l0 = (tvl.x as integer) - 1
+                l1 = (tvl.y as integer) - 1
+                l2 = (tvl.z as integer) - 1
+            )
+         )
+
+		format  "%% % %%" strIndent2 l0 l1 l2 g_delim to:g_strBuffer
+		nx_FlushBuffer()
+	)
+	-- end bead-v modification
+
+
 	-- determine uv coordinate correction
 	local clipu,clipv,clipw,cliph
 	clipu=0
@@ -1027,7 +1060,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 			local v
 			v = gettvert mesh i
                         -- z of 0 looks odd based on data from Manticore model
-			format "%% % 0%" strIndent2 (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
+			format "%% %%" strIndent2 (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
 			nx_FlushBuffer()
 		)
 	)
@@ -1044,13 +1077,13 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 	if(meshop.getMapSupport mesh 2) do
 	(
                 local lightmapverts = meshop.getNumMapVerts mesh 2
-		format "%lightmaptverts %%" strIndent1 lightmapverts g_delim to:g_strBuffer
+		format "%tverts1 %%" strIndent1 lightmapverts g_delim to:g_strBuffer
 		for i=1 to lightmapverts do
 		(
 			local v
 			v = meshop.getMapVert mesh 2 i
                         -- z of 0 looks odd based on data from Manticore model
-			format "%% % 0%" strIndent2 (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
+			format "%% %%" strIndent2 (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
 			nx_FlushBuffer()
 		)
 	)
