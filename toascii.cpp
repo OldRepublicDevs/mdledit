@@ -15,7 +15,7 @@ void MDL::ExportAscii(std::string &sExport){
 }
 
 void RecursiveAabb(Aabb * AABB, std::stringstream &str){
-    str << string_format("\n    %f %f %f %f %f %f %i", AABB->vBBmin.fX, AABB->vBBmin.fY, AABB->vBBmin.fZ, AABB->vBBmax.fX, AABB->vBBmax.fY, AABB->vBBmax.fZ, AABB->nID);
+    str << "\n    "<<AABB->vBBmin.fX<<" "<<AABB->vBBmin.fY<<" "<<AABB->vBBmin.fZ<<" "<<AABB->vBBmax.fX<<" "<<AABB->vBBmax.fY<<" "<<AABB->vBBmax.fZ<<" "<<AABB->nID;
     if(AABB->nChild1 > 0){
         RecursiveAabb(&AABB->Child1[0], str);
     }
@@ -35,15 +35,15 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     if(nDataType == 0) return;
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
-        sReturn << string_format("# MDLedit from KOTOR binary source");
+        sReturn << "# MDLedit from KOTOR binary source";
         sReturn << "\n# model " << mh->GH.sName.c_str();
         sReturn << "\nnewmodel " << mh->GH.sName.c_str();
-        sReturn << string_format("\nsetsupermodel %s %s", mh->GH.sName.c_str(), mh->cSupermodelName.c_str());
+        sReturn << "\nsetsupermodel " << mh->GH.sName.c_str()<<" "<< mh->cSupermodelName.c_str();
         sReturn << "\nclassification " << ReturnClassificationName(mh->nClassification).c_str();
         sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale, 0);
         sReturn << "\n\nbeginmodelgeom " << mh->GH.sName.c_str();
-        sReturn << string_format("\n  bmin %s %s %s", PrepareFloat(mh->vBBmin.fX, 0), PrepareFloat(mh->vBBmin.fY, 1), PrepareFloat(mh->vBBmin.fZ, 2));
-        sReturn << string_format("\n  bmax %s %s %s", PrepareFloat(mh->vBBmax.fX, 0), PrepareFloat(mh->vBBmax.fY, 1), PrepareFloat(mh->vBBmax.fZ, 2));
+        sReturn << "\n  bmin " << PrepareFloat(mh->vBBmin.fX, 0)<<" "<<PrepareFloat(mh->vBBmin.fY, 1)<<" "<<PrepareFloat(mh->vBBmin.fZ, 2);
+        sReturn << "\n  bmax " << PrepareFloat(mh->vBBmax.fX, 0)<<" "<<PrepareFloat(mh->vBBmax.fY, 1)<<" "<<PrepareFloat(mh->vBBmax.fZ, 2);
         sReturn << "\n  radius " << PrepareFloat(mh->fRadius, 0);
         for(int n = 0; n < mh->ArrayOfNodes.size(); n++){
             Node & node = mh->ArrayOfNodes.at(n);
@@ -80,12 +80,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             if(node.Head.nType != 0) sReturn << "\nendnode";
         }
-        sReturn << string_format("\nendmodelgeom %s\n", mh->GH.sName.c_str());
+        sReturn << "\nendmodelgeom "<<mh->GH.sName.c_str()<<"\n";
 
         for(int n = 0; n < mh->Animations.size(); n++){
             ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
         }
-        sReturn << string_format("\n\ndonemodel %s\n", mh->GH.sName.c_str());
+        sReturn << "\n\ndonemodel "<<mh->GH.sName.c_str()<<"\n";
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
@@ -110,7 +110,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
             sReturn << "\n    endnode";
         }
-        sReturn << string_format("\ndoneanim %s %s", anim->sName.c_str(), FH->MH.GH.sName.c_str());
+        sReturn << "\ndoneanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
@@ -366,7 +366,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_AABB){
         Node * node = (Node*) Data;
-        sReturn << string_format("\n  aabb");
+        sReturn << "\n  aabb";
         RecursiveAabb(&node->Walkmesh.RootAabb, sReturn);
     }
     else if(nDataType == CONVERT_SABER){

@@ -1445,7 +1445,7 @@ void MDL::DetermineSmoothing(){
     //Report results
     double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
     double fPercentage2 = ((double)nNumOfFoundNormals / (double)(Data.MH.nTotalVertCount - nBadGeo)) * 100.0;
-    bool bGoodEnough = (fPercentage2 > 80.0);
+    bool bGoodEnough = (fPercentage2 > 80.0 || Data.MH.nTotalVertCount == 0);
     std::cout<<"Found normals: "<<nNumOfFoundNormals<<"/"<<Data.MH.nTotalVertCount<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
     if(nNumOfFoundNormals < Data.MH.nTotalVertCount) std::cout<<"  Without bad geometry: "<<nNumOfFoundNormals<<"/"<<(Data.MH.nTotalVertCount - nBadGeo)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
     if(bDebug && Data.MH.nTotalTangent1Count > 0){

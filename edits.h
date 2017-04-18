@@ -110,7 +110,7 @@ class Edits{
         UpdateEdit();
         UpdateStatusBar();
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) "");
-        if(DEBUG_LEVEL > 80) std::cout<<string_format("New MaxScroll: %i, new CurrentScroll: %i \n", yMaxScroll, yCurrentScroll);
+        if(DEBUG_LEVEL > 80) std::cout<<"New MaxScroll: "<<yMaxScroll<<", new CurrentScroll: "<<yCurrentScroll<<"\n";
     }
     HWND GetWindowHandle(){
         return hMe;
@@ -125,8 +125,9 @@ class Edits{
     }
     void ShowHideEdit(){
         ShowWindow(hMe, bShowHex);
-        bSelection = false;
-        UpdateEdit();
+        if(bShowHex){
+            LoadData();
+        }
     }
     void UpdateEdit(){
         if(!bShowHex) return;
@@ -142,7 +143,7 @@ class Edits{
             si.nPos = yCurrentScroll;
             si.nPage = rcClient.bottom;
             SetScrollInfo(hScrollVert, SB_CTL, &si, true);
-            if(DEBUG_LEVEL > 80) std::cout<<string_format("GetScrollInfo(): max: %i, min: %i, page: n/a, current: %i \n", si.nMax, si.nMin, si.nPos);
+            if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: "<<si.nMax<<", min: "<<si.nMin<<", page: n/a, current: "<<si.nPos<<"\n";
         }
     }
     void Resize(){
@@ -172,7 +173,7 @@ class Edits{
         }
         nSelectEnd = std::min(nSelectEnd, (int) sBuffer->size() - 1);
         nSelectStart = std::min(nSelectStart, (int) sBuffer->size() - 1);
-        if(DEBUG_LEVEL > 100) std::cout<<string_format("Current selection from byte %i to byte %i.\n", nSelectStart, nSelectEnd);
+        if(DEBUG_LEVEL > 100) std::cout<<"Current selection from byte "<<nSelectStart<<" to byte "<<nSelectEnd<<".\n";
     }
     void UpdateStatusBar(bool bCheck = true){
         char cString1 [255];

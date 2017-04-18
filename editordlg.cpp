@@ -36,10 +36,10 @@ EditorDlgWindow::EditorDlgWindow(){
 bool EditorDlgWindow::Run(){
     if(!bRegistered){
         if(!RegisterClassEx(&WindowClass)){
-            std::cout<<string_format("Registering Window Class %s failed!\n", WindowClass.lpszClassName);
+            std::cout<<"Registering Window Class "<<WindowClass.lpszClassName<<" failed!\n";
             return false;
         }
-        std::cout<<string_format("Class %s registered!\n", WindowClass.lpszClassName);
+        std::cout<<"Class "<<WindowClass.lpszClassName<<" registered!\n";
         bRegistered = true;
     }
     //HMENU *has* to be NULL!!!!! Otherwise the function fails to create the window!

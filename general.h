@@ -54,13 +54,6 @@
 
 #define DEBUG_LEVEL 0
 
-template<typename ... Args> std::string string_format( const std::string& format, Args ... args ){
-    size_t size = snprintf( nullptr, 0, format.c_str(), args ... ) + 1; // Extra space for '\0'
-    std::unique_ptr<char[]> buf( new char[ size ] );
-    snprintf( buf.get(), size, format.c_str(), args ... );
-    return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
-}
-
 extern HWND hFrame;
 extern HWND hStatusBar;
 extern HWND hTree;
@@ -68,9 +61,6 @@ extern HWND hTabs;
 extern HWND hProgress;
 extern HWND hDisplayEdit;
 extern bool bShowHex;
-bool BVstrcmp(TCHAR string1[], TCHAR string2[], bool bDebug = false);
-void BVright(TCHAR * string1, int n);
-void BVleft(TCHAR * string1, int n);
 char DecToHexDigit(int nDec);
 void CharsToHex(char * cOutput, std::vector<char> & cInput, int nOffset, int nNumber);
 void AddSignificantZeroes(char * cInt, int nSignificant);

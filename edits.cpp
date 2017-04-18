@@ -58,11 +58,11 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
     Edit = NULL;
     if(GetDlgCtrlID(hwnd) == IDC_MAIN_EDIT) Edit = &Edit1;
     if(Edit == NULL){
-        std::cout<<string_format("MAJORMAJORMAJOR ERROR!! Running the EditsProc() for an unexisting Edit :S \n");
+        std::cout<<"MAJORMAJORMAJOR ERROR!! Running the EditsProc() for an unexisting Edit :S \n";
         return DefWindowProc (hwnd, message, wParam, lParam);
     }
     //After here, Edit is definitely not NULL
-    if(DEBUG_LEVEL > 500) std::cout<<string_format("EditsProc(): %i\n", (int) message);
+    if(DEBUG_LEVEL > 500) std::cout<<"EditsProc(): "<<(int) message<<"\n";
 
 	PAINTSTRUCT ps;
 	HDC hdc;
@@ -114,7 +114,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 si.nPage = Edit->rcClient.bottom;
                 si.nPos = 0;
                 SetScrollInfo(Edit->hScrollVert, SB_CTL, &si, true);
-                if(DEBUG_LEVEL > 80) std::cout<<string_format("GetScrollInfo(): max: %i, min: %i, page: %i, current: %i \n", si.nMax, si.nMin, si.nPage, si.nPos);
+                if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: "<<si.nMax<<", min: "<<si.nMin<<", page: "<<si.nPage<<", current: "<<si.nPos<<"\n";
         }
         break;
         case WM_COMMAND:
@@ -166,7 +166,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentY = std::min( (int) (Edit->rcClient.bottom + Edit->yCurrentScroll - 1) / ME_EDIT_NEXT_ROW - 1, nCurrentY);
                 if(Edit->ptHover.y != nCurrentY){
                     Edit->ptHover.y = nCurrentY;
-                    if(DEBUG_LEVEL > 100) std::cout<<string_format("Update current row hover: %i\n", Edit->ptHover.y);
+                    if(DEBUG_LEVEL > 100) std::cout<<"Update current row hover: "<<Edit->ptHover.y<<"\n";
                     bThreshold = true;
                 }
                 int nCurrentX = (xPos + 2 - ME_EDIT_ROWNUM_OFFSET) / ME_EDIT_CHAR_SIZE_X;
@@ -174,7 +174,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentX = std::min(nCurrentX, 47);
                 if(Edit->ptHover.x != nCurrentX){
                     Edit->ptHover.x = nCurrentX;
-                    if(DEBUG_LEVEL > 49) std::cout<<string_format("Update current char hover: %i\n", Edit->ptHover.x);
+                    if(DEBUG_LEVEL > 49) std::cout<<"Update current char hover: "<<Edit->ptHover.x<<"\n";
                     bThreshold = true;
                 }
             }
@@ -184,7 +184,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentY = std::min((int)(Edit->rcClient.bottom + Edit->yCurrentScroll - 1) / ME_EDIT_NEXT_ROW - 1, nCurrentY);
                 if(Edit->ptHover.y != nCurrentY){
                     Edit->ptHover.y = nCurrentY;
-                    if(DEBUG_LEVEL > 100) std::cout<<string_format("Update current row hover: %i\n", Edit->ptHover.y);
+                    if(DEBUG_LEVEL > 100) std::cout<<"Update current row hover: "<<Edit->ptHover.y<<"\n";
                     bThreshold = true;
                 }
                 int nCurrentX = (xPos + 2 - ME_EDIT_CHARSET_OFFSET) / ME_EDIT_CHAR_SIZE_X * 3;
@@ -192,7 +192,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentX = std::min(nCurrentX, 47);
                 if(Edit->ptHover.x != nCurrentX){
                     Edit->ptHover.x = nCurrentX;
-                    if(DEBUG_LEVEL > 49) std::cout<<string_format("Update current char hover: %i\n", Edit->ptHover.x);
+                    if(DEBUG_LEVEL > 49) std::cout<<"Update current char hover: "<<Edit->ptHover.x<<"\n";
                     bThreshold = true;
                 }
             }
@@ -252,7 +252,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 Edit->ptPrevious = Edit->ptHover;
                 if(!(wParam & MK_SHIFT) || Edit->ptClick.x == -1 || Edit->ptClick.y == -1) Edit->ptClick = Edit->ptHover;
                 Edit->PrintValues(bDrag || Edit->bSelection);
-                if(DEBUG_LEVEL > 20) std::cout<<string_format("WM_LBUTTONDOWN: bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
+                if(DEBUG_LEVEL > 20) std::cout<<"WM_LBUTTONDOWN: bSelection: "<<Edit->bSelection<<" bDrag: "<<bDrag<<"\n";
             }
         }
         break;
@@ -271,13 +271,13 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             bDblClick = false;
             bClick = false;
             InvalidateRect(hwnd, &Edit->rcClient, false);
-            if(DEBUG_LEVEL > 20) std::cout<<string_format("WM_LBUTTONUP: bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
+            if(DEBUG_LEVEL > 20) std::cout<<"WM_LBUTTONUP: bSelection: "<<Edit->bSelection<<" bDrag: "<<bDrag<<"\n";
             Edit->PrintValues(bDrag || Edit->bSelection);
         }
         break;
         case WM_PAINT:
         {
-            if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. Start.\n");
+            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Start.\n";
 
             HDC hdcReal = BeginPaint(hwnd, &ps);
 
@@ -362,7 +362,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             char cIntPrint [255];
             int i = 0;
             int nDataKnown;
-            if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. Beginning data while. Starting position: %i. Max: %i.\n", n, nMax);
+            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Beginning data while. Starting position: "<<n<<". Max: "<<nMax<<".\n";
             char cHexText [50];
             while(n < nMax){
                 CharsToHex(cHexText, *Edit->sBuffer, n * 16, 16);
@@ -420,7 +420,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 }
                 n++;
             }
-            if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. Ending data while. Ending position: %i\n", n);
+            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Ending data while. Ending position: "<<n<<"\n";
         }
         }
             /**/
@@ -433,7 +433,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             DeleteDC(hdc);
 
             EndPaint(hwnd, &ps);
-            if(DEBUG_LEVEL > 50) std::cout<<string_format("Edits: WM_PAINT. End.\n");
+            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. End.\n";
         }
         break;
         case WM_VSCROLL:
@@ -443,7 +443,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             si.cbSize = sizeof(si);
             si.fMask  = SIF_DISABLENOSCROLL | SIF_POS | SIF_TRACKPOS | SIF_PAGE;
             GetScrollInfo(Edit->hScrollVert, SB_CTL, &si);
-            if(DEBUG_LEVEL > 80) std::cout<<string_format("GetScrollInfo(): max: n/a, min: n/a, page: %i, current: %i \n", si.nPage, si.nPos);
+            if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: n/a, min: n/a, page: "<<si.nPage<<", current: "<<si.nPos<<" \n";
 
             switch(LOWORD(wParam)){
                 case SB_TOP:
@@ -492,7 +492,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             }
             //yNewPos = min(Edit->yMaxScroll, yNewPos);
             //yNewPos = max(0, yNewPos);
-            if(DEBUG_LEVEL > 80) std::cout<<string_format("WM_VSCROLL: max: %i, page: %i, current: %i, new: %i \n", Edit->yMaxScroll, si.nPage, Edit->yCurrentScroll, yNewPos);
+            if(DEBUG_LEVEL > 80) std::cout<<"WM_VSCROLL: max: "<<Edit->yMaxScroll<<", page: "<<si.nPage<<", current: "<<Edit->yCurrentScroll<<", new: "<<yNewPos<<"\n";
 
             /* If the current position does not change, do not scroll.*/
             if (yNewPos == Edit->yCurrentScroll) break;

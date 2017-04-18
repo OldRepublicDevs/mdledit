@@ -821,6 +821,6 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_MESH_ALPHA:                 return "alpha";
         }
     }
-    std::cout<<string_format("ReturnController() ERROR: Unknown controller %i (type %i).\n", nController, nType);
+    std::cout<<"ReturnController() ERROR: Unknown controller "<<nController<<" (type "<<nType<<").\n";
     return "unknown";
 }

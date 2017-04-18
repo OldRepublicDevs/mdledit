@@ -1,35 +1,5 @@
 #include "general.h"
 
-bool BVstrcmp(TCHAR * string1, TCHAR * string2, bool bDebug){
-    //std::cout<<string_format("BVstrcmp: to compare <%ls> and <%ls>: \n", string1, string2);
-    int n = 0;
-    bool bReturn = true;
-    //std::cout<<string_format("Comparing %ls and %ls \n", string1, string2);
-    if(string1 == NULL || string2 == NULL) return false;
-    while(n < 5000){
-        //std::cout<<string_format("BVstrcmp: in while...  \n");
-        if(string1[n] != string2[n]) return false;
-        if(bDebug) std::cout<<string_format("BVstrcmp: comparing <%lc> and <%lc> ... result: %i \n", string1[n], string2[n], bReturn);
-        if(string1[n] == L'\0' && string2[n] == L'\0') return true;
-        n++;
-    }
-    return true;
-}
-
-void BVright(TCHAR * string1, int n){
-    if(strlen(string1)<=n) return;
-    int f = 0;
-    while(f<=n){
-        string1[f] = string1[strlen(string1)-(n-f)];
-        f++;
-    }
-}
-
-void BVleft(TCHAR * string1, int n){
-    if(strlen(string1)<=n) return;
-    string1[n] = L'\0';
-}
-
 int pown(int base, int exp){
     int result = 1;
     for(int n = 0; n < exp; n++){
@@ -44,10 +14,6 @@ int pown(int base, int exp){
     */
     return result;
 }
-/*
-float powf(float base, float exp){
-    return (float) pow((double) base, (double) exp);
-}*/
 
 float deg(float rad){
     return rad * 180.0 / 3.141592653589793;

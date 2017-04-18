@@ -92,7 +92,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
     static RECT rcClient;
     //static char cFile[MAX_PATH];
     static std::string sFile;
-    if(DEBUG_LEVEL > 500) std::cout<<string_format("FrameProc(): %i\n", (int) message);
+    if(DEBUG_LEVEL > 500) std::cout<<"FrameProc(): "<<(int) message<<"\n";
     /* handle the messages */
 
     static HWND hIntLabel;
@@ -117,6 +117,22 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
                 "Consolas" 	// pointer to typeface name string
             );
+            HFONT hFont2 = CreateFont(
+                14,  //Height
+                0,  //Width
+                0,  //??
+                0,  //??
+                FW_REGULAR, // font weight
+                FALSE,	    // italic attribute flag
+                FALSE,	    // underline attribute flag
+                FALSE,	    // strikeout attribute flag
+                DEFAULT_CHARSET,	    // character set identifier
+                OUT_DEFAULT_PRECIS	,	// output precision
+                CLIP_DEFAULT_PRECIS	,	// clipping precision
+                DEFAULT_QUALITY	,	    // output quality
+                DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
+                "Segoe UI" 	// pointer to typeface name string
+            );
 
             int nLabelOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X;
             int nEditOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X + ME_DATA_LABEL_SIZE_X + ME_DATA_EDIT_OFFSET_X;
@@ -131,9 +147,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             hFloatLabel = CreateWindowEx(NULL, "STATIC", "Float:", WS_VISIBLE | WS_CHILD | SS_RIGHT,
                                         nLabelOffsetX, nDataOffsetY[2] + ME_DATA_LABEL_ROW_OFFSET_Y, ME_DATA_LABEL_SIZE_X, ME_DATA_LABEL_SIZE_Y,
                                         hwnd, (HMENU) IDC_LBL_FLOAT, GetModuleHandle(NULL), NULL);
-            SendMessage(hIntLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
-            SendMessage(hUIntLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
-            SendMessage(hFloatLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            SendMessage(hIntLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
+            SendMessage(hUIntLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
+            SendMessage(hFloatLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
             ShowWindow(hIntLabel, false);
             ShowWindow(hUIntLabel, false);
             ShowWindow(hFloatLabel, false);
@@ -176,7 +192,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             hTabs = CreateWindowEx(NULL, WC_TABCONTROL, "", WS_VISIBLE | WS_CHILD | TCS_FOCUSNEVER | TCS_FIXEDWIDTH,
                                    ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y,
                                    hwnd, (HMENU) IDC_TABS, GetModuleHandle(NULL), NULL);
-            SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
             ShowWindow(hTabs, false);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
@@ -458,6 +474,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         nBorders[2] = 3 * ME_STATUSBAR_PART_X;
                         nBorders[3] = -1;
                         SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
+                        SetWindowText(hStatusBar, "");
                         Edit1.UpdateEdit();
                         SetWindowPos(hwnd, NULL, 0, 0, 980, 610, SWP_NOMOVE | SWP_NOZORDER);
                     }

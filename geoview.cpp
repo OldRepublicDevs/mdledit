@@ -35,10 +35,10 @@ GeoView::GeoView(){
 bool GeoView::Run(){
     if(!bRegistered){
         if(!RegisterClassEx(&WindowClass)){
-            std::cout<<string_format("Registering Window Class %s failed!\n", WindowClass.lpszClassName);
+            std::cout<<"Registering Window Class "<<WindowClass.lpszClassName<<" failed!\n";
             return false;
         }
-        std::cout<<string_format("Class %s registered!\n", WindowClass.lpszClassName);
+        std::cout<<"Class "<<WindowClass.lpszClassName<<" registered!\n";
         bRegistered = true;
     }
     //HMENU HAS to be NULL!!!!! Otherwise the function fails to create the window!
@@ -341,7 +341,7 @@ void OpenGeoViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
             GeoViews.push_back(GeoView());
             GeoViews.back().SetData(*node);
             if(!(GeoViews.back().Run())){
-                std::cout<<string_format("GeoView window creation failed!\n");
+                std::cout<<"GeoView window creation failed!\n";
             }
         }
     }
