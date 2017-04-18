@@ -67,6 +67,7 @@ extern HWND hTree;
 extern HWND hTabs;
 extern HWND hProgress;
 extern HWND hDisplayEdit;
+extern bool bShowHex;
 bool BVstrcmp(TCHAR string1[], TCHAR string2[], bool bDebug = false);
 void BVright(TCHAR * string1, int n);
 void BVleft(TCHAR * string1, int n);

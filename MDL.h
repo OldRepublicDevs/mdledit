@@ -3,7 +3,6 @@
 
 #include "general.h"
 #include "file.h"
-#include "geometry.h"
 
 /**
     UNKNOWNS:
@@ -274,6 +273,8 @@ struct FileHeader;
 class MDL;
 class MDX;
 class WOK;
+class PWK;
+class DWK;
 class Ascii;
 
 bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
@@ -286,10 +287,9 @@ struct Location{
     Orientation oOrientation;
 };
 
-struct Triples{
-    int n1;
-    int n2;
-    int n3;
+struct Edge{
+    int nIndex = 0;
+    int nTransition = 0;
 };
 
 struct Face{
@@ -877,6 +877,37 @@ struct FileHeader{
     ModelHeader MH;
 };
 
+struct BWMHeader{
+    //Data
+    int nType = 0;
+    Vector vUse1;
+    Vector vUse2;
+    Vector vDwk1;
+    Vector vDwk2;
+    Vector vPosition;
+    unsigned int nNumberOfVerts = 0;
+    unsigned int nOffsetToVerts = 0;
+    unsigned int nNumberOfFaces = 0;
+    unsigned int nOffsetToIndexes = 0;
+    unsigned int nOffsetToMaterials = 0;
+    unsigned int nOffsetToNormals = 0;
+    unsigned int nOffsetToDistances = 0;
+    unsigned int nNumberOfAabb = 0;
+    unsigned int nOffsetToAabb = 0;
+    unsigned int nUnknown2 = 0;
+    unsigned int nNumberOfAdjacentFaces = 0;
+    unsigned int nOffsetToAdjacentFaces = 0;
+    unsigned int nNumberOfEdges= 0;
+    unsigned int nOffsetToEdges = 0;
+    unsigned int nNumberOfPerimeters = 0;
+    unsigned int nOffsetToPerimeters = 0;
+    std::vector<Aabb> aabb;
+    std::vector<Face> faces;
+    std::vector<Vector> verts;
+    std::vector<Edge> edges;
+    std::vector<int> perimeters;
+};
+
 /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
   /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
 /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
@@ -925,15 +956,28 @@ class MDL: public BinaryFile{
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
                            std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
-    void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces);
+    //void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream & file);
     std::string MakeUniqueName(int nNameIndex);
 
     //Getters
     const std::string GetName(){ return sClassName; }
 
+    //Reporters
+    void Report(std::string);
+    void ProgressSize(int, int);
+    void ProgressPos(int);
+
   public:
     std::unique_ptr<ASCII> Ascii;
     std::unique_ptr<MDX> Mdx;
+    std::unique_ptr<WOK> Wok;
+    std::unique_ptr<PWK> Pwk;
+    std::unique_ptr<DWK> Dwk;
+
+    //Function pointers
+    void (*PtrReport)(std::string) = nullptr;
+    void (*PtrProgressSize)(int, int) = nullptr;
+    void (*PtrProgressPos)(int) = nullptr;
 
     //Friends
     friend ASCII;
@@ -976,45 +1020,49 @@ class MDL: public BinaryFile{
     bool ReadAscii();
 };
 
-class WOK: public BinaryFile{
-    static const std::string sClassName;
+class BWM: public BinaryFile{
+    std::unique_ptr<BWMHeader> Bwm;
 
-    //Data
-    unsigned int nNumberOfVerts;
-    unsigned int nOffsetToVerts;
-    unsigned int nNumberOfFaces;
-    unsigned int nOffsetToIndexes;
-    unsigned int nOffsetToMaterials;
-    unsigned int nOffsetToNormals;
-    unsigned int nOffsetToDistances;
-    unsigned int nNumberOfAabb;
-    unsigned int nOffsetToAabb;
-    unsigned int nNumberOfTriples;
-    unsigned int nOffsetToTriples;
-    unsigned int nNumberOfDoubles;
-    unsigned int nOffsetToDoubles;
-    unsigned int nNumberOfSingles;
-    unsigned int nOffsetToSingles;
-    std::vector<Aabb> aabb;
-    std::vector<Face> faces;
-    std::vector<Vertex> verts;
-    std::vector<Triples> triples;
-    std::vector<Triples> doubles;
-    std::vector<int> singles;
+  public:
+    //Getters
+    std::unique_ptr<BWMHeader> & GetData() { return Bwm; }
+
+    //Loaders
+    void ProcessBWM();
+};
+
+class PWK: public BWM{
+    static const std::string sClassName;
 
   public:
     //Getters
     const std::string GetName(){ return sClassName; }
+};
 
-    //Loaders
-    void ProcessWalkmesh();
-    friend void BuildTree(WOK & Walkmesh);
+class DWK: public BWM{
+    static const std::string sClassName;
+
+  public:
+    //Getters
+    const std::string GetName(){ return sClassName; }
+};
+
+class WOK: public BWM{
+    static const std::string sClassName;
+
+  public:
+    //Getters
+    const std::string GetName(){ return sClassName; }
+    void WriteWok(Node & node);
 };
 
 
 int ReturnController(std::string sController);
 std::string ReturnClassificationName(int nClassification);
 std::string ReturnControllerName(int, int nType);
+
+void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream * file = nullptr);
+void LinearizeAabb(Aabb & aabbroot, std::vector<Aabb> & aabbarray);
 
 
 #endif // MDL_H_INCLUDED

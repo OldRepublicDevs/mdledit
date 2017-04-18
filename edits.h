@@ -7,7 +7,6 @@
 #include <commctrl.h>
 
 extern MDL Model;
-extern WOK Walkmesh;
 
 class Edits{
     //Control Creation
@@ -28,10 +27,11 @@ class Edits{
     int nSelectStart;
     int nSelectEnd;
     bool bSelection;
+    std::string sSelected;
     std::vector<int> * nKnownArray;
     std::vector<char> * sBuffer;
 
-    public:
+  public:
     static HWND hIntEdit;
     static HWND hUIntEdit;
     static HWND hFloatEdit;
@@ -48,23 +48,42 @@ class Edits{
     }
     void LoadData(){
         int nSel = TabCtrl_GetCurSel(hTabs);
-        if(nSel == 0 && !Model.empty()){
+        if(nSel != -1){
+            TCITEM tcitem;
+            tcitem.mask = TCIF_TEXT;
+            std::string sName(255, '\0');
+            tcitem.pszText = &sName;
+            tcitem.cchTextMax = 255;
+            TabCtrl_GetItem(hTabs, nSel, &tcitem);
+            sSelected = sName.c_str();
+        }
+        else sSelected = "";
+        if(sSelected == "MDL" && !Model.empty()){
             nKnownArray = &Model.GetKnownData();
             sBuffer = &Model.GetBuffer();
         }
-        else if(nSel == 1 && Model.Mdx){
+        else if(sSelected == "MDX" && Model.Mdx){
             nKnownArray = &Model.Mdx->GetKnownData();
             sBuffer = &Model.Mdx->GetBuffer();
         }
-        else if(nSel == 2 && !Walkmesh.empty()){
-            nKnownArray = &Walkmesh.GetKnownData();
-            sBuffer = &Walkmesh.GetBuffer();
+        else if(sSelected == "WOK" && Model.Wok){
+            nKnownArray = &Model.Wok->GetKnownData();
+            sBuffer = &Model.Wok->GetBuffer();
+        }
+        else if(sSelected == "PWK" && Model.Pwk){
+            nKnownArray = &Model.Pwk->GetKnownData();
+            sBuffer = &Model.Pwk->GetBuffer();
+        }
+        else if(sSelected == "DWK" && Model.Dwk){
+            nKnownArray = &Model.Dwk->GetKnownData();
+            sBuffer = &Model.Dwk->GetBuffer();
         }
         else{
             nKnownArray = nullptr;
             sBuffer = nullptr;
         }
 
+        if(!bShowHex) return;
         if(sBuffer != nullptr && nKnownArray != nullptr){
             if(sBuffer->empty()) ShowWindow(hScrollVert, false);
             else ShowWindow(hScrollVert, true);
@@ -104,7 +123,13 @@ class Edits{
         rcClient.bottom = rcParent.bottom - ME_STATUSBAR_Y - ME_TABS_OFFSET_Y_BOTTOM - ME_TABS_OFFSET_Y_TOP;
         rcClient.right = ME_HEX_WIN_SIZE_X;
     }
+    void ShowHideEdit(){
+        ShowWindow(hMe, bShowHex);
+        bSelection = false;
+        UpdateEdit();
+    }
     void UpdateEdit(){
+        if(!bShowHex) return;
         UpdateClientRect();
         InvalidateRect(hMe, &rcClient, false);
         if(sBuffer == nullptr) return;

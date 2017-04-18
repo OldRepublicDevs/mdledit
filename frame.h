@@ -30,11 +30,15 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 void BuildTree(MDL & Mdl);
-void BuildTree(WOK & Wok);
+void BuildTree(BWM & Bwm);
 void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam);
 void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla);
 void OpenGeoViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
 void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
 void OpenEditorDlg(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam);
+//bool AppendTab(HWND hTabControl, std::string sName);
+void Report(std::string sMessage);
+void ProgressSize(int nMin, int nMax);
+void ProgressPos(int nPos);
 
 #endif // FRAME_H_INCLUDED

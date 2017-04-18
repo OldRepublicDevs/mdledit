@@ -47,6 +47,7 @@ bool Edits::Run(HWND hParent, UINT nID){
                         ME_HEX_WIN_OFFSET_X, ME_TABS_OFFSET_Y_TOP, ME_HEX_WIN_SIZE_X, rcParent.bottom - ME_TABS_OFFSET_Y_BOTTOM - ME_TABS_OFFSET_Y_TOP,
                         hParent, (HMENU) nID, GetModuleHandle(NULL), NULL);
     if(!hMe) return false;
+    ShowWindow(hMe, false);
     return true;
 }
 
@@ -196,17 +197,15 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 }
             }
 
-            char cGet [255];
-            SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cGet);
-            if(!BVstrcmp(cGet, "") && (nArea == 0 || TabCtrl_GetCurSel(hTabs) > 1)){
-                sprintf(cGet, "");
-                SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) cGet);
+            std::string sGet(255, '\0');
+            SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+            if((sGet.front() != 0) && (nArea == 0 || Edit->sSelected == "WOK" || Edit->sSelected == "PWK" || Edit->sSelected == "DWK")){
+                SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) nullptr);
             }
 
             if(bThreshold){
-                //Update position, clear if area equals 0
-                if(nArea > 0 && TabCtrl_GetCurSel(hTabs) == 0) Edit->UpdateStatusPositionModel();
-                else if(nArea > 0 && TabCtrl_GetCurSel(hTabs) == 1) Edit->UpdateStatusPositionMdx();
+                if(nArea > 0 && Edit->sSelected == "MDL") Edit->UpdateStatusPositionModel();
+                else if(nArea > 0 && Edit->sSelected == "MDX") Edit->UpdateStatusPositionMdx();
 
                 if(bDrag){
                     Edit->DetermineSelection();

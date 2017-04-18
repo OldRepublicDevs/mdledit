@@ -14,14 +14,23 @@ HWND hStatusBar;
 HWND hDisplayEdit;
 HWND hTabs;
 HWND hProgress;
+bool bShowHex = false;
 MDL Model;
-//MDX Mdx;
-WOK Walkmesh;
+//WOK Walkmesh;
 HANDLE hThread;
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
 DWORD WINAPI ThreadReprocess(LPVOID lpParam);
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
+
+bool AppendTab(HWND hTabControl, std::string sName){
+    int nTabs = TabCtrl_GetItemCount(hTabControl);
+    TCITEM tcAdd;
+    tcAdd.mask = TCIF_TEXT;
+    tcAdd.pszText = &sName[0];
+    tcAdd.cchTextMax = strlen(sName.c_str());
+    return (TabCtrl_InsertItem(hTabControl, nTabs, &tcAdd) != -1);
+}
 
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
@@ -71,7 +80,7 @@ bool Frame::Run(int nCmdShow){
     InitCommonControlsEx(&icx); // Load the common control DLL
 
     hFrame = CreateWindowEx(NULL, cClassName, "MDLedit", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                        CW_USEDEFAULT, CW_USEDEFAULT, 980, 610,
+                        CW_USEDEFAULT, CW_USEDEFAULT, 368, 610,
                         HWND_DESKTOP, NULL, hInstance, NULL);
     hMe = hFrame;
     if(!hMe) return false;
@@ -125,6 +134,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SendMessage(hIntLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
             SendMessage(hUIntLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
             SendMessage(hFloatLabel, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            ShowWindow(hIntLabel, false);
+            ShowWindow(hUIntLabel, false);
+            ShowWindow(hFloatLabel, false);
 
             Edits::hIntEdit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", WS_VISIBLE | WS_CHILD | ES_READONLY, // | ES_RIGHT,
                                         nEditOffsetX, nDataOffsetY[0], ME_DATA_EDIT_SIZE_X, ME_DATA_EDIT_SIZE_Y,
@@ -138,14 +150,19 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SendMessage(Edits::hIntEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
             SendMessage(Edits::hUIntEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
             SendMessage(Edits::hFloatEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            ShowWindow(Edits::hIntEdit, false);
+            ShowWindow(Edits::hUIntEdit, false);
+            ShowWindow(Edits::hFloatEdit, false);
 
             hStatusBar = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hwnd, IDC_STATUSBAR);
+            /*
             int nBorders [4];
             nBorders[0] = ME_STATUSBAR_PART_X;
             nBorders[1] = 2 * ME_STATUSBAR_PART_X;
             nBorders[2] = 3 * ME_STATUSBAR_PART_X;
             nBorders[3] = -1;
             SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
+            */
 
             GetClientRect(hwnd, &rcClient);
             hTree = CreateWindowEx(WS_EX_TOPMOST, WC_TREEVIEW, "Structure", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT,
@@ -160,18 +177,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                                    ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y,
                                    hwnd, (HMENU) IDC_TABS, GetModuleHandle(NULL), NULL);
             SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
-
-            TCITEM tcAdd;
-            std::string sAdd;
-            tcAdd.mask = TCIF_TEXT;
-            sAdd = "MDL";
-            tcAdd.pszText = &sAdd[0];
-            tcAdd.cchTextMax = 255;
-            TabCtrl_InsertItem(hTabs, 0, &tcAdd);
-            sAdd = "MDX";
-            TabCtrl_InsertItem(hTabs, 1, &tcAdd);
-            sAdd = "WOK";
-            TabCtrl_InsertItem(hTabs, 2, &tcAdd);
+            ShowWindow(hTabs, false);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
                 std::cout<<"Major error, creation of Edit1 window failed.\n";
@@ -427,6 +433,49 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                 }
                 break;
+                case IDM_VIEW_HEX:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_VIEW_HEX, false, &mii);
+                    bShowHex = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                    if(bShowHex) mii.fState = MFS_CHECKED;
+                    else mii.fState = MFS_UNCHECKED;
+                    SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_VIEW_HEX, false, &mii);
+                    Edit1.ShowHideEdit();
+                    if(bShowHex){
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), true);
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_UINT), true);
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_FLOAT), true);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_INT), true);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_UINT), true);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_FLOAT), true);
+                        ShowWindow(hTabs, true);
+                        int nBorders [4];
+                        nBorders[0] = ME_STATUSBAR_PART_X;
+                        nBorders[1] = 2 * ME_STATUSBAR_PART_X;
+                        nBorders[2] = 3 * ME_STATUSBAR_PART_X;
+                        nBorders[3] = -1;
+                        SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
+                        Edit1.UpdateEdit();
+                        SetWindowPos(hwnd, NULL, 0, 0, 980, 610, SWP_NOMOVE | SWP_NOZORDER);
+                    }
+                    else{
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), false);
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_UINT), false);
+                        ShowWindow(GetDlgItem(hwnd, IDC_LBL_FLOAT), false);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_INT), false);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_UINT), false);
+                        ShowWindow(GetDlgItem(hwnd, IDC_EDIT_FLOAT), false);
+                        ShowWindow(hTabs, false);
+                        int nMinusOne = -1;
+                        SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 1, (LPARAM) &nMinusOne);
+                        SetWindowText(hStatusBar, "");
+                        SetWindowPos(hwnd, NULL, 0, 0, 368, 610, SWP_NOMOVE | SWP_NOZORDER);
+                    }
+                }
+                break;
                 case IDPM_TV_FOLD:
                 case IDPM_TV_EXPAND:
                 {
@@ -475,10 +524,35 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_SIZE:
         {
             GetClientRect(hwnd, &rcClient);
+            const int nCompactOffsetTop = 1;
+            const int nCompactOffsetBottom = 1;
+            const int nCompactOffsetLeft = 1;
+            const int nCompactOffsetRight = 1;
 
-            SetWindowPos(hTree, NULL, ME_TREE_OFFSET_X, ME_TREE_OFFSET_Y, ME_TREE_SIZE_X, rcClient.bottom - ME_TREE_OFFSET_Y - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y, NULL);
-            SetWindowPos(hTabs, NULL, ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y, NULL);
-            Edit1.Resize();
+            if(bShowHex) SetWindowPos(hDisplayEdit, NULL,
+                                      ME_TREE_OFFSET_X,
+                                      ME_DISPLAY_OFFSET_Y,
+                                      (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
+                                      ME_DISPLAY_SIZE_Y, NULL);
+            else SetWindowPos(hDisplayEdit, NULL,
+                              nCompactOffsetLeft,
+                              nCompactOffsetTop,
+                              (rcClient.right - rcClient.left) - nCompactOffsetLeft - nCompactOffsetRight,
+                              ME_DISPLAY_SIZE_Y, NULL);
+
+            if(bShowHex) SetWindowPos(hTree, NULL,
+                                      ME_TREE_OFFSET_X,
+                                      ME_TREE_OFFSET_Y,
+                                      (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
+                                      rcClient.bottom - ME_TREE_OFFSET_Y - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y + 5, NULL);
+            else SetWindowPos(hTree, NULL,
+                              nCompactOffsetLeft,
+                              nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y,
+                              (rcClient.right - rcClient.left) - nCompactOffsetLeft - nCompactOffsetRight,
+                              rcClient.bottom - ME_STATUSBAR_Y - (nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y + nCompactOffsetBottom), NULL);
+
+            if(bShowHex) SetWindowPos(hTabs, NULL, ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y, NULL);
+            if(bShowHex) Edit1.Resize();
 
             // Resize the statusbar;
             SendMessage(hStatusBar,message,wParam,lParam);
@@ -647,9 +721,9 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             //Now we need to check our current data
             if(Model.GetFileData()){
                 //A model is already open. Flush it to make room for the new one.
+                TabCtrl_DeleteAllItems(hTabs);
                 TreeView_DeleteAllItems(hTree);
                 Model.FlushData();
-                Walkmesh.FlushAll();
             }
 
             if(bAscii){
@@ -661,12 +735,11 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 std::vector<char> & sBufferRef = Model.CreateAsciiBuffer(length);
                 file.read(&sBufferRef[0], length);
                 file.close();
+                AppendTab(hTabs, "MDL");
 
                 //Process the data
                 Model.SetFilePath(cFile);
-                if(Model.ReadAscii()){
-                    DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1);
-
+                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1)){
                     bReturn = true;
                 }
                 else{
@@ -685,6 +758,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 file.read(&sBufferRef[0], length);
                 file.close();
                 Model.SetFilePath(cFile);
+                AppendTab(hTabs, "MDL");
 
                 //Open and process .mdx if it exists
                 std::string cMdx;
@@ -706,6 +780,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         Model.Mdx->SetFilePath(cMdx);
+                        AppendTab(hTabs, "MDX");
                     }
                 }
                 else{                    PathStripPath(&cMdx.front());
@@ -727,17 +802,73 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         file.seekg(0, std::ios::end);
                         std::streampos length = file.tellg();
                         file.seekg(0,std::ios::beg);
-                        std::vector<char> & sBufferRef = Walkmesh.CreateBuffer(length);
+                        Model.Wok.reset(new WOK());
+                        std::vector<char> & sBufferRef = Model.Wok->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
                         file.close();
-                        Walkmesh.SetFilePath(cWok);
+                        Model.Wok->SetFilePath(cWok);
+                        AppendTab(hTabs, "WOK");
+                    }
+                }
+
+                //Open and process .pwk if it exists
+                std::string cPwk;
+                cPwk = cFile;
+                cExt2 = PathFindExtension(cPwk.c_str());
+                sprintf(cExt2, ".pwk");
+                if(PathFileExists(cPwk.c_str())){
+                    file.open(cPwk, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        Model.Pwk.reset(new PWK());
+                        std::vector<char> & sBufferRef = Model.Pwk->CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Model.Pwk->SetFilePath(cPwk);
+                        AppendTab(hTabs, "PWK");
+                    }
+                }
+
+                //Open and process .dwk if it exists
+                std::string cDwk;
+                cDwk = cFile;
+                cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, ".dwk");
+                if(PathFileExists(cDwk.c_str())){
+                    file.open(cDwk, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        Model.Dwk.reset(new DWK());
+                        std::vector<char> & sBufferRef = Model.Dwk->CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Model.Dwk->SetFilePath(cDwk);
+                        AppendTab(hTabs, "DWK");
                     }
                 }
 
                 //Process the data
-                DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2);
-
-                bReturn = true;
+                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2)){
+                    bReturn = true;
+                }
+                else{
+                    //Something failed, cleanup
+                    Edit1.LoadData();
+                    ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
+                    bReturn = false;
+                }
             }        }
         else std::cout<<"Selecting file failed. :( \n";    }
     return bReturn;
@@ -750,9 +881,13 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             RECT rcStatus;
             GetClientRect(hwnd, &rcStatus);
             hProgress = CreateWindowEx(NULL, PROGRESS_CLASS, "", WS_VISIBLE | WS_CHILD,
-                                            10, 20, rcStatus.right - 20, 18,
+                                            10, 25, rcStatus.right - 20, 18,
                                             hwnd, (HMENU) IDC_STATUSBAR_PROGRESS, NULL, NULL);
             SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
+
+            Model.PtrReport = Report;
+            Model.PtrProgressSize = ProgressSize;
+            Model.PtrProgressPos = ProgressPos;
 
             if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
             else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessBinary, hwnd, 0, NULL);
@@ -763,13 +898,26 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
         case 69:
         {
             CloseHandle(hThread);
-            EndDialog(hwnd, NULL);
+            if(wParam == 1){
+                EndDialog(hwnd, false);
+            }
+            else EndDialog(hwnd, true);
         }
         break;
         default:
             return FALSE;
     }
     return TRUE;
+}
+
+void Report(std::string sMessage){
+    SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sMessage.c_str());
+}
+void ProgressSize(int nMin, int nMax){
+    SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(nMin, nMax));
+}
+void ProgressPos(int nPos){
+    SendMessage(hProgress, PBM_SETPOS, (WPARAM) nPos, (LPARAM) NULL);
 }
 
 DWORD WINAPI ThreadReprocess(LPVOID lpParam){
@@ -782,6 +930,7 @@ DWORD WINAPI ThreadReprocess(LPVOID lpParam){
     //even the binary-file-specific data
 
     //Load the data
+    Report("Loading data...");
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
     BuildTree(Model); //Fills the TreeView control
@@ -791,9 +940,17 @@ DWORD WINAPI ThreadReprocess(LPVOID lpParam){
 }
 
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
+    bool bReadWell = Model.ReadAscii();
+    //Just read it.
+    if(!bReadWell) SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+
     Model.AsciiPostProcess();
     //This should bring us to a state where all the ascii data is interpreted,
     //though there are still calculations to be done for the binary version.
+
+    /// Now we know whether we have MDX or WOK data
+    if(Model.Mdx) AppendTab(hTabs, "MDX");
+    if(Model.Wok) AppendTab(hTabs, "WOK");
 
     Model.CalculateMeshData();
     //This should bring us to a state where all the practical data is ready,
@@ -804,9 +961,18 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     //even the binary-file-specific data
 
     //Load the data
+    Report("Loading data...");
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
     BuildTree(Model); //Fills the TreeView control
+    if(Model.Wok){
+        std::string sWok = Model.GetFullPath();
+        char * cExt2 = PathFindExtension(sWok.c_str());
+        sprintf(cExt2, ".wok");
+        Model.Wok->SetFilePath(sWok);
+        std::cout<< "About to build wok tree.\n";
+        BuildTree(*Model.Wok);
+    }
     std::cout<<"Data loaded!\n";
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
@@ -814,50 +980,22 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
 
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     Model.DecompileModel();
-    if(!Walkmesh.empty()) Walkmesh.ProcessWalkmesh();
+    Report("Processing walkmesh...");
+    if(Model.Wok) Model.Wok->ProcessBWM();
+    if(Model.Pwk) Model.Pwk->ProcessBWM();
+    if(Model.Dwk) Model.Dwk->ProcessBWM();
 
     //Load the data
+    Report("Loading data...");
+    BuildTree(Model);
+    if(Model.Wok) BuildTree(*Model.Wok);
+    if(Model.Pwk) BuildTree(*Model.Pwk);
+    if(Model.Dwk) BuildTree(*Model.Dwk);
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData();
-    BuildTree(Model);
-    if(!Walkmesh.empty()) BuildTree(Walkmesh);
     std::cout<<"Data loaded!\n";
 
     Model.CheckPeculiarities(); //Finally, check for peculiarities
-
-    //Create filedebug
-    //std::string sSuperDebug = Model.GetFullPath().c_str();
-    //sSuperDebug += "_super.txt";
-    //std::stringstream filedebug;
-    /*
-    std::vector<MDL> Supermodels;
-    LoadSupermodel(Model, Supermodels);
-    for(int m = Supermodels.size() - 1; m >= 0; m--){
-        FileHeader & Data = *Supermodels.at(m).GetFileData();
-        //filedebug<<Data.MH.GH.sName.c_str()<<"\r\n";
-        for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-            Node & node = Data.MH.ArrayOfNodes.at(n);
-            //filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
-            //if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
-            //filedebug<<"\r\n";
-        }
-    }
-    FileHeader & Data = *Model.GetFileData();
-    filedebug<<Data.MH.GH.sName<<"\r\n";
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        Node & node = Data.MH.ArrayOfNodes.at(n);
-        filedebug<<Data.MH.Names.at(node.Head.nNameIndex).sName<<" "<<node.Head.nNameIndex<<" "<<node.Head.nID1;
-        if(node.Head.nType & NODE_HAS_MESH) filedebug<<" "<<node.Mesh.nMeshInvertedCounter;
-        filedebug<<"\r\n";
-    }
-    Supermodels.clear();
-    Supermodels.shrink_to_fit();
-    std::ofstream filedebugwrite(sSuperDebug, std::fstream::out);
-    if(filedebugwrite.is_open()){
-        filedebugwrite<<filedebug.str();
-    }
-    filedebugwrite.close();
-    */
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }
@@ -883,12 +1021,16 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     bool bStop = false;
     if(hItem == NULL) bStop = true;
     int n = 1;
-    while(!bStop && !(cItem[0] == Model.GetFilename()) && !(cItem[0] == Walkmesh.GetFilename())){
+    std::string FilenameModel = Model.GetFilename();
+    std::string FilenameWalkmesh = (Model.Wok ? Model.Wok->GetFilename() : "");
+    std::string FilenamePwk = (Model.Pwk ? Model.Pwk->GetFilename() : "");
+    std::string FilenameDwk = (Model.Dwk ? Model.Dwk->GetFilename() : "");
+    while(!bStop && !(cItem[0] == FilenameModel) && !(cItem[0] == FilenameWalkmesh) && !(cItem[0] == FilenamePwk) && !(cItem[0] == FilenameDwk)){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
         tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
         cItem[n] = cGet;
-        if((cItem[n] == Model.GetFilename()) || (cItem[n] == Walkmesh.GetFilename())) bStop = true;
+        if((cItem[n] == FilenameModel) || (cItem[n] == FilenameWalkmesh) || (cItem[n] == FilenamePwk) || (cItem[n] == FilenameDwk)) bStop = true;
         else n++;
     }
 

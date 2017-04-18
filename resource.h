@@ -35,6 +35,8 @@
 #define IDM_GAME_K1         126
 #define IDM_GAME_K2         127
 #define IDM_EDIT_TEXTURES   128
+#define IDM_VIEW_HEX        129
+#define IDM_HELP            130
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -79,6 +81,7 @@
 #define DLG_ID_STATIC        404
 #define DLG_PROGRESS         405
 #define DLG_EDIT_TEXTURES    406
+#define DLG_ID_CALC_SMOOTHING 407
 
 #define IDDB_EDIT                   500
 #define IDDB_SAVE                   501

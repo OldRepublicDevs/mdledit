@@ -834,6 +834,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     local MDL_ANIM = 3
     local MDL_NOT_IN_MDL = 4
 
+    --DEBUG = true
+
     -- temp modifier var
     local aurora_mod
     -- temp helper var
@@ -1104,6 +1106,9 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             objScale_float = 1.0
                             objMaterial = undefined
                             textureName = ""
+                            textureName1 = ""
+                            textureName2 = ""
+                            textureName3 = ""
 
 
                             objTilefadeprop = 1
@@ -1124,6 +1129,15 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             numTVerts = 0
                             TVerts = #()
                             TVfaces = #()
+                            numTVerts1 = 0
+                            TVerts1 = #()
+                            TVfaces1 = #()
+                            numTVerts2 = 0
+                            TVerts2 = #()
+                            TVfaces2 = #()
+                            numTVerts3 = 0
+                            TVerts3 = #()
+                            TVfaces3 = #()
                             smoothGroups = #()
                             surfacemats = #()
                             numConstraints = 0
@@ -1291,6 +1305,21 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             textureName = tok.ReadToken()
                             if (textureName == "NULL") then textureName = ""
                         )
+                        "bitmap2":
+                        (
+                            textureName1 = tok.ReadToken()
+                            if (textureName1 == "NULL") then textureName1 = ""
+                        )
+                        "texture0":
+                        (
+                            textureName2 = tok.ReadToken()
+                            if (textureName2 == "NULL") then textureName2 = ""
+                        )
+                        "texture1":
+                        (
+                            textureName3 = tok.ReadToken()
+                            if (textureName3 == "NULL") then textureName3 = ""
+                        )
                         "rotatetexture": objRotatetexture = tok.ReadInteger()
                         "verts": -- Verticies Struct
                         (
@@ -1354,6 +1383,51 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             )
                         )
 
+                        "texindices1": -- Faces Struct
+                        (
+                            local p3
+                            --numFaces = tok.ReadInteger()
+                            for i = 1 to numFaces do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                -- Get the current TVface
+                                p3 = (tok.ReadPoint3() + [1,1,1])
+                                append TVfaces1 p3
+                            )
+                        )
+
+                        "texindices2": -- Faces Struct
+                        (
+                            local p3
+                            --numFaces = tok.ReadInteger()
+                            for i = 1 to numFaces do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                -- Get the current TVface
+                                p3 = (tok.ReadPoint3() + [1,1,1])
+                                append TVfaces2 p3
+                            )
+                        )
+
+                        "texindices3": -- Faces Struct
+                        (
+                            local p3
+                            --numFaces = tok.ReadInteger()
+                            for i = 1 to numFaces do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                -- Get the current TVface
+                                p3 = (tok.ReadPoint3() + [1,1,1])
+                                append TVfaces3 p3
+                            )
+                        )
+
                         "tverts": -- Verticies Struct
                         (
                             numTVerts = tok.ReadInteger()
@@ -1372,6 +1446,52 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                     -- bead-v end modification
 
                                 append TVerts p3
+                            )
+                        )
+
+                        "tverts1": -- Vertices Struct
+                        (
+                            numTVerts1 = tok.ReadInteger()
+                            for i = 1 to numTVerts1 do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                local bv1 = tok.ReadFloat()
+                                local bv2 = tok.ReadFloat()
+                                local p3 = [bv1, bv2, 0]
+
+                                append TVerts1 p3
+                            )
+                        )
+                        "tverts2": -- Vertices Struct
+                        (
+                            numTVerts2 = tok.ReadInteger()
+                            for i = 1 to numTVerts2 do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                local bv1 = tok.ReadFloat()
+                                local bv2 = tok.ReadFloat()
+                                local p3 = [bv1, bv2, 0]
+
+                                append TVerts2 p3
+                            )
+                        )
+                        "tverts3": -- Vertices Struct
+                        (
+                            numTVerts3 = tok.ReadInteger()
+                            for i = 1 to numTVerts3 do
+                            (
+                                tok.SetString (getNextNonBlankLine mdlStream)
+                                lineNum += 1
+
+                                local bv1 = tok.ReadFloat()
+                                local bv2 = tok.ReadFloat()
+                                local p3 = [bv1, bv2, 0]
+
+                                append TVerts3 p3
                             )
                         )
 
@@ -1562,36 +1682,68 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                      (objType == "aabb")):
                                     (
                                         -- Make material, if necessary
-                                        matName = objName
+                                        texturepresent = false
                                         if ((textureName != "") and
                                             (textureName != "NULL") and
-                                            (textureName != undefined)) then matName = textureName
-                                        objMaterial = sceneMaterials[matName]
+                                            (textureName != undefined)) then texturepresent = true
+                                        --objMaterial = sceneMaterials[matName]
+
+                                        lightmappresent = false
+                                        if ((textureName1 != "") and
+                                            (textureName1 != "NULL") and
+                                            (textureName1 != undefined)) then lightmappresent = true
+
+                                        objMaterial = undefined
+                                        for curMaterial in sceneMaterials do (
+                                            if classof curMaterial != standardMaterial then continue
+                                            --format "Looking through material %\n" curMaterial
+                                            local bGotText = false
+                                            local bGotLight = false
+                                            --if(curMaterial.MapEnables[2]) then format "Texture filename: %\n" curMaterial.Maps[2].name
+                                            if(not texturepresent and not curMaterial.MapEnables[2] or (texturepresent and curMaterial.MapEnables[2]) and curMaterial.Maps[2].name == textureName) then(
+                                                bGotText = true
+                                            )
+                                            if(not lightmappresent and not curMaterial.MapEnables[1] or (lightmappresent and curMaterial.MapEnables[1]) and curMaterial.Maps[1].name == textureName1) then(
+                                                bGotLight = true
+                                            )
+                                            if(bGotText and bGotLight) then (
+                                                objMaterial = curMaterial
+                                                exit
+                                            )
+                                        )
+
                                         if (objType == "aabb") then
                                         (
                                             if DEBUG then format "%BUILD MESH OBJECT: make aabb material\r\n" strIndent1
                                             objMaterial = nx_createNWNWalkMaterial()
                                             objProps = ""
                                         )
-                                        if (objMaterial == undefined) and (textureName != "") then
+
+                                        if (objMaterial == undefined) and (texturepresent or lightmappresent) then
                                         (
+                                            --format "objMaterial is %\n" objMaterial
                                             if DEBUG then format "%BUILD MESH OBJECT: make material and if possible find tga file\r\n" strIndent1
-                                            objMaterial = standardmaterial name:matName
+                                            objMaterial = standardmaterial name:"placeholder"
                                             objMaterial.shaderType = 1 -- Blinn
+                                            objMaterial.adLock = false
+                                            objMaterial.adTextureLock = false
                                             objMaterial.ambient = objAmbient
                                             objMaterial.diffuse = objDiffuse
                                             objMaterial.specular = objSpecular
                                             objMaterial.glossiness = objShine
                                             objMaterial.selfillumcolor = objSelfIllum
+                                            --format "Material skeleton done\n"
                                             -- alpha done on trimesh modifier only now
                                             --objMaterial.opacity = objAlpha
-                                            if (textureName != "") then
+                                            if (texturepresent) then
                                             (
                                                 -- We want to see where the texture file is.
                                                 -- Look in local dir first then check in g_maps_path
                                                 if DEBUG then format "Look in local dir for texture\r\n"
+                                                --format "Currentpath: %, Texturename: %\n" currentPath textureName
                                                 tgaFilename = currentPath + textureName + ".tga"
                                                 bmpFilename = currentPath + textureName + ".bmp"
+                                                --format "Texture files 1 done\n"
                                                 if not ((nx_existFile tgaFilename) or (nx_existFile bmpFilename)) then
                                                 (
                                                     -- search through the global bitmap paths taken from gmax
@@ -1607,7 +1759,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 (
                                                     if (nx_existFile tgaFilename) then
                                                         bmp = openBitMap(tgaFilename)
-                                                    else --2
+                                                    else
                                                         bmp = openBitMap(bmpFilename)
 
                                                     if loadtiff then
@@ -1622,16 +1774,64 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     objMaterial.mapEnables[2] = true;
                                                     showTextureMap objMaterial texMap true
                                                 )
-                                                else --3
+                                                else
                                                 (
                                                     format "#Missing texture file: %\r\n" textureName
                                                     if (showWarnings) then messagebox ("Missing texture file: " + textureName)
                                                 )
                                             )
+                                            --format "Texture done\n"
+                                            if (lightmappresent) then
+                                            (
+                                                -- We want to see where the texture file is.
+                                                -- Look in local dir first then check in g_maps_path
+                                                if DEBUG then format "Look in local dir for texture1\r\n"
+                                                tgaFilename = currentPath + textureName1 + ".tga"
+                                                bmpFilename = currentPath + textureName1 + ".bmp"
+                                                if not ((nx_existFile tgaFilename) or (nx_existFile bmpFilename)) then
+                                                (
+                                                    -- search through the global bitmap paths taken from gmax
+                                                    if DEBUG then format "Searching gmax global paths: %\r\n" g_maps_path
+                                                    for i = 1 to (g_maps_path.count) do
+                                                    (
+                                                        tgaFilename = g_maps_path[i] + "\\" + textureName1 + ".tga"
+                                                        bmpFilename = g_maps_path[i] + "\\" + textureName1 + ".bmp"
+                                                        if ((nx_existFile tgaFilename) or (nx_existFile bmpFilename)) then exit
+                                                    )
+                                                )
+                                                if ((nx_existFile tgaFilename) or (nx_existFile bmpFilename)) then
+                                                (
+                                                    if (nx_existFile tgaFilename) then
+                                                        bmp = openBitMap(tgaFilename)
+                                                    else
+                                                        bmp = openBitMap(bmpFilename)
+
+                                                    if loadtiff then
+                                                    (
+                                                        texMap = BitmapTexture bitmap:(nx_tiff_from_tex bmp) name:textureName1
+                                                    ) else
+                                                    (
+                                                        texMap = BitmapTexture bitmap:bmp name:textureName1
+                                                    )
+                                                    texMap.coords.mapChannel = 2
+                                                    objMaterial.mapAmounts[1] = 100
+                                                    objMaterial.maps[1] = texMap
+                                                    objMaterial.mapEnables[1] = true;
+                                                    --showTextureMap objMaterial texMap true
+                                                )
+                                                else
+                                                (
+                                                    format "#Missing texture file: %\r\n" textureName1
+                                                    if (showWarnings) then messagebox ("Missing texture file: " + textureName1)
+                                                )
+                                            )
+                                            --format "About to set new material name\n"
+                                            assignNewName objMaterial
+                                            --format "Material with new name: %\n" objMaterial
                                         )
 
                                         -- Make an editable mesh
-                                        if (textureName != "") then
+                                        if (objMaterial != undefined) then
                                         (
                                             if DEBUG then format "%BUILD MESH OBJECT: make the actual mesh with material\r\n" strIndent1
                                             newObj = mesh name:objName \
@@ -1673,6 +1873,15 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             for i = 1 to numTVerts do setTVert newObj i TVerts[i]
                                             buildTVFaces newObj
                                             for i = 1 to numFaces do setTVFace newObj i TVfaces[i]
+                                        )
+                                        if numTVerts1 > 0 do
+                                        (
+                                            meshop.setNumMaps newObj 3
+                                            meshop.setMapSupport newObj 2 true
+                                            meshop.setNumMapVerts newObj 2 numTVerts1
+                                            for i = 1 to numTVerts1 do meshop.setMapVert newObj 2 i TVerts1[i]
+                                            meshop.buildMapFaces newObj 2
+                                            for i = 1 to numFaces do meshop.setMapFace newObj 2 i TVfaces1[i]
                                         )
 
                                         if DEBUG then format "%BUILD MESH OBJECT: apply constraints if have them\r\n" strIndent1
@@ -1721,18 +1930,18 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.specular = objSpecular
                                                 aurora_mod.shininess = objShine
                                         -- bead-v modification: added kotor props
-                                                aurora_mod.animateuv = objAnimateuv
-                                                aurora_mod.uvdirectionx = objUvdirectionx
-                                                aurora_mod.uvdirectiony = objUvdirectiony
-                                                aurora_mod.uvjitter = objUvjitter
-                                                aurora_mod.uvjitterspeed = objUvjitterspeed
-                                                aurora_mod.lightmapped = objLightmapped
-                                                aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
-                                                aurora_mod.dirt_enabled = objDirt_enabled
-                                                aurora_mod.dirt_texture = objDirt_texture
-                                                aurora_mod.dirt_worldspace = objDirt_worldspace
-                                                aurora_mod.hologram_donotdraw = objHologram_donotdraw
-                                                aurora_mod.tangentspace = objTangentspace
+                                                if objAnimateuv != undefined then aurora_mod.animateuv = objAnimateuv
+                                                if objUvdirectionx != undefined then aurora_mod.uvdirectionx = objUvdirectionx
+                                                if objUvdirectiony != undefined then aurora_mod.uvdirectiony = objUvdirectiony
+                                                if objUvjitter != undefined then aurora_mod.uvjitter = objUvjitter
+                                                if objUvjitterspeed != undefined then aurora_mod.uvjitterspeed = objUvjitterspeed
+                                                if objLightmapped != undefined then aurora_mod.lightmapped = objLightmapped
+                                                if objBackgroundgeometry != undefined then aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
+                                                if objDirt_enabled != undefined then aurora_mod.dirt_enabled = objDirt_enabled
+                                                if objDirt_texture != undefined then aurora_mod.dirt_texture = objDirt_texture
+                                                if objDirt_worldspace != undefined then aurora_mod.dirt_worldspace = objDirt_worldspace
+                                                if objHologram_donotdraw != undefined then aurora_mod.hologram_donotdraw = objHologram_donotdraw
+                                                if objTangentspace != undefined then aurora_mod.tangentspace = objTangentspace
                                         -- end bead-v modification
                                                 -- we now force extra data to always be true
                                                 --if newObj.material == undefined then
@@ -1751,7 +1960,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.scale = objScale_float
                                                 aurora_mod.render = objRender
                                                 aurora_mod.shadow = objShadow
-                                                if objBeaming!=undefined then aurora_mod.beaming = objBeaming
+                                                if objBeaming != undefined then aurora_mod.beaming = objBeaming
                                                 aurora_mod.inheritcolor = objInheritcolor
                                                 aurora_mod.selfillumcolor = objSelfillum
                                                 aurora_mod.rotatetexture = objRotatetexture
@@ -1762,18 +1971,18 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.specular = objSpecular
                                                 aurora_mod.shininess = objShine
                                         -- bead-v modification: added kotor props
-                                                aurora_mod.animateuv = objAnimateuv
-                                                aurora_mod.uvdirectionx = objUvdirectionx
-                                                aurora_mod.uvdirectiony = objUvdirectiony
-                                                aurora_mod.uvjitter = objUvjitter
-                                                aurora_mod.uvjitterspeed = objUvjitterspeed
-                                                aurora_mod.lightmapped = objLightmapped
-                                                aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
-                                                aurora_mod.dirt_enabled = objDirt_enabled
-                                                aurora_mod.dirt_texture = objDirt_texture
-                                                aurora_mod.dirt_worldspace = objDirt_worldspace
-                                                aurora_mod.hologram_donotdraw = objHologram_donotdraw
-                                                aurora_mod.tangentspace = objTangentspace
+                                                if objAnimateuv != undefined then aurora_mod.animateuv = objAnimateuv
+                                                if objUvdirectionx != undefined then aurora_mod.uvdirectionx = objUvdirectionx
+                                                if objUvdirectiony != undefined then aurora_mod.uvdirectiony = objUvdirectiony
+                                                if objUvjitter != undefined then aurora_mod.uvjitter = objUvjitter
+                                                if objUvjitterspeed != undefined then aurora_mod.uvjitterspeed = objUvjitterspeed
+                                                if objLightmapped != undefined then aurora_mod.lightmapped = objLightmapped
+                                                if objBackgroundgeometry != undefined then aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
+                                                if objDirt_enabled != undefined then aurora_mod.dirt_enabled = objDirt_enabled
+                                                if objDirt_texture != undefined then aurora_mod.dirt_texture = objDirt_texture
+                                                if objDirt_worldspace != undefined then aurora_mod.dirt_worldspace = objDirt_worldspace
+                                                if objHologram_donotdraw != undefined then aurora_mod.hologram_donotdraw = objHologram_donotdraw
+                                                if objTangentspace != undefined then aurora_mod.tangentspace = objTangentspace
                                         -- end bead-v modification
                                                 -- we now force extra data to always be true
                                                 --if newObj.material == undefined then
@@ -1960,7 +2169,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objAffectDynamic!=undefined then newObj.affectDynamic = objAffectDynamic
                                         if objShadow!=undefined then newObj.Shadow = objShadow
                                         format "#beaming=%\r\n" objBeaming
-                                        if objBeaming!=undefined then newObj.beaming = objBeaming
+                                        if objBeaming != undefined then newObj.beaming = objBeaming
                                         if objLensflares!=undefined then newObj.lensflares = objLensflares
                                         if objFadingLight!=undefined then newObj.fadingLight = objFadingLight
 
@@ -2039,7 +2248,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 local itsParent = for p in objects where p.name == parent collect p
                                 if itsParent != undefined and itsParent.count > 0 then
                                 (
-    -- check the controller types are correct!
+                                    -- check the controller types are correct!
                                     newObj.parent = itsParent[1]
                             -- bead-v modification: we're now making all controllers bezier from the get go, except orientation is linear
                                     --newObj.scale.controller = tcb_scale()
@@ -2493,12 +2702,14 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     )
 
                                     -- Get correct objAnim
+                                    --format "str_token = %\n" str_token
                                     if(str_token == "scale" or
                                        str_token == "alpha" or
-                                       str_token == "selfillumcolor") then(
-                                        if (classof animObj) == Editable_mesh then (
+                                       str_token == "selfillumcolor")
+                                    then(
+                                        if (classof objAnim) == Editable_mesh then (
                                             -- we have a trimesh and not a emitter
-                                            animObj = animObj.modifiers["AuroraTrimesh"]
+                                            objAnim = objAnim.modifiers["AuroraTrimesh"]
                                         )
                                     )
 

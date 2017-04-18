@@ -22,298 +22,138 @@ void MDL::DoCalculations(Node & node, int & nMeshCounter){
         Mod = nMeshCounter%100;
         node.Saber.nInvCount2 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
     }
-    if(node.Head.nType & NODE_HAS_SKIN){
-        //First, declare our empty location as a starting point
-        Vector vPos;
-        Quaternion qOrient;
+    else{
+        //inverted counter
+        nMeshCounter++;
+        int Quo = nMeshCounter/100;
+        int Mod = nMeshCounter%100;
+        node.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
 
-        //Now we need to construct a path by adding all the locations from this node through all its parents to the root
-        int nIndex = node.Head.nNameIndex;
-        Vector vCurPosition;
-        Quaternion qCurOrientation;
-        while(nIndex != -1){
-            Node & curnode = GetNodeByNameIndex(nIndex);
+        if(node.Head.nType & NODE_HAS_SKIN){
+            //First, declare our empty location as a starting point
+            Vector vPos;
+            Quaternion qOrient;
 
-            //Construct base location
-            Location locNode = curnode.GetLocation();
-            vCurPosition = locNode.vPosition * -1.0;
-            qCurOrientation = locNode.oOrientation.GetQuaternion();
-            qCurOrientation = qCurOrientation.reverse();
-            vCurPosition.Rotate(qCurOrientation);
-
-            //Add parent location to main location
-            vPos += vCurPosition;
-            qOrient *= qCurOrientation;
-            //On the first round, because loc is initialized with the identity orientation, locNode orientation is simply copied
-
-            nIndex = curnode.Head.nParentIndex;
-        }
-        //We now have a location loc, going from our current node to the root.
-        //Now we need to add to that a similar kind of path of every node in the model
-
-        //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
-        for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
-            Vector vRecord = vPos; //Make copy
-            Quaternion qRecord = qOrient; //Make copy
-            Node & curnode = FH->MH.ArrayOfNodes.at(n);
-
-            nIndex = curnode.Head.nNameIndex;
-            std::vector<int> Indexes;
-            //The price we have to pay for not going recursive
+            //Now we need to construct a path by adding all the locations from this node through all its parents to the root
+            int nIndex = node.Head.nNameIndex;
+            Vector vCurPosition;
+            Quaternion qCurOrientation;
             while(nIndex != -1){
-                Indexes.push_back(nIndex);
-                nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
-            }
-            //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
-            for(int a = Indexes.size() - 1; a >= 0; a--){
-                Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
-                Location locNode = curnode2.GetLocation();
-                vCurPosition = locNode.vPosition;
+                Node & curnode = GetNodeByNameIndex(nIndex);
+
+                //Construct base location
+                Location locNode = curnode.GetLocation();
+                vCurPosition = locNode.vPosition * -1.0;
                 qCurOrientation = locNode.oOrientation.GetQuaternion();
-                vCurPosition.Rotate(qRecord); //Note: rotating with the Record rotation!
-                vRecord += vCurPosition;
-                qRecord *= qCurOrientation;
+                qCurOrientation = qCurOrientation.reverse();
+                vCurPosition.Rotate(qCurOrientation);
+
+                //Add parent location to main location
+                vPos += vCurPosition;
+                qOrient *= qCurOrientation;
+                //On the first round, because loc is initialized with the identity orientation, locNode orientation is simply copied
+
+                nIndex = curnode.Head.nParentIndex;
+            }
+            //We now have a location loc, going from our current node to the root.
+            //Now we need to add to that a similar kind of path of every node in the model
+
+            //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
+            for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
+                Vector vRecord = vPos; //Make copy
+                Quaternion qRecord = qOrient; //Make copy
+                Node & curnode = FH->MH.ArrayOfNodes.at(n);
+
+                nIndex = curnode.Head.nNameIndex;
+                std::vector<int> Indexes;
+                //The price we have to pay for not going recursive
+                while(nIndex != -1){
+                    Indexes.push_back(nIndex);
+                    nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
+                }
+                //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
+                for(int a = Indexes.size() - 1; a >= 0; a--){
+                    Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
+                    Location locNode = curnode2.GetLocation();
+                    vCurPosition = locNode.vPosition;
+                    qCurOrientation = locNode.oOrientation.GetQuaternion();
+                    vCurPosition.Rotate(qRecord); //Note: rotating with the Record rotation!
+                    vRecord += vCurPosition;
+                    qRecord *= qCurOrientation;
+                }
+
+                //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
+                vRecord *= -1.0;
+                qRecord = qRecord.reverse();
+                vRecord.Rotate(qRecord);
+
+                //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
+                node.Skin.Bones.at(n).TBone = vRecord;
+                node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
             }
 
-            //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
-            vRecord *= -1.0;
-            qRecord = qRecord.reverse();
-            vRecord.Rotate(qRecord);
-
-            //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
-            node.Skin.Bones.at(n).TBone = vRecord;
-            node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
         }
 
-    }
-    if(node.Head.nType & NODE_HAS_MESH){
-        if(!(node.Head.nType & NODE_HAS_SABER)){
-            //inverted counter
-            nMeshCounter++;
-            int Quo = nMeshCounter/100;
-            int Mod = nMeshCounter%100;
-            node.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
-
-            //Take care of the mdx pointer stuff. The only thing we need set is the bitmap, which should be done on import.
-            int nMDXsize = 0;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                node.Mesh.nOffsetToVerticesInMDX = nMDXsize;
-                nMDXsize += 12;
-            }
-            else node.Mesh.nOffsetToVerticesInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-                node.Mesh.nOffsetToNormalsInMDX = nMDXsize;
-                nMDXsize += 12;
-            }
-            else node.Mesh.nOffsetToNormalsInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                node.Mesh.nOffsetToUVsInMDX = nMDXsize;
-                nMDXsize += 8;
-            }
-            else node.Mesh.nOffsetToUVsInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                node.Mesh.nOffsetToUV2sInMDX = nMDXsize;
-                nMDXsize += 8;
-            }
-            else node.Mesh.nOffsetToUV2sInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                node.Mesh.nOffsetToUV3sInMDX = nMDXsize;
-                nMDXsize += 8;
-            }
-            else node.Mesh.nOffsetToUV3sInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                node.Mesh.nOffsetToUV4sInMDX = nMDXsize;
-                nMDXsize += 8;
-            }
-            else node.Mesh.nOffsetToUV4sInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-                node.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
-                nMDXsize += 36;
-            }
-            else node.Mesh.nOffsetToTangentSpaceInMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-                node.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
-                nMDXsize += 36;
-            }
-            else node.Mesh.nOffsetToTangentSpace2InMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-                node.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
-                nMDXsize += 36;
-            }
-            else node.Mesh.nOffsetToTangentSpace3InMDX = -1;
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-                node.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
-                nMDXsize += 36;
-            }
-            else node.Mesh.nOffsetToTangentSpace4InMDX = -1;
-            if(node.Head.nType & NODE_HAS_SKIN){
-                node.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
-                nMDXsize += 16;
-                node.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
-                nMDXsize += 16;
-            }
-            node.Mesh.nMdxDataSize = nMDXsize;
-            node.Mesh.nOffsetToUnknownInMDX = -1;
+        //Take care of the mdx pointer stuff. The only thing we need set is the bitmap, which should be done on import.
+        int nMDXsize = 0;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+            node.Mesh.nOffsetToVerticesInMDX = nMDXsize;
+            nMDXsize += 12;
         }
-
-        //Determine face data
-        node.Mesh.fTotalArea = 0;
-        for(int f = 0; f < node.Mesh.Faces.size(); f++){
-            Face & face = node.Mesh.Faces.at(f);
-            Vertex & v1 = node.Mesh.Vertices.at(face.nIndexVertex[0]);
-            Vertex & v2 = node.Mesh.Vertices.at(face.nIndexVertex[1]);
-            Vertex & v3 = node.Mesh.Vertices.at(face.nIndexVertex[2]);
-            Vector & v1UV = v1.MDXData.vUV1;
-            Vector & v2UV = v2.MDXData.vUV1;
-            Vector & v3UV = v3.MDXData.vUV1;
-            Vector Edge1 = v2 - v1;
-            Vector Edge2 = v3 - v1;
-            Vector Edge3 = v3 - v2;
-            Vector EUV1 = v2UV - v1UV;
-            Vector EUV2 = v3UV - v1UV;
-            Vector EUV3 = v3UV - v2UV;
-
-            //This is for face normal
-            face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
-            face.vNormal.Normalize();
-
-            //This is for the distance.
-            face.fDistance = - (face.vNormal.fX * v1.fX +
-                                face.vNormal.fY * v1.fY +
-                                face.vNormal.fZ * v1.fZ);
-
-            //Area calculation
-            face.fArea = HeronFormula(Edge1, Edge2, Edge3);
-            face.fAreaUV = HeronFormula(EUV1, EUV2, EUV3);
-            node.Mesh.fTotalArea += face.fArea;
-
-            //Tangent space vectors
-            //Now comes the calculation. Will be using edges 1 and 2
-            double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
-            //This is division, need to check for 0
-            if(r != 0){
-                r = 1.0 / r;
-            }
-            else{
-                /**
-                It can be 0 in several ways.
-                1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
-                2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
-                3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
-                4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
-                /**/
-
-                //ndix UR's magic factor
-                r = 2406.6388;
-            }
-            face.vTangent = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
-            face.vBitangent = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
-            face.vTangent.Normalize();
-            face.vBitangent.Normalize();
-            if(face.vTangent.Null()){
-                face.vTangent = Vector(1.0, 0.0, 0.0);
-            }
-            if(face.vBitangent.Null()){
-                face.vBitangent = Vector(1.0, 0.0, 0.0);
-            }
-            //Handedness
-            Vector vCross = (face.vNormal / face.vTangent);
-            double fDot = vCross * face.vBitangent;
-            if(fDot > 0.0000000001){
-                face.vTangent *= -1.0;
-            }
-            //Now check if we need to invert  T and B. But first we need a UV normal
-            Vector vNormalUV = EUV1 / EUV2; //cross product
-            if(vNormalUV.fZ < 0.0){
-                face.vTangent *= -1.0;
-                face.vBitangent *= -1.0;
-            }
-
-            //Calculate adjacent faces
-            face.nAdjacentFaces[0] = -1;
-            face.nAdjacentFaces[1] = -1;
-            face.nAdjacentFaces[2] = -1;
-            for(int c = f+1; c < node.Mesh.Faces.size(); c++){
-                Face & compareface = node.Mesh.Faces.at(c);
-                std::vector<bool> VertMatches(3, false);
-                std::vector<bool> VertMatchesCompare(3, false);
-                for(int a = 0; a < 3; a++){
-                    int nVertIndex = face.nIndexVertex[a];
-                    for(int b = 0; b < 3; b++){
-                        if(node.Mesh.Vertices.at(nVertIndex).fX == node.Mesh.Vertices.at(compareface.nIndexVertex[b]).fX &&
-                            node.Mesh.Vertices.at(nVertIndex).fY == node.Mesh.Vertices.at(compareface.nIndexVertex[b]).fY &&
-                            node.Mesh.Vertices.at(nVertIndex).fZ == node.Mesh.Vertices.at(compareface.nIndexVertex[b]).fZ ){
-                            VertMatches.at(a) = true;
-                            VertMatchesCompare.at(b) = true;
-                            b = 3; // we can only have one matching vert in a face per vert. Once we find a match, we're done.
-                        }
-                    }
-                }
-                if(VertMatches.at(0) && VertMatches.at(1)){
-                    if(face.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 0...\n";
-                    else face.nAdjacentFaces[0] = c;
-                }
-                else if(VertMatches.at(1) && VertMatches.at(2)){
-                    if(face.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 1...\n";
-                    else face.nAdjacentFaces[1] = c;
-                }
-                else if(VertMatches.at(2) && VertMatches.at(0)){
-                    if(face.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 2...\n";
-                    else face.nAdjacentFaces[2] = c;
-                }
-                if(VertMatchesCompare.at(0) && VertMatchesCompare.at(1)){
-                    if(compareface.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<c<<") for edge 0...\n";
-                    else compareface.nAdjacentFaces[0] = f;
-                }
-                else if(VertMatchesCompare.at(1) && VertMatchesCompare.at(2)){
-                    if(compareface.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<c<<") for edge 1...\n";
-                    else compareface.nAdjacentFaces[1] = f;
-                }
-                else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)){
-                    if(compareface.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<c<<") for edge 2...\n";
-                    else compareface.nAdjacentFaces[2] = f;
-                }
-                if(face.nAdjacentFaces[0]!=-1 &&
-                   face.nAdjacentFaces[1]!=-1 &&
-                   face.nAdjacentFaces[2]!=-1 ){
-                    c = node.Mesh.Faces.size(); //Found them all, maybe I finish early?
-                }
-            }
+        else node.Mesh.nOffsetToVerticesInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
+            node.Mesh.nOffsetToNormalsInMDX = nMDXsize;
+            nMDXsize += 12;
         }
-
-        double fLargestRadius = 0.0;
-        double fSumX = 0.0;
-        double fSumY = 0.0;
-        double fSumZ = 0.0;
-        node.Mesh.vBBmin = Vector(0.0, 0.0, 0.0);
-        node.Mesh.vBBmax = Vector(0.0, 0.0, 0.0);
-        for(int v = 0; v < node.Mesh.Vertices.size(); v++){
-            Vertex & vert = node.Mesh.Vertices.at(v);
-
-            //Bounding Box and Average calculations
-            node.Mesh.vBBmin.fX = std::min(node.Mesh.vBBmin.fX, vert.fX);
-            node.Mesh.vBBmin.fY = std::min(node.Mesh.vBBmin.fY, vert.fY);
-            node.Mesh.vBBmin.fZ = std::min(node.Mesh.vBBmin.fZ, vert.fZ);
-            node.Mesh.vBBmax.fX = std::max(node.Mesh.vBBmax.fX, vert.fX);
-            node.Mesh.vBBmax.fY = std::max(node.Mesh.vBBmax.fY, vert.fY);
-            node.Mesh.vBBmax.fZ = std::max(node.Mesh.vBBmax.fZ, vert.fZ);
-            fSumX += vert.fX;
-            fSumY += vert.fY;
-            fSumZ += vert.fZ;
+        else node.Mesh.nOffsetToNormalsInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+            node.Mesh.nOffsetToUVsInMDX = nMDXsize;
+            nMDXsize += 8;
         }
-        node.Mesh.vAverage.fX = fSumX / node.Mesh.Vertices.size();
-        node.Mesh.vAverage.fY = fSumY / node.Mesh.Vertices.size();
-        node.Mesh.vAverage.fZ = fSumZ / node.Mesh.Vertices.size();
-
-        for(int v = 0; v < node.Mesh.Vertices.size(); v++){
-            Vertex & vert = node.Mesh.Vertices.at(v);
-
-            //Radius calculation
-            fLargestRadius = std::max(fLargestRadius, sqrt(pow(vert.fX - node.Mesh.vAverage.fX, 2.0) +
-                                                           pow(vert.fY - node.Mesh.vAverage.fY, 2.0) +
-                                                           pow(vert.fZ - node.Mesh.vAverage.fZ, 2.0)));
+        else node.Mesh.nOffsetToUVsInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+            node.Mesh.nOffsetToUV2sInMDX = nMDXsize;
+            nMDXsize += 8;
         }
-        node.Mesh.fRadius = fLargestRadius;
+        else node.Mesh.nOffsetToUV2sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+            node.Mesh.nOffsetToUV3sInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUV3sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+            node.Mesh.nOffsetToUV4sInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUV4sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
+            node.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpaceInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
+            node.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace2InMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
+            node.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace3InMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
+            node.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace4InMDX = -1;
+        if(node.Head.nType & NODE_HAS_SKIN){
+            node.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
+            nMDXsize += 16;
+            node.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
+            nMDXsize += 16;
+        }
+        node.Mesh.nMdxDataSize = nMDXsize;
+        node.Mesh.nOffsetToUnknownInMDX = -1;
     }
 }
 
@@ -328,17 +168,19 @@ void MDL::CalculateMeshData(){
 
     /// PART 2 ///
     /// Do the necessary mesh calculations
-    /// Mesh: average, bbox, radius, inverted counter, MDX data offsets, face vectors (normal, distance, tangent, bitangent),
-    /// adjacent faces, total area
+    /// Mesh: inverted counter, MDX data offsets
     /// Skin: MDX data offsets, T-bones, Q-bones
+    /// Saber: inverted counter
+    Report("Calculating mesh data...");
     int nMeshCounter = 0;
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
-        DoCalculations(node, nMeshCounter);
+        if(node.Head.nType & NODE_HAS_MESH) DoCalculations(node, nMeshCounter);
     }
 
     /// PART 3 ///
     /// Calculate vertex normals and vertex tangent space vectors
+    Report("Calculating vertex normals and vertex tangent space vectors...");
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
         for(int p = 0; p < nPatchCount; p++){
@@ -400,6 +242,7 @@ bool MDL::Compile(){
     Mdx.reset(new MDX());
 
     std::unique_ptr<FileHeader> & Data = FH;
+    Report("Compiling model...");
 
     //File header
     WriteInt(0, 8);

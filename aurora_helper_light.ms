@@ -255,11 +255,11 @@ replaceUI:true
 		radius			type:#float ui:spn_radius
 		multiplier		type:#float 	animatable:true default:1.0 ui:spn_multiplier
     -- bead-v modification: add kotor props
-		shadowradius         type:#float animatable:true default:0.0
-		verticaldisplacement type:#float animatable:true default:0.0
+		shadowradius         type:#float animatable:true default:0.0 ui:spn_shadowradius
+		verticaldisplacement type:#float animatable:true default:0.0 ui:spn_verticaldisp
     -- end bead-v modification
 		lightpriority	type:#integer	animatable:false default:5 ui:spn_lightpriority
-		nDynamicType	type:#integer	animatable:false ui:box_isdynamic
+		nDynamicType	type:#integer	animatable:false ui:spn_isdynamic
 
 		ambientOnly 	type:#integer	animatable:false ui:box_ambientOnly
 		affectDynamic	type:#integer	animatable:false ui:box_affectDynamic
@@ -268,7 +268,7 @@ replaceUI:true
 		fadingLight 	type:#integer	animatable:false ui:box_fadingLight
 		negativeLight	type:#integer	animatable:false ui:box_negative
 
-		Preset_Sel		type:#integer	animatable:false ui:rdo_mainlights default:1
+		Preset_Sel		type:#integer	animatable:false default:1 --ui:rdo_mainlights
 	)
 	-- from bioware. Modified by Joco
 	parameters flares rollout:lensflareUI
@@ -284,31 +284,32 @@ replaceUI:true
 
 	rollout params "MDL Light Parameters" width:160 height:337
 	(
+		group "Intensity\Color"
+		(
+            spinner spn_red "Red:" range:[0,255,255] fieldwidth:40 --pos:[74,126] width:75 height:16 fieldwidth:40
+            spinner spn_green "Green:" range:[0,255,255] fieldwidth:40 --pos:[65,146] width:84 height:16 fieldwidth:40
+            spinner spn_blue "Blue:" range:[0,255,255] fieldwidth:40 --pos:[73,167] width:76 height:16 fieldwidth:40
+            colorPicker colorpicker_color "" across:1 pos:[12,28] width:44 height:53
+            checkbox box_negative "Negative Light" --pos:[13,175] width:97 height:15
+		)
+		spinner spn_radius "Radius:" range:[0,10000000000,500] fieldwidth:55
+		spinner spn_verticaldisp "Z-Displacement:" fieldwidth:55 range:[-10000000000,10000000000,0]
+		spinner spn_multiplier "Multiplier:" fieldwidth:55
+		spinner spn_lightpriority "Priority:" range:[1,5,5] type:#integer scale:1 fieldwidth:55
+		spinner spn_isdynamic "Dynamic Type:" range:[0,2,0] type:#integer scale:1 fieldwidth:55
+		spinner spn_shadowradius "Shadow Radius:" range:[0,10000000000,500] fieldwidth:55
+		checkbox box_shadow "Shadows" align:#left --pos:[13,309] width:63 height:15
+		checkbox box_fadingLight "Fading Light" --pos:[73,71] width:80 height:15
+		checkbox box_ambientOnly "Ambient Only"
+		--checkbox box_isdynamic "Is Dynamic Light" --pos:[13,268] width:106 height:15
+		checkbox box_affectDynamic "Affects Dynamic Objects" --pos:[13,288] width:140 height:15
 
-		spinner spn_radius "Radius (cm):" pos:[43,10] width:106 height:16 range:[0,10000000000,500]
-		spinner spn_multiplier "Multiplier:" pos:[53,30] width:96 height:16 fieldwidth:40
-		spinner spn_lightpriority "Priority:" pos:[63,51] width:86 height:16 range:[1,5,5] type:#integer scale:1 fieldwidth:40
-
-		GroupBox grp3 "Intensity\Colour" pos:[4,92] width:154 height:105
-		colorPicker colorpicker_color "" pos:[7,113] width:44 height:50 across:2
-		spinner spn_red "Red:" pos:[74,106] width:75 height:16 range:[0,255,255] fieldwidth:40
-		spinner spn_green "Green:" pos:[65,126] width:84 height:16 range:[0,255,255] fieldwidth:40
-		spinner spn_blue "Blue:" pos:[73,147] width:76 height:16 range:[0,255,255] fieldwidth:40
-
-		checkbox box_ambientOnly "Ambient (off=Diffuse)" pos:[13,238] width:126 height:15
-		checkbox box_affectDynamic "Affects Dynamic Objects" pos:[13,288] width:140 height:15
-		checkbox box_shadow "Shadows" pos:[13,309] width:63 height:15
-		checkbox box_fadingLight "Fading Light" pos:[73,71] width:80 height:15
-		checkbox box_negative "Negative Light" pos:[13,175] width:97 height:15
-		label lbl1 "Surface Type:" pos:[13,222] width:108 height:14
-		checkbox box_isdynamic "Is Dynamic Light" pos:[13,268] width:106 height:15
-		label lbl_1 ""
-		label lbl_2 ""
-		label lbl_3 ""
+        /*
 		group "Tilelight Presets"
 		(
-			radiobuttons rdo_mainlights "" labels:#("No preset","Mainlight 1","Mainlight 2")
+			radiobuttons rdo_mainlights "" align:#left labels:#("No preset","Mainlight 1","Mainlight 2")
 		)
+		*/
 
 		fn Mainlight_Preset suffix radius =
 		(

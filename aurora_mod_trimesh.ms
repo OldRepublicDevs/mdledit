@@ -56,7 +56,7 @@ version:1
 		    - alpha channel options
 		*/
 
-		tilefadeprop	type:#integer   ui:radio_cap    default:1       -- defaults to "Not a cap"
+		tilefadeprop	type:#integer   default:1  --ui:radio_cap     -- defaults to "Not a cap"
 		scale		    type:#float     ui:spn_scale    default:1.0
 		render		    type:#integer   ui:box_render   default:1      -- defaults to render
 		shadow		    type:#integer   ui:box_shadow   default:0      -- defaults to cast shadow
@@ -77,13 +77,13 @@ version:1
         uvdirectiony                type:#float     default: 0.0
         uvjitter                    type:#float     default: 0.0
         uvjitterspeed               type:#float     default: 0.0
-        lightmapped                 type:#integer   default: 0
-        m_blsBackgroundGeometry     type:#integer   default: 0
-        dirt_enabled                type:#integer   default: 0
-        dirt_texture                type:#integer   default: 1
-        dirt_worldspace             type:#integer   default: 1
-        hologram_donotdraw          type:#integer   default: 0
-        tangentspace                type:#integer   default: 0
+        lightmapped                 type:#integer   default: 0     ui:box_lightmapped
+        m_blsBackgroundGeometry     type:#integer   default: 0     ui:box_backgroundgeometry
+        dirt_enabled                type:#integer   default: 0     ui:box_dirtenabled
+        dirt_texture                type:#integer   default: 1     ui:spn_dirttexture
+        dirt_worldspace             type:#integer   default: 1     ui:spn_dirtworldspace
+        hologram_donotdraw          type:#integer   default: 0     ui:box_hideinhologram
+        tangentspace                type:#integer   default: 0     ui:box_bumpmappable
 
 	)
 
@@ -91,12 +91,34 @@ version:1
 	(
 		button btn_tex "test" width:120 height:15 tooltip:"Applied Texture, press to select all objects that use this texture."
 		button btn_parent "" width:120 height:15 tooltip:"Parent. Press to select."
-		checkbox box_render "Render"   height:15 align:#left across:2 -- pos:[13,7] width:95
-		checkbox box_shadow "Shadow"   height:15 align:#right -- pos:[13,27] width:95
-		checkbox box_rotatetexture "Rotate Tex"  height:15 align:#left across:2 --  pos:[13,67] width:95
-		checkbox box_beaming "Beaming"  height:15 align:#right -- pos:[13,47] width:65
-		checkbox box_inheritcolor "Inherit Color" height:15 align:#left -- pos:[13,87]  width:80
+		checkbox box_render "Render"   --height:15 align:#left across:2 -- pos:[13,7] width:95
+		checkbox box_shadow "Shadow"   --height:15 align:#right -- pos:[13,27] width:95
+		checkbox box_beaming "Beaming"  --height:15 align:#right -- pos:[13,47] width:65
+		checkbox box_lightmapped "Lightmapped"  --height:15 align:#left across:2 --  pos:[13,67] width:95
+		checkbox box_rotatetexture "Rotate Texture"  --height:15 align:#left across:2 --  pos:[13,67] width:95
+		checkbox box_backgroundgeometry "Background Geometry"  --height:15 align:#left across:2 --  pos:[13,67] width:95
+		checkbox box_hideinhologram "Hide In Hologram"  --height:15 align:#left across:2 --  pos:[13,67] width:95
+		checkbox box_bumpmappable "Bumpmappable"  --height:15 align:#left across:2 --  pos:[13,67] width:95
+		checkbox box_inheritcolor "Inherit Color" --height:15 align:#left -- pos:[13,87]  width:80
 
+		group "Dirt"
+		(
+            checkbox box_dirtenabled "Dirt Enabled"
+            spinner spn_dirttexture "Texture" fieldwidth:30 range:[1,4,1] type:#integer
+            spinner spn_dirtworldspace "World Space" fieldwidth:30 range:[1,4,1] type:#integer
+		)
+        /*
+		group "Fading Tile Properties"
+		(
+            radiobuttons radio_cap "" align:#left labels:#("Not a cap", "Fadable", "Neighbour", "Base") columns:1
+		)
+		*/
+
+		spinner spn_scale "Scale Factor" range:[0,1000,1] scale:0.1 fieldwidth:46 --pos:[31,198] width:118 height:16
+		spinner spn_transparencyhint "Transparency Hint" range:[0,9,0] type:#integer fieldwidth:30 --pos:[17,224] width:132 height:16 ---align:#center
+		spinner spn_alpha "Alpha" range:[0,1,1] fieldwidth:30 --pos:[77,263] width:72 height:16 ---align:#center
+
+		/*
 		GroupBox grp1 "Fading Tile Properties" pos:[4,106] width:154 height:85
 		radiobuttons radio_cap "" pos:[27,122] width:72 height:64 labels:#("Not a cap", "Fadable", "Neighbour", "Base") columns:1
 		--groupBox grp2 "Aplha Channel Options" pos:[4,218] width:154 height:80
@@ -107,16 +129,20 @@ version:1
 		-- no longer synching alpha with material
 		--button btn_refresh "Refresh" pos:[7,262] width:57 height:18 toolTip:"Refresh the alpha value to synch with material opacity"
 		spinner spn_alpha "Alpha" pos:[77,263] width:72 height:16 range:[0,1,1] fieldwidth:33 ---align:#center
+		*/
 
 		colorPicker colorpicker_selfillum "Self Illum. Color" color:[0,0,0] align:#right
 		button btn_selfillum_fromwire "Get Self Illum From Wire Color"
 
 		-- extra optional data
-		checkbox chk_xtra_mat_data "Over-ride Mat Values" default:false
-		colorPicker colorpicker_ambient "Ambient" color:[255,255,255] enabled:false align:#right
-		colorPicker colorpicker_diffuse "Diffuse" color:[255,255,255] enabled:false align:#right
-		colorPicker colorpicker_specular "Specular" color:[0,0,0] enabled:false align:#right
-		spinner spn_shininess "Shininess" type:#integer enabled:false align:#right
+		group "Extra"
+		(
+            checkbox chk_xtra_mat_data "Over-ride Mat Values" default:false
+            colorPicker colorpicker_ambient "Ambient" color:[255,255,255] enabled:false align:#right
+            colorPicker colorpicker_diffuse "Diffuse" color:[255,255,255] enabled:false align:#right
+            colorPicker colorpicker_specular "Specular" color:[0,0,0] enabled:false align:#right
+            spinner spn_shininess "Shininess" type:#integer enabled:false align:#right fieldwidth:33
+		)
 
 		-- refresh the alpha spinner control
 		/*

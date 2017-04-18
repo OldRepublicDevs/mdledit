@@ -23,6 +23,7 @@ void MDL::DecompileModel(bool bMinimal){
 
     FH.reset(new FileHeader());
     if(!bMinimal) std::cout<<"Begin decompiling.\n";
+    Report("Decompiling header...");
 
     FileHeader & Data = *FH;
 
@@ -119,6 +120,7 @@ void MDL::DecompileModel(bool bMinimal){
     }
     if(!bMinimal) std::cout<<"Name array read.\n";
 
+    Report("Decompiling animations...");
     //Next, animations. Skip them if we're reading minimally
     if(Data.MH.AnimationArray.nCount > 0 && !bMinimal){
         //Data.MH.Animations = new Animation [Data.MH.AnimationArray.nCount];
@@ -194,6 +196,7 @@ void MDL::DecompileModel(bool bMinimal){
         }
     }
     if(!bMinimal) std::cout<<"Animation array read.\n";
+    Report("Decompiling geometry...");
     if(Data.MH.Names.size() > 0){
         Data.MH.RootNode.nOffset = Data.MH.GH.nOffsetToRootNode;
         Data.MH.RootNode.nAnimation = -1;
@@ -964,6 +967,7 @@ void MDL::DetermineSmoothing(){
 
     ///I will first do it the inefficient way, but a clear way, so I can merge stuff later if need be.
     // The point is twofold - calculate area and calculate tangent space vectors
+    Report("Post-processing decompiled model...");
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
             for(int f = 0; f < Data.MH.ArrayOfNodes.at(n).Mesh.Faces.size(); f++){
@@ -1049,6 +1053,7 @@ void MDL::DetermineSmoothing(){
     int nBadGeo = 0;
     int nTangentPerfect = 0;
 
+    Report("Recalculating vectors...");
     std::vector<std::vector<unsigned long int>> nSmoothingGroupNumbers;
     nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
@@ -1436,50 +1441,11 @@ void MDL::DetermineSmoothing(){
         }
     }
     /**/
-    /// Here we finally apply the smoothing groups to the faces in a principled way.
-    std::vector<bool> DoneGroups(Data.MH.PatchArrayPointers.size(), false);
-    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
-        ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DoneGroups);
-    }
-    /// And finally finally, we merge the numbers for every face and get rid of the patch array.
-    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
-        for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
-            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            unsigned long int nExistingSG = 0;
-            for(int i = 0; i < patch.SmoothingGroupNumbers.size(); i++){
-                nExistingSG = nExistingSG | *patch.SmoothingGroupNumbers.at(i);
-            }
-            patch.nSmoothingGroups = (unsigned int) nExistingSG;
-            for(int f = 0; f < patch.FaceIndices.size(); f++){
-                GetNodeByNameIndex(patch.nNameIndex).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup = nExistingSG;
-            }
-        }
-    }
-    Data.MH.PatchArrayPointers.clear();
-    Data.MH.PatchArrayPointers.shrink_to_fit();
-    /**/
 
-    if(bDebug){
-        std::string sDir = sFullPath;
-        sDir.reserve(MAX_PATH);
-        PathRemoveFileSpec(&sDir[0]);
-        sDir.resize(strlen(sDir.c_str()));
-        sDir += "\\debug.txt";
-        std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
-        std::ofstream filewrite(sDir.c_str());
-
-        if(!filewrite.is_open()){
-            std::cout<<"'debug.txt' does not exist. No debug will be written.\n";
-        }
-        else{
-            filewrite << file.str();
-            filewrite.close();
-        }
-    }
-
+    //Report results
     double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
     double fPercentage2 = ((double)nNumOfFoundNormals / (double)(Data.MH.nTotalVertCount - nBadGeo)) * 100.0;
-    std::cout<<"Done calculating smoothing groups!\n";
+    bool bGoodEnough = (fPercentage2 > 80.0);
     std::cout<<"Found normals: "<<nNumOfFoundNormals<<"/"<<Data.MH.nTotalVertCount<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
     if(nNumOfFoundNormals < Data.MH.nTotalVertCount) std::cout<<"  Without bad geometry: "<<nNumOfFoundNormals<<"/"<<(Data.MH.nTotalVertCount - nBadGeo)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
     if(bDebug && Data.MH.nTotalTangent1Count > 0){
@@ -1502,6 +1468,54 @@ void MDL::DetermineSmoothing(){
         std::cout<<"Found normals: "<<nNumOfFoundTSN<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
         std::cout<<"  Without bad UVs: "<<nNumOfFoundTSN<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
     }
+
+    if(bGoodEnough){
+        Report("Calculating smoothing groups...");
+        /// Here we finally apply the smoothing groups to the faces in a principled way.
+        std::vector<bool> DoneGroups(Data.MH.PatchArrayPointers.size(), false);
+        for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+            ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DoneGroups);
+        }
+        /// And finally finally, we merge the numbers for every face and get rid of the patch array.
+        for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+            for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
+                Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+                unsigned long int nExistingSG = 0;
+                for(int i = 0; i < patch.SmoothingGroupNumbers.size(); i++){
+                    nExistingSG = nExistingSG | *patch.SmoothingGroupNumbers.at(i);
+                }
+                patch.nSmoothingGroups = (unsigned int) nExistingSG;
+                for(int f = 0; f < patch.FaceIndices.size(); f++){
+                    GetNodeByNameIndex(patch.nNameIndex).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup = nExistingSG;
+                }
+            }
+        }
+    }
+    else Error("The vector recalculations were off by too much to be able to determine the smoothing groups. Try decompiling with different vertex normal calculation settings.");
+
+    Data.MH.PatchArrayPointers.clear();
+    Data.MH.PatchArrayPointers.shrink_to_fit();
+    /**/
+
+    if(bDebug){
+        std::string sDir = sFullPath;
+        sDir.reserve(MAX_PATH);
+        PathRemoveFileSpec(&sDir[0]);
+        sDir.resize(strlen(sDir.c_str()));
+        sDir += "\\debug.txt";
+        std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
+        std::ofstream filewrite(sDir.c_str());
+
+        if(!filewrite.is_open()){
+            std::cout<<"'debug.txt' does not exist. No debug will be written.\n";
+        }
+        else{
+            filewrite << file.str();
+            filewrite.close();
+        }
+    }
+
+    std::cout<<"Done calculating smoothing groups!\n";
 }
 
 void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups){

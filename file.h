@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "geometry.h"
 
 union BB2{
     short int i;
@@ -70,6 +71,7 @@ class BinaryFile: public File{
     int ReadInt(unsigned int * nPosition, int nMarking, int nBytes = 4);
     float ReadFloat(unsigned int * nPosition, int nMarking, int nBytes = 4);
     void ReadString(std::string & sArray1, unsigned int *nPosition, int nMarking, int nNumber);
+    Vector ReadVector(unsigned int * nPosition, int nMarking, int nBytes = 4);
 
     //Writing functions
     void WriteInt(int nInt, int nKnown, int nBytes = 4);

@@ -7,7 +7,7 @@ ID_CUR_DRAG CURSOR "cursor.cur"
 
 //IDI_ICON ICON "acdc_icon.ico"
 
-DLG_SETTINGS DIALOGEX  100, 50, 200, 70
+DLG_SETTINGS DIALOGEX  100, 50, 200, 80
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg"
@@ -16,6 +16,7 @@ BEGIN
     AUTOCHECKBOX "Include Area Weighting", DLG_ID_AREA_WEIGHT, 15, 22, 160, 8
     AUTOCHECKBOX "Include Angle Weighting", DLG_ID_ANGLE_WEIGHT, 15, 34, 160, 8
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
+    AUTOCHECKBOX "Calculate Smoothing Groups", DLG_ID_CALC_SMOOTHING, 15, 64, 160, 8
 END
 
 DLG_EDIT_TEXTURES DIALOGEX  100, 50, 316, 172
@@ -26,9 +27,11 @@ BEGIN
     LTEXT "Click on a selected texture to rename it. Check the checkbox to enable bumpmapping.", DLG_ID_STATIC, 8, 5, 308, 8
 END
 
-DLG_PROGRESS DIALOGEX  0, 0, 200, 25
+DLG_PROGRESS DIALOGEX  0, 0, 200, 30
 STYLE WS_POPUP | WS_BORDER | DS_CENTER
+FONT 8, "MS Shell Dlg"
 BEGIN
+    LTEXT "Processing...", DLG_ID_STATIC, 10, 4, 190, 8
 END
 
 IDM_EDITOR_DLG MENU DISCARDABLE
@@ -63,11 +66,14 @@ BEGIN
         MENUITEM "&K1", IDM_GAME_K1
         MENUITEM "&K2", IDM_GAME_K2
         END
-    /**
-    POPUP "&Help"
-    BEGIN
+    POPUP " &View "
+        BEGIN
+        MENUITEM "&Hex", IDM_VIEW_HEX
+        END
+    POPUP " &Help "
+        BEGIN
+        MENUITEM "&Help", IDM_HELP
         MENUITEM "&About", IDM_HELP_ABOUT
-    END
-    /**/
+        END
 END
 

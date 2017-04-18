@@ -104,7 +104,7 @@ invisible:true
 	parameters EmitParam rollout:EmitParamRollout
 	(
     	-- display
-    	iconSize        type:#float animatable:false ui:spn_iconSize default:100
+    	iconSize        type:#float animatable:false default:100 --ui:spn_iconSize
     	-- emitter size
     	xsize           type:#float animatable:true ui:spn_xSize default:0.0f
     	ysize           type:#float animatable:true ui:spn_ySize default:0.0f
@@ -120,29 +120,33 @@ invisible:true
     	combinetime     type:#float range:[0,15,0] animatable:true ui:spn_combinetime default:0 -- is this a p2p property?
     	deadspace       type:#float animatable:false ui:spn_deadspace default:0.0
     	opacity         type:#float animatable:true ui:spn_opacity  default:0.5
+
+    	-- new props -- bead-v modification: add kotor props
+    	numBranches         type:#integer animatable:false default:0 ui:spn_branchnumber
+    	-- end bead-v modification
 	)
 
 	parameters EmitParticles rollout:EmitParticlesRollout
 	(
     	-- start/end
     	colorStart  type:#color animatable:true ui:colorPicker_colorStart
-    	colorMid    type:#color animatable:true                                  -- bead-v modification: add kotor props
+    	colorMid    type:#color animatable:true ui:colorPicker_colorMid          -- bead-v modification: add kotor props
     	colorEnd    type:#color animatable:true ui:colorPicker_colorEnd
     	alphaStart  type:#float animatable:true ui:spn_alphaStart default:1.0
-    	alphaMid    type:#float animatable:true default:1.0                      -- bead-v modification: add kotor props
+    	alphaMid    type:#float animatable:true ui:spn_alphaMid default:1.0      -- bead-v modification: add kotor props
     	alphaEnd    type:#float animatable:true ui:spn_alphaEnd default:1.0
-    	percentStart type:#float animatable:true                                 -- bead-v modification: add kotor props
-    	percentMid  type:#float animatable:true                                  -- bead-v modification: add kotor props
-    	percentEnd  type:#float animatable:true                                  -- bead-v modification: add kotor props
+    	percentStart type:#float animatable:true ui:spn_percentStart             -- bead-v modification: add kotor props
+    	percentMid  type:#float animatable:true ui:spn_percentMid                -- bead-v modification: add kotor props
+    	percentEnd  type:#float animatable:true ui:spn_percentEnd                -- bead-v modification: add kotor props
     	sizeStart   type:#float animatable:true ui:spn_sizeStart default:0.00
-    	sizeMid     type:#float animatable:true default:0.00                     -- bead-v modification: add kotor props
+    	sizeMid     type:#float animatable:true ui:spn_sizeMid default:0.00      -- bead-v modification: add kotor props
     	sizeEnd     type:#float animatable:true ui:spn_sizeEnd default:0.00
     	sizeStart_y type:#float animatable:true ui:spn_sizeStart_y default:0.00
-    	sizeMid_y   type:#float animatable:true default:0.00                     -- bead-v modification: add kotor props
+    	sizeMid_y   type:#float animatable:true ui:spn_sizeMid_y default:0.00    -- bead-v modification: add kotor props
     	sizeEnd_y   type:#float animatable:true ui:spn_sizeEnd_y default:0.00
 
     	birthrate   type:#integer animatable:true ui:spn_birthrate default:0
-    	m_fRandomBirthRate   type:#float animatable:true default:0.0             -- bead-v modification: add kotor props
+    	m_fRandomBirthRate   type:#float animatable:true ui:spn_randombirthrate default:0.0   -- bead-v modification: add kotor props
     	lifeExp     type:#float animatable:true ui:spn_lifeExp default:0.0
     	mass        type:#float animatable:true ui:spn_mass default:0.0
     	spread      type:#float animatable:true ui:spn_spread default:0.0
@@ -152,7 +156,12 @@ invisible:true
     	bounce_co   type:#float animatable:true ui:spn_bounce_co default:0.0
     	blurlength  type:#float animatable:true ui:spn_blurlength default:10.0
 
-
+    	-- new props -- bead-v modification: add kotor props
+    	targetsize          type:#float animatable:true default:0.0 ui:spn_targetsize
+    	tangentspread       type:#float animatable:true default:0.0 ui:spn_tangentspread
+    	tangentlength       type:#float animatable:true default:0.0 ui:spn_tangentlength
+    	detonate            type:#float animatable:true default:0.0 ui:spn_detonate
+    	-- end bead-v modification
 
     	loop        type:#integer animatable:false ui:box_loop default:0
     	bounce      type:#integer animatable:false ui:box_bounce default:0
@@ -175,6 +184,12 @@ invisible:true
     	frameEnd    type:#integer animatable:true		ui:spn_frameEnd default:0
     	random      type:#integer animatable:false	ui:box_random default:0
 
+    	-- new props -- bead-v modification: add kotor props
+    	m_bFrameBlending    type:#integer animatable:false default:0 ui:box_frameblending
+    	depth_texture       type:#integer animatable:false default:0 ui:box_depthtexture
+    	m_sDepthTextureName type:#string animatable:false default:"NULL" ui:edit_depthtexturename
+    	-- end bead-v modification
+
     	-- chunk
     	chunky		type:#integer default:0		ui:chk_chunk
     	chunkName   type:#string  default:"NULL"
@@ -188,25 +203,17 @@ invisible:true
     	lightningRadius     type:#float animatable:true ui:spn_lightningRadius default:0.0
     	lightningSubDiv		type:#integer animatable:false ui:spn_lightningSubDiv default:0
     	lightningScale		type:#float animatable:true ui:spn_lightningScale default:0
-    	lightningzigzag     type:#float animatable: true default:0.0 -- bead-v modification: add kotor props
+    	lightningzigzag     type:#float animatable:true ui:spn_lightningzigzag default:0.0 -- bead-v modification: add kotor props
 
     	-- blast props
     	blastRadius         type:#float animatable:false ui:spn_blastRadius default:0
     	blastLength         type:#float animatable:false ui:spn_blastLength default:0
 
     	-- new props -- bead-v modification: add kotor props
-    	targetsize          type:#float animatable:true default:0.0
-    	numcontrolpts       type:#float animatable:true default:0.0
-    	controlptradius     type:#float animatable:true default:0.0
-    	controlptdelay      type:#float animatable:true default:0.0
-    	tangentspread       type:#float animatable:true default:0.0
-    	tangentlength       type:#float animatable:true default:0.0
-    	detonate            type:#float animatable:true default:0.0
-    	numBranches         type:#integer animatable:false default:0
-    	controlptsmoothing  type:#float animatable:false default:0.0
-    	m_bFrameBlending    type:#integer animatable:false default:0
-    	depth_texture       type:#integer animatable:false default:0
-    	m_sDepthTextureName type:#string animatable:false default:"NULL"
+    	numcontrolpts       type:#float animatable:true default:0.0 ui:spn_numctrlpts
+    	controlptradius     type:#float animatable:true default:0.0 ui:spn_ctrlptradius
+    	controlptdelay      type:#float animatable:true default:0.0 ui:spn_ctrlptdelay
+    	controlptsmoothing  type:#float animatable:false default:0.0 ui:spn_ctrlptsmoothing
     	-- end bead-v modification
 
     	-- p2p props
@@ -263,9 +270,11 @@ invisible:true
 
     rollout EmitParamRollout "Emitter Parameters" width:162 height:293
     (
+        /*
     	-- GroupBox grp1 "Display"  width:154 height:41
 		label lbl_iconsize "Display Icon Size:" across:2
     	spinner spn_iconSize ""  fieldwidth:48 height:16
+    	*/
 
     	-- GroupBox grp2 "Emitter Size (cm)"  width:154 height:62
 		Label lbl_emittersize "Emitter Size (cm)" align:#left
@@ -287,6 +296,8 @@ invisible:true
         )
     	group "Miscellaneous"
 		(
+			label lbl_branchnumber "Branch Number:" align:#left across:2
+	    	spinner spn_branchnumber ""  fieldwidth:40 height:16 range:[0,100,0] type:#integer
 			label lbl_renderorder "Render Order:" align:#left across:2
 	    	spinner spn_renderorder ""  fieldwidth:40 height:16 range:[0,255,0] type:#integer
 			label lbl_threshold "Threshold:" align:#left across:2
@@ -298,7 +309,7 @@ invisible:true
 	    	spinner spn_combinetime "" fieldwidth:40 height:16
 			label lbl_deadspace "Deadspace:" align:#left across:2
 	    	spinner spn_deadspace "" fieldwidth:40 height:16
-			label lbl_opacity "Opacity" align:#left align:#left across:2
+			label lbl_opacity "Opacity:" align:#left align:#left across:2
 	    	spinner spn_opacity "" fieldwidth:40 height:16
 		)
 
@@ -364,6 +375,45 @@ invisible:true
     rollout EmitParticlesRollout "Emitter Particles" -- width:162 height:431
     (
     	--GroupBox grp1 "Start and End"  width:154 height:171
+    	group "Start, Mid, End"
+    	(
+            label lbl_l01 across:2
+            label lbl_lPercent "Percent" align:#left
+			label lbl_start1 "Start" align:#right across:2
+			spinner spn_percentStart ""  align:#left fieldwidth:34 height:16 range:[0,100,0]
+			label lbl_mid1 "Mid" align:#right across:2
+	    	spinner spn_percentMid "" align:#left fieldwidth:34 height:16 range:[0,100,50]
+			label lbl_end1 "End" align:#right across:2
+	    	spinner spn_percentEnd "" align:#left fieldwidth:34 height:16 range:[0,100,100]
+
+            label lbl_l02 across:3
+            label lbl_lColor "Color"
+            label lbl_lAlpha "Alpha"
+			label lbl_start2 "Start" align:#right across:3
+	    	colorPicker colorPicker_colorStart ""  height:20 color:[255,255,255]
+			spinner spn_alphaStart ""  fieldwidth:34 height:16 range:[0,1,0]
+			label lbl_mid2 "Mid" align:#right across:3
+	    	colorPicker colorPicker_colorMid ""  height:20 color:[255,255,255]
+	    	spinner spn_alphaMid "" fieldwidth:34 height:16 range:[0,1,0]
+			label lbl_end2 "End" align:#right across:3
+	    	colorPicker colorPicker_colorEnd ""   height:20 color:[255,255,255]
+	    	spinner spn_alphaEnd "" fieldwidth:34 height:16 range:[0,1,0]
+	    	checkbox box_m_isTinted "Allow Color Tint"  height:15 align:#left
+
+            label lbl_l03 across:3
+            label lbl_lSizeX "Size X"
+            label lbl_lSizeY "Size Y"
+			label lbl_start4 "Start" align:#right across:3
+			spinner spn_sizeStart ""  fieldwidth:34 height:16 range:[0,255,0]
+			spinner spn_sizeStart_y ""  fieldwidth:34 height:16 range:[0,255,0]
+			label lbl_mid4 "Mid" align:#right across:3
+	    	spinner spn_sizeMid "" fieldwidth:34 height:16 range:[0,255,0]
+	    	spinner spn_sizeMid_y "" fieldwidth:34 height:16 range:[0,255,0]
+			label lbl_end4 "End" align:#right across:3
+	    	spinner spn_sizeEnd "" fieldwidth:34 height:16 range:[0,255,0]
+	    	spinner spn_sizeEnd_y "" fieldwidth:34 height:16 range:[0,255,0]
+    	)
+    	/*
 		group "Start and End"
 		(
 			label lbl_dummy1 across:3
@@ -386,8 +436,11 @@ invisible:true
 			spinner spn_sizeStart_y ""  fieldwidth:34 height:16 range:[0,255,0] --align:#left
 	    	spinner spn_sizeEnd_y "" fieldwidth:34 height:16 range:[0,255,0] --align:#right
         )
+        */
 		label lbl_1 "Birthrate (per s):" align:#left across:2
     	spinner spn_birthrate ""  type:#integer fieldwidth:40 height:16 range:[0,9999,0]
+		label lbl_31 "Random Birthrate:" align:#left across:2
+    	spinner spn_randombirthrate "" type:#float fieldwidth:40 height:16 range:[0,9999,0]
 		label lbl_2 "Life Exp(s; -1=inf):" align:#left across:2
     	spinner spn_lifeExp ""  fieldwidth:40 height:16 range:[-1,1000,0]
 		label lbl_3 "Mass:" align:#left across:2
@@ -402,6 +455,14 @@ invisible:true
     	spinner spn_randvel ""  fieldwidth:40 height:16 range:[0,1000,0]
 		label lbl_9 "Blur Length:" align:#left across:2
     	spinner spn_blurlength "" fieldwidth:40 height:16
+		label lbl_2002 "Target Size:" align:#left across:2
+    	spinner spn_targetsize "" fieldwidth:40 range:[0,100,0]
+		label lbl_2003 "Tangent Spread:" align:#left across:2
+    	spinner spn_tangentspread "" fieldwidth:40 height:16 range:[0,100,0]
+		label lbl_2004 "Tangent Length:" align:#left across:2
+    	spinner spn_tangentlength "" fieldwidth:40 height:16 range:[0,100,0]
+		label lbl_2005 "Detonate:" align:#left across:2
+    	spinner spn_detonate "" fieldwidth:40 height:16 range:[0,100,0]
 
     	checkbox box_bounce "Bounce"  width:61 height:15
 		label lbl_8 "Bounce Coef:" align:#left across:2
@@ -423,7 +484,10 @@ invisible:true
 		(
 			edittext edit_texture height:17
 			checkbox box_twosidedtex "Two-Sided Texture" height:15
-			label lbl_animation "Texture Animation" align:#left
+		)
+		group "Texture Animation"
+		(
+			--label lbl_animation "Texture Animation" align:#left
 
 			-- label lbl_textgrid "Texture Grid"
 			label lbl_a1 "Grid:" align:#left across:3
@@ -436,7 +500,13 @@ invisible:true
 			spinner spn_frameStart "" fieldwidth:40 height:16 range:[0,255,0] type:#integer
 			label lbl_a4 "Last Frame:" align:#left across:2
 			spinner spn_frameEnd "" fieldwidth:40 height:16 range:[0,255,0] type:#integer
+			checkbox box_frameblending "Frame Blending"
 			checkbox box_random "Random Playback" width:111 height:15
+		)
+		group "Depth Texture"
+		(
+			checkbox box_depthtexture "Use Depth Texture" align:#left
+			edittext edit_depthtexturename height:17
 		)
 		group "Chunk Model"
 		(
@@ -483,6 +553,8 @@ invisible:true
 	    	spinner spn_lightningSubDiv "" fieldwidth:40 height:16 range:[0,12,0] type:#integer
 			label lbl_l4 "Scale:" align:#left across:2
 	    	spinner spn_lightningScale "" fieldwidth:40 height:16 range:[0,1,0]
+			label lbl_34 "Zig Zag:" align:#left across:2
+	    	spinner spn_lightningzigzag "" fieldwidth:40 height:16 range:[0,1000,0]
         )
     	group "Blast Properties"
 		(
@@ -504,6 +576,17 @@ invisible:true
 	    	label lbl_l11 "Drag (m/s^2):" align:#left across:2
 	    	spinner spn_drag "" fieldwidth:40 height:16 range:[0,1,0]
 		)
+		group "Control Points"
+		(
+	    	label lbl_l20 "Number:" align:#left across:2
+	    	spinner spn_numctrlpts "" fieldwidth:40 height:16 range:[0,100,0] type:#integer
+	    	label lbl_l21 "Radius:" align:#left across:2
+	    	spinner spn_ctrlptradius "" fieldwidth:40 height:16 range:[0,1000,0] type:#float
+	    	label lbl_l22 "Delay:" align:#left across:2
+	    	spinner spn_ctrlptdelay "" fieldwidth:40 height:16 range:[0,1000,0] type:#float
+	    	label lbl_l23 "Smoothing:" align:#left across:2
+	    	spinner spn_ctrlptsmoothing "" fieldwidth:40 height:16 range:[-10000,10000,0] type:#float
+        )
     	on box_p2p changed state do
         (
 			update_ui()

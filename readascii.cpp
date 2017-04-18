@@ -1,5 +1,7 @@
 #include "MDL.h"
 #include <algorithm>
+#include "shlwapi.h"
+#include <fstream>
 
 /**
     Functions:
@@ -14,6 +16,8 @@ bool ASCII::Read(MDL & Mdl){
 
     std::unique_ptr<FileHeader> & FH = Mdl.GetFileData();
     std::string sID;
+
+    Mdl.Report("Reading ASCII...");
 
     //Set stuff to zero
     nPosition = 0;
@@ -1979,7 +1983,9 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
 
 void MDL::AsciiPostProcess(){
     std::cout<<"Ascii post-processing...\n";
+    Report("Post-processing imported ASCII...");
     FileHeader & Data = *FH;
+    bool bWok = false, bMdx = false;
 
     /// PART 0 ///
     /// Get rid of the duplication marks
@@ -2098,10 +2104,13 @@ void MDL::AsciiPostProcess(){
     /// PART 3 ///
     /// Interpret ascii data
     /// This constructs the Mesh.Vertices, Mesh.VertIndices, Dangly.Data2, Dangly.Constraints and Saber.SaberData structures.
-    /// And not to forget the weights.
+    /// And not to forget the weights. Also face normals, average, aabb tree.
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
         if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
+            std::vector<Vector> vectorarray;
+            vectorarray.reserve(node.Mesh.Faces.size()*3);
+            node.Mesh.fTotalArea = 0.0;
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
                 face.nID = f;
@@ -2112,8 +2121,16 @@ void MDL::AsciiPostProcess(){
                         vert.MDXData.nNameIndex = node.Head.nNameIndex;
 
                         if(node.Mesh.TempVerts.size() > 0){
+                            if(Mdx) Mdx.reset(new MDX());
                             bIgnoreVert = false;
                             vert.assign(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
+
+                            //Add to vectorarray if no identical
+                            bool bAdd = true;
+                            for(int v = 0; v < vectorarray.size() && bAdd; v++){
+                                if(vectorarray.at(v).Compare(node.Mesh.TempVerts.at(face.nIndexVertex[i]))) bAdd = false;
+                            }
+                            if(bAdd) vectorarray.push_back(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
 
                             vert.vFromRoot = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
                             vert.vFromRoot.Rotate(node.GetLocation().oOrientation.GetQuaternion());
@@ -2184,6 +2201,73 @@ void MDL::AsciiPostProcess(){
                 vertindex.nValues[2] = face.nIndexVertex[2];
                 node.Mesh.VertIndices.push_back(std::move(vertindex));
 
+                /// Surprise! Face normal calculation! Moved here so it can be used by BuildAABB
+                Vertex & v1 = node.Mesh.Vertices.at(face.nIndexVertex[0]);
+                Vertex & v2 = node.Mesh.Vertices.at(face.nIndexVertex[1]);
+                Vertex & v3 = node.Mesh.Vertices.at(face.nIndexVertex[2]);
+                Vector & v1UV = v1.MDXData.vUV1;
+                Vector & v2UV = v2.MDXData.vUV1;
+                Vector & v3UV = v3.MDXData.vUV1;
+                Vector Edge1 = v2 - v1;
+                Vector Edge2 = v3 - v1;
+                Vector Edge3 = v3 - v2;
+                Vector EUV1 = v2UV - v1UV;
+                Vector EUV2 = v3UV - v1UV;
+                Vector EUV3 = v3UV - v2UV;
+
+                //This is for face normal
+                    face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
+                    face.vNormal.Normalize();
+                //This is for the distance.
+                    face.fDistance = - (face.vNormal.fX * v1.fX +
+                                        face.vNormal.fY * v1.fY +
+                                        face.vNormal.fZ * v1.fZ);
+                //Area calculation
+                    face.fArea = HeronFormula(Edge1, Edge2, Edge3);
+                    face.fAreaUV = HeronFormula(EUV1, EUV2, EUV3);
+                    node.Mesh.fTotalArea += face.fArea;
+                //Tangent space vectors
+                    //Now comes the calculation. Will be using edges 1 and 2
+                    double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
+                    //This is division, need to check for 0
+                    if(r != 0){
+                        r = 1.0 / r;
+                    }
+                    else{
+                        /**
+                        It can be 0 in several ways.
+                        1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
+                        2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
+                        3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
+                        4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
+                        /**/
+                        //ndix UR's magic factor
+                        r = 2406.6388;
+                    }
+                    face.vTangent = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
+                    face.vBitangent = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
+                    face.vTangent.Normalize();
+                    face.vBitangent.Normalize();
+                    if(face.vTangent.Null()){
+                        face.vTangent = Vector(1.0, 0.0, 0.0);
+                    }
+                    if(face.vBitangent.Null()){
+                        face.vBitangent = Vector(1.0, 0.0, 0.0);
+                    }
+                    //Handedness
+                    Vector vCross = (face.vNormal / face.vTangent);
+                    double fDot = vCross * face.vBitangent;
+                    if(fDot > 0.0000000001){
+                        face.vTangent *= -1.0;
+                    }
+                    //Now check if we need to invert  T and B. But first we need a UV normal
+                    Vector vNormalUV = EUV1 / EUV2; //cross product
+                    if(vNormalUV.fZ < 0.0){
+                        face.vTangent *= -1.0;
+                        face.vBitangent *= -1.0;
+                    }
+
+                //Face Bounding Box calculation for AABB tree
                 if(node.Head.nType & NODE_HAS_AABB){
                     face.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
                     face.vBBmin = Vector(10000.0, 10000.0, 10000.0);
@@ -2197,6 +2281,85 @@ void MDL::AsciiPostProcess(){
                     }
                 }
             }
+
+            /// Surprise 2!! Average and BB calculation!
+            node.Mesh.vAverage = Vector(0.0, 0.0, 0.0);
+            node.Mesh.vBBmin = Vector(0.0, 0.0, 0.0); /// Wrong, but Bioware-correct
+            node.Mesh.vBBmax = Vector(0.0, 0.0, 0.0); /// Wrong, but Bioware-correct
+            for(int v = 0; v < vectorarray.size(); v++){
+                node.Mesh.vBBmin.fX = std::min(node.Mesh.vBBmin.fX, vectorarray.at(v).fX);
+                node.Mesh.vBBmin.fY = std::min(node.Mesh.vBBmin.fY, vectorarray.at(v).fY);
+                node.Mesh.vBBmin.fZ = std::min(node.Mesh.vBBmin.fZ, vectorarray.at(v).fZ);
+                node.Mesh.vBBmax.fX = std::max(node.Mesh.vBBmax.fX, vectorarray.at(v).fX);
+                node.Mesh.vBBmax.fY = std::max(node.Mesh.vBBmax.fY, vectorarray.at(v).fY);
+                node.Mesh.vBBmax.fZ = std::max(node.Mesh.vBBmax.fZ, vectorarray.at(v).fZ);
+                node.Mesh.vAverage += vectorarray.at(v);
+            }
+            node.Mesh.vAverage /= (double) vectorarray.size();
+            /// Now find the radius as well!
+            node.Mesh.fRadius = 0.0;
+            for(int v = 0; v < vectorarray.size(); v++){
+                node.Mesh.fRadius = std::max(node.Mesh.fRadius, Vector(vectorarray.at(v) - node.Mesh.vAverage).GetLength());
+            }
+
+            //Calculate adjacent faces
+            for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                Face & face = node.Mesh.Faces.at(f);
+
+                // Skip if none is -1
+                if(face.nAdjacentFaces[0]==-1 ||
+                   face.nAdjacentFaces[1]==-1 ||
+                   face.nAdjacentFaces[2]==-1 ){
+                    //Go through all the faces coming after this one
+                    for(int f2 = f+1; f2 < node.Mesh.Faces.size(); f2++){
+                        Face & compareface = node.Mesh.Faces.at(f2);
+                        std::vector<bool> VertMatches(3, false);
+                        std::vector<bool> VertMatchesCompare(3, false);
+                        for(int i = 0; i < 3; i++){
+                            int nVertIndex = face.nIndexVertex[i];
+                            Vector & ourvect = node.Mesh.Vertices.at(nVertIndex).vFromRoot;
+                            for(int i2 = 0; i2 < 3; i2++){
+                                Vector & othervect = node.Mesh.Vertices.at(compareface.nIndexVertex[i2]).vFromRoot;
+                                if(ourvect.Compare(othervect)){
+                                    VertMatches.at(i) = true;
+                                    VertMatchesCompare.at(i2) = true;
+                                    i2 = 3; // we can only have one matching vert in a face per vert. Once we find a match, we're done.
+                                }
+                            }
+                        }
+                        if(VertMatches.at(0) && VertMatches.at(1)){
+                            if(face.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 0...\n";
+                            else face.nAdjacentFaces[0] = f2;
+                        }
+                        else if(VertMatches.at(1) && VertMatches.at(2)){
+                            if(face.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 1...\n";
+                            else face.nAdjacentFaces[1] = f2;
+                        }
+                        else if(VertMatches.at(2) && VertMatches.at(0)){
+                            if(face.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f<<") for edge 2...\n";
+                            else face.nAdjacentFaces[2] = f2;
+                        }
+                        if(VertMatchesCompare.at(0) && VertMatchesCompare.at(1)){
+                            if(compareface.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f2<<") for edge 0...\n";
+                            else compareface.nAdjacentFaces[0] = f;
+                        }
+                        else if(VertMatchesCompare.at(1) && VertMatchesCompare.at(2)){
+                            if(compareface.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f2<<") for edge 1...\n";
+                            else compareface.nAdjacentFaces[1] = f;
+                        }
+                        else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)){
+                            if(compareface.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent faces (to "<<f2<<") for edge 2...\n";
+                            else compareface.nAdjacentFaces[2] = f;
+                        }
+                        if(face.nAdjacentFaces[0]!=-1 &&
+                           face.nAdjacentFaces[1]!=-1 &&
+                           face.nAdjacentFaces[2]!=-1 ){
+                            f2 = node.Mesh.Faces.size(); //Found them all, maybe I finish early?
+                        }
+                    }
+                }
+            }
+
             node.Mesh.TempVerts.resize(0);
             node.Mesh.TempTverts.resize(0);
             node.Mesh.TempTverts1.resize(0);
@@ -2249,11 +2412,36 @@ void MDL::AsciiPostProcess(){
             else std::cout<<"Warning! Requirements for saber mesh not met! The saber mesh will remain empty.\n";
         }
         if(node.Head.nType & NODE_HAS_AABB){
-            std::vector<Face*> allfaces;
-            for(int f = 0; f < node.Mesh.Faces.size(); f++){
-                allfaces.push_back(&node.Mesh.Faces.at(f));
+            if(Wok) Warning("Found an aabb node, but Wok already exists! Skipping this node...");
+            else{
+                Wok.reset(new WOK());
+                std::vector<Face*> allfaces;
+                for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                    allfaces.push_back(&node.Mesh.Faces.at(f));
+                }
+                std::stringstream file;
+                BuildAabb(node.Walkmesh.RootAabb, allfaces, &file);
+
+                //Write to Wok
+                std::cout<< "Should write wok.\n";
+                Wok->WriteWok(node);
+
+                std::string sDir = sFullPath;
+                sDir.reserve(MAX_PATH);
+                PathRemoveFileSpec(&sDir[0]);
+                sDir.resize(strlen(sDir.c_str()));
+                sDir += "\\debug_aabb.txt";
+                std::cout<<"Will write aabb debug to: "<<sDir.c_str()<<"\n";
+                std::ofstream filewrite(sDir.c_str());
+
+                if(!filewrite.is_open()){
+                    std::cout<<"'debug_aabb.txt' does not exist. No debug will be written.\n";
+                }
+                else{
+                    filewrite << file.str();
+                    filewrite.close();
+                }
             }
-            BuildAabb(node.Walkmesh.RootAabb, allfaces);
         }
     }
 
@@ -2261,7 +2449,18 @@ void MDL::AsciiPostProcess(){
     std::cout<<"Done post-processing ascii...\n";
 }
 
-void MDL::BuildAabb(Aabb & aabb, const std::vector<Face*> & faces){
+struct FaceSort{
+    Face * p_face = nullptr;
+    double centroid = 0.0;
+    bool operator<(const FaceSort & facesort){
+        if(centroid == facesort.centroid && p_face != nullptr && facesort.p_face != nullptr)
+            return (p_face->fDistance < facesort.p_face->fDistance);
+        return (centroid < facesort.centroid);
+    }
+};
+
+void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream * file){
+    if(file != nullptr) (*file).precision(5);
     if(faces.size() == 1){
         //This is the leaf
         Face & face = *faces.front();
@@ -2271,10 +2470,10 @@ void MDL::BuildAabb(Aabb & aabb, const std::vector<Face*> & faces){
         aabb.nProperty = 0;
         aabb.nChild1 = 0;
         aabb.nChild2 = 0;
-        std::cout<<"Wrote leaf: "<<aabb.nID<<"\n";
+        if(file != nullptr) *file<<"Wrote leaf: "<<aabb.nID<<"\n";
     }
     else{
-        std::cout<<"Processing non-leaf, faces: "<<faces.size()<<"\n";
+        if(file != nullptr) *file<<"Processing non-leaf, faces: "<<faces.size()<<"\n";
         aabb.nID = -1;
         aabb.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
         aabb.vBBmin = Vector(10000.0, 10000.0, 10000.0);
@@ -2287,7 +2486,8 @@ void MDL::BuildAabb(Aabb & aabb, const std::vector<Face*> & faces){
             aabb.vBBmin.fY = std::min(aabb.vBBmin.fY, face.vBBmin.fY);
             aabb.vBBmin.fZ = std::min(aabb.vBBmin.fZ, face.vBBmin.fZ);
         }
-        std::cout<<"Bounding box: "<<aabb.vBBmin.fX<<", "<<aabb.vBBmin.fY<<", "<<aabb.vBBmin.fZ<<", "<<aabb.vBBmax.fX<<", "<<aabb.vBBmax.fY<<", "<<aabb.vBBmax.fZ<<"\n";
+        aabb.vBBmax += Vector(0.0001, 0.0001, 0.0001);
+        if(file != nullptr) *file<<"Bounding box: "<<aabb.vBBmin.fX<<", "<<aabb.vBBmin.fY<<", "<<aabb.vBBmin.fZ<<", "<<aabb.vBBmax.fX<<", "<<aabb.vBBmax.fY<<", "<<aabb.vBBmax.fZ<<"\n";
         if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fY - aabb.vBBmin.fY)){
             if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fZ - aabb.vBBmin.fZ)){
                 //Diff in X is definitely the largest
@@ -2309,83 +2509,113 @@ void MDL::BuildAabb(Aabb & aabb, const std::vector<Face*> & faces){
 
         std::vector<Face*> half1;
         std::vector<Face*> half2;
-        if(faces.size() == 2){
-            half1.push_back(faces.front());
-            half2.push_back(faces.back());
-        }
-        else{
-            double fMedian = 0.0;
-            std::vector<double> centroids;
-            centroids.reserve(faces.size());
-            double fCentroid = 0.0;
-            bool bSkip;
-            for(int f = 0; f < faces.size(); f++){
-                Face & face = *faces.at(f);
-                if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
-                else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
-                else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
-                else{
-                    Error("Aabb significant plane not assigned!");
-                    return;
-                }
-                /*
-                bSkip = false;
-                for(int c = 0; c < centroids.size() && !bSkip; c++){
-                    if(centroids.at(c) == fCentroid) bSkip = true;
-                }
-                */
-                //if(!bSkip){
-                    centroids.push_back(fCentroid);
-                    std::cout<<"Current centroid: "<<centroids.back()<<" (face "<<face.nID<<")\n";
-                //}
-                //else std::cout<<"Skipped centroid: "<<fCentroid<<" (face "<<face.nID<<")\n";
-            }
-            sort(centroids.begin(), centroids.end());
-            bool bEven = (centroids.size() % 2 == 0);
-            int nIndex;
-            if(bEven) nIndex = centroids.size() / 2 - 1;
-            else nIndex = centroids.size() / 2;
-            fMedian = centroids.at(nIndex);
-            if(bEven){
-                fMedian = (fMedian + centroids.at(nIndex + 1)) / 2;
-            }
-            std::cout<<"Median: "<<fMedian<<"\n";
 
-            for(int f = 0; f < faces.size(); f++){
-                Face & face = *faces.at(f);
-                if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
-                else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
-                else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
-                else{
-                    Error("Aabb significant plane not assigned after median!");
-                    return;
+        double fMedian = 0.0;
+        std::vector<FaceSort> centroids;
+        centroids.reserve(faces.size());
+        double fCentroid = 0.0;
+        bool bSkip;
+        if(file != nullptr) *file<<"Faces:\n";
+        for(int f = 0; f < faces.size(); f++){
+            Face & face = *faces.at(f);
+            FaceSort newfs;
+            newfs.p_face = &face;
+            if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) newfs.centroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
+            else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) newfs.centroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
+            else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) newfs.centroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
+            else{
+                Error("Aabb significant plane not assigned!");
+                return;
+            }
+            /*
+            bSkip = false;
+            for(int c = 0; c < centroids.size() && !bSkip; c++){
+                if(centroids.at(c) == fCentroid) bSkip = true;
+            }
+            */
+            //if(!bSkip){
+                centroids.push_back(std::move(newfs));
+                if(file != nullptr) *file<<"  "<<centroids.back().centroid<<" ("<<face.nID<<")\n";
+            //}
+            //else std::cout<<"Skipped centroid: "<<fCentroid<<" (face "<<face.nID<<")\n";
+        }
+        sort(centroids.begin(), centroids.end());
+        bool bEven = (centroids.size() % 2 == 0);
+        int nIndex;
+        if(bEven) nIndex = centroids.size() / 2 - 1;
+        else nIndex = centroids.size() / 2;
+        fMedian = centroids.at(nIndex).centroid;
+        if(bEven){
+            nIndex++;
+            fMedian = (fMedian + centroids.at(nIndex).centroid) / 2;
+        }
+        if(file != nullptr) *file<<"Median: "<<fMedian<<"\n";
+
+        for(int c = 0; c < centroids.size(); c++){
+            if(c < nIndex) half1.push_back(centroids.at(c).p_face);
+            else  half2.push_back(centroids.at(c).p_face);
+        }
+
+        /*
+        bool bToggle = false;
+        for(int f = 0; f < faces.size(); f++){
+            Face & face = *faces.at(f);
+            if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
+            else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
+            else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
+            else{
+                Error("Aabb significant plane not assigned after median!");
+                return;
+            }
+            if(fCentroid < fMedian) half1.push_back(&face);
+            else if(fCentroid > fMedian) half2.push_back(&face);
+            else{
+                //They are equal
+                if(!bEven){
+                    half2.push_back(&face);
+                    bEven = true;
+                    bToggle = true;
                 }
-                if(fCentroid < fMedian) half1.push_back(&face);
-                else if(fCentroid > fMedian) half2.push_back(&face);
+                else if(!bToggle){
+                    half1.push_back(&face);
+                    bToggle = true;
+                }
                 else{
-                    //They are equal
-                    if(centroids.at(nIndex + 1) == fMedian){
-                        half2.push_back(&face);
-                    }
-                    else if(centroids.at(nIndex - 1) == fMedian){
-                        half1.push_back(&face);
-                    }
-                    else{
-                        //default default, go with 1
-                        half1.push_back(&face);
-                    }
+                    //default default, go with 1
+                    bToggle = false;
+                    half2.push_back(&face);
                 }
             }
-            centroids.resize(0);
-            centroids.shrink_to_fit();
-        }
+        }*/
+        centroids.resize(0);
+        centroids.shrink_to_fit();
 
         if(!half1.empty() && !half2.empty()){
             aabb.Child1.resize(1);
-            BuildAabb(aabb.Child1.front(), half1);
+            BuildAabb(aabb.Child1.front(), half1, file);
             aabb.Child2.resize(1);
-            BuildAabb(aabb.Child2.front(), half2);
+            BuildAabb(aabb.Child2.front(), half2, file);
         }
-        else Error("AABB tree: One of the halves is empty!");
+        else{
+            if(file != nullptr) *file<<"ERROR: One of the halves is empty!\n";
+            Error("AABB tree: One of the halves is empty!");
+        }
     }
+}
+
+void LinearizeAabb(Aabb & aabbroot, std::vector<Aabb> & aabbarray){
+    unsigned int nIndex = aabbarray.size();
+    aabbroot.nExtra = 4;
+    aabbarray.push_back(std::move(aabbroot));
+
+    if(aabbarray.at(nIndex).Child1.size() > 0){
+        aabbarray.at(nIndex).nChild1 = aabbarray.size();
+        LinearizeAabb(aabbarray.at(nIndex).Child1.front(), aabbarray);
+    }
+    else aabbarray.at(nIndex).nChild1 = -1;
+    if(aabbarray.at(nIndex).Child2.size() > 0){
+        aabbarray.at(nIndex).nChild2 = aabbarray.size();
+        LinearizeAabb(aabbarray.at(nIndex).Child2.front(), aabbarray);
+    }
+    else aabbarray.at(nIndex).nChild2 = -1;
 }

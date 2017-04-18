@@ -2,10 +2,17 @@
 #include "file.h"
 #include <iostream>
 #include <algorithm>
+#include <Shlwapi.h>
 
 BB2 ByteBlock2;
 BB4 ByteBlock4;
 BB8 ByteBlock8;
+
+void File::SetFilePath(std::string & sPath){
+    sFullPath = sPath;
+    sFile = sPath;    PathStripPath(&sFile.front());
+    sFile.resize(strlen(sFile.c_str()));
+}
 
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
     //std::cout<<string_format("ReadInt() at position %i.\n", *nCurPos);
@@ -57,6 +64,26 @@ float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
     MarkBytes(*nCurPos, 4, nMarking);
     *nCurPos += 4;
     return ByteBlock4.f;
+}
+
+Vector BinaryFile::ReadVector(unsigned int * nCurPos, int nMarking, int nBytes){
+    if(*nCurPos+nBytes*3 > sBuffer.size()){
+        std::cout<<"ReadVector(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.0.\n";
+        return Vector(-1.0, -1.0, -1.0);
+    }
+    int n = 0;
+    double Coords[3];
+    for(int m = 0; m < 3; m++){
+        n = 0;
+        while(n < 4){
+            ByteBlock4.bytes[n] = sBuffer[*nCurPos + m*4 + n];
+            n++;
+        }
+        Coords[m] = ByteBlock4.f;
+    }
+    MarkBytes(*nCurPos, 12, nMarking);
+    *nCurPos += 12;
+    return Vector(Coords[0], Coords[1], Coords[2]);
 }
 
 void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int nMarking, int nNumber){

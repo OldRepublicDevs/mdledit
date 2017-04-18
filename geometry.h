@@ -1,6 +1,8 @@
 #ifndef GEOMETRY_H_INCLUDED
 #define GEOMETRY_H_INCLUDED
 
+#include <string>
+
 struct Matrix22;
 struct Vector;
 class Orientation;

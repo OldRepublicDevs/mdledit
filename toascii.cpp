@@ -611,7 +611,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             return;
         }
         Node & node = GetNodeByNameIndex(ctrl->nNameIndex);
-        sReturn<<"\n  "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<"  ";
+        sReturn<<"\n  "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
             ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart];

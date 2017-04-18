@@ -239,6 +239,7 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             MDL* Mdl = (MDL*) lParam;
             if(Mdl->bSmoothAngleWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_ANGLE_WEIGHT), BST_CHECKED);
             if(Mdl->bSmoothAreaWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_AREA_WEIGHT), BST_CHECKED);
+            if(Mdl->bDetermineSmoothing) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_CALC_SMOOTHING), BST_CHECKED);
         }
         break;
         case WM_COMMAND:
@@ -262,6 +263,13 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSmoothAngleWeighting = true;
                         else Mdl->bSmoothAreaWeighting = false;
                     }
+                    break;
+                    case DLG_ID_CALC_SMOOTHING:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bDetermineSmoothing = true;
+                        else Mdl->bDetermineSmoothing = false;
+                    }
+                    break;
                 }
             }
         }
