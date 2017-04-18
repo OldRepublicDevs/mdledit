@@ -542,9 +542,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             if(bShowHex) SetWindowPos(hTree, NULL,
                                       ME_TREE_OFFSET_X,
-                                      ME_TREE_OFFSET_Y,
+                                      ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2, //ME_TREE_OFFSET_Y,
                                       (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
-                                      rcClient.bottom - ME_TREE_OFFSET_Y - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y + 5, NULL);
+                                      rcClient.bottom - (ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2) - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y + 5, NULL);
             else SetWindowPos(hTree, NULL,
                               nCompactOffsetLeft,
                               nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y,

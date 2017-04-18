@@ -50,7 +50,7 @@
 #define ME_TREE_OFFSET_X            620
 #define ME_TREE_OFFSET_Y            280
 #define ME_DISPLAY_OFFSET_Y         71
-#define ME_DISPLAY_SIZE_Y           205
+#define ME_DISPLAY_SIZE_Y           220
 
 #define DEBUG_LEVEL 0
 
@@ -81,18 +81,10 @@ int Error(std::string sErrorMessage);
 int WarningCancel(std::string sWarningMessage);
 int Warning(std::string sWarningMessage);
 int pown(int base, int exp);
-//float powf(float base, float exp);
 float deg(float rad);
 float rad(float deg);
 double deg(double rad);
 double rad(double deg);
-//float acosf(float fVal);
-//float cosf(float fVal);
-//float sinf(float fVal);
-//float tanf(float fVal);
-//float sqrtf(float fVal);
-//void QuaternionToAA(float * fQuaternion, float * fAA);
-//void AAToQuaternion(float * fAA, float * fQuaternion);
 void QuaternionToAA(double * fQuaternion, double * fAA);
 void AAToQuaternion(double * fAA, double * fQuaternion);
 double RoundDec(double fNumber, int nDecPlaces);
