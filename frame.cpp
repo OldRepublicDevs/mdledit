@@ -659,6 +659,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 sAsciiExport.shrink_to_fit();
             }
 
+            //Save Dwk
+            if(Model.Dwk0 || Model.Dwk1 || Model.Dwk2){
+                std::string cDwk;
+                cDwk = cFile;
+                char * cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, ".dwk");
+
+                file.open(cDwk, std::fstream::out);
+
+                sAsciiExport.clear();
+                Model.ExportDwkAscii(sAsciiExport);
+
+                //Write and close file
+                file<<sAsciiExport;
+                file.close();
+
+                sAsciiExport.clear();
+                sAsciiExport.shrink_to_fit();
+            }
+
 
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";

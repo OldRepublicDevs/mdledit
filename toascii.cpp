@@ -765,6 +765,143 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n"<< "endnode";
     }
     else if(nDataType == CONVERT_DWK){
+        if(!Dwk0 && !Dwk1 && !Dwk2) return;
+        if(Dwk0) if(!Dwk0->GetData()) return;
+        if(Dwk1) if(!Dwk1->GetData()) return;
+        if(Dwk2) if(!Dwk2->GetData()) return;
 
+        /// DETERMINE NAMES
+        std::string sClosedUse1, sClosedUse2, sOpen1Use1, sOpen1Use2, sOpen2Use1, sOpen2Use2, sClosedMesh, sOpen1Mesh, sOpen2Mesh, sRoot;
+        bool bClosedUse1 = true, bClosedUse2 = true, bOpen1Use1 = true, bOpen1Use2 = true, bOpen2Use1 = true, bOpen2Use2 = true;
+        bool bClosedMesh = true, bOpen1Mesh = true, bOpen2Mesh = true, bRoot = true;
+        if(FH){
+            FileHeader & Data = *FH;
+
+            for(int n = 0; n < Data.MH.Names.size(); n++){
+                std::string & sName = Data.MH.Names.at(n).sName;
+                if(sName.find("DWK_dp_closed_01")!=std::string::npos) sClosedUse1 = sName;
+                else if(sName.find("DWK_dp_closed_02")!=std::string::npos) sClosedUse2 = sName;
+                else if(sName.find("DWK_dp_open1_01")!=std::string::npos) sOpen1Use1 = sName;
+                else if(sName.find("DWK_dp_open1_02")!=std::string::npos) sOpen1Use2 = sName;
+                else if(sName.find("DWK_dp_open2_01")!=std::string::npos) sOpen2Use1 = sName;
+                else if(sName.find("DWK_dp_open2_02")!=std::string::npos) sOpen2Use2 = sName;
+                else if(sName.find("DWK_wg_closed")!=std::string::npos) sClosedMesh = sName;
+                else if(sName.find("DWK_wg_open1")!=std::string::npos) sOpen1Mesh = sName;
+                else if(sName.find("DWK_wg_open2")!=std::string::npos) sOpen2Mesh = sName;
+                else if(safesubstr(sName, strlen(sName.c_str()) - 4, 4) == "_DWK") sRoot = sName;
+            }
+            if(sClosedUse1.empty()) bClosedUse1 = false;
+            if(sClosedUse2.empty()) bClosedUse2 = false;
+            if(sOpen1Use1.empty()) bOpen1Use1 = false;
+            if(sOpen1Use2.empty()) bOpen1Use2 = false;
+            if(sOpen2Use1.empty()) bOpen2Use1 = false;
+            if(sOpen2Use2.empty()) bOpen2Use2 = false;
+            if(sClosedMesh.empty()) bClosedMesh = false;
+            if(sOpen1Mesh.empty()) bOpen1Mesh = false;
+            if(sOpen2Mesh.empty()) bOpen2Mesh = false;
+            if(sRoot.empty()) bRoot = false;
+            if(sRoot.empty()) sRoot = std::string(Data.MH.GH.sName.c_str()) + "_DWK";
+        }
+        if(sClosedUse1.empty()) sClosedUse1 = "md_DWK_dp_closed_01";
+        if(sClosedUse2.empty()) sClosedUse2 = "md_DWK_dp_closed_02";
+        if(sOpen1Use1.empty()) sOpen1Use1 = "md_DWK_dp_open1_01";
+        if(sOpen1Use2.empty()) sOpen1Use2 = "md_DWK_dp_open1_02";
+        if(sOpen2Use1.empty()) sOpen2Use1 = "md_DWK_dp_open2_01";
+        if(sOpen2Use2.empty()) sOpen2Use2 = "md_DWK_dp_open2_02";
+        if(sClosedMesh.empty()) sClosedMesh = "md_DWK_wg_closed";
+        if(sOpen1Mesh.empty()) sOpen1Mesh = "md_DWK_wg_open1";
+        if(sOpen2Mesh.empty()) sOpen2Mesh = "md_DWK_wg_open2";
+        if(sRoot.empty()) sRoot = "DWK";
+
+        /// WRITE DWK
+        sReturn      << "# Exported from MDLedit " << sTimestamp.str();
+        sReturn<<"\n"<< "# dwk file";
+        sReturn<<"\n"<< "#";
+        sReturn<<"\n"<< "# MDLedit DWKMESH  ASCII";
+        sReturn<<"\n"<< "node dummy "<< sRoot;
+        sReturn<<"\n"<< "  parent NULL";
+        sReturn<<"\n"<< "endnode";
+        if(Dwk0){
+            BWMHeader & data = *Dwk0->GetData();
+            sReturn<<"\n"<< "node dummy "<< sClosedUse1;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
+            sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node dummy "<< sClosedUse2;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
+            sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node trimesh "<< sClosedMesh;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
+            sReturn<<"\n"<< "  orientation 1.0 0.0 0.0 0.0";
+            sReturn<<"\n"<< "  verts "<<data.verts.size();
+            for(int v = 0; v < data.verts.size(); v++){
+                Vector & vert = data.verts.at(v);
+                sReturn<<"\n"<< "    "<<PrepareFloat(vert.fX)<<" "<<PrepareFloat(vert.fY)<<" "<<PrepareFloat(vert.fZ);
+            }
+            sReturn<<"\n"<< "  faces "<<data.faces.size();
+            for(int v = 0; v < data.faces.size(); v++){
+                Face & face = data.faces.at(v);
+                sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
+            }
+            sReturn<<"\n"<< "endnode";
+        }
+        if(Dwk1){
+            BWMHeader & data = *Dwk1->GetData();
+            sReturn<<"\n"<< "node dummy "<< sOpen1Use1;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
+            sReturn<<"\n"<< "endnode";
+            if(bOpen1Use2){
+                sReturn<<"\n"<< "node dummy "<< sOpen1Use2;
+                sReturn<<"\n"<< "  parent "<<sRoot;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
+                sReturn<<"\n"<< "endnode";
+            }
+            sReturn<<"\n"<< "node trimesh "<< sOpen1Mesh;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
+            sReturn<<"\n"<< "  orientation 1.0 0.0 0.0 0.0";
+            sReturn<<"\n"<< "  verts "<<data.verts.size();
+            for(int v = 0; v < data.verts.size(); v++){
+                Vector & vert = data.verts.at(v);
+                sReturn<<"\n"<< "    "<<PrepareFloat(vert.fX)<<" "<<PrepareFloat(vert.fY)<<" "<<PrepareFloat(vert.fZ);
+            }
+            sReturn<<"\n"<< "  faces "<<data.faces.size();
+            for(int v = 0; v < data.faces.size(); v++){
+                Face & face = data.faces.at(v);
+                sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
+            }
+            sReturn<<"\n"<< "endnode";
+        }
+        if(Dwk2){
+            BWMHeader & data = *Dwk2->GetData();
+            sReturn<<"\n"<< "node dummy "<< sOpen2Use1;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
+            sReturn<<"\n"<< "endnode";
+            if(bOpen2Use2){
+                sReturn<<"\n"<< "node dummy "<< sOpen2Use2;
+                sReturn<<"\n"<< "  parent "<<sRoot;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
+                sReturn<<"\n"<< "endnode";
+            }
+            sReturn<<"\n"<< "node trimesh "<< sOpen2Mesh;
+            sReturn<<"\n"<< "  parent "<<sRoot;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
+            sReturn<<"\n"<< "  orientation 1.0 0.0 0.0 0.0";
+            sReturn<<"\n"<< "  verts "<<data.verts.size();
+            for(int v = 0; v < data.verts.size(); v++){
+                Vector & vert = data.verts.at(v);
+                sReturn<<"\n"<< "    "<<PrepareFloat(vert.fX)<<" "<<PrepareFloat(vert.fY)<<" "<<PrepareFloat(vert.fZ);
+            }
+            sReturn<<"\n"<< "  faces "<<data.faces.size();
+            for(int v = 0; v < data.faces.size(); v++){
+                Face & face = data.faces.at(v);
+                sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
+            }
+            sReturn<<"\n"<< "endnode";
+        }
     }
 }
