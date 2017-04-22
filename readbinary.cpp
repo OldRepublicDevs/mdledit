@@ -964,12 +964,14 @@ void MDL::DetermineSmoothing(){
 
     //Create file /stringstream)
     std::stringstream file;
+    std::stringstream fileaabb;
 
     ///I will first do it the inefficient way, but a clear way, so I can merge stuff later if need be.
     // The point is twofold - calculate area and calculate tangent space vectors
     Report("Post-processing decompiled model...");
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
+            Node & node = Data.MH.ArrayOfNodes.at(n);
             for(int f = 0; f < Data.MH.ArrayOfNodes.at(n).Mesh.Faces.size(); f++){
                 Face & face = Data.MH.ArrayOfNodes.at(n).Mesh.Faces.at(f);
                 Vertex & v1 = Data.MH.ArrayOfNodes.at(n).Mesh.Vertices.at(face.nIndexVertex[0]);
@@ -1034,9 +1036,59 @@ void MDL::DetermineSmoothing(){
                     //file<<Data.MH.Names.at(Data.MH.ArrayOfNodes.at(n).Head.nNameIndex).cName<<" > face "<<f<<" > Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<", Normal "<<face.vNormal.Print()<<", Bitangent × Tangent "<<vCross.Print()<<"\n";
                 }
 
+                face.nID = f;
+                if(node.Head.nType & NODE_HAS_AABB){
+                    face.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
+                    face.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+                    face.vCentroid = Vector(0.0, 0.0, 0.0);
+                    for(int i = 0; i < 3; i++){
+                        face.vBBmax.fX = std::max(face.vBBmax.fX, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fX);
+                        face.vBBmax.fY = std::max(face.vBBmax.fY, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fY);
+                        face.vBBmax.fZ = std::max(face.vBBmax.fZ, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fZ);
+                        face.vBBmin.fX = std::min(face.vBBmin.fX, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fX);
+                        face.vBBmin.fY = std::min(face.vBBmin.fY, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fY);
+                        face.vBBmin.fZ = std::min(face.vBBmin.fZ, node.Mesh.Vertices.at(face.nIndexVertex.at(i)).fZ);
+                        face.vCentroid += node.Mesh.Vertices.at(face.nIndexVertex.at(i));
+                    }
+                    face.vCentroid /= 3.0;
+                }
+
                 //Area calculation
                 face.fArea = HeronFormula(Edge1, Edge2, Edge3);
                 face.fAreaUV = HeronFormula(EUV1, EUV2, EUV3);
+            }
+
+            if(node.Head.nType & NODE_HAS_AABB){
+                std::vector<Aabb> array1;
+                std::vector<Aabb> array2;
+                std::vector<Face*> faceptrs;
+                for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                    faceptrs.push_back(&node.Mesh.Faces.at(f));
+                }
+                Aabb RecalculationAabb;
+                std::stringstream ssTemp;
+                BuildAabb(RecalculationAabb, faceptrs, &ssTemp);
+                LinearizeAabb(RecalculationAabb, array1);
+                Aabb VanillaCopy = node.Walkmesh.RootAabb;
+                LinearizeAabb(VanillaCopy, array2);
+                if(array1.size() != array2.size()) fileaabb<<"ERROR! Aabb arrays have different sizes!";
+                else{
+                    fileaabb<<"Vanilla vs New";
+                    int nGood = 0;
+                    int nTotal = 0;
+                    std::stringstream ssTemp2;
+                    for(int a = 0; a < array1.size(); a++){
+                        bool bEq = (array1.at(a).nID == array2.at(a).nID);
+                        if(array2.at(a).nID != -1){
+                            nTotal++;
+                            if(bEq) nGood++;
+                        }
+                        ssTemp2<< "\n (" << a << ") " <<array2.at(a).nID << " " << (bEq? "==" : "!=") << " " << array1.at(a).nID << (bEq? "" : " DIFFERENT!!");
+                    }
+                    fileaabb<<"\nCorrect: "<<nGood<<"/"<<(nTotal)<<" ("<<std::setprecision(4)<<((double) nGood / (double) nTotal * 100.0)<<"%)\n";
+                    fileaabb<<ssTemp2.str();
+                    fileaabb<<"\n\n\n"<<ssTemp.str();
+                }
             }
         }
     }
@@ -1502,9 +1554,13 @@ void MDL::DetermineSmoothing(){
         sDir.reserve(MAX_PATH);
         PathRemoveFileSpec(&sDir[0]);
         sDir.resize(strlen(sDir.c_str()));
+        std::string sDir2 (sDir);
         sDir += "\\debug.txt";
-        std::cout<<"Will write smoothing debug to: "<<sDir.c_str()<<"\n";
+        sDir2 += "\\debug_aabb_comp.txt";
+        std::cout<<"Writing smoothing debug: "<<sDir.c_str()<<"\n";
+        std::cout<<"Writing aabb debug: "<<sDir2.c_str()<<"\n";
         std::ofstream filewrite(sDir.c_str());
+        std::ofstream filewrite2(sDir2.c_str());
 
         if(!filewrite.is_open()){
             std::cout<<"'debug.txt' does not exist. No debug will be written.\n";
@@ -1512,6 +1568,14 @@ void MDL::DetermineSmoothing(){
         else{
             filewrite << file.str();
             filewrite.close();
+        }
+
+        if(!filewrite2.is_open()){
+            std::cout<<"'debug_aabb_comp.txt' does not exist. No debug will be written.\n";
+        }
+        else{
+            filewrite2 << fileaabb.str();
+            filewrite2.close();
         }
     }
 

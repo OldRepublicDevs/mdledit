@@ -136,6 +136,20 @@ void TruncateDec(TCHAR * tcString){
     }
 }
 
+//Removes final zeros, unless a decimal operator precedes it.
+std::string TruncateDec(std::string sCopy){
+    if(sCopy.find('.') == std::string::npos){
+        return sCopy + ".0";
+    }
+    else while(sCopy.back() == '0'){
+        sCopy.pop_back();
+    }
+    if(sCopy.back() == '.'){
+        sCopy.push_back('0');
+    }
+    return sCopy;
+}
+
 //This replaces chars that display weirdly in font Consolas with spaces and replaces \0 with period.
 void PrepareCharForDisplay(char * cChar){
     switch((unsigned char)*cChar){
@@ -310,7 +324,8 @@ bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     else return false;
 }
 
-std::string safesubstr(const std::string & sParam, size_t nStart, size_t nEnd){
-    if(nStart > sParam.length() || nEnd < 0 || nStart < 0) return sParam;
-    else return sParam.substr(nStart, nEnd);
+std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen){
+    if(nStart >= sParam.length() || nLen <= 0) return std::string();
+    if(nStart < 0) nStart = 0;
+    return sParam.substr(nStart, nLen);
 }

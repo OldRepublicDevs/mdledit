@@ -1,5 +1,5 @@
-#include <windowsx.h>
 #include "frame.h"
+#include <windowsx.h>
 
 INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
     static bool bChange = false;
@@ -214,7 +214,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
         {
             if(Mdl != nullptr){
                 if(bChange && Mdl->GetFileData()){
-                    MessageBox(hwnd, "Bumpmapping has changed. The program will now reprocess the model to apply the changes.", "Note", MB_OK | MB_ICONINFORMATION);
+                    //MessageBox(hwnd, "Bumpmapping has changed. The program will now reprocess the model to apply the changes.", "Note", MB_OK | MB_ICONINFORMATION);
                     EndDialog(hwnd, 2);
                     return TRUE;
                 }

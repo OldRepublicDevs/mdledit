@@ -25,6 +25,32 @@ int MDL::GetNameIndex(std::string sName){
     return -1;
 }
 
+void MDL::GetLytPositionFromWok(){
+    if(!Wok) return;
+    if(!FH) return;
+    if(!Wok->GetData()) return;
+    FileHeader & Data = *FH;
+    BWMHeader & data = *Wok->GetData();
+
+    int nSearchMaterial = data.faces.front().nMaterialID;
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+        if(node.Head.nType & NODE_HAS_AABB){
+            for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                Face & face = node.Mesh.Faces.at(f);
+                if(face.nMaterialID == nSearchMaterial){
+                    Data.MH.vLytPosition =
+                        Vector(data.verts.at(data.faces.front().nIndexVertex.at(0)).fX - node.Mesh.Vertices.at(face.nIndexVertex.at(0)).vFromRoot.fX,
+                               data.verts.at(data.faces.front().nIndexVertex.at(0)).fY - node.Mesh.Vertices.at(face.nIndexVertex.at(0)).vFromRoot.fY,
+                               data.verts.at(data.faces.front().nIndexVertex.at(0)).fZ - node.Mesh.Vertices.at(face.nIndexVertex.at(0)).vFromRoot.fZ);
+                    return;
+                }
+            }
+            return;
+        }
+    }
+}
+
 void MDL::LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
     for(int n = 0; n < NODE.Head.Children.size(); n++){
         LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
@@ -87,7 +113,9 @@ void MDL::FlushData(){
     Mdx.reset();
     Wok.reset();
     Pwk.reset();
-    Dwk.reset();
+    Dwk0.reset();
+    Dwk1.reset();
+    Dwk2.reset();
     FlushAll();
 }
 

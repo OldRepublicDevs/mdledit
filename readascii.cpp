@@ -51,6 +51,7 @@ bool ASCII::Read(MDL & Mdl){
     bool bFlarePositions = false;
     bool bFlareSizes = false;
     bool bFlareColorShifts = false;
+    bool bRoomLinks = false;
     bool bMagnusll = false;
     unsigned int nNodeCounter = 0;
     Node * PreviousNode;
@@ -113,6 +114,7 @@ bool ASCII::Read(MDL & Mdl){
         else if(bFlareSizes) lpbList = &bFlareSizes;
         else if(bFlareColorShifts) lpbList = &bFlareColorShifts;
         else if(bTextureNames) lpbList = &bTextureNames;
+        else if(bRoomLinks) lpbList = &bRoomLinks;
         else lpbList = nullptr;
 
         //First, check if we have a blank line, we'll just skip it here.
@@ -559,6 +561,19 @@ bool ASCII::Read(MDL & Mdl){
                     if(bFound) node.Light.FlareColorShifts.push_back(Color(f1, f2, f3));
                     else bError = true;
                 }
+                else if(bRoomLinks){
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    Edge edge;
+                    bFound = true;
+                    if(ReadInt(nConvert)) edge.nIndex = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) edge.nTransition = nConvert;
+                    else bFound = false;
+                    if(bFound){
+                        node.Mesh.Faces.at(edge.nIndex/3).nEdgeTransitions.at(edge.nIndex%3) = edge.nTransition;
+                    }
+                    else bError = true;
+                }
                 nDataCounter++;
                 if(nDataCounter >= nDataMax && nDataMax != -1){
                     *lpbList = false;
@@ -648,6 +663,12 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "beginmodelgeom"){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bGeometry = true;
+                    SkipLine();
+                }
+                else if(sID == "lytposition" && bGeometry && nNode == 0){
+                    if(ReadFloat(fConvert)) FH->MH.vLytPosition.fX = fConvert;
+                    if(ReadFloat(fConvert)) FH->MH.vLytPosition.fY = fConvert;
+                    if(ReadFloat(fConvert)) FH->MH.vLytPosition.fZ = fConvert;
                     SkipLine();
                 }
                 else if(sID == "bmin" && bGeometry && nNode == 0){
@@ -1418,11 +1439,20 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "aabb" && nNode & NODE_HAS_AABB){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bAabb = true;
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     int nSavePos = nPosition; //Save position
-                    nDataMax = -1;
+                    nDataMax = node.Mesh.Faces.size() * 2 - 1;
                     nDataCounter = 0;
                     if(ReadFloat(fConvert)) nPosition = nSavePos; //The data starts in this line, revert position
                     else SkipLine(); //if not, then data starts next line, so it is okay to skip
+                }
+                else if(sID == "roomlinks" && nNode & NODE_HAS_AABB){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bRoomLinks = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
                 }
                 else if(sID == "constraints" && nNode & NODE_HAS_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
@@ -1917,7 +1947,7 @@ bool ASCII::Read(MDL & Mdl){
         Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
         return false;
     }
-
+    Mdl.AsciiPostProcess();
     return true;
 }
 /* Binary tree reading
@@ -1985,7 +2015,6 @@ void MDL::AsciiPostProcess(){
     std::cout<<"Ascii post-processing...\n";
     Report("Post-processing imported ASCII...");
     FileHeader & Data = *FH;
-    bool bWok = false, bMdx = false;
 
     /// PART 0 ///
     /// Get rid of the duplication marks
@@ -2104,7 +2133,8 @@ void MDL::AsciiPostProcess(){
     /// PART 3 ///
     /// Interpret ascii data
     /// This constructs the Mesh.Vertices, Mesh.VertIndices, Dangly.Data2, Dangly.Constraints and Saber.SaberData structures.
-    /// And not to forget the weights. Also face normals, average, aabb tree.
+    /// And not to forget the weights. Also face normals, average, aabb tree .... everything.
+    Report("Interpreting ascii data...");
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
         if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
@@ -2121,7 +2151,6 @@ void MDL::AsciiPostProcess(){
                         vert.MDXData.nNameIndex = node.Head.nNameIndex;
 
                         if(node.Mesh.TempVerts.size() > 0){
-                            if(Mdx) Mdx.reset(new MDX());
                             bIgnoreVert = false;
                             vert.assign(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
 
@@ -2271,6 +2300,7 @@ void MDL::AsciiPostProcess(){
                 if(node.Head.nType & NODE_HAS_AABB){
                     face.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
                     face.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+                    face.vCentroid = Vector(0.0, 0.0, 0.0);
                     for(int i = 0; i < 3; i++){
                         face.vBBmax.fX = std::max(face.vBBmax.fX, node.Mesh.Vertices.at(face.nIndexVertex[i]).fX);
                         face.vBBmax.fY = std::max(face.vBBmax.fY, node.Mesh.Vertices.at(face.nIndexVertex[i]).fY);
@@ -2278,7 +2308,9 @@ void MDL::AsciiPostProcess(){
                         face.vBBmin.fX = std::min(face.vBBmin.fX, node.Mesh.Vertices.at(face.nIndexVertex[i]).fX);
                         face.vBBmin.fY = std::min(face.vBBmin.fY, node.Mesh.Vertices.at(face.nIndexVertex[i]).fY);
                         face.vBBmin.fZ = std::min(face.vBBmin.fZ, node.Mesh.Vertices.at(face.nIndexVertex[i]).fZ);
+                        face.vCentroid += node.Mesh.Vertices.at(face.nIndexVertex[i]);
                     }
+                    face.vCentroid /= 3.0;
                 }
             }
 
@@ -2419,12 +2451,15 @@ void MDL::AsciiPostProcess(){
                 for(int f = 0; f < node.Mesh.Faces.size(); f++){
                     allfaces.push_back(&node.Mesh.Faces.at(f));
                 }
-                std::stringstream file;
-                BuildAabb(node.Walkmesh.RootAabb, allfaces, &file);
+                std::stringstream file2;
+                BuildAabb(node.Walkmesh.RootAabb, allfaces, &file2);
 
                 //Write to Wok
+                std::stringstream file;
                 std::cout<< "Should write wok.\n";
-                Wok->WriteWok(node);
+                Wok->WriteWok(node, Data.MH.vLytPosition, &file);
+                file<<"\r\n\r\nAABB\r\n";
+                file<<file2.str();
 
                 std::string sDir = sFullPath;
                 sDir.reserve(MAX_PATH);
@@ -2445,6 +2480,157 @@ void MDL::AsciiPostProcess(){
         }
     }
 
+    /// PART 4 ///
+    /// Do the necessary mesh calculations
+    /// Mesh: inverted counter
+    /// Skin: T-bones, Q-bones
+    /// Saber: inverted counter
+    int nMeshCounter = 0;
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+
+        if(node.Head.nType & NODE_HAS_SABER){
+            //inverted counter
+            nMeshCounter++;
+            int Quo = nMeshCounter/100;
+            int Mod = nMeshCounter%100;
+            node.Saber.nInvCount1 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
+            nMeshCounter++;
+            Quo = nMeshCounter/100;
+            Mod = nMeshCounter%100;
+            node.Saber.nInvCount2 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
+        }
+        else if(node.Head.nType & NODE_HAS_MESH){
+            //inverted counter
+            nMeshCounter++;
+            int Quo = nMeshCounter/100;
+            int Mod = nMeshCounter%100;
+            node.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
+
+            if(node.Head.nType & NODE_HAS_SKIN){
+                //First, declare our empty location as a starting point
+                Vector vPos;
+                Quaternion qOrient;
+
+                //Now we need to construct a path by adding all the locations from this node through all its parents to the root
+                int nIndex = node.Head.nNameIndex;
+                Vector vCurPosition;
+                Quaternion qCurOrientation;
+                while(nIndex != -1){
+                    Node & curnode = GetNodeByNameIndex(nIndex);
+
+                    //Construct base location
+                    Location locNode = curnode.GetLocation();
+                    vCurPosition = locNode.vPosition * -1.0;
+                    qCurOrientation = locNode.oOrientation.GetQuaternion();
+                    qCurOrientation = qCurOrientation.reverse();
+                    vCurPosition.Rotate(qCurOrientation);
+
+                    //Add parent location to main location
+                    vPos += vCurPosition;
+                    qOrient *= qCurOrientation;
+                    //On the first round, because loc is initialized with the identity orientation, locNode orientation is simply copied
+
+                    nIndex = curnode.Head.nParentIndex;
+                }
+                //We now have a location loc, going from our current node to the root.
+                //Now we need to add to that a similar kind of path of every node in the model
+
+                //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
+                for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
+                    Vector vRecord = vPos; //Make copy
+                    Quaternion qRecord = qOrient; //Make copy
+                    Node & curnode = FH->MH.ArrayOfNodes.at(n);
+
+                    nIndex = curnode.Head.nNameIndex;
+                    std::vector<int> Indexes;
+                    //The price we have to pay for not going recursive
+                    while(nIndex != -1){
+                        Indexes.push_back(nIndex);
+                        nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
+                    }
+                    //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
+                    for(int a = Indexes.size() - 1; a >= 0; a--){
+                        Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
+                        Location locNode = curnode2.GetLocation();
+                        vCurPosition = locNode.vPosition;
+                        qCurOrientation = locNode.oOrientation.GetQuaternion();
+                        vCurPosition.Rotate(qRecord); //Note: rotating with the Record rotation!
+                        vRecord += vCurPosition;
+                        qRecord *= qCurOrientation;
+                    }
+
+                    //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
+                    vRecord *= -1.0;
+                    qRecord = qRecord.reverse();
+                    vRecord.Rotate(qRecord);
+
+                    //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
+                    node.Skin.Bones.at(n).TBone = vRecord;
+                    node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
+                }
+            }
+        }
+    }
+
+    /// PART 5 ///
+    /// Create patches through linked faces
+    //This will take a while and needs to be optimized for speed, anything that can be taken out of it, should be
+    CreatePatches();
+
+    /// PART 6 ///
+    /// Calculate vertex normals and vertex tangent space vectors
+    Report("Calculating vertex normals and vertex tangent space vectors...");
+    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
+        int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
+        for(int p = 0; p < nPatchCount; p++){
+            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+            Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
+
+            for(int p2 = 0; p2 < nPatchCount; p2++){
+                Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(p2);
+                if(patch2.nSmoothingGroups & patch.nSmoothingGroups){
+                    for(int f = 0; f < patch2.FaceIndices.size(); f++){
+                        Face & face = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Faces.at(patch2.FaceIndices.at(f));
+                        Vertex & v1 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[0]);
+                        Vertex & v2 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[1]);
+                        Vertex & v3 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[2]);
+                        Vector Edge1 = v2 - v1;
+                        Vector Edge2 = v3 - v1;
+                        Vector Edge3 = v3 - v2;
+
+                        Vector vAdd = face.vNormal;
+                        if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                        if(bSmoothAngleWeighting){
+                            if(patch.nVertex == face.nIndexVertex[0]){
+                                vAdd *= Angle(Edge1, Edge2);
+                            }
+                            else if(patch.nVertex == face.nIndexVertex[1]){
+                                vAdd *= Angle(Edge1, Edge3);
+                            }
+                            else if(patch.nVertex == face.nIndexVertex[2]){
+                                vAdd *= Angle(Edge2, Edge3);
+                            }
+                        }
+
+                        vert.MDXData.vNormal += vAdd;
+                        vert.MDXData.vTangent1[0] += face.vBitangent;
+                        vert.MDXData.vTangent1[1] += face.vTangent;
+                        vert.MDXData.vTangent1[2] += (face.vBitangent / face.vTangent);
+                    }
+                }
+            }
+            vert.MDXData.vNormal.Normalize();
+            vert.MDXData.vTangent1[0].Normalize();
+            vert.MDXData.vTangent1[1].Normalize();
+            vert.MDXData.vTangent1[2].Normalize();
+        }
+    }
+
+    /// No need for the patches anymore, get rid of them
+    Data.MH.PatchArrayPointers.clear();
+    Data.MH.PatchArrayPointers.shrink_to_fit();
+
     /// DONE ///
     std::cout<<"Done post-processing ascii...\n";
 }
@@ -2452,11 +2638,47 @@ void MDL::AsciiPostProcess(){
 struct FaceSort{
     Face * p_face = nullptr;
     double centroid = 0.0;
+    double maxdiff = 0.0;
+    double fMax = 0.0;
+    double fMin = 0.0;
     bool operator<(const FaceSort & facesort){
-        if(centroid == facesort.centroid && p_face != nullptr && facesort.p_face != nullptr)
-            return (p_face->fDistance < facesort.p_face->fDistance);
+        if(centroid == facesort.centroid && p_face != nullptr && facesort.p_face != nullptr){
+            if(RoundDec(p_face->fDistance, 4) != RoundDec(facesort.p_face->fDistance, 4)){
+                return (abs(p_face->fDistance) < abs(facesort.p_face->fDistance));
+            }
+            /*
+            else{
+                return (p_face->nID < facesort.p_face->nID);
+            }
+            */
+        }
         return (centroid < facesort.centroid);
     }
+    bool operator==(const FaceSort & facesort){
+        return (centroid == facesort.centroid);
+    }
+};
+
+struct AxisSort{
+    std::string sName;
+    double fSort;
+    bool operator<(const AxisSort & axissort){
+        return (fSort < axissort.fSort);
+    }
+    AxisSort(std::string sName = "", double fSort = 0.0): sName(sName), fSort(fSort) {}
+};
+
+struct AxisSort2{
+    std::string sName;
+    int nSize;
+    bool operator<(const AxisSort2 & axissort){
+        if(nSize == axissort.nSize){
+            if(sName == "Z" && (axissort.sName == "Y" || axissort.sName == "X")) return true;
+            if(sName == "Y" &&  axissort.sName == "X") return true;
+        }
+        return (nSize < axissort.nSize);
+    }
+    AxisSort2(std::string sName = "", int nSize = 0): sName(sName), nSize(nSize) {}
 };
 
 void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream * file){
@@ -2477,6 +2699,10 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         aabb.nID = -1;
         aabb.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
         aabb.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+        Vector vAxisBBmax = Vector(-10000.0, -10000.0, -10000.0);
+        Vector vAxisBBmin = Vector(10000.0, 10000.0, 10000.0);
+        Vector vAverage;
+        Vector vAverageBB;
         for(int f = 0; f < faces.size(); f++){
             Face & face = *faces.at(f);
             aabb.vBBmax.fX = std::max(aabb.vBBmax.fX, face.vBBmax.fX);
@@ -2485,108 +2711,255 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
             aabb.vBBmin.fX = std::min(aabb.vBBmin.fX, face.vBBmin.fX);
             aabb.vBBmin.fY = std::min(aabb.vBBmin.fY, face.vBBmin.fY);
             aabb.vBBmin.fZ = std::min(aabb.vBBmin.fZ, face.vBBmin.fZ);
+            vAxisBBmax.fX = std::max(vAxisBBmax.fX, face.vCentroid.fX);
+            vAxisBBmax.fY = std::max(vAxisBBmax.fY, face.vCentroid.fY);
+            vAxisBBmax.fZ = std::max(vAxisBBmax.fZ, face.vCentroid.fZ);
+            vAxisBBmin.fX = std::min(vAxisBBmin.fX, face.vCentroid.fX);
+            vAxisBBmin.fY = std::min(vAxisBBmin.fY, face.vCentroid.fY);
+            vAxisBBmin.fZ = std::min(vAxisBBmin.fZ, face.vCentroid.fZ);
+            vAverageBB.fX += aabb.vBBmin.fX + (aabb.vBBmax.fX - aabb.vBBmin.fX)/2.0;
+            vAverageBB.fY += aabb.vBBmin.fY + (aabb.vBBmax.fY - aabb.vBBmin.fY)/2.0;
+            vAverageBB.fZ += aabb.vBBmin.fZ + (aabb.vBBmax.fZ - aabb.vBBmin.fZ)/2.0;
+            vAverage += face.vCentroid;
         }
+        vAverage /= faces.size();
+        vAverageBB /= faces.size();
         aabb.vBBmax += Vector(0.0001, 0.0001, 0.0001);
         if(file != nullptr) *file<<"Bounding box: "<<aabb.vBBmin.fX<<", "<<aabb.vBBmin.fY<<", "<<aabb.vBBmin.fZ<<", "<<aabb.vBBmax.fX<<", "<<aabb.vBBmax.fY<<", "<<aabb.vBBmax.fZ<<"\n";
-        if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fY - aabb.vBBmin.fY)){
-            if((aabb.vBBmax.fX - aabb.vBBmin.fX) > (aabb.vBBmax.fZ - aabb.vBBmin.fZ)){
-                //Diff in X is definitely the largest
-                aabb.nProperty = AABB_POSITIVE_X;
-            }
-            else{
-                //Diff in Z could be considered largest, though it might be equal to that of X
-                aabb.nProperty = AABB_POSITIVE_Z;
-            }
+
+        std::vector<AxisSort> axispriority;
+        axispriority.push_back(AxisSort("X", aabb.vBBmax.fX - aabb.vBBmin.fX));
+        axispriority.push_back(AxisSort("Y", aabb.vBBmax.fY - aabb.vBBmin.fY));
+        axispriority.push_back(AxisSort("Z", aabb.vBBmax.fZ - aabb.vBBmin.fZ));
+        sort(axispriority.begin(), axispriority.end());
+        std::reverse(axispriority.begin(), axispriority.end());
+        if(file != nullptr) *file<<"Priority List: "<<axispriority.at(0).sName<<": "<<axispriority.at(0).fSort<<", "<<axispriority.at(1).sName<<": "<<axispriority.at(1).fSort<<", "<<axispriority.at(2).sName<<": "<<axispriority.at(2).fSort<<"\n";
+        int nCurrentPriority = 0;
+        std::vector<double> vectorX;
+        std::vector<double> vectorY;
+        std::vector<double> vectorZ;
+        for(int f = 0; f < faces.size(); f++){
+            Face & face = *faces.at(f);
+            if(std::find(vectorX.begin(), vectorX.end(), face.vCentroid.fX/* + (face.vBBmax.fX - face.vBBmin.fX)/2/**/) == vectorX.end()) vectorX.push_back(face.vCentroid.fX /*+ (face.vBBmax.fX - face.vBBmin.fX)/2/**/);
+            if(std::find(vectorY.begin(), vectorY.end(), face.vCentroid.fY/* + (face.vBBmax.fY - face.vBBmin.fY)/2/**/) == vectorY.end()) vectorY.push_back(face.vCentroid.fY /*+ (face.vBBmax.fY - face.vBBmin.fY)/2/**/);
+            if(std::find(vectorZ.begin(), vectorZ.end(), face.vCentroid.fZ/* + (face.vBBmax.fZ - face.vBBmin.fZ)/2/**/) == vectorZ.end()) vectorZ.push_back(face.vCentroid.fZ /*+ (face.vBBmax.fZ - face.vBBmin.fZ)/2/**/);
         }
-        else if((aabb.vBBmax.fZ - aabb.vBBmin.fZ) > (aabb.vBBmax.fY - aabb.vBBmin.fY)){
-            //Diff in Z is definitely the largest
-            aabb.nProperty = AABB_POSITIVE_Z;
+        std::vector<AxisSort2> axispriority2;
+        axispriority2.push_back(AxisSort2("X", vectorX.size()));
+        axispriority2.push_back(AxisSort2("Y", vectorY.size()));
+        axispriority2.push_back(AxisSort2("Z", vectorZ.size()));
+        sort(axispriority2.begin(), axispriority2.end());
+        std::reverse(axispriority2.begin(), axispriority2.end());
+        if(file != nullptr) *file<<"Priority List 2: "<<axispriority2.at(0).sName<<": "<<axispriority2.at(0).nSize<<", "<<axispriority2.at(1).sName<<": "<<axispriority2.at(1).nSize<<", "<<axispriority2.at(2).sName<<": "<<axispriority2.at(2).nSize<<"\n";
+        /*if(faces.size()%2 == 0){
+            axispriority.at(0).sName = axispriority2.at(0).sName;
+            axispriority.at(1).sName = axispriority2.at(1).sName;
+            axispriority.at(2).sName = axispriority2.at(2).sName;
+        }*/
+        std::vector<AxisSort> axispriority3;
+        axispriority3.push_back(AxisSort("X", vAxisBBmax.fX - vAxisBBmin.fX));
+        axispriority3.push_back(AxisSort("Y", vAxisBBmax.fY - vAxisBBmin.fY));
+        axispriority3.push_back(AxisSort("Z", vAxisBBmax.fZ - vAxisBBmin.fZ));
+        sort(axispriority3.begin(), axispriority3.end());
+        std::reverse(axispriority3.begin(), axispriority3.end());
+        Vector vDeviance;
+        Vector vDeviance2;
+        if(file != nullptr) *file<<"Priority List 3: "<<axispriority3.at(0).sName<<": "<<axispriority3.at(0).fSort<<", "<<axispriority3.at(1).sName<<": "<<axispriority3.at(1).fSort<<", "<<axispriority3.at(2).sName<<": "<<axispriority3.at(2).fSort<<"\n";
+        for(int f = 0; f < faces.size(); f++){
+            Face & face = *faces.at(f);
+            vDeviance += face.vCentroid - vAverage;
+            vDeviance2.fX += (face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX)/2.0 - vAverageBB.fX);
+            vDeviance2.fY += (face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY)/2.0 - vAverageBB.fY);
+            vDeviance2.fZ += (face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ)/2.0 - vAverageBB.fZ);
         }
-        else{
-            //Diff in Y could be considered largest, though it might be equal to that of either X or Z or both X and Z
-            aabb.nProperty = AABB_POSITIVE_Y;
-        }
+        vDeviance /= (faces.size() );
+        vDeviance2 /= (faces.size() );
+        std::vector<AxisSort> axispriority4;
+        axispriority4.push_back(AxisSort("X", vDeviance.fX));
+        axispriority4.push_back(AxisSort("Y", vDeviance.fY));
+        axispriority4.push_back(AxisSort("Z", vDeviance.fZ));
+        sort(axispriority4.begin(), axispriority4.end());
+        if(file != nullptr) *file<<"Priority List 4: "<<axispriority4.at(0).sName<<": "<<axispriority4.at(0).fSort<<", "<<axispriority4.at(1).sName<<": "<<axispriority4.at(1).fSort<<", "<<axispriority4.at(2).sName<<": "<<axispriority4.at(2).fSort<<"\n";
+
+        std::vector<AxisSort> axispriority5;
+        axispriority5.push_back(AxisSort("X", vDeviance2.fX));
+        axispriority5.push_back(AxisSort("Y", vDeviance2.fY));
+        axispriority5.push_back(AxisSort("Z", vDeviance2.fZ));
+        sort(axispriority5.begin(), axispriority5.end());
+        if(file != nullptr) *file<<"Priority List 5: "<<axispriority5.at(0).sName<<": "<<axispriority5.at(0).fSort<<", "<<axispriority5.at(1).sName<<": "<<axispriority5.at(1).fSort<<", "<<axispriority5.at(2).sName<<": "<<axispriority5.at(2).fSort<<"\n";
+
+        //axispriority.at(0).sName = axispriority4.at(0).sName;
+        //axispriority.at(1).sName = axispriority4.at(1).sName;
+        //axispriority.at(2).sName = axispriority4.at(2).sName;
 
         std::vector<Face*> half1;
         std::vector<Face*> half2;
-
-        double fMedian = 0.0;
         std::vector<FaceSort> centroids;
-        centroids.reserve(faces.size());
-        double fCentroid = 0.0;
-        bool bSkip;
-        if(file != nullptr) *file<<"Faces:\n";
-        for(int f = 0; f < faces.size(); f++){
-            Face & face = *faces.at(f);
-            FaceSort newfs;
-            newfs.p_face = &face;
-            if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) newfs.centroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
-            else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) newfs.centroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
-            else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) newfs.centroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
-            else{
-                Error("Aabb significant plane not assigned!");
-                return;
-            }
-            /*
-            bSkip = false;
-            for(int c = 0; c < centroids.size() && !bSkip; c++){
-                if(centroids.at(c) == fCentroid) bSkip = true;
-            }
-            */
-            //if(!bSkip){
-                centroids.push_back(std::move(newfs));
-                if(file != nullptr) *file<<"  "<<centroids.back().centroid<<" ("<<face.nID<<")\n";
-            //}
-            //else std::cout<<"Skipped centroid: "<<fCentroid<<" (face "<<face.nID<<")\n";
-        }
-        sort(centroids.begin(), centroids.end());
-        bool bEven = (centroids.size() % 2 == 0);
+
+        bool bNegative = false;
+        bool bEven;
         int nIndex;
-        if(bEven) nIndex = centroids.size() / 2 - 1;
-        else nIndex = centroids.size() / 2;
-        fMedian = centroids.at(nIndex).centroid;
+        int nTry = 0;
+        bool bOk = false;
+        std::stringstream ssFaces;
+        while(nTry < 7 && !bOk){
+            bOk = true;
+
+            //Clear
+            centroids.resize(0);
+            ssFaces.str(std::string());
+
+            //Fill centroids
+            int nNegative = 0;
+            for(int f = 0; f < faces.size(); f++){
+                Face & face = *faces.at(f);
+                FaceSort newfs;
+                newfs.p_face = &face;
+                double fMax = 0.0, fMin = 0.0, fAverage = 0.0;
+
+                if(axispriority.at(nCurrentPriority).sName == "X"){
+                    newfs.fMin = face.vBBmin.fX;
+                    newfs.fMax = face.vBBmax.fX;
+                    newfs.centroid = face.vCentroid.fX; //+ (face.vBBmax.fX - face.vBBmin.fX) / 2;
+                    //newfs.centroid = /**/face.vBBmin.fX +/**/ (face.vBBmax.fX - face.vBBmin.fX)/2;
+                    newfs.maxdiff = /**/face.vBBmin.fX +/**/ (face.vBBmax.fX - face.vBBmin.fX)/2;
+                    fMax = aabb.vBBmax.fX;
+                    fMin = aabb.vBBmin.fX;
+                    fAverage = vAverage.fX;
+                }
+                else if(axispriority.at(nCurrentPriority).sName == "Y"){
+                    newfs.fMin = face.vBBmin.fY;
+                    newfs.fMax = face.vBBmax.fY;
+                    newfs.centroid = face.vCentroid.fY; //+ (face.vBBmax.fY - face.vBBmin.fY) / 2;
+                    //newfs.centroid = /**/face.vBBmin.fY +/**/ (face.vBBmax.fY - face.vBBmin.fY)/2;
+                    newfs.maxdiff = /**/face.vBBmin.fY +/**/ (face.vBBmax.fY - face.vBBmin.fY)/2;
+                    fMax = aabb.vBBmax.fY;
+                    fMin = aabb.vBBmin.fY;
+                    fAverage = vAverage.fY;
+                }
+                else if(axispriority.at(nCurrentPriority).sName == "Z"){
+                    newfs.fMin = face.vBBmin.fZ;
+                    newfs.fMax = face.vBBmax.fZ;
+                    newfs.centroid = face.vCentroid.fZ; //+ (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
+                    //newfs.centroid = /**/face.vBBmin.fZ +/**/ (face.vBBmax.fZ - face.vBBmin.fZ)/2;
+                    newfs.maxdiff = /**/face.vBBmin.fZ +/**/ (face.vBBmax.fZ - face.vBBmin.fZ)/2;
+                    fMax = aabb.vBBmax.fZ;
+                    fMin = aabb.vBBmin.fZ;
+                    fAverage = vAverage.fZ;
+                }
+                else{
+                    Error("Aabb significant plane not assigned!");
+                    return;
+                }
+                //nNegative += (newfs.centroid < fMin + (fMax - fMin)/2)? -1 : 1;
+                //nNegative += (newfs.centroid < fAverage)? -1 : 1;
+                //nNegative += (newfs.maxdiff < fMin + (fMax - fMin)/2)? -1 : 1;
+                nNegative += (newfs.maxdiff < fAverage)? -1 : 1;
+                //nNegative += (newfs.fMin < fMin + (fMax - fMin)/2)? -1 : 1;
+                //nNegative += (newfs.fMin < fAverage)? -1 : 1;
+                centroids.push_back(std::move(newfs));
+                //ssFaces<<"  "<<centroids.back().centroid<<" ("<<fMin<<" -> "<<fMax<<") - face "<<face.nID<<"\n";
+            }
+            //if(nNegative < 0) bNegative = true;
+            //if(centroids.size() == 0) Error("Major error, centroid size 0!!");
+            sort(centroids.begin(), centroids.end());
+            bEven = (centroids.size() % 2 == 0);
+            /*
+            if(centroids.size() >= 2 && bEven){
+                *file << centroids.at(centroids.size() / 2 - 1).fMin << " > " << centroids.at(centroids.size() / 2).fMin << "\n";
+                if(!(centroids.at(centroids.size() / 2 - 1).fMin > centroids.at(centroids.size() / 2).fMin)){
+                    bNegative = true;
+                }
+                else bNegative = false;
+            }
+            else bNegative = false;*/
+            if(bNegative) std::reverse(centroids.begin(), centroids.end());
+
+            if(bEven) nIndex = centroids.size() / 2 - 1;
+            else nIndex = centroids.size() / 2;
+
+            if(file != nullptr){
+                *file << "Priority: "<<(bNegative? "-" : "+")<<axispriority.at(nCurrentPriority).sName<<"\n";
+                *file<<"Faces:\n";
+                for(int c = 0; c < centroids.size(); c++){
+                    ssFaces<<"  "<<centroids.at(c).centroid<<", "<<centroids.at(c).fMin + (centroids.at(c).fMax - centroids.at(c).fMin)/2.0;
+                    ssFaces<<" ("<<centroids.at(c).fMin<<" -> "<<centroids.at(c).fMax<<") - face "<<centroids.at(c).p_face->nID<<"\n";
+                }
+                *file << ssFaces.str();
+            }
+
+            /**/
+            if(nTry < 5){
+                if(!bEven){
+                    /*
+                    if(!bNegative && centroids.size() > 2){
+                        if(centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
+                            bNegative = true;
+                            if(file != nullptr) *file << "To negative\n";
+                            bOk = false;
+                        }
+                    }
+                    else*/ if(/*bNegative &&*/ centroids.size() > 2){
+                        if(centroids.at(nIndex).centroid == centroids.at(nIndex-1).centroid){
+                            bNegative = false;
+                            if(file != nullptr) *file << "Increase priority\n";
+                            if(nCurrentPriority < 2) nCurrentPriority++;
+                            bOk = false;
+                        }
+                    }
+                }
+                else{
+                    /*
+                    if(!bNegative && centroids.size() > 2){
+                        if(//centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff ||
+                           centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
+                            bNegative = true;
+                            if(file != nullptr) *file << "To negative\n";
+                            bOk = false;
+                        }
+                    }
+                    else*/ if(centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff && /*bNegative &&*/ centroids.size() > 2){
+                        bNegative = false;
+                        if(file != nullptr) *file << "Increase priority\n";
+                        if(nCurrentPriority < 2) nCurrentPriority++;
+                        bOk = false;
+                    }
+                }
+            }
+            else{
+                nCurrentPriority = 0;
+                bNegative = false;
+                bOk = false;
+                if(file != nullptr) *file << "Resetting\n";
+            }
+            nTry++;
+            /**/
+        }
+
+        double fMedian = centroids.at(nIndex).centroid;
         if(bEven){
             nIndex++;
             fMedian = (fMedian + centroids.at(nIndex).centroid) / 2;
         }
-        if(file != nullptr) *file<<"Median: "<<fMedian<<"\n";
+        if(file != nullptr){
+            *file<<"Median: "<<fMedian<<" (";
+            if(bEven) *file<<centroids.at(nIndex-1).p_face->nID<<", ";
+            *file<<centroids.at(nIndex).p_face->nID;
+            *file<<")\n";
+        }
+
+        if(axispriority.at(nCurrentPriority).sName == "X" && !bNegative) aabb.nProperty = AABB_POSITIVE_X;
+        else if(axispriority.at(nCurrentPriority).sName == "X" && bNegative) aabb.nProperty = AABB_NEGATIVE_X;
+        else if(axispriority.at(nCurrentPriority).sName == "Y" && !bNegative) aabb.nProperty = AABB_POSITIVE_Y;
+        else if(axispriority.at(nCurrentPriority).sName == "Y" && bNegative) aabb.nProperty = AABB_NEGATIVE_Y;
+        else if(axispriority.at(nCurrentPriority).sName == "Z" && !bNegative) aabb.nProperty = AABB_POSITIVE_Z;
+        else if(axispriority.at(nCurrentPriority).sName == "Z" && bNegative) aabb.nProperty = AABB_NEGATIVE_Z;
+        aabb.nProperty = 0;
 
         for(int c = 0; c < centroids.size(); c++){
             if(c < nIndex) half1.push_back(centroids.at(c).p_face);
-            else  half2.push_back(centroids.at(c).p_face);
+            else half2.push_back(centroids.at(c).p_face);
         }
-
-        /*
-        bool bToggle = false;
-        for(int f = 0; f < faces.size(); f++){
-            Face & face = *faces.at(f);
-            if(aabb.nProperty & (AABB_POSITIVE_X | AABB_NEGATIVE_X)) fCentroid = face.vBBmin.fX + (face.vBBmax.fX - face.vBBmin.fX) / 2;
-            else if(aabb.nProperty & (AABB_POSITIVE_Y | AABB_NEGATIVE_Y)) fCentroid = face.vBBmin.fY + (face.vBBmax.fY - face.vBBmin.fY) / 2;
-            else if(aabb.nProperty & (AABB_POSITIVE_Z | AABB_NEGATIVE_Z)) fCentroid = face.vBBmin.fZ + (face.vBBmax.fZ - face.vBBmin.fZ) / 2;
-            else{
-                Error("Aabb significant plane not assigned after median!");
-                return;
-            }
-            if(fCentroid < fMedian) half1.push_back(&face);
-            else if(fCentroid > fMedian) half2.push_back(&face);
-            else{
-                //They are equal
-                if(!bEven){
-                    half2.push_back(&face);
-                    bEven = true;
-                    bToggle = true;
-                }
-                else if(!bToggle){
-                    half1.push_back(&face);
-                    bToggle = true;
-                }
-                else{
-                    //default default, go with 1
-                    bToggle = false;
-                    half2.push_back(&face);
-                }
-            }
-        }*/
         centroids.resize(0);
         centroids.shrink_to_fit();
 

@@ -68,7 +68,7 @@ BEGIN
         END
     POPUP " &View "
         BEGIN
-        MENUITEM "&Hex", IDM_VIEW_HEX
+        MENUITEM "&Hex Mode", IDM_VIEW_HEX
         END
     POPUP " &Help "
         BEGIN

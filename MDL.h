@@ -4,36 +4,6 @@
 #include "general.h"
 #include "file.h"
 
-/**
-    UNKNOWNS:
-
-    1. Non-static data
-     - Supermodel int32 in Header
-     - last three bytes (padding?) after Classification in Header
-       - ndix UR: unconfirmed theory, the byte immediately following == 4 for placeables,
-                  2 for most characaters and a few other random things, in NWN it was
-                  'is this model affected by fog' I've spent a little bit of time trying to see
-                  if this might be the same, inconclusive. my current logic for this is if
-                  classification = placeable, then set to 4, otherwise set to 0.
-     - last three bytes (padding?) after ModelType in Header and Animation
-       - ndix UR: padding
-     - bytes after RenderOrder in EmitterHeader (possibly padding like above?)
-     - short nUnknown2 and last three bytes (padding?) in Controller
-     - an unknown array in LightHeader (remains unknown and unused)
-     - MeshHeader:
-       - two unknown bytes after Render
-       - Unknown float at the end
-       - Unknown lightsaber bytes
-       - K2 unknown 1 (float)
-
-    2. Static data - always 0 (usually it's 0)
-     - short nPadding1 in NodeHeader
-     - 3 int32s in SkinHeader
-     - K2 unknown 2 in MeshHeader
-     - -1 -1 0 Array in MeshHeader
-
-/**/
-
 #define MDL_OFFSET 12
 #define ANIM_OFFSET 136
 
@@ -52,6 +22,9 @@
 #define CONVERT_ANIMATION_NODE           13
 #define CONVERT_MODEL_GEO                14
 #define CONVERT_MODEL                    15
+#define CONVERT_WOK                      16
+#define CONVERT_PWK                      17
+#define CONVERT_DWK                      18
 
 #define K1_FUNCTION_POINTER_0 4273776
 #define K1_FUNCTION_POINTER_1 4216096
@@ -288,8 +261,10 @@ struct Location{
 };
 
 struct Edge{
-    int nIndex = 0;
-    int nTransition = 0;
+    int nIndex;
+    int nTransition;
+
+    Edge(int nIndex = -1, int nTransition = -1): nIndex(nIndex), nTransition(nTransition) {}
 };
 
 struct Face{
@@ -297,16 +272,17 @@ struct Face{
     Vector vNormal;
     double fDistance = 0.0;
     int nMaterialID = 0;
-    short nAdjacentFaces [3] = {-1, -1, -1};
-    short nIndexVertex[3] = {-1, -1, -1};
+    std::array<short, 3> nAdjacentFaces = {-1, -1, -1}; //short nAdjacentFaces [3] = {-1, -1, -1};
+    std::array<short, 3> nIndexVertex = {-1, -1, -1}; //short nIndexVertex[3] = {-1, -1, -1};
 
     //Added members
-    short nIndexTvert[3] = {-1, -1, -1};
-    short nIndexTvert1[3] = {-1, -1, -1};
-    short nIndexTvert2[3] = {-1, -1, -1};
-    short nIndexTvert3[3] = {-1, -1, -1};
-    bool bProcessed[3] = {false, false, false};
+    std::array<short, 3> nIndexTvert = {-1, -1, -1}; //short nIndexTvert[3] = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert1 = {-1, -1, -1}; //short nIndexTvert1[3] = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert2 = {-1, -1, -1}; //short nIndexTvert2[3] = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert3 = {-1, -1, -1}; //short nIndexTvert3[3] = {-1, -1, -1};
+    std::array<bool, 3> bProcessed = {false, false, false}; //bool bProcessed[3] = {false, false, false};
     bool bProcessedSG = false;
+    std::array<short, 3> nEdgeTransitions = {-1, -1, -1};
     int nTextureCount = 0;
     int nSmoothingGroup = 1;
     double fArea = 0.0;
@@ -315,6 +291,7 @@ struct Face{
     Vector vBitangent;
     Vector vBBmin;
     Vector vBBmax;
+    Vector vCentroid;
     short nID = -1;
 };
 
@@ -343,7 +320,7 @@ struct Controller{
     unsigned short nTimekeyStart = 0;
     unsigned short nDataStart = 0;
     char nColumnCount = 0;
-    char nPadding [3] = {0, 0, 0};
+    std::array<char, 3> nPadding = {0, 0, 0};//char nPadding [3] = {0, 0, 0};
 
     //Added members
     int nNameIndex = -1;
@@ -372,12 +349,12 @@ struct SaberDataStruct{
 };
 
 struct VertIndicesStruct{
-    short nValues[3] = {-1, -1, -1};
+    std::array<short, 3> nValues = {-1, -1, -1};//short nValues[3] = {-1, -1, -1};
 };
 
 struct Weight{
-    double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
-    double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
+    std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0}; //double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
+    std::array<double, 4> fWeightIndex = {-1.0, -1.0, -1.0, -1.0}; //double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
 };
 
 struct MDXDataStruct{
@@ -388,10 +365,10 @@ struct MDXDataStruct{
     Vector vUV2;
     Vector vUV3;
     Vector vUV4;
-    Vector vTangent1[3];
-    Vector vTangent2[3];
-    Vector vTangent3[3];
-    Vector vTangent4[3];
+    std::array<Vector, 3> vTangent1; //Vector vTangent1[3];
+    std::array<Vector, 3> vTangent2; //Vector vTangent2[3];
+    std::array<Vector, 3> vTangent3; //Vector vTangent3[3];
+    std::array<Vector, 3> vTangent4; //Vector vTangent4[3];
     Weight Weights;
 
     //Added members
@@ -622,7 +599,7 @@ struct MeshHeader{
          * 199..101, 200
          * 399..?
          */
-    int nUnknown3 [3] = {-1, -1, 0};
+    std::array<int, 3> nUnknown3 = {-1, -1, 0}; //int nUnknown3 [3] = {-1, -1, 0};
     char nSaberUnknown1 = 0; // 3 for non-saber
     char nSaberUnknown2 = 0; // 0 for non-saber
     char nSaberUnknown3 = 0; // 0 for non-saber
@@ -718,7 +695,7 @@ struct SkinHeader{
     ArrayHead QBoneArray;
     ArrayHead TBoneArray;
     ArrayHead Array8Array; //empty, data irrelevant
-    short nBoneIndexes[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::array<short, 18> nBoneIndexes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //short nBoneIndexes[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     std::vector<Bone> Bones;
     std::vector<int> BoneNameIndexes;
@@ -797,7 +774,7 @@ struct Animation{
     ArrayHead RuntimeArray2; //Always 0
     unsigned int nRefCount = 0; //Always 0
     unsigned char nModelType = 5; //1 - geometry, 2 - model, 5 - animation
-    unsigned char nPadding [3] = {0, 0, 0};
+    std::array<unsigned char, 3> nPadding = {0, 0, 0}; //unsigned char nPadding [3] = {0, 0, 0};
 
     /// Animation-specific part
     double fLength = 0.0;
@@ -824,13 +801,13 @@ struct GeometryHeader{
     ArrayHead RuntimeArray2; //Always 0
     unsigned int nRefCount = 0;  //Always 0
     unsigned char nModelType = 2; //1 - geometry, 2 - model, 5 - animation
-    unsigned char nPadding[3] = {0, 0, 0};
+    std::array<unsigned char, 3> nPadding = {0, 0, 0}; //unsigned char nPadding[3] = {0, 0, 0};
 };
 
 struct ModelHeader{
     //Binary members
     unsigned char nClassification = 0;
-    unsigned char nUnknown1 [3] = {0, 0, 1};
+    std::array<unsigned char, 3> nUnknown1 = {0, 0, 1}; //unsigned char nUnknown1 [3] = {0, 0, 1};
     unsigned int nChildModelCount = 0; //Always 0
     ArrayHead AnimationArray;
 
@@ -858,6 +835,7 @@ struct ModelHeader{
     int nTotalTangent3Count = 0;
     int nTotalTangent4Count = 0;
     int nNodeCount = 0; //Only the nodes that actually exist, and only the ones in this model
+    Vector vLytPosition;
     GeometryHeader GH;
     Node RootNode;
     std::vector<Animation> Animations;
@@ -944,7 +922,6 @@ class MDL: public BinaryFile{
     void WriteNodes(Node & node);
     void WriteAabb(Aabb & aabb);
     void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
-    void DoCalculations(Node & NODE, int & nMeshCounter);
 
     //Calculating
     void CreatePatches();
@@ -972,7 +949,9 @@ class MDL: public BinaryFile{
     std::unique_ptr<MDX> Mdx;
     std::unique_ptr<WOK> Wok;
     std::unique_ptr<PWK> Pwk;
-    std::unique_ptr<DWK> Dwk;
+    std::unique_ptr<DWK> Dwk0;
+    std::unique_ptr<DWK> Dwk1;
+    std::unique_ptr<DWK> Dwk2;
 
     //Function pointers
     void (*PtrReport)(std::string) = nullptr;
@@ -998,12 +977,12 @@ class MDL: public BinaryFile{
     bool NodeExists(const std::string & sNodeName);
     int GetNameIndex(std::string sName);
     void UpdateTexture(Node & node, const std::string & sNew, int nTex);
+    void GetLytPositionFromWok();
 
     //Loaders
     bool Compile();
     void DecompileModel(bool bMinimal = false);
     void AsciiPostProcess();
-    void CalculateMeshData();
     void CheckPeculiarities();
     void FlushData();
     void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
@@ -1015,6 +994,9 @@ class MDL: public BinaryFile{
 
     //ascii
     void ExportAscii(std::string &sExport);
+    void ExportPwkAscii(std::string &sExport);
+    void ExportDwkAscii(std::string &sExport);
+    void ExportWokAscii(std::string &sExport);
     void FlushAscii();
     std::vector<char> & CreateAsciiBuffer(int nSize);
     bool ReadAscii();
@@ -1029,6 +1011,7 @@ class BWM: public BinaryFile{
 
     //Loaders
     void ProcessBWM();
+    void Compile();
 };
 
 class PWK: public BWM{
@@ -1046,14 +1029,30 @@ class DWK: public BWM{
     //Getters
     const std::string GetName(){ return sClassName; }
 };
+/*
+class DWK1: public BWM{
+    static const std::string sClassName;
 
+  public:
+    //Getters
+    const std::string GetName(){ return sClassName; }
+};
+
+class DWK2: public BWM{
+    static const std::string sClassName;
+
+  public:
+    //Getters
+    const std::string GetName(){ return sClassName; }
+};
+*/
 class WOK: public BWM{
     static const std::string sClassName;
 
   public:
     //Getters
     const std::string GetName(){ return sClassName; }
-    void WriteWok(Node & node);
+    void WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile);
 };
 
 

@@ -3,237 +3,10 @@
 
 /**
     Functions:
-    MDL::DoCalculations()
-    MDL::CalculateMeshData()
     MDL::Compile()
     MDL::WriteAabb()
     MDL::WriteNodes()
 /**/
-
-void MDL::DoCalculations(Node & node, int & nMeshCounter){
-    if(node.Head.nType & NODE_HAS_SABER){
-        //inverted counter
-        nMeshCounter++;
-        int Quo = nMeshCounter/100;
-        int Mod = nMeshCounter%100;
-        node.Saber.nInvCount1 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
-        nMeshCounter++;
-        Quo = nMeshCounter/100;
-        Mod = nMeshCounter%100;
-        node.Saber.nInvCount2 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
-    }
-    else{
-        //inverted counter
-        nMeshCounter++;
-        int Quo = nMeshCounter/100;
-        int Mod = nMeshCounter%100;
-        node.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
-
-        if(node.Head.nType & NODE_HAS_SKIN){
-            //First, declare our empty location as a starting point
-            Vector vPos;
-            Quaternion qOrient;
-
-            //Now we need to construct a path by adding all the locations from this node through all its parents to the root
-            int nIndex = node.Head.nNameIndex;
-            Vector vCurPosition;
-            Quaternion qCurOrientation;
-            while(nIndex != -1){
-                Node & curnode = GetNodeByNameIndex(nIndex);
-
-                //Construct base location
-                Location locNode = curnode.GetLocation();
-                vCurPosition = locNode.vPosition * -1.0;
-                qCurOrientation = locNode.oOrientation.GetQuaternion();
-                qCurOrientation = qCurOrientation.reverse();
-                vCurPosition.Rotate(qCurOrientation);
-
-                //Add parent location to main location
-                vPos += vCurPosition;
-                qOrient *= qCurOrientation;
-                //On the first round, because loc is initialized with the identity orientation, locNode orientation is simply copied
-
-                nIndex = curnode.Head.nParentIndex;
-            }
-            //We now have a location loc, going from our current node to the root.
-            //Now we need to add to that a similar kind of path of every node in the model
-
-            //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
-            for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
-                Vector vRecord = vPos; //Make copy
-                Quaternion qRecord = qOrient; //Make copy
-                Node & curnode = FH->MH.ArrayOfNodes.at(n);
-
-                nIndex = curnode.Head.nNameIndex;
-                std::vector<int> Indexes;
-                //The price we have to pay for not going recursive
-                while(nIndex != -1){
-                    Indexes.push_back(nIndex);
-                    nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
-                }
-                //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
-                for(int a = Indexes.size() - 1; a >= 0; a--){
-                    Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
-                    Location locNode = curnode2.GetLocation();
-                    vCurPosition = locNode.vPosition;
-                    qCurOrientation = locNode.oOrientation.GetQuaternion();
-                    vCurPosition.Rotate(qRecord); //Note: rotating with the Record rotation!
-                    vRecord += vCurPosition;
-                    qRecord *= qCurOrientation;
-                }
-
-                //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
-                vRecord *= -1.0;
-                qRecord = qRecord.reverse();
-                vRecord.Rotate(qRecord);
-
-                //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
-                node.Skin.Bones.at(n).TBone = vRecord;
-                node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
-            }
-
-        }
-
-        //Take care of the mdx pointer stuff. The only thing we need set is the bitmap, which should be done on import.
-        int nMDXsize = 0;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-            node.Mesh.nOffsetToVerticesInMDX = nMDXsize;
-            nMDXsize += 12;
-        }
-        else node.Mesh.nOffsetToVerticesInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-            node.Mesh.nOffsetToNormalsInMDX = nMDXsize;
-            nMDXsize += 12;
-        }
-        else node.Mesh.nOffsetToNormalsInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-            node.Mesh.nOffsetToUVsInMDX = nMDXsize;
-            nMDXsize += 8;
-        }
-        else node.Mesh.nOffsetToUVsInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-            node.Mesh.nOffsetToUV2sInMDX = nMDXsize;
-            nMDXsize += 8;
-        }
-        else node.Mesh.nOffsetToUV2sInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-            node.Mesh.nOffsetToUV3sInMDX = nMDXsize;
-            nMDXsize += 8;
-        }
-        else node.Mesh.nOffsetToUV3sInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-            node.Mesh.nOffsetToUV4sInMDX = nMDXsize;
-            nMDXsize += 8;
-        }
-        else node.Mesh.nOffsetToUV4sInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-            node.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
-            nMDXsize += 36;
-        }
-        else node.Mesh.nOffsetToTangentSpaceInMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-            node.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
-            nMDXsize += 36;
-        }
-        else node.Mesh.nOffsetToTangentSpace2InMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-            node.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
-            nMDXsize += 36;
-        }
-        else node.Mesh.nOffsetToTangentSpace3InMDX = -1;
-        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-            node.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
-            nMDXsize += 36;
-        }
-        else node.Mesh.nOffsetToTangentSpace4InMDX = -1;
-        if(node.Head.nType & NODE_HAS_SKIN){
-            node.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
-            nMDXsize += 16;
-            node.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
-            nMDXsize += 16;
-        }
-        node.Mesh.nMdxDataSize = nMDXsize;
-        node.Mesh.nOffsetToUnknownInMDX = -1;
-    }
-}
-
-void MDL::CalculateMeshData(){
-    std::cout<<"Calculating mesh data...\n";
-    FileHeader & Data = *FH;
-
-    /// PART 1 ///
-    /// Create patches through linked faces
-    //This will take a while and needs to be optimized for speed, anything that can be taken out of it, should be
-    CreatePatches();
-
-    /// PART 2 ///
-    /// Do the necessary mesh calculations
-    /// Mesh: inverted counter, MDX data offsets
-    /// Skin: MDX data offsets, T-bones, Q-bones
-    /// Saber: inverted counter
-    Report("Calculating mesh data...");
-    int nMeshCounter = 0;
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        Node & node = Data.MH.ArrayOfNodes.at(n);
-        if(node.Head.nType & NODE_HAS_MESH) DoCalculations(node, nMeshCounter);
-    }
-
-    /// PART 3 ///
-    /// Calculate vertex normals and vertex tangent space vectors
-    Report("Calculating vertex normals and vertex tangent space vectors...");
-    for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
-        int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
-        for(int p = 0; p < nPatchCount; p++){
-            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
-
-            for(int p2 = 0; p2 < nPatchCount; p2++){
-                Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(p2);
-                if(patch2.nSmoothingGroups & patch.nSmoothingGroups){
-                    for(int f = 0; f < patch2.FaceIndices.size(); f++){
-                        Face & face = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Faces.at(patch2.FaceIndices.at(f));
-                        Vertex & v1 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[0]);
-                        Vertex & v2 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[1]);
-                        Vertex & v3 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[2]);
-                        Vector Edge1 = v2 - v1;
-                        Vector Edge2 = v3 - v1;
-                        Vector Edge3 = v3 - v2;
-
-                        Vector vAdd = face.vNormal;
-                        if(bSmoothAreaWeighting) vAdd *= face.fArea;
-                        if(bSmoothAngleWeighting){
-                            if(patch.nVertex == face.nIndexVertex[0]){
-                                vAdd *= Angle(Edge1, Edge2);
-                            }
-                            else if(patch.nVertex == face.nIndexVertex[1]){
-                                vAdd *= Angle(Edge1, Edge3);
-                            }
-                            else if(patch.nVertex == face.nIndexVertex[2]){
-                                vAdd *= Angle(Edge2, Edge3);
-                            }
-                        }
-
-                        vert.MDXData.vNormal += vAdd;
-                        vert.MDXData.vTangent1[0] += face.vBitangent;
-                        vert.MDXData.vTangent1[1] += face.vTangent;
-                        vert.MDXData.vTangent1[2] += (face.vBitangent / face.vTangent);
-                    }
-                }
-            }
-            vert.MDXData.vNormal.Normalize();
-            vert.MDXData.vTangent1[0].Normalize();
-            vert.MDXData.vTangent1[1].Normalize();
-            vert.MDXData.vTangent1[2].Normalize();
-        }
-    }
-
-    /// No need for the patches anymore, get rid of them
-    Data.MH.PatchArrayPointers.clear();
-    Data.MH.PatchArrayPointers.shrink_to_fit();
-
-    /// DONE ///
-    std::cout<<"Done calculating mesh data...\n";
-}
 
 bool MDL::Compile(){
     nPosition = 0;
@@ -421,6 +194,11 @@ bool MDL::Compile(){
 
     bLoaded = true;
     Mdx->bLoaded = true;
+    if(Wok) Wok->Compile();
+    if(Pwk) Pwk->Compile();
+    if(Dwk0) Dwk0->Compile();
+    if(Dwk1) Dwk1->Compile();
+    if(Dwk2) Dwk2->Compile();
 }
 
 void MDL::WriteAabb(Aabb & aabb){
@@ -671,6 +449,67 @@ void MDL::WriteNodes(Node & node){
         WriteFloat(node.Mesh.fUVJitterSpeed, 2);
 
         //MDX stuff
+        //Take care of the mdx pointer stuff. The only thing we need set is the bitmap, which should be done on import.
+        int nMDXsize = 0;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+            node.Mesh.nOffsetToVerticesInMDX = nMDXsize;
+            nMDXsize += 12;
+        }
+        else node.Mesh.nOffsetToVerticesInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
+            node.Mesh.nOffsetToNormalsInMDX = nMDXsize;
+            nMDXsize += 12;
+        }
+        else node.Mesh.nOffsetToNormalsInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+            node.Mesh.nOffsetToUVsInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUVsInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+            node.Mesh.nOffsetToUV2sInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUV2sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+            node.Mesh.nOffsetToUV3sInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUV3sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+            node.Mesh.nOffsetToUV4sInMDX = nMDXsize;
+            nMDXsize += 8;
+        }
+        else node.Mesh.nOffsetToUV4sInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
+            node.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpaceInMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
+            node.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace2InMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
+            node.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace3InMDX = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
+            node.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
+            nMDXsize += 36;
+        }
+        else node.Mesh.nOffsetToTangentSpace4InMDX = -1;
+        if(node.Head.nType & NODE_HAS_SKIN){
+            node.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
+            nMDXsize += 16;
+            node.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
+            nMDXsize += 16;
+        }
+        node.Mesh.nMdxDataSize = nMDXsize;
+        node.Mesh.nOffsetToUnknownInMDX = -1;
+
         WriteInt(node.Mesh.nMdxDataSize, 1);
         WriteInt(node.Mesh.nMdxDataBitmap, 4);
         WriteInt(node.Mesh.nOffsetToVerticesInMDX, 6);
@@ -1199,4 +1038,145 @@ void MDL::WriteNodes(Node & node){
     }
 
     //Done you are, padawan
+}
+
+void BWM::Compile(){
+    if(!Bwm) return;
+    BWMHeader & data = *Bwm;
+    nPosition = 0;
+    sBuffer.resize(0);
+    bKnown.resize(0);
+
+    WriteString("BWM V1.0", 3);
+    WriteInt(data.nType, 4);
+
+    WriteFloat(data.vUse1.fX, 2);
+    WriteFloat(data.vUse1.fY, 2);
+    WriteFloat(data.vUse1.fZ, 2);
+    WriteFloat(data.vUse2.fX, 2);
+    WriteFloat(data.vUse2.fY, 2);
+    WriteFloat(data.vUse2.fZ, 2);
+    WriteFloat(data.vDwk1.fX, 2);
+    WriteFloat(data.vDwk1.fY, 2);
+    WriteFloat(data.vDwk1.fZ, 2);
+    WriteFloat(data.vDwk2.fX, 2);
+    WriteFloat(data.vDwk2.fY, 2);
+    WriteFloat(data.vDwk2.fZ, 2);
+
+    WriteFloat(data.vPosition.fX, 2);
+    WriteFloat(data.vPosition.fY, 2);
+    WriteFloat(data.vPosition.fZ, 2);
+
+    data.nNumberOfVerts = data.verts.size();
+    WriteInt(data.nNumberOfVerts, 1);
+    int nOffsetVerts = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    data.nNumberOfFaces = data.faces.size();
+    WriteInt(data.nNumberOfFaces, 1);
+    int nOffsetVertIndices = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+    int nOffsetMaterials = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+    int nOffsetNormals = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+    int nOffsetDistances = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    data.nNumberOfAabb = data.aabb.size();
+    WriteInt(data.nNumberOfAabb, 1);
+    int nOffsetAabb = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    WriteInt(data.nUnknown2, 10);
+
+    int nCount = 0;
+    for(int f = 0; f < data.faces.size(); f++){
+        if(data.faces.at(f).nMaterialID != 7) nCount++;
+    }
+    data.nNumberOfAdjacentFaces = nCount;
+    WriteInt(data.nNumberOfAdjacentFaces, 1);
+    int nOffsetAdjacent = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    data.nNumberOfEdges = data.edges.size();
+    WriteInt(data.nNumberOfEdges, 1);
+    int nOffsetEdges = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    data.nNumberOfPerimeters = data.perimeters.size();
+    WriteInt(data.nNumberOfPerimeters, 1);
+    int nOffsetPerimeters = nPosition;
+    WriteInt(0xFFFFFFFF, 6);
+
+    WriteIntToPH(nPosition, nOffsetVerts, data.nOffsetToVerts);
+    for(int v = 0; v < data.verts.size(); v++){
+        Vector & vert = data.verts.at(v);
+        WriteFloat(vert.fX, 2);
+        WriteFloat(vert.fY, 2);
+        WriteFloat(vert.fZ, 2);
+    }
+
+    WriteIntToPH(nPosition, nOffsetVertIndices, data.nOffsetToIndexes);
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        WriteInt(face.nIndexVertex.at(0), 4);
+        WriteInt(face.nIndexVertex.at(1), 4);
+        WriteInt(face.nIndexVertex.at(2), 4);
+    }
+    WriteIntToPH(nPosition, nOffsetMaterials, data.nOffsetToMaterials);
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        WriteInt(face.nMaterialID, 4);
+    }
+    WriteIntToPH(nPosition, nOffsetNormals, data.nOffsetToNormals);
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        WriteFloat(face.vNormal.fX, 2);
+        WriteFloat(face.vNormal.fY, 2);
+        WriteFloat(face.vNormal.fZ, 2);
+    }
+    WriteIntToPH(nPosition, nOffsetDistances, data.nOffsetToDistances);
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        WriteFloat(face.fDistance, 2);
+    }
+
+    WriteIntToPH(nPosition, nOffsetAabb, data.nOffsetToAabb);
+    for(int v = 0; v < data.aabb.size(); v++){
+        Aabb & aabb = data.aabb.at(v);
+        WriteFloat(aabb.vBBmin.fX, 2);
+        WriteFloat(aabb.vBBmin.fY, 2);
+        WriteFloat(aabb.vBBmin.fZ, 2);
+        WriteFloat(aabb.vBBmax.fX, 2);
+        WriteFloat(aabb.vBBmax.fY, 2);
+        WriteFloat(aabb.vBBmax.fZ, 2);
+        WriteInt(aabb.nID, 4);
+        WriteInt(aabb.nExtra, 4);
+        WriteInt(aabb.nProperty, 4);
+        WriteInt(aabb.nChild1, 4);
+        WriteInt(aabb.nChild2, 4);
+    }
+
+    WriteIntToPH(nPosition, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        if(face.nMaterialID != 7){
+            WriteInt(face.nAdjacentFaces.at(0), 4);
+            WriteInt(face.nAdjacentFaces.at(1), 4);
+            WriteInt(face.nAdjacentFaces.at(2), 4);
+        }
+    }
+    WriteIntToPH(nPosition, nOffsetEdges, data.nOffsetToEdges);
+    for(int f = 0; f < data.edges.size(); f++){
+        Edge & edge = data.edges.at(f);
+        WriteInt(edge.nIndex, 4);
+        WriteInt(edge.nTransition, 4);
+    }
+    WriteIntToPH(nPosition, nOffsetPerimeters, data.nOffsetToPerimeters);
+    for(int f = 0; f < data.perimeters.size(); f++){
+        int & perimeter = data.perimeters.at(f);
+        WriteInt(perimeter, 4);
+    }
+    bLoaded = true;
 }

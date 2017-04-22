@@ -264,6 +264,11 @@ bool TextFile::ReadFloat(double & fNew, bool bPrint){
         fNew = 0.0;
         return false;
     }
+    catch(...){
+        std::cout<<"Ascii::ReadFloat(): There was an unknown error converting the string: "<<sCheck<<". Printing 0.0. \n";
+        fNew = 0.0;
+        return false;
+    }
     if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
     return true;
 }

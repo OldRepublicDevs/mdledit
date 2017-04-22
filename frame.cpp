@@ -171,17 +171,16 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             ShowWindow(Edits::hFloatEdit, false);
 
             hStatusBar = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hwnd, IDC_STATUSBAR);
-            /*
             int nBorders [4];
             nBorders[0] = ME_STATUSBAR_PART_X;
             nBorders[1] = 2 * ME_STATUSBAR_PART_X;
             nBorders[2] = 3 * ME_STATUSBAR_PART_X;
             nBorders[3] = -1;
             SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
-            */
+            ShowWindow(hStatusBar, false);
 
             GetClientRect(hwnd, &rcClient);
-            hTree = CreateWindowEx(WS_EX_TOPMOST, WC_TREEVIEW, "Structure", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT,
+            hTree = CreateWindowEx(WS_EX_TOPMOST, WC_TREEVIEW, "Structure", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
                            ME_TREE_OFFSET_X, ME_TREE_OFFSET_Y, ME_TREE_SIZE_X, rcClient.bottom - ME_TREE_OFFSET_Y - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y,
                            hwnd, (HMENU) IDC_TREEVIEW, GetModuleHandle(NULL), NULL);
             hDisplayEdit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", WS_VISIBLE | WS_CHILD | ES_READONLY | ES_AUTOVSCROLL | ES_MULTILINE | WS_VSCROLL,
@@ -377,12 +376,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 {
                     if(Model.bK2){
                         if(Model.GetFileData()){
-                            int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
-                            if(nResult == IDOK){
-                                Model.bK2 = false;
-                                Model.Compile();
-                                Edit1.LoadData();
-                            }
+                            Model.bK2 = false;
+                            Model.Compile();
+                            Edit1.LoadData();
                         }
                         else{
                             Model.bK2 = false;
@@ -403,12 +399,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 {
                     if(!Model.bK2){
                         if(Model.GetFileData()){
-                            int nResult = WarningCancel("Changing the game will cause recompilation of the open model.");
-                            if(nResult == IDOK){
-                                Model.bK2 = true;
-                                Model.Compile();
-                                Edit1.LoadData();
-                            }
+                            Model.bK2 = true;
+                            Model.Compile();
+                            Edit1.LoadData();
                         }
                         else{
                             Model.bK2 = true;
@@ -441,8 +434,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 {
                     if(2 == DialogBoxParam(NULL, MAKEINTRESOURCE(DLG_EDIT_TEXTURES), hwnd, TexturesProc, (LPARAM) &Model)){
                         std::cout<<"Cause model reprocessing!\n";
-                        TreeView_DeleteAllItems(hTree);
-                        DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 3);
+                        //TreeView_DeleteAllItems(hTree);
+                        //DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 3);
+                        Model.Compile();
                     }
                     Edit1.UpdateEdit();
                     HTREEITEM hSel = TreeView_GetSelection(hTree);
@@ -468,13 +462,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         ShowWindow(GetDlgItem(hwnd, IDC_EDIT_UINT), true);
                         ShowWindow(GetDlgItem(hwnd, IDC_EDIT_FLOAT), true);
                         ShowWindow(hTabs, true);
-                        int nBorders [4];
-                        nBorders[0] = ME_STATUSBAR_PART_X;
-                        nBorders[1] = 2 * ME_STATUSBAR_PART_X;
-                        nBorders[2] = 3 * ME_STATUSBAR_PART_X;
-                        nBorders[3] = -1;
-                        SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
-                        SetWindowText(hStatusBar, "");
+                        ShowWindow(hStatusBar, true);
                         Edit1.UpdateEdit();
                         SetWindowPos(hwnd, NULL, 0, 0, 980, 610, SWP_NOMOVE | SWP_NOZORDER);
                     }
@@ -486,9 +474,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         ShowWindow(GetDlgItem(hwnd, IDC_EDIT_UINT), false);
                         ShowWindow(GetDlgItem(hwnd, IDC_EDIT_FLOAT), false);
                         ShowWindow(hTabs, false);
-                        int nMinusOne = -1;
-                        SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 1, (LPARAM) &nMinusOne);
-                        SetWindowText(hStatusBar, "");
+                        ShowWindow(hStatusBar, false);
                         SetWindowPos(hwnd, NULL, 0, 0, 368, 610, SWP_NOMOVE | SWP_NOZORDER);
                     }
                 }
@@ -566,7 +552,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                               nCompactOffsetLeft,
                               nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y,
                               (rcClient.right - rcClient.left) - nCompactOffsetLeft - nCompactOffsetRight,
-                              rcClient.bottom - ME_STATUSBAR_Y - (nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y + nCompactOffsetBottom), NULL);
+                              rcClient.bottom - (nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y + nCompactOffsetBottom), NULL);
 
             if(bShowHex) SetWindowPos(hTabs, NULL, ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y, NULL);
             if(bShowHex) Edit1.Resize();
@@ -652,6 +638,28 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             sAsciiExport.clear();
             sAsciiExport.shrink_to_fit();
+
+            //Save Pwk
+            if(Model.Pwk){
+                std::string cPwk;
+                cPwk = cFile;
+                char * cExt2 = PathFindExtension(cPwk.c_str());
+                sprintf(cExt2, ".pwk");
+
+                file.open(cPwk, std::fstream::out);
+
+                sAsciiExport.clear();
+                Model.ExportPwkAscii(sAsciiExport);
+
+                //Write and close file
+                file<<sAsciiExport;
+                file.close();
+
+                sAsciiExport.clear();
+                sAsciiExport.shrink_to_fit();
+            }
+
+
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
@@ -678,7 +686,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 return false;
             }
 
-            //Put data into a strings
+            //Put data into a string
             std::string sBinaryExport;
             Model.Export(sBinaryExport);
 
@@ -687,22 +695,123 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             file.close();
 
             //Save mdx
-            std::string cMdx;
-            cMdx = cFile;
-            char * cExt2 = PathFindExtension(cMdx.c_str());
-            sprintf(cExt2, ".mdx");
+            if(Model.Mdx){
+                std::string cMdx;
+                cMdx = cFile;
+                char * cExt2 = PathFindExtension(cMdx.c_str());
+                sprintf(cExt2, ".mdx");
 
-            file.open(cMdx, std::ios::binary | std::fstream::out);
+                file.open(cMdx, std::ios::binary | std::fstream::out);
 
-            sBinaryExport.clear();
-            Model.Mdx->Export(sBinaryExport);
+                sBinaryExport.clear();
+                Model.Mdx->Export(sBinaryExport);
 
-            //Write and close file
-            file<<sBinaryExport;
-            file.close();
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
 
-            sBinaryExport.clear();
-            sBinaryExport.shrink_to_fit();
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
+
+            //Save Wok
+            if(Model.Wok){
+                std::string cWok;
+                cWok = cFile;
+                char * cExt2 = PathFindExtension(cWok.c_str());
+                sprintf(cExt2, ".wok");
+
+                file.open(cWok, std::ios::binary | std::fstream::out);
+
+                sBinaryExport.clear();
+                Model.Wok->Export(sBinaryExport);
+
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
+
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
+
+            //Save Pwk
+            if(Model.Pwk){
+                std::string cPwk;
+                cPwk = cFile;
+                char * cExt2 = PathFindExtension(cPwk.c_str());
+                sprintf(cExt2, ".pwk");
+
+                file.open(cPwk, std::ios::binary | std::fstream::out);
+
+                sBinaryExport.clear();
+                Model.Pwk->Export(sBinaryExport);
+
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
+
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
+
+            //Save Dwk
+            if(Model.Dwk0){
+                std::string cDwk;
+                cDwk = cFile.c_str();
+                cDwk.push_back('k');
+                char * cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, "0.dwk");
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
+
+                sBinaryExport.clear();
+                Model.Dwk0->Export(sBinaryExport);
+
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
+
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
+            if(Model.Dwk1){
+                std::string cDwk;
+                cDwk = cFile.c_str();
+                cDwk.push_back('k');
+                char * cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, "1.dwk");
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
+
+                sBinaryExport.clear();
+                Model.Dwk1->Export(sBinaryExport);
+
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
+
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
+            if(Model.Dwk2){
+                std::string cDwk;
+                cDwk = cFile.c_str();
+                cDwk.push_back('k');
+                char * cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, "2.dwk");
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
+
+                sBinaryExport.clear();
+                Model.Dwk2->Export(sBinaryExport);
+
+                //Write and close file
+                file<<sBinaryExport;
+                file.close();
+
+                sBinaryExport.clear();
+                sBinaryExport.shrink_to_fit();
+            }
 
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
@@ -753,6 +862,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 file.read(&sBufferRef[0], length);
                 file.close();
                 AppendTab(hTabs, "MDL");
+                AppendTab(hTabs, "MDX");
 
                 //Process the data
                 Model.SetFilePath(cFile);
@@ -854,25 +964,64 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
                 //Open and process .dwk if it exists
                 std::string cDwk;
-                cDwk = cFile;
+                cDwk = cFile.c_str();
+                cDwk.push_back('k');
                 cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, ".dwk");
+                sprintf(cExt2, "0.dwk");
                 if(PathFileExists(cDwk.c_str())){
                     file.open(cDwk, std::ios::binary);
                     if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
+                        std::cout<<"File creation/opening failed (dwk0). Aborting.\n";
                     }
                     else{
                         //We may begin reading
                         file.seekg(0, std::ios::end);
                         std::streampos length = file.tellg();
                         file.seekg(0,std::ios::beg);
-                        Model.Dwk.reset(new DWK());
-                        std::vector<char> & sBufferRef = Model.Dwk->CreateBuffer(length);
+                        Model.Dwk0.reset(new DWK());
+                        std::vector<char> & sBufferRef = Model.Dwk0->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
                         file.close();
-                        Model.Dwk->SetFilePath(cDwk);
-                        AppendTab(hTabs, "DWK");
+                        Model.Dwk0->SetFilePath(cDwk);
+                        AppendTab(hTabs, "DWK 0");
+                    }
+                }
+                sprintf(cExt2, "1.dwk");
+                if(PathFileExists(cDwk.c_str())){
+                    file.open(cDwk, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (dwk1). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        Model.Dwk1.reset(new DWK());
+                        std::vector<char> & sBufferRef = Model.Dwk1->CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Model.Dwk1->SetFilePath(cDwk);
+                        AppendTab(hTabs, "DWK 1");
+                    }
+                }
+                sprintf(cExt2, "2.dwk");
+                if(PathFileExists(cDwk.c_str())){
+                    file.open(cDwk, std::ios::binary);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (dwk2). Aborting.\n";
+                    }
+                    else{
+                        //We may begin reading
+                        file.seekg(0, std::ios::end);
+                        std::streampos length = file.tellg();
+                        file.seekg(0,std::ios::beg);
+                        Model.Dwk2.reset(new DWK());
+                        std::vector<char> & sBufferRef = Model.Dwk2->CreateBuffer(length);
+                        file.read(&sBufferRef[0], length);
+                        file.close();
+                        Model.Dwk2->SetFilePath(cDwk);
+                        AppendTab(hTabs, "DWK 2");
                     }
                 }
 
@@ -921,6 +1070,9 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             else EndDialog(hwnd, true);
         }
         break;
+        case WM_CLOSE:
+            PostQuitMessage(0);
+        break;
         default:
             return FALSE;
     }
@@ -938,10 +1090,6 @@ void ProgressPos(int nPos){
 }
 
 DWORD WINAPI ThreadReprocess(LPVOID lpParam){
-    Model.CalculateMeshData();
-    //This should bring us to a state where all the practical data is ready,
-    //but not the binary-file-specific data, such as offsets, etc..
-
     Model.Compile();
     //This should bring us to a state where all data is ready,
     //even the binary-file-specific data
@@ -961,17 +1109,8 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     //Just read it.
     if(!bReadWell) SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
 
-    Model.AsciiPostProcess();
-    //This should bring us to a state where all the ascii data is interpreted,
-    //though there are still calculations to be done for the binary version.
-
-    /// Now we know whether we have MDX or WOK data
-    if(Model.Mdx) AppendTab(hTabs, "MDX");
+    /// Now we know whether we have WOK data
     if(Model.Wok) AppendTab(hTabs, "WOK");
-
-    Model.CalculateMeshData();
-    //This should bring us to a state where all the practical data is ready,
-    //but not the binary-file-specific data, such as offsets, etc..
 
     Model.Compile();
     //This should bring us to a state where all data is ready,
@@ -998,16 +1137,23 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     Model.DecompileModel();
     Report("Processing walkmesh...");
-    if(Model.Wok) Model.Wok->ProcessBWM();
+    if(Model.Wok){
+        Model.Wok->ProcessBWM();
+        Model.GetLytPositionFromWok();
+    }
     if(Model.Pwk) Model.Pwk->ProcessBWM();
-    if(Model.Dwk) Model.Dwk->ProcessBWM();
+    if(Model.Dwk0) Model.Dwk0->ProcessBWM();
+    if(Model.Dwk1) Model.Dwk1->ProcessBWM();
+    if(Model.Dwk2) Model.Dwk2->ProcessBWM();
 
     //Load the data
     Report("Loading data...");
     BuildTree(Model);
     if(Model.Wok) BuildTree(*Model.Wok);
     if(Model.Pwk) BuildTree(*Model.Pwk);
-    if(Model.Dwk) BuildTree(*Model.Dwk);
+    if(Model.Dwk0) BuildTree(*Model.Dwk0);
+    if(Model.Dwk1) BuildTree(*Model.Dwk1);
+    if(Model.Dwk2) BuildTree(*Model.Dwk2);
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData();
     std::cout<<"Data loaded!\n";
@@ -1041,13 +1187,15 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     std::string FilenameModel = Model.GetFilename();
     std::string FilenameWalkmesh = (Model.Wok ? Model.Wok->GetFilename() : "");
     std::string FilenamePwk = (Model.Pwk ? Model.Pwk->GetFilename() : "");
-    std::string FilenameDwk = (Model.Dwk ? Model.Dwk->GetFilename() : "");
-    while(!bStop && !(cItem[0] == FilenameModel) && !(cItem[0] == FilenameWalkmesh) && !(cItem[0] == FilenamePwk) && !(cItem[0] == FilenameDwk)){
+    std::string FilenameDwk0 = (Model.Dwk0 ? Model.Dwk0->GetFilename() : "");
+    std::string FilenameDwk1 = (Model.Dwk1 ? Model.Dwk1->GetFilename() : "");
+    std::string FilenameDwk2 = (Model.Dwk2 ? Model.Dwk2->GetFilename() : "");
+    while(!bStop && !(cItem[0] == FilenameModel) && !(cItem[0] == FilenameWalkmesh) && !(cItem[0] == FilenamePwk) && !(cItem[0] == FilenameDwk0) && !(cItem[0] == FilenameDwk1) && !(cItem[0] == FilenameDwk2)){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
         tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
         cItem[n] = cGet;
-        if((cItem[n] == FilenameModel) || (cItem[n] == FilenameWalkmesh) || (cItem[n] == FilenamePwk) || (cItem[n] == FilenameDwk)) bStop = true;
+        if((cItem[n] == FilenameModel) || (cItem[n] == FilenameWalkmesh) || (cItem[n] == FilenamePwk) || (cItem[n] == FilenameDwk0) || (cItem[n] == FilenameDwk1) || (cItem[n] == FilenameDwk2)) bStop = true;
         else n++;
     }
 

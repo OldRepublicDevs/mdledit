@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <math.h>
+#include <array>
 #include <iostream> //for std::cout
 #include <vector> //for std::vector
 #include <memory> //for std::unique_ptr
@@ -65,6 +66,7 @@ char DecToHexDigit(int nDec);
 void CharsToHex(char * cOutput, std::vector<char> & cInput, int nOffset, int nNumber);
 void AddSignificantZeroes(char * cInt, int nSignificant);
 void TruncateDec(TCHAR * tcString);
+std::string TruncateDec(std::string sCopy);
 void PrepareCharForDisplay(char * cChar);
 void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount);
 int Error(std::string sErrorMessage);
@@ -87,6 +89,6 @@ struct MenuLineAdder{
 };
 
 char * operator&(std::string & sStr);
-std::string safesubstr(const std::string & sParam, size_t nStart, size_t nEnd = std::string::npos);
+std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = std::string::npos);
 
 #endif // GENERAL_H_INCLUDED

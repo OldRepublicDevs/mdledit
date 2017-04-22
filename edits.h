@@ -74,9 +74,17 @@ class Edits{
             nKnownArray = &Model.Pwk->GetKnownData();
             sBuffer = &Model.Pwk->GetBuffer();
         }
-        else if(sSelected == "DWK" && Model.Dwk){
-            nKnownArray = &Model.Dwk->GetKnownData();
-            sBuffer = &Model.Dwk->GetBuffer();
+        else if(sSelected == "DWK 0" && Model.Dwk0){
+            nKnownArray = &Model.Dwk0->GetKnownData();
+            sBuffer = &Model.Dwk0->GetBuffer();
+        }
+        else if(sSelected == "DWK 1" && Model.Dwk1){
+            nKnownArray = &Model.Dwk1->GetKnownData();
+            sBuffer = &Model.Dwk1->GetBuffer();
+        }
+        else if(sSelected == "DWK 2" && Model.Dwk2){
+            nKnownArray = &Model.Dwk2->GetKnownData();
+            sBuffer = &Model.Dwk2->GetBuffer();
         }
         else{
             nKnownArray = nullptr;
