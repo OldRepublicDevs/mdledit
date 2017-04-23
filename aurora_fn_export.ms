@@ -647,6 +647,27 @@ fn ExportAABBTree node =
     	WriteAABBTree node verbose:true
 	)
 
+	local ssTempBuffer = stringStream ""
+	local nTransitions = 0
+	for f = 1 to (meshop.getNumFaces node) do
+	(
+        local ClrVertInds = getVCFace node f
+        for i = 1 to 3 do
+        (
+            local VertColor = getVertColor node ClrVertInds[i]
+            if(VertColor.b == 0 and VertColor.r == 0 and VertColor.g >= 100) then
+            (
+                nTransitions += 1
+                format "    % %%" ((f - 1)* 3 + i - 1) ((VertColor.g as Integer) - 100) g_delim to:ssTempBuffer
+            )
+        )
+	)
+	if(nTransitions > 0) then
+	(
+        format "  roomlinks %%" nTransitions g_delim to:g_strBuffer
+        format "%" (ssTempBuffer as string) to:g_strBuffer
+    )
+
     if SPEEDT then nx_stopStopWatch txt:"ExportAABBTree"
 )
 

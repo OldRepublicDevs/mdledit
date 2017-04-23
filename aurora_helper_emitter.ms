@@ -688,6 +688,7 @@ invisible:true
             EmitAdvRollout.spn_lightningRadius.enabled = true
             EmitAdvRollout.spn_lightningSubDiv.enabled = true
             EmitAdvRollout.spn_lightningScale.enabled = true
+            EmitAdvRollout.spn_lightningZigZag.enabled = true
         ) else
         (
             --EmitStyleRollout.radio_render.state = 1
@@ -715,6 +716,7 @@ invisible:true
             EmitAdvRollout.spn_lightningRadius.enabled = false
             EmitAdvRollout.spn_lightningSubDiv.enabled = false
             EmitAdvRollout.spn_lightningScale.enabled = false
+            EmitAdvRollout.spn_lightningZigZag.enabled = false
         )
         -- chunk rules
         if (EmitTextChunkRollout.edit_chunk.text != "") and \

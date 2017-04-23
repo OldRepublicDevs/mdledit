@@ -3,16 +3,16 @@
 TO DO:
  maybe:
  - Add more stuff to editordlg (texture names, controller data, for example) OR maybe not
- - NWMax scripts: see if it's possible to import channels 2,3,4 and export channels 3,4.
+ - NWMax scripts: channels 3,4.
 
  definitely:
- - viewer for Walkmesh (somewhat done)
+ - viewer for Walkmesh (somewhat done) nope
  - interpret WOK (mostly done)
- - AABB tree creator
+ - AABB tree creator (mostly done)
 
 
  Binary diff shortcomings:
- 1. I cannot accurately reproduce the correct radius and average values. For now, I will settle with the largest radius and the mean average of all points.
+ //1. I cannot accurately reproduce the correct radius and average values. For now, I will settle with the largest radius and the mean average of all points.
  2. unknown padding mismatches
  4. precision issues, probably cannot avoid this
  5. inverted counter - I can create the correct values, but I cannot figure out how to count them

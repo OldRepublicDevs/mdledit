@@ -637,10 +637,12 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_HAS_EMITTER){
+                /*
                 if(NodeArray.at(b).Emitter.nUnknown1 != 0){
                     ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
                     bUpdate = true;
                 }
+                */
             }
             if(NodeArray.at(b).Head.nType & NODE_HAS_MESH){
                 if(NodeArray.at(b).Mesh.nUnknown3[0] != -1 || NodeArray.at(b).Mesh.nUnknown3[1] != -1 || NodeArray.at(b).Mesh.nUnknown3[2] != 0){

@@ -1144,6 +1144,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             danglyConstraints = #()
                             numWeights = 0
                             weightBuffer = #()
+                            edgeIndices = #()
+                            edgeTransitions = #()
 
                             -- lens flare var setup
                             a_texturenames = #() -- read multiple strings
@@ -1333,7 +1335,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 append verts p3
                             )
                         )
-                        "constraints": -- Danlgy constraints
+                        "constraints": -- Dangly constraints
                         (
                             numConstraints = tok.ReadInteger()
                             for i = 1 to numConstraints do
@@ -1492,6 +1494,33 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 local p3 = [bv1, bv2, 0]
 
                                 append TVerts3 p3
+                            )
+                        )
+                        "roomlinks": --Walkmesh room links
+                        (
+                            -- Get key count
+                            local keyCount = undefined;
+                            if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
+
+                            -- Go to first row
+                            tok.SetString (getNextNonBlankLine mdlStream)
+
+                            while ((tok.PeekToken() != "endlist") and (keyCount != 0)) do (
+                                lineNum += 1
+
+                                -------- DO STUFF
+                                local bv1 = tok.ReadInteger()
+                                local bv2 = tok.ReadInteger()
+                                append edgeIndices bv1
+                                append edgeTransitions bv2
+                                -------- DONE STUFF
+
+                                -- read in next line from import data stream
+                                if (keyCount != undefined) then(
+                                    keyCount -= 1
+                                    if keyCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                                )
+                                else tok.SetString (getNextNonBlankLine mdlStream)
                             )
                         )
 
@@ -1847,6 +1876,28 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                             faces:faces \
                                                             wirecolor:objWireColor \
                                                             materialIDS:surfacemats
+                                        )
+
+                                        -- if aabb, adjust colors.
+                                        if (objType == "aabb") then
+                                        (
+                                            meshop.setMapSupport newObj 0 true
+                                            setNumCPVVerts newObj (edgeIndices.count + 1)
+                                            meshop.setMapVert newObj 0 1 [1, 1, 1]
+                                            for i = 2 to (edgeTransitions.count + 1) do meshop.setMapVert newObj 0 i [0, ((100 + edgeTransitions[i-1]) / 255.0), 0]
+                                            buildVCFaces newObj
+                                            for i = 1 to numFaces do
+                                            (
+                                                local cei = #(1, 1, 1)
+                                                for nindex = 1 to 3 do(
+                                                    for j = 1 to edgeIndices.count do
+                                                    (
+                                                        if((edgeIndices[j] / 3 + 1) == i and ((mod edgeIndices[j] 3) + 1) == nindex) then
+                                                            cei[nindex] = j+1
+                                                    )
+                                                )
+                                                setVCFace newObj i [cei[1], cei[2], cei[3]]
+                                            )
                                         )
 
                                         -- special post processing to deal with some sort of odd Max vert position distortion

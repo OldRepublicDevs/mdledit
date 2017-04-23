@@ -665,7 +665,7 @@ bool ASCII::Read(MDL & Mdl){
                     bGeometry = true;
                     SkipLine();
                 }
-                else if(sID == "lytposition" && bGeometry && nNode == 0){
+                else if(sID == "layoutposition" || sID == "lytposition" && bGeometry && nNode == 0){
                     if(ReadFloat(fConvert)) FH->MH.vLytPosition.fX = fConvert;
                     if(ReadFloat(fConvert)) FH->MH.vLytPosition.fY = fConvert;
                     if(ReadFloat(fConvert)) FH->MH.vLytPosition.fZ = fConvert;
@@ -2888,19 +2888,38 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
                 *file << ssFaces.str();
             }
 
-            /**/
-            if(nTry < 5){
-                if(!bEven){
-                    /*
-                    if(!bNegative && centroids.size() > 2){
-                        if(centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
-                            bNegative = true;
-                            if(file != nullptr) *file << "To negative\n";
-                            bOk = false;
+            bool bTryAxis = false;
+            if(bTryAxis){
+                if(nTry < 5){
+                    if(!bEven){
+                        /*
+                        if(!bNegative && centroids.size() > 2){
+                            if(centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
+                                bNegative = true;
+                                if(file != nullptr) *file << "To negative\n";
+                                bOk = false;
+                            }
+                        }
+                        else*/ if(centroids.size() > 2){
+                            if(centroids.at(nIndex).centroid == centroids.at(nIndex-1).centroid){
+                                bNegative = false;
+                                if(file != nullptr) *file << "Increase priority\n";
+                                if(nCurrentPriority < 2) nCurrentPriority++;
+                                bOk = false;
+                            }
                         }
                     }
-                    else*/ if(/*bNegative &&*/ centroids.size() > 2){
-                        if(centroids.at(nIndex).centroid == centroids.at(nIndex-1).centroid){
+                    else{
+                        /*
+                        if(!bNegative && centroids.size() > 2){
+                            if(//centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff ||
+                               centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
+                                bNegative = true;
+                                if(file != nullptr) *file << "To negative\n";
+                                bOk = false;
+                            }
+                        }
+                        else*/ if(centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff && centroids.size() > 2){
                             bNegative = false;
                             if(file != nullptr) *file << "Increase priority\n";
                             if(nCurrentPriority < 2) nCurrentPriority++;
@@ -2909,31 +2928,13 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
                     }
                 }
                 else{
-                    /*
-                    if(!bNegative && centroids.size() > 2){
-                        if(//centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff ||
-                           centroids.at(nIndex).maxdiff == centroids.at(nIndex-1).maxdiff){
-                            bNegative = true;
-                            if(file != nullptr) *file << "To negative\n";
-                            bOk = false;
-                        }
-                    }
-                    else*/ if(centroids.at(nIndex).maxdiff == centroids.at(nIndex+1).maxdiff && /*bNegative &&*/ centroids.size() > 2){
-                        bNegative = false;
-                        if(file != nullptr) *file << "Increase priority\n";
-                        if(nCurrentPriority < 2) nCurrentPriority++;
-                        bOk = false;
-                    }
+                    nCurrentPriority = 0;
+                    bNegative = false;
+                    bOk = false;
+                    if(file != nullptr) *file << "Resetting\n";
                 }
             }
-            else{
-                nCurrentPriority = 0;
-                bNegative = false;
-                bOk = false;
-                if(file != nullptr) *file << "Resetting\n";
-            }
             nTry++;
-            /**/
         }
 
         double fMedian = centroids.at(nIndex).centroid;

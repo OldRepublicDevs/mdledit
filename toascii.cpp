@@ -75,7 +75,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale);
         sReturn << "\n\nbeginmodelgeom " << mh->GH.sName.c_str();
         if(!mh->vLytPosition.Null())
-            sReturn << "\n  lytposition " << PrepareFloat(mh->vLytPosition.fX)<<" "<<PrepareFloat(mh->vLytPosition.fY)<<" "<<PrepareFloat(mh->vLytPosition.fZ);
+            sReturn << "\n  layoutposition " << PrepareFloat(mh->vLytPosition.fX)<<" "<<PrepareFloat(mh->vLytPosition.fY)<<" "<<PrepareFloat(mh->vLytPosition.fZ);
         sReturn << "\n  bmin " << PrepareFloat(mh->vBBmin.fX)<<" "<<PrepareFloat(mh->vBBmin.fY)<<" "<<PrepareFloat(mh->vBBmin.fZ);
         sReturn << "\n  bmax " << PrepareFloat(mh->vBBmax.fX)<<" "<<PrepareFloat(mh->vBBmax.fY)<<" "<<PrepareFloat(mh->vBBmax.fZ);
         sReturn << "\n  radius " << PrepareFloat(mh->fRadius);
@@ -823,14 +823,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n"<< "endnode";
         if(Dwk0){
             BWMHeader & data = *Dwk0->GetData();
-            sReturn<<"\n"<< "node dummy "<< sClosedUse1;
-            sReturn<<"\n"<< "  parent "<<sRoot;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
-            sReturn<<"\n"<< "endnode";
-            sReturn<<"\n"<< "node dummy "<< sClosedUse2;
-            sReturn<<"\n"<< "  parent "<<sRoot;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
-            sReturn<<"\n"<< "endnode";
             sReturn<<"\n"<< "node trimesh "<< sClosedMesh;
             sReturn<<"\n"<< "  parent "<<sRoot;
             sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
@@ -846,19 +838,17 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
             }
             sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node dummy "<< sClosedUse1;
+            sReturn<<"\n"<< "  parent "<< sRoot; //sClosedMesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node dummy "<< sClosedUse2;
+            sReturn<<"\n"<< "  parent "<< sRoot; //sClosedMesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "endnode";
         }
         if(Dwk1){
             BWMHeader & data = *Dwk1->GetData();
-            sReturn<<"\n"<< "node dummy "<< sOpen1Use1;
-            sReturn<<"\n"<< "  parent "<<sRoot;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
-            sReturn<<"\n"<< "endnode";
-            if(bOpen1Use2){
-                sReturn<<"\n"<< "node dummy "<< sOpen1Use2;
-                sReturn<<"\n"<< "  parent "<<sRoot;
-                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
-                sReturn<<"\n"<< "endnode";
-            }
             sReturn<<"\n"<< "node trimesh "<< sOpen1Mesh;
             sReturn<<"\n"<< "  parent "<<sRoot;
             sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
@@ -874,19 +864,19 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
             }
             sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node dummy "<< sOpen1Use1;
+            sReturn<<"\n"<< "  parent "<< sRoot; //sOpen1Mesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "endnode";
+            if(bOpen1Use2){
+                sReturn<<"\n"<< "node dummy "<< sOpen1Use2;
+                sReturn<<"\n"<< "  parent "<< sRoot; //sOpen1Mesh;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+                sReturn<<"\n"<< "endnode";
+            }
         }
         if(Dwk2){
             BWMHeader & data = *Dwk2->GetData();
-            sReturn<<"\n"<< "node dummy "<< sOpen2Use1;
-            sReturn<<"\n"<< "  parent "<<sRoot;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
-            sReturn<<"\n"<< "endnode";
-            if(bOpen2Use2){
-                sReturn<<"\n"<< "node dummy "<< sOpen2Use2;
-                sReturn<<"\n"<< "  parent "<<sRoot;
-                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
-                sReturn<<"\n"<< "endnode";
-            }
             sReturn<<"\n"<< "node trimesh "<< sOpen2Mesh;
             sReturn<<"\n"<< "  parent "<<sRoot;
             sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
@@ -902,6 +892,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
             }
             sReturn<<"\n"<< "endnode";
+            sReturn<<"\n"<< "node dummy "<< sOpen2Use1;
+            sReturn<<"\n"<< "  parent "<< sRoot; //sOpen2Mesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "endnode";
+            if(bOpen2Use2){
+                sReturn<<"\n"<< "node dummy "<< sOpen2Use2;
+                sReturn<<"\n"<< "  parent "<< sRoot; //sOpen2Mesh;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+                sReturn<<"\n"<< "endnode";
+            }
         }
     }
 }
