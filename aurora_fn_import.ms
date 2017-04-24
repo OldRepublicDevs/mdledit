@@ -57,6 +57,8 @@ struct model_node_ref (
 )
 */
 
+--DEBUG = true
+
 -----------------------------------
 -- Binary Model Importer Dialog  --
 -----------------------------------
@@ -825,7 +827,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                 animloadtype:0 \
                 showprogress:false \
                 loadtiff:false \
-                location:[0,0,0]
+                location:[0,0,0] \
+                uselytposition:false
 =
 (
     -- Model heirarchy defs
@@ -1056,11 +1059,11 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         idToken = tok.ReadToken()
                    	if (not (isKindOf idToken float) and
                             not (isKindOf idToken integer)) then
-			(
-				in_aabb = false
-		    	)
+                        (
+                            in_aabb = false
+                        )
                         -- bead-v end modification
-		    )
+                    )
                     if (in_aabb) then
                     (
                         local x = idToken as float
@@ -1216,7 +1219,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             --objGrav=undefined
                             --objDrag=undefined
                         )
-
+                        "layoutposition": objLayoutPos = tok.ReadPoint3() * 100.0
                         "parent": parent = tok.ReadToken()
                         "position":
                         (
@@ -1711,17 +1714,26 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                      (objType == "aabb")):
                                     (
                                         -- Make material, if necessary
-                                        texturepresent = false
+                                        local texturepresent = false
                                         if ((textureName != "") and
                                             (textureName != "NULL") and
                                             (textureName != undefined)) then texturepresent = true
-                                        --objMaterial = sceneMaterials[matName]
 
-                                        lightmappresent = false
+                                        local lightmappresent = false
                                         if ((textureName1 != "") and
                                             (textureName1 != "NULL") and
                                             (textureName1 != undefined)) then lightmappresent = true
 
+
+                                        local NewMaterialName = undefined
+                                        if(textureName != undefined and textureName != "") then NewMaterialName = textureName
+                                        else NewMaterialName = "n/a"
+                                        if(textureName1 != "" and textureName1 != undefined) then
+                                            NewMaterialName += " "+textureName1
+
+                                        objMaterial = sceneMaterials[NewMaterialName]
+
+                                        /*
                                         objMaterial = undefined
                                         for curMaterial in sceneMaterials do (
                                             if classof curMaterial != standardMaterial then continue
@@ -1740,6 +1752,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 exit
                                             )
                                         )
+                                        */
 
                                         if (objType == "aabb") then
                                         (
@@ -1752,7 +1765,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         (
                                             --format "objMaterial is %\n" objMaterial
                                             if DEBUG then format "%BUILD MESH OBJECT: make material and if possible find tga file\r\n" strIndent1
-                                            objMaterial = standardmaterial name:"placeholder"
+                                            objMaterial = standardmaterial name:NewMaterialName
                                             objMaterial.shaderType = 1 -- Blinn
                                             objMaterial.adLock = false
                                             objMaterial.adTextureLock = false
@@ -1854,9 +1867,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     if (showWarnings) then messagebox ("Missing texture file: " + textureName1)
                                                 )
                                             )
+                                            /*
                                             --format "About to set new material name\n"
-                                            assignNewName objMaterial
+                                            --assignNewName objMaterial
+                                            if(NewMaterialName == undefined) then assignNewName objMaterial
+                                            else objMaterial.name = assignNewName objMaterial
                                             --format "Material with new name: %\n" objMaterial
+                                            */
                                         )
 
                                         -- Make an editable mesh
@@ -2264,7 +2281,9 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             -- this is the base
                                             newObj = aurorabase name:objName
                                             newObj.delegate.boxsize = [100,100,5]
-                                            newObj.pos = location
+                                            if(not uselytposition) then newObj.pos = location
+                                            else if(objLayoutPos != undefined) then newObj.pos = objLayoutPos
+                                            else newObj.pos = [0,0,0]
                                             newObj.classification_sel = newModelClassification
                                             newObj.setanimationscale = newModelAnimscale
                                             newObj.setsupermodel = newModelSupermodel

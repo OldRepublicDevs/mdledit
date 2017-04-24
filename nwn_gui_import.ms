@@ -81,6 +81,7 @@ fn nx_importer =
     */
         clearListener()
         disableSceneRedraw()
+        local ImportLocation
         ImportNWNmdl \
             mdlFileName \
             bDoAnims \
@@ -90,7 +91,8 @@ fn nx_importer =
             loadanimlist:animname \
             insertpoint:insertpoint \
             showprogress:true \
-            location:[ImportRollout.spn_loc_x.value, ImportRollout.spn_loc_y.value, 0]
+            location:[ImportRollout.spn_loc_x.value, ImportRollout.spn_loc_y.value, 0] \
+            uselytposition:ImportRollout.chk_uselyt.checked
 
         -- import pwk file if available
         local pwk_file = (getFilenamePath mdlFileName)+(getFilenameFile  mdlFileName)+".pwk"
@@ -154,8 +156,9 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		spinner spn_startframe "Insert Frame:" type:#integer range:[0,100000,0] enabled:false
 		checkbox chk_resetctrl "Reset Controllers" checked:false
 		checkbox warn_checkbox "Show warnings" width:128 height:16
-		spinner spn_loc_x "Import Loc X:" range:[0,1000000,0]
-		spinner spn_loc_y "Import Loc Y:" range:[0,1000000,0]
+		checkbox chk_uselyt "Use Layout Position" checked:true
+		spinner spn_loc_x "Import Loc X:" range:[0,1000000,0] enabled:false
+		spinner spn_loc_y "Import Loc Y:" range:[0,1000000,0] enabled:false
 	)
 	button import_button "Import" width:144 height:24
 
@@ -167,6 +170,14 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	)
 
 	progressBar progress "" width:136 height:14
+
+	on chk_uselyt changed val do
+	(
+        if(val) then val = false
+        else val = true
+		spn_loc_x.enabled = val
+		spn_loc_y.enabled = val
+	)
 
  	on btn_loadgrp pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_loadgrp.ms")) catch() )
 

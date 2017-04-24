@@ -138,7 +138,10 @@ fn nx_materialbitmapname mat =
 
 	if (mat.diffusemap== undefined or mat.diffusemap.filename==undefined) then
 	(
-		return (mat.name)
+        local tok = filterString mat.name " "
+        if(tok[1] == "n/a") then return ""
+        else return tok[1]
+		--return (mat.name)
 	)
 
 	return (getfilenamefile mat.diffusemap.filename)
@@ -163,7 +166,10 @@ fn nx_materiallightmapname mat =
 
 	if (mat.ambientmap==undefined or mat.ambientmap.filename==undefined) then
 	(
-		return "NULL"
+        local tok = filterString mat.name " "
+        if(tok.count < 2) then return ""
+        else return tok[2]
+		--return "NULL"
 	)
 
 	return (getfilenamefile mat.ambientmap.filename)
@@ -802,84 +808,6 @@ fn ExAuroraPoly node =
 		)
 	) -- end for 'modifier'
 
-    -- bead-v modification: Also append user props
-	local uprop
-	/*
-        uprop = getUserProp node "lightningzigzag"
-	if uprop != undefined then format "%lightningzigzag %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "alphamid"
-	if uprop != undefined then format "%alphaMid %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "percentstart"
-	if uprop != undefined then format "%percentStart %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "percentmid"
-	if uprop != undefined then format "%percentMid %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "percentend"
-	if uprop != undefined then format "%percentEnd %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "sizemid"
-	if uprop != undefined then format "%sizeMid %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "sizemid_y"
-	if uprop != undefined then format "%sizeMid_y %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "m_frandombirthrate"
-	if uprop != undefined then format "%m_fRandomBirthRate %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "targetsize"
-	if uprop != undefined then format "%targetsize %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "numcontrolpts"
-	if uprop != undefined then format "%numcontrolpts %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "controlptradius"
-	if uprop != undefined then format "%controlptradius %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "controlptdelay"
-	if uprop != undefined then format "%controlptdelay %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "tangentspread"
-	if uprop != undefined then format "%tangentspread %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "tangentlength"
-	if uprop != undefined then format "%tangentlength %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "colormid"
-	if uprop != undefined then format "%colorMid %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "detonate"
-	if uprop != undefined then format "%detonate %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "numbranches"
-	if uprop != undefined then format "%numBranches %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "shadowradius"
-	if uprop != undefined then format "%shadowradius %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "verticaldisplacement"
-	if uprop != undefined then format "%verticaldisplacement %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "numbranches"
-	if uprop != undefined then format "%numBranches %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "controlptsmoothing"
-	if uprop != undefined then format "%controlptsmoothing %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "m_bframeblending"
-	if uprop != undefined then format "%m_bFrameBlending %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "m_sdepthtexturename"
-	if uprop != undefined then format "%m_sDepthTextureName %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "depth_texture"
-	if uprop != undefined then format "%depth_texture %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "animateuv"
-	if uprop != undefined then format "%animateuv %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "uvdirectionx"
-	if uprop != undefined then format "%uvdirectionx %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "uvdirectiony"
-	if uprop != undefined then format "%uvdirectiony %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "uvjitter"
-	if uprop != undefined then format "%uvjitter %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "uvjitterspeed"
-	if uprop != undefined then format "%uvjitterspeed %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "lightmapped"
-	if uprop != undefined then format "%lightmapped %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "m_blsbackgroundgeometry"
-	if uprop != undefined then format "%m_blsBackgroundGeometry %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "dirt_enabled"
-	if uprop != undefined then format "%dirt_enabled %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "dirt_texture"
-	if uprop != undefined then format "%dirt_texture %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "dirt_worldspace"
-	if uprop != undefined then format "%dirt_worldspace %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "hologram_donotdraw"
-	if uprop != undefined then format "%hologram_donotdraw %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-        uprop = getUserProp node "tangentspace"
-	if uprop != undefined then format "%tangentspace %%"  strIndent1 (nx_fprints uprop) g_delim to:g_strBuffer
-	*/
-    -- end bead-v modification
-
     if DEBUG then format "#ExAuroraPoly:: End%" g_delim to:g_strBuffer
 )
 
@@ -1028,7 +956,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 	)
 
 
-	-- bead-v modification: texindices1 -style export	-- build faces entry
+	-- bead-v modification: texindices-style export	-- build faces entry
 	format "%texindices1 %%" strIndent1 mesh.numfaces g_delim to:g_strBuffer
 	for i=1 to mesh.numfaces do(
         local l0, l1, l2
@@ -1037,7 +965,7 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
         l2=0
 
         -- bead-v: check if there are more than the default number of channels (2)
-        if (meshop.getNumMaps mesh > 2) then
+        if (meshop.getNumMaps mesh > 2 and meshop.getMapSupport mesh 2) then
         (
             if(meshop.getNumMapFaces mesh 2 > 0) do
             (
@@ -1091,12 +1019,10 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 	-- export lightmap coordinates if they exist (we are assuming lightmap channel = 2)
 
      -- bead-v modification: check if there are more than the default number of channels (2)
-     if (meshop.getNumMaps mesh > 2) then
+     if (meshop.getNumMaps mesh > 2 and meshop.getMapSupport mesh 2) then
      (
      -- end bead-v modification
 
-	if(meshop.getMapSupport mesh 2) do
-	(
                 local lightmapverts = meshop.getNumMapVerts mesh 2
 		format "%tverts1 %%" strIndent1 lightmapverts g_delim to:g_strBuffer
 		for i=1 to lightmapverts do
@@ -1107,7 +1033,6 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 			format "%% %%" strIndent2 (v.x*clipw + clipu) (v.y*cliph + clipv) g_delim to:g_strBuffer
 			nx_FlushBuffer()
 		)
-	)
 
      -- bead-v modification: end if
      )
@@ -1688,10 +1613,10 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
     		format "  shadow %%" node.Shadow g_delim to:g_strBuffer
     		format "  lightpriority %%" node.lightpriority g_delim to:g_strBuffer
     		format "  fadingLight %%" node.fadingLight g_delim to:g_strBuffer
-      		format "  flare %\r\n" node.lensflares -- bead-v: add flare
+      		format "  flare %%" node.lensflares g_delim to:g_strBuffer -- bead-v: add flare
 
     		--used??
---    		format "  lensflares %\r\n" node.lensflares
+            --format "  lensflares %\r\n" node.lensflares
 
 			-- If there are flares, process for them
 			if node.lens_flares.count > 0 then
@@ -2027,6 +1952,14 @@ fn ExAuroraGeometry node =
 
 	format "#NWmax GEOM  ASCII%" g_delim to:g_strBuffer
 	format "beginmodelgeom %%" node.name g_delim to:g_strBuffer
+	if (node.uselyt != 0) then(
+        in coordsys world
+        (
+            local objPos = at time 0 node.position;
+            objPos *= 0.01  -- scale the model down by 100 to make it in meters
+            format "%layoutposition % % %%" strIndent1 objPos.x objPos.y objPos.z g_delim to:g_strBuffer
+        )
+    )
     Node_Geometry node
 	format "endmodelgeom %%" node.name g_delim to:g_strBuffer
 
@@ -3009,8 +2942,8 @@ fn ExAuroraMDL node anim:true =
 		format "filedependancy Unknown%" g_delim to:g_strBuffer
 	)
 	else (
-    	format "#local file: %%" (maxfilepath + maxfilename) g_delim to:g_strBuffer
-    	format "filedependancy %%" maxfilename g_delim to:g_strBuffer
+    		format "#local file: %%" (maxfilepath + maxfilename) g_delim to:g_strBuffer
+    		format "filedependancy %%" maxfilename g_delim to:g_strBuffer
  	)
 
 	format "newmodel %%" node.name g_delim to:g_strBuffer

@@ -1,7 +1,7 @@
 /*-----------------------------------------------------------------------------\
 
     AuroraBase Helper Object
- 
+
     Credits:
     Wayland Reid :-
         Extends Wayland's Import/Export script with rewrites as needed
@@ -31,11 +31,11 @@ format "load: aurora_helper_base.ms\r\n"
 nx_progressPlus()
 
 plugin helper aurorabase
-name:"AuroraBase" 
-classID:#(0xc52f72fa, 0xc48a3a16) 
+name:"AuroraBase"
+classID:#(0xc52f72fa, 0xc48a3a16)
 version:2
 extends:Dummy
-replaceUI:true 
+replaceUI:true
 invisible:true
 (
 	-- local vars
@@ -44,9 +44,9 @@ invisible:true
     --#("Character", "BodyPart", "Item", "Tile","GUI", "Effects", "Door","WalkMesh")
     --#("BodyPart", "Item", "GUI")
 	local class_types = #("Character","Tile", "Door","Effect","WalkMesh","Other", "BodyPart", "Item", "GUI")
-	
+
 	-- parameters
-	parameters main rollout:params 
+	parameters main rollout:params
 	(
     	-- Animation data is stored in the 'animations' array as a
     	-- space delimited string of the form:
@@ -54,17 +54,18 @@ invisible:true
 		animations      type:#stringtab tabsizevariable:true
 		setsupermodel      type:#string  default:"NULL" ui:edit_supermodel
 		classification  type:#string default:"Character"
-		classification_sel  type:#integer default:1 ui:droplist_classui 
+		classification_sel  type:#integer default:1 ui:droplist_classui
 		setanimationscale  type:#float default:1.0 ui:spn_animscale
 		events          type:#stringtab  tabsizevariable:true
 		export_path     type:#string default:(getdir #export) ui:edit_exportpath
-		export_binary   type:#integer default:0 ui:chk_binary
+		export_binary   type:#integer default:0 --ui:chk_binary
 		sanity_check	type:#integer default:0 ui:chk_check
+		uselyt      	type:#integer default:1 ui:chk_uselyt
 		sanity_tests	type:#string default:gnx_sanity
 		copy_tga		type:#integer default:0 ui:chk_copytga
 		tga2dds			type:#integer default:0 ui:chk_convdds
 		sanityok        type:#integer default:1
-		
+
 		on classification_sel set val do
 		(
 			-- do a quick sanity check on val
@@ -73,17 +74,17 @@ invisible:true
 				val = 1
 				format "Error: classification_sel set call not in bounds\r\n"
 			)
-			
+
     		classification = class_types[val]
 		)
 	)
-	
-	
-	rollout params "MDL Base Parameters" 
+
+
+	rollout params "MDL Base Parameters"
 	(
 		label modelname ""
 		edittext edit_supermodel "Super:"
-		label classtype "Classification" across:2 
+		label classtype "Classification" across:2
 		dropdownlist droplist_classui "" items:class_types height:7 width:75
 
 		-- export data button widgets
@@ -92,15 +93,16 @@ invisible:true
   		editText edit_exportpath "Dir:"
   		button btn_exportbrowse "Browse" align:#left across:2
 		button btn_exportreset "Reset" align:#right
-  		button  btn_export_mdl	"Export Model+Anim " align:#center width:140 
+  		button  btn_export_mdl	"Export Model+Anim " align:#center width:140
   		button  btn_export_noanims "Export Geom only" align:#center width:140 toolTip:"Export ONLY the geometry, no animations"
-  		checkbox chk_binary "Compile exported model" align:#left checked:false
+  		--checkbox chk_binary "Compile exported model" align:#left checked:false
+  		checkbox chk_uselyt "Export Layout Position" align:#left
   		checkbox chk_check "Do Sanity Checks" align:#left
   		checkbox chk_copytga "Copy TGAs" align:#left checked:false
   		checkbox chk_convdds "Convert to DDS" align:#left checked:false enabled:false
   		button btn_viewsanity "View Sanity Check Results" align:#center width:140
   	)
-    	
+
 		group "Animation Parameters" (
 			--label animlabel "Animation Parameters"
 			spinner spn_animscale "Animation scale:" type:#float scale:0.01 range:[0,10,1] fieldwidth:40 align:#left
@@ -125,7 +127,7 @@ invisible:true
 			--label lbl_animlist "Animation Name List"
 			--combobox lst_animnames "" height:5
 		)
-		
+
     group "Events" (
 	    listBox list_events "" height:5
 	    editText edit_event_name "Name:"
@@ -169,9 +171,9 @@ invisible:true
 			)
 			return namelist
 		)
-		
-		
-		fn refresh_anim_namelist = 
+
+
+		fn refresh_anim_namelist =
 		(
 			if (classification != undefined) then
 			(
@@ -197,8 +199,8 @@ invisible:true
     		if not (nx_existDir val) then
     		    messagebox "Directory does not exist!"
 		)
-		
-		
+
+
 		fn export_start doanim:true =
 		(
     		local node = selection[1]
@@ -211,17 +213,17 @@ invisible:true
     		if (nx_existDir export_path) then
     		(
         		if (export_path[export_path.count] != "\\") then export_path = export_path + "\\"
-        		
+
         		-- set the external control snoop bracket.
         		if not g_ismax then format "<snoopstart file=%%>%" scriptsPath "NWmax\\scratch\\exportcontrol.txt" g_delim to:g_strBuffer
         		-- Tell GMAX Snoop what fully qualified file name to use and keep a global copy
         		g_exportPath = export_path
-        		if chk_binary.checked then
-        		    mdlextn = "mdl.ascii"
-    		    else
+        		--if chk_binary.checked then
+        		--    mdlextn = "mdl.ascii"
+    		    --else
     		        mdlextn = "mdl"
-				model_name = node.name
-				
+				model_name = node.name + "-nwmax"
+
 				-- we need to make sure that the model_name has no tabs in it
 				-- as it will break things. The rule will be tabs will be changed to '_'
 				if (matchPattern node.name pattern:"*	") then
@@ -229,59 +231,60 @@ invisible:true
 	   				messageBox "Model name contains a tab. ERROR!! Processing Halted."
 	   				return -1
 				)
-				
+
 	    		if not g_ismax then format "<snoopstart file=%%.%>%" export_path model_name mdlextn g_delim to:g_strBuffer
 	    		-- we can now do some sanity checks and record the results for review
-    		
+
 	    		if not g_ismax then (
 	    		   format "<snoopstart file=%%_sanitycheck.txt>%" (scriptsPath+"nwmax/sanity/") model_name g_delim to:g_strBuffer
 				) else (
 					g_strBuffer = createFile (scriptsPath+"nwmax/sanity/" + model_name + "_sanitycheck.txt")
 				) -- end ismax
-				
+
 				if chk_check.checked then
 		    		bSanityCheck = SanityCheck node
 	    		else
 	    			bSanityCheck = 1
-		    		
+
 	    		if not g_ismax then (
 		       		format "</snoopstart>%" g_delim to:g_strBuffer
 	    		) else (
 		       		flush g_strBuffer
 		       		close g_strBuffer
 	    		) -- end ismax
-    		
-				if bSanityCheck == 0 then 
+
+				if bSanityCheck == 0 then
 				(
 					-- Ask user if want to continue export anyway
 	  				str = "SanityCheck failed for "+model_name+". Push YES to continue export."
 	  				if (queryBox str  title:"Failed Sanity Check" beep:true) then
 	  				    bSanityCheck = 1    -- over-ride and export
 	      		)
-      		
+
 	      		if bSanityCheck == 1 then
 	      		(
 	         		if g_ismax then (
 	            		g_strBuffer = createFile (export_path + model_name + "." + mdlextn)
 	         		) -- end ismax
-	         		
+
 	         		ExAuroraMDL node anim:doanim
-	         		
+
 	         		if g_ismax then (
 	            		flush g_strBuffer
 	            		close g_strBuffer
 	         		) -- end ismax
 	      		)
-      		
+
 	      		if not g_ismax then format "</snoopstart>%" g_delim to:g_strBuffer  -- closes model export
-	      		
+
 	      		-- if we need to compile model we do it here
+	      		/*
 	      		if chk_binary.checked and (not g_ismax) then
 	      		(
 					format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\export.bat") g_delim to:g_strBuffer
 					format "\"%\" -c \"%%%\" \"%\\\" > \"%\"%" g_compiler export_path model_name ".mdl.ascii" export_path (scriptsPath+"nwmax\\scratch\\compile.txt") g_delim to:g_strBuffer
 					format "</snoopstart>%" g_delim to:g_strBuffer
-					
+
 					format "<commandstart>%" g_delim to:g_strBuffer
 					format "\"%export.bat\"%" (scriptsPath+"nwmax\\scratch\\") g_delim to:g_strBuffer
 					format "</commandstart>%" g_delim to:g_strBuffer
@@ -294,13 +297,14 @@ invisible:true
 					close strCmd
 					DOSCommand (scriptsPath+"nwmax\\scratch\\export.bat")
 	      		)
-	      		
+                */
+
 	      		-- copy the tga files to export dir. If converting to dds then put in a tga dir inside export dir
 	      		if node.copy_tga == 1 then
 	      		(
 		      			nx_getTextures node node
       			)
-	      		
+
 	      		-- perform the tga to dds conversion
 	      		if node.tga2dds == 1 then
 	      		(
@@ -310,8 +314,8 @@ invisible:true
 		      		cmd += export_path
 		      		DOSCommand cmd
 	      		)
-	      		
-	      		
+
+
 	      		if not g_ismax then
 	      		(
 	        		format "\r\n%" g_delim to:g_strBuffer
@@ -321,12 +325,12 @@ invisible:true
     		) else (
     		    messagebox "Directory does not exist."
 		    )
-    		    
+
     	    clearSelection()
     	    select node
     	    nx_FlushBuffer force:true
 		)
-		
+
 		-- support browse for export dir path
 		on btn_exportbrowse pressed do
 		(
@@ -336,13 +340,13 @@ invisible:true
 				edit_exportpath.text = p
 			)
 		)
-		
+
 		-- reset the export path
     	on btn_exportreset pressed do
 		(
 			edit_exportpath.text = (getDir #export)
 		)
-		
+
 		-- Export model and animations
 		on btn_export_mdl pressed do
 		(
@@ -354,7 +358,7 @@ invisible:true
 		(
     		export_start doanim:false
 		)
-		
+
 		-- Copy TGA switch
 		on chk_copytga changed checked do
 		(
@@ -367,7 +371,7 @@ invisible:true
 				chk_convdds.enabled = false
 			)
 		)
-		
+
 		-- View the sanity file results
 		on btn_viewsanity pressed do
 		(
@@ -396,10 +400,10 @@ invisible:true
 				format "View sanity file.\r\n"
 				shellLaunch "notepad.exe" target_file
       		)
-      		
+
 		)
-		
-  	fn updateanimlist =	
+
+  	fn updateanimlist =
   	(
   		local tmpList = #()
   		for a in animations do (
@@ -408,7 +412,7 @@ invisible:true
   		if (nx_strclassof(selection[1]) == "aurorabase") then
   			selection[1].params.list_animations.items = tmpList
   	)
-    
+
     fn LoadSelectedAnimation=
     (
       local str_anim = params.list_animations.selected
@@ -452,7 +456,7 @@ invisible:true
           params.btn_zoom_to_anim.enabled = false
       )
     )
-    
+
     fn ZoomToAnim=
     (
         local firstframe = params.spn_first_frame.value
@@ -468,11 +472,11 @@ invisible:true
     (
         animationRange = (interval 0 max_anim_frame)
     )
-    
+
     on list_animations selected list_idx do LoadSelectedAnimation()
-    
+
     on list_animations doubleClicked list_idx do ZoomToAnim()
-    
+
         on btn_add_anim pressed do
         (
             local str_name = (params.edit_anim_name.text as string)
@@ -491,7 +495,7 @@ invisible:true
                 list_animations.selection = animations.count
             )
         )
-    
+
         on btn_delete_anim pressed do
         (
             local sel = params.list_animations.selection
@@ -505,9 +509,9 @@ invisible:true
                 params.btn_delete_anim.enabled = false
             )
         )
-    
+
         on btn_zoom_to_anim pressed do ZoomToAnim()
-    
+
         --
         -- Support direct edits to the frame and transition times
         --
@@ -539,7 +543,7 @@ invisible:true
         (
 	        ChangeSelAnimEntry()
         )
-    
+
         on btn_moveup pressed do
         (
             -- get current selection in list box
@@ -547,18 +551,18 @@ invisible:true
             local tempStr = ""
             --if selindex is 0 then nothing selected so don't do anything more
             if selindex == 0 or selindex == 1 then return 0
-            
+
             tempstr = animations[selindex]
             animations[selindex] = animations[selindex-1]
             animations[selindex-1] = tempstr
-            
+
             -- after our changes do the update to the list
             updateanimlist()
-            
+
             -- update selection
             list_animations.selection = selindex-1
         )
-        
+
         on btn_movedown pressed do
         (
             -- get current selection in list box
@@ -566,18 +570,18 @@ invisible:true
             local tempStr = ""
             --if selindex is 0 then nothing selected so don't do anything more
             if selindex == 0 or selindex == animations.count then return 0
-            
+
             tempstr = animations[selindex]
             animations[selindex] = animations[selindex+1]
             animations[selindex+1] = tempstr
-            
+
             -- after our changes do the update to the list
             updateanimlist()
-            
+
             -- update selection
             list_animations.selection = selindex+1
         )
-        
+
         on btn_allanim_y pressed do
         (
             local i, tokens, animroot
@@ -598,7 +602,7 @@ invisible:true
             )
             updateanimlist()
         )
-        
+
         on btn_allanim_n pressed do
         (
             local i, tokens, animroot
@@ -619,7 +623,7 @@ invisible:true
             )
             updateanimlist()
         )
-        
+
         --
         -- Animation Event Processing
         --
@@ -632,7 +636,7 @@ invisible:true
     		if (classof($) == aurorabase) then
     			params.list_events.items = tmpList
         )
-        
+
         fn LoadSelectedAnimEvent=
         (
             local str_event = params.list_events.selected
@@ -653,7 +657,7 @@ invisible:true
                 params.btn_event_delete.enabled = false
             )
         )
-    
+
         on btn_event_add pressed do
         (
             format "btn_add_event\r\n"
@@ -667,7 +671,7 @@ invisible:true
                 list_events.selection = events.count
             )
         )
-    
+
         on btn_event_delete pressed do
         (
             local sel = params.list_events.selection
@@ -681,7 +685,7 @@ invisible:true
                 params.btn_event_delete.enabled = false
             )
         )
-        
+
         on btn_eventeditapply pressed do
         (
             local str_name = (params.edit_event_name.text as string)
@@ -694,9 +698,9 @@ invisible:true
                 list_events.selection = sel
             )
         )
-    
+
         on list_events selected list_idx do LoadSelectedAnimEvent()
-        
+
       fn add_event strEvent =
       (
          local str_frame = (sliderTime.frame as integer)  as string
@@ -715,15 +719,15 @@ invisible:true
       on btn_qe_sndfootstep pressed do ( add_event "snd_footstep" )
       on btn_qe_sndhitground pressed do ( add_event "snd_hitground" )
       on btn_qe_detonate pressed do ( add_event "detonate" )
-      
+
 		--
         -- Aurora base rollout has been opened
         --
-		on params open do  
+		on params open do
 		(
 			--if (classification == undefined) then
 			--	classification = classui.selected
-			
+
 			current =0;
 			list_animations.selection=0;
 			list_events.selection=0
@@ -738,8 +742,8 @@ invisible:true
 			if ($ != undefined) then
 				modelname.text = "Model:  " + $.name
 			else
-				modelname.text = "Model: "	
-			
+				modelname.text = "Model: "
+
 			/*
 			spn_animscale.enabled = false
 			if (classification == "Character") then
@@ -748,14 +752,14 @@ invisible:true
 
 		    if max_anim_frame == undefined then max_anim_frame = 0
 		    if max_anim_frame < (animationrange.end) then max_anim_frame = animationrange.end
-		    
+
 		    if edit_anim_name.items.count < 1 then (
 			    refresh_anim_namelist()
 		    )
-		    
+
 		    -- make sure sanity bit string is correct length
 		    --if sanity_tests.count < 20 then sanity_tests = sanity_tests + "1"
-		    
+
     		--runRotationCheck = nx_itob(sanity_tests[1] as integer)
 			--runAnimCheck = nx_itob(sanity_tests[2] as integer)
 			--runCollisionMeshCheck = nx_itob(sanity_tests[3] as integer)
@@ -777,10 +781,10 @@ invisible:true
 			--runBoneCountCheck = nx_itob(sanity_tests[19] as integer)
 			--runWOKCheck = nx_itob(sanity_tests[20] as integer)
 		)
-	) ---- rollout params "MDL Base Parameters" 
-	
-	
-		
+	) ---- rollout params "MDL Base Parameters"
+
+
+
 	--
 	-- Sanity Checks gui
 	--
@@ -817,14 +821,14 @@ invisible:true
 		fn setsanity i val =
 		(
 			local t = sanity_tests
-			
+
 			-- make sure string bit array is correct min size
 			if (t.count <20) then t = t + "1"
-			
+
 			t[i] = val
 			sanity_tests = t
 		)
-		
+
 		on box_RotationCheck changed newState do (
 			runRotationCheck = newState
 			setsanity 1 (nx_btoi(newState) as string)
@@ -916,14 +920,14 @@ rollout basewiz "Model Base Wizard"
 (
 	local class_types = #("Character","Tile", "Door","Effect","WalkMesh","Other", "BodyPart", "Item", "GUI")
 	local modelbase
-	
+
 	dropDownList ddl_type "Model Type" width:133 height:40 align:#center items:class_types selection:1
 	checkbox chk_animkeys "Add standard anim keys" width:138 height:26 align:#left
 	checkbox chk_helpers "Add standard helpers" width:138 height:21 align:#left
 	checkbox chk_center "Center to [0,0,0]" align:#left
 	edittext ed_name "Name:"
 	button btn_ok "OK" width:91 height:23 align:#center
-	
+
 	fn addAnims animarray node = (
     	local maxkey = 0
     	local parsedkey
@@ -952,12 +956,12 @@ rollout basewiz "Model Base Wizard"
         )
         return maxkey
 	)
-	
+
 	on basewiz open do
 	(
     	modelbase = selection[1]
 	)
-	
+
 	on btn_ok pressed do
 	(
    	-- Set the models name
@@ -1064,7 +1068,7 @@ rollout basewiz "Model Base Wizard"
                     modelbase.animations = key_list
                     animationRange = (interval 0 (maxframe + 50))
                 )
-                
+
                 if chk_helpers.checked then
                 (
                     -- place stock helper objects for effect
@@ -1119,8 +1123,8 @@ rollout basewiz "Model Base Wizard"
             	(
                 	/* add Tile anim key lists as needed
                 	-animloop01  	(moving parts and emitters, like smoke)
-                    -Day 	        (The rest of the animations mostly deal 	 
-                    -Night 	         with changing the colors of the light 	 
+                    -Day 	        (The rest of the animations mostly deal
+                    -Night 	         with changing the colors of the light
                     -Night2Day 	     sources)
                     -Day2Night
                     -tiledefault
@@ -1131,13 +1135,13 @@ rollout basewiz "Model Base Wizard"
                 	            "Night2Day 230 280 0.25",
                 	            "Day2Night 290 340 0.25",
                 	            "tiledefault 350 400 0.25")
-    	            
+
     	            maxframe = (addAnims key_list modelbase)
 						-- set animation data to model base gui
 						modelbase.animations = key_list
 						animationRange = (interval 0 (maxframe + 50))
 					)
-                
+
 					if chk_helpers.checked then
 					(
 						-- place stock helper/light objects for a tile
@@ -1170,13 +1174,13 @@ rollout basewiz "Model Base Wizard"
                 	key_list = #("impact 50 100 0.25",
                 	            "duration 110 160 0.25",
                 	            "cessation 170 220 0.25")
-    	            
+
     	            maxframe = (addAnims key_list modelbase)
                     -- set animation data to model base gui
                     modelbase.animations = key_list
                     animationRange = (interval 0 (maxframe + 50))
                 )
-                
+
                 if chk_helpers.checked then
                 (
                     -- place stock helper objects for effect
@@ -1187,23 +1191,23 @@ rollout basewiz "Model Base Wizard"
             	if chk_animkeys.checked then
             	(
                   	/* Placeable animations
-                	-close  	ANIMATION_PLACEABLE_CLOSE (1 frame closed)  	 
+                	-close  	ANIMATION_PLACEABLE_CLOSE (1 frame closed)
                     -close2open 	(from closed to open)
-                    -open 	ANIMATION_PLACEABLE_OPEN (1 frame open) 	 
+                    -open 	ANIMATION_PLACEABLE_OPEN (1 frame open)
                     -open2close 	(from open to closed)
-                    -damage 	(3 frame position change) 	 
-                    -die 	(move model below ground plane) 	 
-                    -dead 	(1 frame below ground plane) 	 
+                    -damage 	(3 frame position change)
+                    -die 	(move model below ground plane)
+                    -dead 	(1 frame below ground plane)
                     -default 	(normal position)
-                     
+
                     Probably can't have both open/close and on/off animations
                     in the same model. I haven't tried it though.
-                     
-                    -on 	ANIMATION_PLACEABLE_ACTIVATE (looping animation) 	 
-                    -off 	ANIMATION_PLACEABLE_DEACTIVATE (1 frame in off position) 	 
-                    -off2on 	(from off to on position) 	 
-                    -on2off 	(from on to off position) 	 
-     
+
+                    -on 	ANIMATION_PLACEABLE_ACTIVATE (looping animation)
+                    -off 	ANIMATION_PLACEABLE_DEACTIVATE (1 frame in off position)
+                    -off2on 	(from off to on position)
+                    -on2off 	(from on to off position)
+
                 	*/
                  	key_list = #("close 50 51 0.25",
                 	            "close2open 60 70 0.25",
@@ -1213,13 +1217,13 @@ rollout basewiz "Model Base Wizard"
                 	            "die 160 210 0.25",
                 	            "dead 220 221 0.25",
                 	            "default 230 280 0.25")
-    	            
+
     	            maxframe = (addAnims key_list modelbase)
                     -- set animation data to model base gui
                     modelbase.animations = key_list
                     animationRange = (interval 0 (maxframe + 50))
                 )
-                
+
                 if chk_helpers.checked then
                 (
 	                max modify mode
@@ -1260,7 +1264,7 @@ rollout basewiz "Model Base Wizard"
                 )
         	)
     	)
-    	
+
     	if chk_center.checked then
     	(
 	    	max modify mode
@@ -1268,7 +1272,7 @@ rollout basewiz "Model Base Wizard"
 		    	modelbase.pos = [0,0,0]
 	    	) catch (format "Error creating helpers\r\n")
     	)
-    	
+
     	destroyDialog basewiz
 	)
 )

@@ -1935,6 +1935,9 @@ bool ASCII::Read(MDL & Mdl){
                 else if(sID == "wirecolor") SkipLine();
                 else if(sID == "shininess") SkipLine();
                 else if(sID == "name") SkipLine();
+                else if(sID == "inheritcolor") SkipLine();
+                else if(sID == "tilefade") SkipLine();
+                else if(sID == "center") SkipLine();
                 else{
                     std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
                     SkipLine();

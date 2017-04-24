@@ -707,10 +707,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(!bwm->GetData()) return;
         BWMHeader & data = *bwm->GetData();
         /// DETERMINE NAMES
-        std::string sUse1, sUse2, sMesh, sRoot;
+        std::string sUse1, sUse2, sMesh, sRoot, sModel;
         if(FH){
             FileHeader & Data = *FH;
 
+            sModel = Data.MH.GH.sName.c_str();
             for(int n = 0; n < Data.MH.Names.size(); n++){
                 std::string & sName = Data.MH.Names.at(n).sName;
                 if(sName.find("pwk_use01")!=std::string::npos || sName.find("pwk_dp_use_01")!=std::string::npos) sUse1 = sName;
@@ -738,7 +739,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n"<< "#";
         sReturn<<"\n"<< "#MDLedit PWKMESH  ASCII";
         sReturn<<"\n"<< "node dummy "<< sRoot;
-        sReturn<<"\n"<< "  parent NULL";
+        sReturn<<"\n"<< "  parent "<<sModel;
         sReturn<<"\n"<< "endnode";
         sReturn<<"\n"<< "node dummy "<< sUse1;
         sReturn<<"\n"<< "  parent "<<sRoot;
@@ -771,12 +772,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(Dwk2) if(!Dwk2->GetData()) return;
 
         /// DETERMINE NAMES
-        std::string sClosedUse1, sClosedUse2, sOpen1Use1, sOpen1Use2, sOpen2Use1, sOpen2Use2, sClosedMesh, sOpen1Mesh, sOpen2Mesh, sRoot;
+        std::string sClosedUse1, sClosedUse2, sOpen1Use1, sOpen1Use2, sOpen2Use1, sOpen2Use2, sClosedMesh, sOpen1Mesh, sOpen2Mesh, sRoot, sModel;
         bool bClosedUse1 = true, bClosedUse2 = true, bOpen1Use1 = true, bOpen1Use2 = true, bOpen2Use1 = true, bOpen2Use2 = true;
         bool bClosedMesh = true, bOpen1Mesh = true, bOpen2Mesh = true, bRoot = true;
         if(FH){
             FileHeader & Data = *FH;
 
+            sModel = Data.MH.GH.sName.c_str();
             for(int n = 0; n < Data.MH.Names.size(); n++){
                 std::string & sName = Data.MH.Names.at(n).sName;
                 if(sName.find("DWK_dp_closed_01")!=std::string::npos) sClosedUse1 = sName;
@@ -819,7 +821,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n"<< "#";
         sReturn<<"\n"<< "# MDLedit DWKMESH  ASCII";
         sReturn<<"\n"<< "node dummy "<< sRoot;
-        sReturn<<"\n"<< "  parent NULL";
+        sReturn<<"\n"<< "  parent "<<sModel;
         sReturn<<"\n"<< "endnode";
         if(Dwk0){
             BWMHeader & data = *Dwk0->GetData();
