@@ -904,6 +904,8 @@ class MDX: public BinaryFile{
 class ASCII: public TextFile{
   public:
     bool Read(MDL & Mdl);
+    bool ReadPwk(MDL & Mdl);
+    bool ReadDwk(MDL & Mdl);
 };
 
 class MDL: public BinaryFile{
@@ -946,6 +948,8 @@ class MDL: public BinaryFile{
 
   public:
     std::unique_ptr<ASCII> Ascii;
+    std::unique_ptr<ASCII> PwkAscii;
+    std::unique_ptr<ASCII> DwkAscii;
     std::unique_ptr<MDX> Mdx;
     std::unique_ptr<WOK> Wok;
     std::unique_ptr<PWK> Pwk;
@@ -983,6 +987,7 @@ class MDL: public BinaryFile{
     bool Compile();
     void DecompileModel(bool bMinimal = false);
     void AsciiPostProcess();
+    void BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, bool bDwk = true);
     void CheckPeculiarities();
     void FlushData();
     void ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data);
@@ -1029,23 +1034,7 @@ class DWK: public BWM{
     //Getters
     const std::string GetName(){ return sClassName; }
 };
-/*
-class DWK1: public BWM{
-    static const std::string sClassName;
 
-  public:
-    //Getters
-    const std::string GetName(){ return sClassName; }
-};
-
-class DWK2: public BWM{
-    static const std::string sClassName;
-
-  public:
-    //Getters
-    const std::string GetName(){ return sClassName; }
-};
-*/
 class WOK: public BWM{
     static const std::string sClassName;
 

@@ -6,14 +6,531 @@
 /**
     Functions:
     ASCII::Read()
+    ASCII::ReadDwk()
+    ASCII::ReadPwk()
     MDL::BuildAabb()
     MDL::GatherChildren()
     MDL::AsciiPostProcess()
 /**/
 
-bool ASCII::Read(MDL & Mdl){
-    std::cout<<"We made it into ASCII::Read.\n";
+bool ASCII::ReadPwk(MDL & Mdl){
+    Mdl.Pwk.reset(new PWK);
+    std::string sPwk = GetFilename();
+    Mdl.Pwk->SetFilePath(sPwk);
+    Mdl.Pwk->GetData().reset(new BWMHeader);
+    std::string sID;
+    nPosition = 0;
 
+    int nConvert;
+    double fConvert;
+    bool bError = false;
+    bool bFound = false;
+    bool bVerts = false;
+    bool bFaces = false;
+    bool * lpbList = nullptr;
+    int nNode = 0;
+    int nDataMax = -1;
+    int nDataCounter = -1;
+    BWMHeader * DATA = nullptr;
+    std::vector<Vector> TempVerts;
+    std::string sNodeName;
+
+    while(nPosition < sBuffer.size() && !bError){
+        //First set our current list
+        if(bVerts) lpbList = &bVerts;
+        else if(bFaces) lpbList = &bFaces;
+        else lpbList = nullptr;
+
+        //First, check if we have a blank line, we'll just skip it here.
+        if(EmptyRow()){
+            SkipLine();
+        }
+        //Second, check if we are in some list of data. We should not look for a keyword then.
+        else if(lpbList != nullptr && DATA != nullptr){
+            //First, check if we're done. Save your position, cuz we'll need to revert if we're not done
+            int nSavePos = nPosition;
+            ReadUntilText(sID);
+            if(sID == "endlist" || nDataMax == 0){
+                *lpbList = false;
+                SkipLine();
+            }
+            else{
+                //Revert back to old position
+                nPosition = nSavePos;
+
+                /// Read the data
+                if(bVerts){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data "<<nDataCounter<<".\n";
+                    bFound = true;
+                    Vector vert;
+                    if(ReadFloat(fConvert)) vert.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fY = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fZ = fConvert;
+                    else bFound = false;
+                    if(bFound){
+                        TempVerts.push_back(std::move(vert));
+                    }
+                    else bError = true;
+                }
+                else if(bFaces){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
+                    bFound = true;
+                    Face face;
+
+                    //Currently we read the regular NWMax version with only a single set of tvert indices
+                    if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[1] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[2] = nConvert;
+                    else bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(ReadInt(nConvert)) face.nMaterialID = nConvert;
+                    else bFound = false;
+
+                    if(bFound){
+                        DATA->faces.push_back(face);
+                    }
+                    else bError = true;
+                }
+
+                nDataCounter++;
+                if(nDataCounter >= nDataMax && nDataMax != -1){
+                    *lpbList = false;
+                }
+                SkipLine();
+            }
+        }
+        //So no data. Find the next keyword then.
+        else{
+            //std::cout<<"No data to read. Read keyword instead"<<""<<".\n";
+            bFound = ReadUntilText(sID);
+            if(!bFound) SkipLine(); //This will have already been done above, no need to look for it again
+            else{
+                /// Common case for nodes
+                if(sID == "node" && nNode == 0){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+
+                    //Read type
+                    int nType;
+                    bFound = ReadUntilText(sID); //Get type
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() ERROR: a node is without any other specification.\n";
+                    }
+                    if(sID == "dummy") nType = NODE_HAS_HEADER;
+                    else if(sID == "trimesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH;
+                    else if(sID == "skin") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SKIN;
+                    else if(sID == "danglymesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_DANGLY;
+                    else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
+                    else if(bFound){
+                        std::cout<<"ReadUntilText() has found some text (type?) that we do not support: "<<sID<<"\n";
+                        bError = true;
+                    }
+
+                    //Read name
+                    bFound = ReadUntilText(sID, false); //Name
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
+                    }
+                    else{
+                        sNodeName = sID;
+                        DATA = Mdl.Pwk->GetData().get();
+                    }
+
+                    //Finish up
+                    nNode = nType;
+                    if(!bFound) bError;
+                    SkipLine();
+                }
+                /// Next we have the DATA LISTS
+                else if(sID == "verts" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bVerts = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "faces" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFaces = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "position" && nNode){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    double fX, fY, fZ;
+                    if(ReadFloat(fConvert)) fX = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fY = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fZ = fConvert;
+                    else bError = true;
+
+                    if(sNodeName.find("pwk_use01") != std::string::npos || sNodeName.find("pwk_dp_use_01") != std::string::npos){
+                        DATA->vUse1 = Vector(fX, fY, fZ);
+                    }
+                    else if(sNodeName.find("pwk_use02") != std::string::npos || sNodeName.find("pwk_dp_use_02") != std::string::npos){
+                        DATA->vUse2 = Vector(fX, fY, fZ);
+                    }
+                    else if(sNodeName.find("_wg") != std::string::npos){
+                        DATA->vPosition = Vector(fX, fY, fZ);
+                    }
+
+                    SkipLine();
+                }
+                /// General ending tokens
+                else if(sID == "endnode" && nNode > 0){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    nNode = 0;
+                    DATA = nullptr;
+                    SkipLine();
+                }
+                //These are the names we should ignore, because we expect them to appear, but we have no use for them
+                else if(sID == "multimaterial"){
+                    if(ReadInt(nConvert)){
+                        SkipLine();
+                        for(int nj = 0; nj < nConvert; nj++){
+                            SkipLine();
+                        }
+                    }
+                    else SkipLine();
+                }
+                else if(sID == "filedependancy") SkipLine();
+                else if(sID == "specular") SkipLine();
+                else if(sID == "wirecolor") SkipLine();
+                else if(sID == "shininess") SkipLine();
+                else if(sID == "name") SkipLine();
+                else if(sID == "inheritcolor") SkipLine();
+                else if(sID == "tilefade") SkipLine();
+                else if(sID == "center") SkipLine();
+                else{
+                    //std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
+                    SkipLine();
+                }
+            }
+        }
+    }
+    std::cout<<"Done reading pwk ascii, checking for errors...\n";
+    if(bError){
+        Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
+        return false;
+    }
+    Mdl.BwmAsciiPostProcess(*Mdl.Pwk->GetData(), TempVerts, false);
+    return true;
+}
+
+void MDL::BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, bool bDwk){
+    data.nType = 0;
+    if(bDwk){
+        data.vDwk1 = data.vUse1 + data.vPosition;
+        data.vDwk2 = data.vUse2 + data.vPosition;
+    }
+
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+        for(int i = 0; i < 3; i++){
+            if(!face.bProcessed[i]){
+                Vector vert;
+
+                if(vertices.size() > 0)
+                    vert = vertices.at(face.nIndexVertex[i]);
+
+                //Find identical verts
+                for(int f2 = f; f2 < data.faces.size(); f2++){
+                    Face & face2 = data.faces.at(f2);
+                    for(int i2 = 0; i2 < 3; i2++){
+                        //Make sure that we're only changing what's past our current position if we are in the same face.
+                        if(f2 != f || i2 > i){
+                            if( (face2.nIndexVertex[i2] == face.nIndexVertex[i]) &&
+                                !face2.bProcessed[i2] )
+                            {
+                                face2.nIndexVertex[i2] = data.verts.size();
+                                face2.bProcessed[i2] = true;
+                            }
+                        }
+                    }
+                }
+
+                //Now we're allowed to link the original vert as well
+                face.nIndexVertex[i] = data.verts.size();
+                face.bProcessed[i] = true;
+
+                //Put the new vert into the array
+                data.verts.push_back(std::move(vert));
+            }
+        }
+
+        Vector & v1 = data.verts.at(face.nIndexVertex[0]);
+        Vector & v2 = data.verts.at(face.nIndexVertex[1]);
+        Vector & v3 = data.verts.at(face.nIndexVertex[2]);
+        Vector Edge1 = v2 - v1;
+        Vector Edge2 = v3 - v1;
+        Vector Edge3 = v3 - v2;
+
+        //This is for face normal
+        face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
+        face.vNormal.Normalize();
+
+        //This is for the distance.
+        face.fDistance = - (face.vNormal.fX * v1.fX +
+                            face.vNormal.fY * v1.fY +
+                            face.vNormal.fZ * v1.fZ);
+    }
+}
+bool ASCII::ReadDwk(MDL & Mdl){
+    Mdl.Dwk0.reset(new DWK);
+    Mdl.Dwk1.reset(new DWK);
+    Mdl.Dwk2.reset(new DWK);
+    std::string sDwk = GetFilename();
+    sDwk.push_back('k');
+    char * cExt = PathFindExtension(sDwk.c_str());
+    sprintf(cExt, "0.dwk");
+    std::string sFile = "new dwk 0";
+    Mdl.Dwk0->SetFilePath(sDwk);
+    sprintf(cExt, "1.dwk");
+    Mdl.Dwk1->SetFilePath(sDwk);
+    sprintf(cExt, "2.dwk");
+    Mdl.Dwk2->SetFilePath(sDwk);
+    Mdl.Dwk0->GetData().reset(new BWMHeader);
+    Mdl.Dwk1->GetData().reset(new BWMHeader);
+    Mdl.Dwk2->GetData().reset(new BWMHeader);
+    std::string sID;
+    nPosition = 0;
+
+    int nConvert;
+    double fConvert;
+    bool bError = false;
+    bool bFound = false;
+    bool bVerts = false;
+    bool bFaces = false;
+    bool * lpbList = nullptr;
+    int nNode = 0;
+    int nDataMax = -1;
+    int nDataCounter = -1;
+    BWMHeader * DATA = nullptr;
+    std::vector<Vector> * TempVerts = nullptr;
+    std::vector<Vector> TempVerts0;
+    std::vector<Vector> TempVerts1;
+    std::vector<Vector> TempVerts2;
+    std::string sNodeName;
+
+    while(nPosition < sBuffer.size() && !bError){
+        //First set our current list
+        if(bVerts) lpbList = &bVerts;
+        else if(bFaces) lpbList = &bFaces;
+        else lpbList = nullptr;
+
+        //First, check if we have a blank line, we'll just skip it here.
+        if(EmptyRow()){
+            SkipLine();
+        }
+        //Second, check if we are in some list of data. We should not look for a keyword then.
+        else if(lpbList != nullptr && DATA != nullptr){
+            //First, check if we're done. Save your position, cuz we'll need to revert if we're not done
+            int nSavePos = nPosition;
+            ReadUntilText(sID);
+            if(sID == "endlist" || nDataMax == 0){
+                *lpbList = false;
+                SkipLine();
+            }
+            else{
+                //Revert back to old position
+                nPosition = nSavePos;
+
+                /// Read the data
+                if(bVerts && TempVerts != nullptr){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data "<<nDataCounter<<".\n";
+                    bFound = true;
+                    Vector vert;
+                    if(ReadFloat(fConvert)) vert.fX = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fY = fConvert;
+                    else bFound = false;
+                    if(ReadFloat(fConvert)) vert.fZ = fConvert;
+                    else bFound = false;
+                    if(bFound){
+                        TempVerts->push_back(std::move(vert));
+                    }
+                    else bError = true;
+                }
+                else if(bFaces){
+                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
+                    bFound = true;
+                    Face face;
+
+                    //Currently we read the regular NWMax version with only a single set of tvert indices
+                    if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[1] = nConvert;
+                    else bFound = false;
+                    if(ReadInt(nConvert)) face.nIndexVertex[2] = nConvert;
+                    else bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(!ReadInt(nConvert)) bFound = false;
+                    if(ReadInt(nConvert)) face.nMaterialID = nConvert;
+                    else bFound = false;
+
+                    if(bFound){
+                        DATA->faces.push_back(std::move(face));
+                    }
+                    else bError = true;
+                }
+
+                nDataCounter++;
+                if(nDataCounter >= nDataMax && nDataMax != -1){
+                    *lpbList = false;
+                }
+                SkipLine();
+            }
+        }
+        //So no data. Find the next keyword then.
+        else{
+            //std::cout<<"No data to read. Read keyword instead"<<""<<".\n";
+            bFound = ReadUntilText(sID);
+            if(!bFound) SkipLine(); //This will have already been done above, no need to look for it again
+            else{
+                /// Common case for nodes
+                if(sID == "node" && nNode == 0){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+
+                    //Read type
+                    int nType;
+                    bFound = ReadUntilText(sID); //Get type
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() ERROR: a node is without any other specification.\n";
+                    }
+                    if(sID == "dummy") nType = NODE_HAS_HEADER;
+                    else if(sID == "trimesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH;
+                    else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
+                    else if(bFound){
+                        std::cout<<"ReadUntilText() has found some text (type?) that we do not support: "<<sID<<"\n";
+                        bError = true;
+                    }
+
+                    //Read name
+                    bFound = ReadUntilText(sID, false); //Name
+                    if(!bFound){
+                        std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
+                    }
+                    else{
+                        sNodeName = sID;
+                        if(sNodeName.find("closed") != std::string::npos){
+                            DATA = Mdl.Dwk0->GetData().get();
+                            TempVerts = &TempVerts0;
+                        }
+                        else if(sNodeName.find("open1") != std::string::npos){
+                            DATA = Mdl.Dwk1->GetData().get();
+                            TempVerts = &TempVerts1;
+                        }
+                        else if(sNodeName.find("open2") != std::string::npos){
+                            DATA = Mdl.Dwk2->GetData().get();
+                            TempVerts = &TempVerts2;
+                        }
+                    }
+
+                    //Finish up
+                    nNode = nType;
+                    if(!bFound) bError;
+                    SkipLine();
+                }
+                /// Next we have the DATA LISTS
+                else if(sID == "verts" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg_") != std::string::npos)){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bVerts = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "faces" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg_") != std::string::npos)){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFaces = true;
+                    if(ReadInt(nConvert)) nDataMax = nConvert;
+                    else nDataMax = -1;
+                    nDataCounter = 0;
+                    SkipLine();
+                }
+                else if(sID == "position" && nNode && DATA != nullptr){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    double fX, fY, fZ;
+                    if(ReadFloat(fConvert)) fX = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fY = fConvert;
+                    else bError = true;
+                    if(ReadFloat(fConvert)) fZ = fConvert;
+                    else bError = true;
+
+                    if(sNodeName.find("DWK_dp_closed_01") != std::string::npos || sNodeName.find("DWK_dp_open1_01") != std::string::npos || sNodeName.find("DWK_dp_open2_01") != std::string::npos){
+                        DATA->vUse1 = Vector(fX, fY, fZ);
+                    }
+                    else if(sNodeName.find("DWK_dp_closed_02") != std::string::npos || sNodeName.find("DWK_dp_open1_02") != std::string::npos || sNodeName.find("DWK_dp_open2_02") != std::string::npos){
+                        DATA->vUse2 = Vector(fX, fY, fZ);
+                    }
+                    else if(sNodeName.find("_wg_") != std::string::npos){
+                        DATA->vPosition = Vector(fX, fY, fZ);
+                    }
+
+                    SkipLine();
+                }
+                /// General ending tokens
+                else if(sID == "endnode" && nNode > 0){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    nNode = 0;
+                    DATA = nullptr;
+                    TempVerts = nullptr;
+                    SkipLine();
+                }
+                //These are the names we should ignore, because we expect them to appear, but we have no use for them
+                else if(sID == "multimaterial"){
+                    if(ReadInt(nConvert)){
+                        SkipLine();
+                        for(int nj = 0; nj < nConvert; nj++){
+                            SkipLine();
+                        }
+                    }
+                    else SkipLine();
+                }
+                else if(sID == "filedependancy") SkipLine();
+                else if(sID == "specular") SkipLine();
+                else if(sID == "wirecolor") SkipLine();
+                else if(sID == "shininess") SkipLine();
+                else if(sID == "name") SkipLine();
+                else if(sID == "inheritcolor") SkipLine();
+                else if(sID == "tilefade") SkipLine();
+                else if(sID == "center") SkipLine();
+                else{
+                    //std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
+                    SkipLine();
+                }
+            }
+        }
+    }
+    std::cout<<"Done reading dwk ascii, checking for errors...\n";
+    if(bError){
+        Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
+        return false;
+    }
+    Mdl.BwmAsciiPostProcess(*Mdl.Dwk0->GetData(), TempVerts0);
+    Mdl.BwmAsciiPostProcess(*Mdl.Dwk1->GetData(), TempVerts1);
+    Mdl.BwmAsciiPostProcess(*Mdl.Dwk2->GetData(), TempVerts2);
+    return true;
+}
+
+bool ASCII::Read(MDL & Mdl){
+    //std::cout<<"We made it into ASCII::Read.\n";
+
+    //CreateDataStructure
+    Mdl.GetFileData().reset(new FileHeader);
     std::unique_ptr<FileHeader> & FH = Mdl.GetFileData();
     std::string sID;
 
@@ -1930,6 +2447,15 @@ bool ASCII::Read(MDL & Mdl){
                     bEnd = true;
                 }
                 //These are the names we should ignore, because we expect them to appear, but we have no use for them
+                else if(sID == "multimaterial"){
+                    if(ReadInt(nConvert)){
+                        SkipLine();
+                        for(int nj = 0; nj < nConvert; nj++){
+                            SkipLine();
+                        }
+                    }
+                    else SkipLine();
+                }
                 else if(sID == "filedependancy") SkipLine();
                 else if(sID == "specular") SkipLine();
                 else if(sID == "wirecolor") SkipLine();

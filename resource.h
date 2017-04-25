@@ -82,6 +82,7 @@
 #define DLG_PROGRESS         405
 #define DLG_EDIT_TEXTURES    406
 #define DLG_ID_CALC_SMOOTHING 407
+#define DLG_ABOUT 408
 
 #define IDDB_EDIT                   500
 #define IDDB_SAVE                   501

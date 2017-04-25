@@ -337,7 +337,6 @@ void BuildTree(BWM & Bwm){
     if(!Bwm.GetData()) return;
     BWMHeader & Walkmesh = *Bwm.GetData();
 
-    std::cout<< "Actually building wok tree.\n";
     HTREEITEM Root = Append(Bwm.GetFilename(), NULL, TVI_ROOT);
     Append("Walkmesh Type", NULL, Root);
     Append("Use Position", NULL, Root);
@@ -374,6 +373,7 @@ void BuildTree(BWM & Bwm){
         Append(ss.str().c_str(), (LPARAM) &Walkmesh.perimeters[n], Array3);
     }
     InvalidateRect(hTree, nullptr, true);
+    std::cout<<"Walkmesh tree building done!\n";
 }
 
 std::string PrepareFloat(double fFloat);

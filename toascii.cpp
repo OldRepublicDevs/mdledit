@@ -741,14 +741,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n"<< "node dummy "<< sRoot;
         sReturn<<"\n"<< "  parent "<<sModel;
         sReturn<<"\n"<< "endnode";
-        sReturn<<"\n"<< "node dummy "<< sUse1;
-        sReturn<<"\n"<< "  parent "<<sRoot;
-        sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
-        sReturn<<"\n"<< "endnode";
-        sReturn<<"\n"<< "node dummy "<< sUse2;
-        sReturn<<"\n"<< "  parent "<<sRoot;
-        sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
-        sReturn<<"\n"<< "endnode";
         sReturn<<"\n"<< "node trimesh "<< sMesh;
         sReturn<<"\n"<< "  parent "<<sRoot;
         sReturn<<"\n"<< "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
@@ -763,6 +755,14 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             Face & face = data.faces.at(v);
             sReturn<<"\n"<< "    "<<face.nIndexVertex.at(0)<<" "<<face.nIndexVertex.at(1)<<" "<<face.nIndexVertex.at(2)<<"  1  0 0 0  "<<face.nMaterialID;
         }
+        sReturn<<"\n"<< "endnode";
+        sReturn<<"\n"<< "node dummy "<< sUse1;
+        sReturn<<"\n"<< "  parent "<<sMesh;
+        sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
+        sReturn<<"\n"<< "endnode";
+        sReturn<<"\n"<< "node dummy "<< sUse2;
+        sReturn<<"\n"<< "  parent "<<sMesh;
+        sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
         sReturn<<"\n"<< "endnode";
     }
     else if(nDataType == CONVERT_DWK){
@@ -841,12 +841,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             sReturn<<"\n"<< "endnode";
             sReturn<<"\n"<< "node dummy "<< sClosedUse1;
-            sReturn<<"\n"<< "  parent "<< sRoot; //sClosedMesh;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "  parent "<< sClosedMesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
             sReturn<<"\n"<< "endnode";
             sReturn<<"\n"<< "node dummy "<< sClosedUse2;
-            sReturn<<"\n"<< "  parent "<< sRoot; //sClosedMesh;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "  parent "<< sClosedMesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
             sReturn<<"\n"<< "endnode";
         }
         if(Dwk1){
@@ -867,13 +867,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             sReturn<<"\n"<< "endnode";
             sReturn<<"\n"<< "node dummy "<< sOpen1Use1;
-            sReturn<<"\n"<< "  parent "<< sRoot; //sOpen1Mesh;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "  parent "<< sOpen1Mesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
             sReturn<<"\n"<< "endnode";
             if(bOpen1Use2){
                 sReturn<<"\n"<< "node dummy "<< sOpen1Use2;
-                sReturn<<"\n"<< "  parent "<< sRoot; //sOpen1Mesh;
-                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+                sReturn<<"\n"<< "  parent "<< sOpen1Mesh;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
                 sReturn<<"\n"<< "endnode";
             }
         }
@@ -895,13 +895,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             sReturn<<"\n"<< "endnode";
             sReturn<<"\n"<< "node dummy "<< sOpen2Use1;
-            sReturn<<"\n"<< "  parent "<< sRoot; //sOpen2Mesh;
-            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse1.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse1.fZ + data.vPosition.fZ);
+            sReturn<<"\n"<< "  parent "<< sOpen2Mesh;
+            sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse1.fX)<<" "<<PrepareFloat(data.vUse1.fY)<<" "<<PrepareFloat(data.vUse1.fZ);
             sReturn<<"\n"<< "endnode";
             if(bOpen2Use2){
                 sReturn<<"\n"<< "node dummy "<< sOpen2Use2;
-                sReturn<<"\n"<< "  parent "<< sRoot; //sOpen2Mesh;
-                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX + data.vPosition.fX)<<" "<<PrepareFloat(data.vUse2.fY + data.vPosition.fY)<<" "<<PrepareFloat(data.vUse2.fZ + data.vPosition.fZ);
+                sReturn<<"\n"<< "  parent "<< sOpen2Mesh;
+                sReturn<<"\n"<< "  position "<<PrepareFloat(data.vUse2.fX)<<" "<<PrepareFloat(data.vUse2.fY)<<" "<<PrepareFloat(data.vUse2.fZ);
                 sReturn<<"\n"<< "endnode";
             }
         }

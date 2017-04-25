@@ -28,8 +28,8 @@ class Edits{
     int nSelectEnd;
     bool bSelection;
     std::string sSelected;
-    std::vector<int> * nKnownArray;
-    std::vector<char> * sBuffer;
+    std::vector<int> * nKnownArray = nullptr;
+    std::vector<char> * sBuffer = nullptr;
 
   public:
     static HWND hIntEdit;
@@ -187,10 +187,13 @@ class Edits{
         char cString1 [255];
         char cString2 [255];
         char cString3 [255];
-        if(nSelectEnd == -1 || nSelectStart == -1 || !bCheck){
+        if(nSelectEnd == -1 || nSelectStart == -1 || !bCheck || sBuffer == nullptr){
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) "");
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) "");
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) "");
+            SetWindowText(hIntEdit, "");
+            SetWindowText(hUIntEdit, "");
+            SetWindowText(hFloatEdit, "");
         }
         else if(nSelectStart == nSelectEnd){
             sprintf(cString1, "Offset: %i", nSelectStart);

@@ -207,6 +207,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
             mii.fState = MFS_CHECKED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+            mii.fState = MFS_GRAYED;
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
         }
         break;
         case WM_NOTIFY:
@@ -334,6 +336,15 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         if(!Model.bK2) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                        mii.fState = MFS_ENABLED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
+                    }
+                    else{
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_GRAYED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
                     }
                 }
                 break;
@@ -477,6 +488,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         ShowWindow(hStatusBar, false);
                         SetWindowPos(hwnd, NULL, 0, 0, 368, 610, SWP_NOMOVE | SWP_NOZORDER);
                     }
+                }
+                break;
+                case IDM_HELP_ABOUT:
+                {
+                    DialogBox(NULL, MAKEINTRESOURCE(DLG_ABOUT), hwnd, AboutProc);
                 }
                 break;
                 case IDPM_TV_FOLD:
@@ -884,6 +900,76 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 AppendTab(hTabs, "MDL");
                 AppendTab(hTabs, "MDX");
 
+                //Open and process .pwk if it exists
+                std::string cPwk;
+                cPwk = cFile;
+                char * cExt2 = PathFindExtension(cPwk.c_str());
+                sprintf(cExt2, ".pwk");
+                if(PathFileExists(cPwk.c_str())){
+                    file.open(cPwk);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (pwk). Aborting.\n";
+                    }
+                    else{
+                        bAscii = false;
+                        file.seekg(0,std::ios::beg);
+                        char cBinary [4];
+                        file.read(cBinary, 4);
+                        //First check whether it's an ascii or a binary
+                        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
+                            bAscii = true;
+                        }
+                        if(bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.PwkAscii.reset(new ASCII());
+                            std::vector<char> & sBufferRef = Model.PwkAscii->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.PwkAscii->SetFilePath(cPwk);
+                            AppendTab(hTabs, "PWK");
+                        }
+                    }
+                }
+
+                //Open and process .dwk if it exists
+                std::string cDwk;
+                cDwk = cFile;
+                cExt2 = PathFindExtension(cDwk.c_str());
+                sprintf(cExt2, ".dwk");
+                if(PathFileExists(cDwk.c_str())){
+                    file.open(cDwk);
+                    if(!file.is_open()){
+                        std::cout<<"File creation/opening failed (pwk). Aborting.\n";
+                    }
+                    else{
+                        bAscii = false;
+                        file.seekg(0,std::ios::beg);
+                        char cBinary [4];
+                        file.read(cBinary, 4);
+                        //First check whether it's an ascii or a binary
+                        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
+                            bAscii = true;
+                        }
+                        if(bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.DwkAscii.reset(new ASCII());
+                            std::vector<char> & sBufferRef = Model.DwkAscii->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.DwkAscii->SetFilePath(cDwk);
+                            AppendTab(hTabs, "DWK 0");
+                            AppendTab(hTabs, "DWK 1");
+                            AppendTab(hTabs, "DWK 2");
+                        }
+                    }
+                }
+
                 //Process the data
                 Model.SetFilePath(cFile);
                 if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1)){
@@ -891,6 +977,9 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 }
                 else{
                     //We failed reading the ascii, so we need to clean up
+                    TabCtrl_DeleteAllItems(hTabs);
+                    TreeView_DeleteAllItems(hTree);
+                    Model.FlushData();
                     Edit1.LoadData();
                     ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
                     bReturn = false;
@@ -1127,7 +1216,10 @@ DWORD WINAPI ThreadReprocess(LPVOID lpParam){
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     bool bReadWell = Model.ReadAscii();
     //Just read it.
-    if(!bReadWell) SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+    if(!bReadWell){
+        SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+        return 0;
+    }
 
     /// Now we know whether we have WOK data
     if(Model.Wok) AppendTab(hTabs, "WOK");
@@ -1141,10 +1233,14 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
     SetWindowText(hDisplayEdit, "");
     Edit1.LoadData(); //Loads up the binary file onto the screen
     BuildTree(Model); //Fills the TreeView control
+    if(Model.Pwk) BuildTree(*Model.Pwk);
+    if(Model.Dwk0) BuildTree(*Model.Dwk0);
+    if(Model.Dwk1) BuildTree(*Model.Dwk1);
+    if(Model.Dwk2) BuildTree(*Model.Dwk2);
     if(Model.Wok){
-        std::string sWok = Model.GetFullPath();
-        char * cExt2 = PathFindExtension(sWok.c_str());
-        sprintf(cExt2, ".wok");
+        std::string sWok = ".wok"; //Model.GetFullPath();
+        //char * cExt2 = PathFindExtension(sWok.c_str());
+        //sprintf(cExt2, ".wok");
         Model.Wok->SetFilePath(sWok);
         std::cout<< "About to build wok tree.\n";
         BuildTree(*Model.Wok);
@@ -1240,4 +1336,30 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     else if(nAction == ACTION_OPEN_EDITOR){
         OpenEditorDlg(Model, cItem, lParam);
     }
+}
+
+INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
+    switch(message){
+        case WM_INITDIALOG:
+        {
+            std::string sText;
+            sText = "MDLedit version 1.0\nDeveloped by bead-v.";
+            sText += "\n\nThis application was made with the knowledge from other MDL-related tools and the discoveries talked about on deadlystream.com forums. ";
+            sText += "A big thank you goes out to all the people who contributed to this knowledge, including:";
+            sText += "\nCChargin, Magnusll, JdNoa, ndix UR, VarsityPuppet, FairStrides, DarthSapiens";
+            sText += "\n\nI would also like to thank the kind people who were very helpful in answering the bunch of questions I had while making this application:";
+            sText += "\nDarthParametric, JCarter42, Quanon, FairStrides";
+            sText += "\n\nA very special thanks goes to ndix UR, both for sharing his very complete knowledge of the format and his advice and support while making this application.";
+            SetWindowText(GetDlgItem(hwnd, DLG_ID_STATIC), sText.c_str());
+        }
+        break;
+        case WM_CLOSE:
+        {
+            EndDialog(hwnd, wParam);
+        }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
 }

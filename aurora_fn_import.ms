@@ -413,29 +413,18 @@ fn ImportNWNwk pFile type =
                             -- Texture is allways assumed to be "" as there is no purpose
                             -- in having a texture/bitmap for a pwk mesh
                             local matName = objName
-                            --objMaterial = sceneMaterials[matName]
                             -- if we are in a trimesh in a pwk or dwk file it
                             -- needs a walkmesh material against it
-                            --objMaterial = nx_createNWNWalkMaterial()
-                            --if (objMaterial == undefined) then
-                            --(
-                            --    objMaterial = standardmaterial name:matName
-                            --    objMaterial.shaderType = 1 -- Blinn
-                            --    objMaterial.ambient = objAmbient
-                            --    objMaterial.diffuse = objDiffuse
-                            --    objMaterial.specular = objSpecular
-                            --    objMaterial.glossiness = objShine
-                            --    objMaterial.selfillumcolor = objSelfIllum
-                                -- alpha is no done on the trimesh modifier only
-                                --objMaterial.opacity = objAlpha
-                            --)
+                            objMaterial = undefined
+                            objMaterial = sceneMaterials[matName]
+                            if(objMaterial == undefined) then objMaterial = nx_createNWNWalkMaterial()
 
                             -- Make an editable mesh
                             local newObj = mesh name:objName \
                                             vertices:verts \
                                             faces:faces \
                                             wirecolor:objWireColor \
-                                            material:undefined \
+                                            material:objMaterial \
                                             materialIDS:surfacemats
 
                             -- special post processing to deal with some sort of odd Max vert position distortion
@@ -448,16 +437,6 @@ fn ImportNWNwk pFile type =
                             -- Assign smoothing groups
                             for i = 1 to smoothGroups.count do
                                 setFaceSmoothGroup newObj i smoothGroups[i]
-
-                            -- We need to process for the appropriate
-                            -- modifiers to be applied to the mesh.
-                            --aurora_mod = aurorawalkmesh()
-                            --case type of
-                            --(
-                            --    "pwk": aurora_mod.meshtype = 2
-                            --    "dwk": aurora_mod.meshtype = 3
-                            --)
-                            --addModifier newObj aurora_mod
 
                             -- Update the mesh
                             update newObj
@@ -478,19 +457,14 @@ fn ImportNWNwk pFile type =
                     (
                         -- parent exists
                         newObj.parent = itsParent
-                        newObj.scale.controller = tcb_scale()
-                        newObj.position.controller = tcb_position()
-                        newObj.rotation.controller = tcb_rotation()
+                        newObj.scale.controller = linear_scale()
+                        newObj.position.controller = linear_position()
+                        newObj.rotation.controller = linear_rotation()
 
-                        -- remove anim on always static mesh
---                        in coordsys parent
---                        (
---                            with animate on at time 0 newObj.scale = objScale
---                            with animate on at time 0 newObj.rotation = objRot
---                            with animate on at time 0 newObj.position = objPos
---                        )
-						newObj.rotation = objRot
-						newObj.position = objPos
+                        in coordsys parent(
+                            newObj.rotation = objRot
+                            newObj.position = objPos
+						)
                     ) else
                     (
                         -- Build the parent node as it doesn't exist
@@ -509,17 +483,10 @@ fn ImportNWNwk pFile type =
                         newParent.parent = modelbase
                         -- configure the new object linked to parent
                         newObj.parent = newParent
-                        newObj.scale.controller = tcb_scale()
-                        newObj.position.controller = tcb_position()
-                        newObj.rotation.controller = tcb_rotation()
+                        newObj.scale.controller = linear_scale()
+                        newObj.position.controller = linear_position()
+                        newObj.rotation.controller = linear_rotation()
 
-                        -- remove anim on always static mesh
---                        in coordsys parent
---                        (
---                            with animate on at time 0 newObj.scale = objScale
---                            with animate on at time 0 newObj.rotation = objRot
---                            with animate on at time 0 newObj.position = objPos
---                        )
                     ) -- end if
                 ) -- End endnode case
             ) -- end iToken case

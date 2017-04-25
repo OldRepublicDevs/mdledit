@@ -1109,7 +1109,8 @@ void BWM::Compile(){
     int nOffsetPerimeters = nPosition;
     WriteInt(0xFFFFFFFF, 6);
 
-    WriteIntToPH(nPosition, nOffsetVerts, data.nOffsetToVerts);
+    if(data.verts.size() == 0) WriteIntToPH(0, nOffsetVerts, data.nOffsetToVerts);
+    else WriteIntToPH(nPosition, nOffsetVerts, data.nOffsetToVerts);
     for(int v = 0; v < data.verts.size(); v++){
         Vector & vert = data.verts.at(v);
         WriteFloat(vert.fX, 2);
@@ -1117,32 +1118,37 @@ void BWM::Compile(){
         WriteFloat(vert.fZ, 2);
     }
 
-    WriteIntToPH(nPosition, nOffsetVertIndices, data.nOffsetToIndexes);
+    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetVertIndices, data.nOffsetToIndexes);
+    else WriteIntToPH(nPosition, nOffsetVertIndices, data.nOffsetToIndexes);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteInt(face.nIndexVertex.at(0), 4);
         WriteInt(face.nIndexVertex.at(1), 4);
         WriteInt(face.nIndexVertex.at(2), 4);
     }
-    WriteIntToPH(nPosition, nOffsetMaterials, data.nOffsetToMaterials);
+    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetMaterials, data.nOffsetToMaterials);
+    else WriteIntToPH(nPosition, nOffsetMaterials, data.nOffsetToMaterials);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteInt(face.nMaterialID, 4);
     }
-    WriteIntToPH(nPosition, nOffsetNormals, data.nOffsetToNormals);
+    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetNormals, data.nOffsetToNormals);
+    else WriteIntToPH(nPosition, nOffsetNormals, data.nOffsetToNormals);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteFloat(face.vNormal.fX, 2);
         WriteFloat(face.vNormal.fY, 2);
         WriteFloat(face.vNormal.fZ, 2);
     }
-    WriteIntToPH(nPosition, nOffsetDistances, data.nOffsetToDistances);
+    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetDistances, data.nOffsetToDistances);
+    else WriteIntToPH(nPosition, nOffsetDistances, data.nOffsetToDistances);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteFloat(face.fDistance, 2);
     }
 
-    WriteIntToPH(nPosition, nOffsetAabb, data.nOffsetToAabb);
+    if(data.aabb.size() == 0) WriteIntToPH(0, nOffsetAabb, data.nOffsetToAabb);
+    else WriteIntToPH(nPosition, nOffsetAabb, data.nOffsetToAabb);
     for(int v = 0; v < data.aabb.size(); v++){
         Aabb & aabb = data.aabb.at(v);
         WriteFloat(aabb.vBBmin.fX, 2);
@@ -1158,7 +1164,8 @@ void BWM::Compile(){
         WriteInt(aabb.nChild2, 4);
     }
 
-    WriteIntToPH(nPosition, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
+    if(data.faces.size() == 0 || data.nType == 0) WriteIntToPH(0, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
+    else WriteIntToPH(nPosition, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         if(face.nMaterialID != 7){
@@ -1167,13 +1174,15 @@ void BWM::Compile(){
             WriteInt(face.nAdjacentFaces.at(2), 4);
         }
     }
-    WriteIntToPH(nPosition, nOffsetEdges, data.nOffsetToEdges);
+    if(data.edges.size() == 0) WriteIntToPH(0, nOffsetEdges, data.nOffsetToEdges);
+    else WriteIntToPH(nPosition, nOffsetEdges, data.nOffsetToEdges);
     for(int f = 0; f < data.edges.size(); f++){
         Edge & edge = data.edges.at(f);
         WriteInt(edge.nIndex, 4);
         WriteInt(edge.nTransition, 4);
     }
-    WriteIntToPH(nPosition, nOffsetPerimeters, data.nOffsetToPerimeters);
+    if(data.perimeters.size() == 0) WriteIntToPH(0, nOffsetPerimeters, data.nOffsetToPerimeters);
+    else WriteIntToPH(nPosition, nOffsetPerimeters, data.nOffsetToPerimeters);
     for(int f = 0; f < data.perimeters.size(); f++){
         int & perimeter = data.perimeters.at(f);
         WriteInt(perimeter, 4);

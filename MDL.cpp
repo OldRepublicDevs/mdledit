@@ -116,6 +116,8 @@ void MDL::FlushData(){
     Dwk0.reset();
     Dwk1.reset();
     Dwk2.reset();
+    PwkAscii.reset();
+    DwkAscii.reset();
     FlushAll();
 }
 
@@ -194,14 +196,28 @@ std::vector<char> & MDL::CreateAsciiBuffer(int nSize){
 }
 
 bool MDL::ReadAscii(){
-    //CreateDataStructure
-    FH.reset(new FileHeader);
-    bool bReturn = Ascii->Read(*this);
-    if(!bReturn){
-        FlushData();
+    if(Ascii){
+        if(!Ascii->Read(*this)){
+            FlushData();
+            return false;
+        }
+        else std::cout<<"Mdl ascii read succesfully!\n";
     }
-    else std::cout<<"Ascii read succesfully!\n";
-    return bReturn;
+    if(PwkAscii){
+        if(!PwkAscii->ReadPwk(*this)){
+            FlushData();
+            return false;
+        }
+        else std::cout<<"Pwk ascii read succesfully!\n";
+    }
+    if(DwkAscii){
+        if(!DwkAscii->ReadDwk(*this)){
+            FlushData();
+            return false;
+        }
+        else std::cout<<"Dwk ascii read succesfully!\n";
+    }
+    return true;
 }
 
 Location Node::GetLocation(){
