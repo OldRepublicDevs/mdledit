@@ -250,7 +250,8 @@ class PWK;
 class DWK;
 class Ascii;
 
-bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
+//bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
+bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel);
 
 
 /**** DATA STRUCTS ****/

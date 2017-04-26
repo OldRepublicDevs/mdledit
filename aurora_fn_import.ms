@@ -412,7 +412,7 @@ fn ImportNWNwk pFile type =
                             -- Make material, if necessary
                             -- Texture is allways assumed to be "" as there is no purpose
                             -- in having a texture/bitmap for a pwk mesh
-                            local matName = objName
+                            local matName = "NWN_WalkMaterial"
                             -- if we are in a trimesh in a pwk or dwk file it
                             -- needs a walkmesh material against it
                             objMaterial = undefined
@@ -1049,6 +1049,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             -- local b = box pos:box_pos length:(tr.y-bl.y) width:(tr.x-bl.x) height:(tr.z-bl.z)
                         )
                     )
+
                     case idToken of
                     (
                         "#": () -- ignore comments
@@ -2043,7 +2044,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         -- Update the mesh
                                         update newObj
 
-
                                     ) --End trimesh, danglymesh, skin, aabb CASE
 
                                     -- Joco 23-Aug-03: Create emitter and make sure
@@ -2347,7 +2347,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     append weightsList (nx_SkinWeights newObj weightBuffer)
                                 )
                             ) -- End If for loadGeom
-
                         ) -- End endnode case and create mesh block
 
                         "endmodelgeom": -- End of model geometry

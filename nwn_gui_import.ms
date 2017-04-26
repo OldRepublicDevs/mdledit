@@ -111,8 +111,8 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = tcb_rotation()
-			    		o.pos.controller = tcb_position()
-			    		o.scale.controller = tcb_scale()
+			    		--o.pos.controller = tcb_position()
+			    		--o.scale.controller = tcb_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
 					)
@@ -120,8 +120,8 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = linear_rotation()
-			    		o.pos.controller = linear_position()
-			    		o.scale.controller = linear_scale()
+			    		--o.pos.controller = linear_position()
+			    		--o.scale.controller = linear_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
 					)
@@ -154,7 +154,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		label lbl_animname "Anim name to load:" enabled:false
 		edittext edt_animname enabled:false
 		spinner spn_startframe "Insert Frame:" type:#integer range:[0,100000,0] enabled:false
-		checkbox chk_resetctrl "Reset Controllers" checked:false
+		checkbox chk_resetctrl "Reset Orientation" checked:false
 		checkbox warn_checkbox "Show warnings" width:128 height:16
 		checkbox chk_uselyt "Use Layout Position" checked:true
 		spinner spn_loc_x "Import Loc X:" range:[0,1000000,0] enabled:false
@@ -162,12 +162,14 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	)
 	button import_button "Import" width:144 height:24
 
+	/*
 	group "Specialist Tools"
 	(
 		button btn_removepointer "Del Base Pointer" width:144 height:18
 		button btn_loadgrp "Load Tile Group" width:144 height:18
 		button btn_masstileload "Mass Tile Load" width:144 height:18
 	)
+	*/
 
 	progressBar progress "" width:136 height:14
 
@@ -179,9 +181,11 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		spn_loc_y.enabled = val
 	)
 
+	/*
  	on btn_loadgrp pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_loadgrp.ms")) catch() )
 
  	on btn_masstileload pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_masstileload.ms")) catch() )
+	*/
 
 	on rdo_options changed val do
 	(
@@ -196,6 +200,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		)
 	)
 
+	/*
 	on btn_removepointer pressed do
 	(
 		for obj in $objects do
@@ -206,6 +211,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 			)
 		)
 	)
+	*/
 
 	on import_browse_button pressed do
 	(

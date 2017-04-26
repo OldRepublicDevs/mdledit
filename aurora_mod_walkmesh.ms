@@ -48,15 +48,17 @@ version:2
 
     on create do (
         local node = selection[1]
-        if(not (meshop.GetMapSupport node 0)) then (
-            meshop.setMapSupport node 0 true
-        )
-        if((meshop.getNumMapVerts node 0) == 0) then (
-            meshop.setNumMapVerts node 0 1
-            meshop.setMapVert node 0 1 [1, 1, 1]
-            meshop.buildMapFaces node 0
-            for i = 1 to (meshop.getMapFace node 0) do (
-                meshop.setMapFace node 0 i [1, 1, 1]
+        if(node != undefined) then (
+            if(not (meshop.GetMapSupport node 0)) then (
+                meshop.setMapSupport node 0 true
+            )
+            if((meshop.getNumMapVerts node 0) == 0) then (
+                meshop.setNumMapVerts node 0 1
+                meshop.setMapVert node 0 1 [1, 1, 1]
+                meshop.buildMapFaces node 0
+                for i = 1 to (meshop.getMapFace node 0) do (
+                    meshop.setMapFace node 0 i [1, 1, 1]
+                )
             )
         )
     )

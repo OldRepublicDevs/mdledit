@@ -54,11 +54,11 @@ IDM_MAIN MENU DISCARDABLE
 BEGIN
     POPUP " &File "
         BEGIN
-        MENUITEM "&Load...", IDM_MDL_OPEN
-        POPUP "Export"
+        MENUITEM "&Load ...", IDM_MDL_OPEN
+        POPUP "Save"
             BEGIN
-            MENUITEM "&Binary...", IDM_BIN_SAVE
-            MENUITEM "&ASCII...", IDM_ASCII_SAVE
+            MENUITEM "&Binary ...", IDM_BIN_SAVE
+            MENUITEM "&ASCII ...", IDM_ASCII_SAVE
             END
         MENUITEM SEPARATOR
         MENUITEM "E&xit", IDM_FILE_EXIT
@@ -66,8 +66,8 @@ BEGIN
     POPUP " &Options "
         BEGIN
         MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
-        MENUITEM "&Edit textures...", IDM_EDIT_TEXTURES
-        MENUITEM "&Settings...", IDM_SETTINGS
+        MENUITEM "&Edit textures ...", IDM_EDIT_TEXTURES
+        MENUITEM "&Settings ...", IDM_SETTINGS
         END
     POPUP " &Game "
         BEGIN
@@ -81,7 +81,7 @@ BEGIN
     POPUP " &Help "
         BEGIN
         //MENUITEM "&Help", IDM_HELP
-        MENUITEM "&About", IDM_HELP_ABOUT
+        MENUITEM "&About ...", IDM_HELP_ABOUT
         END
 END
 

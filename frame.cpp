@@ -320,11 +320,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_MDL_OPEN:
                 {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
                     bool bSuccess = FileEditor(hwnd, nID, sFile);
                     if(bSuccess){
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
                         bool bLinkHead = Model.HeadLinked();
                         if(!Model.NodeExists("neck_g")) mii.fState = MFS_DISABLED;
                         else if(bLinkHead) mii.fState = MFS_CHECKED;
@@ -336,14 +336,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         if(!Model.bK2) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
-                        mii.fState = MFS_ENABLED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
-                    }
-                    else{
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_GRAYED;
+                        if(!Model.empty()) mii.fState = MFS_ENABLED;
+                        else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
                     }
                 }
@@ -913,10 +907,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     else{
                         bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        char cBinary [4];
-                        file.read(cBinary, 4);
+                        char cBinary [8];
+                        file.read(cBinary, 8);
                         //First check whether it's an ascii or a binary
-                        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
                             bAscii = true;
                         }
                         if(bAscii){
@@ -947,10 +941,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     else{
                         bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        char cBinary [4];
-                        file.read(cBinary, 4);
+                        char cBinary [8];
+                        file.read(cBinary, 8);
                         //First check whether it's an ascii or a binary
-                        if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
                             bAscii = true;
                         }
                         if(bAscii){
@@ -1034,16 +1028,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         std::cout<<"File creation/opening failed (wok). Aborting.\n";
                     }
                     else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
+                        bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        Model.Wok.reset(new WOK());
-                        std::vector<char> & sBufferRef = Model.Wok->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Wok->SetFilePath(cWok);
-                        AppendTab(hTabs, "WOK");
+                        char cBinary [8];
+                        file.read(cBinary, 8);
+                        //First check whether it's an ascii or a binary
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
+                            bAscii = true;
+                        }
+                        if(!bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.Wok.reset(new WOK());
+                            std::vector<char> & sBufferRef = Model.Wok->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.Wok->SetFilePath(cWok);
+                            AppendTab(hTabs, "WOK");
+                        }
                     }
                 }
 
@@ -1058,16 +1062,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         std::cout<<"File creation/opening failed (wok). Aborting.\n";
                     }
                     else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
+                        bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        Model.Pwk.reset(new PWK());
-                        std::vector<char> & sBufferRef = Model.Pwk->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Pwk->SetFilePath(cPwk);
-                        AppendTab(hTabs, "PWK");
+                        char cBinary [8];
+                        file.read(cBinary, 8);
+                        //First check whether it's an ascii or a binary
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
+                            bAscii = true;
+                        }
+                        if(!bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.Pwk.reset(new PWK());
+                            std::vector<char> & sBufferRef = Model.Pwk->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.Pwk->SetFilePath(cPwk);
+                            AppendTab(hTabs, "PWK");
+                        }
                     }
                 }
 
@@ -1083,16 +1097,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         std::cout<<"File creation/opening failed (dwk0). Aborting.\n";
                     }
                     else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
+                        bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        Model.Dwk0.reset(new DWK());
-                        std::vector<char> & sBufferRef = Model.Dwk0->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Dwk0->SetFilePath(cDwk);
-                        AppendTab(hTabs, "DWK 0");
+                        char cBinary [8];
+                        file.read(cBinary, 8);
+                        //First check whether it's an ascii or a binary
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
+                            bAscii = true;
+                        }
+                        if(!bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.Dwk0.reset(new DWK());
+                            std::vector<char> & sBufferRef = Model.Dwk0->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.Dwk0->SetFilePath(cDwk);
+                            AppendTab(hTabs, "DWK 0");
+                        }
                     }
                 }
                 sprintf(cExt2, "1.dwk");
@@ -1102,16 +1126,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         std::cout<<"File creation/opening failed (dwk1). Aborting.\n";
                     }
                     else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
+                        bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        Model.Dwk1.reset(new DWK());
-                        std::vector<char> & sBufferRef = Model.Dwk1->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Dwk1->SetFilePath(cDwk);
-                        AppendTab(hTabs, "DWK 1");
+                        char cBinary [8];
+                        file.read(cBinary, 8);
+                        //First check whether it's an ascii or a binary
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
+                            bAscii = true;
+                        }
+                        if(!bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.Dwk1.reset(new DWK());
+                            std::vector<char> & sBufferRef = Model.Dwk1->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.Dwk1->SetFilePath(cDwk);
+                            AppendTab(hTabs, "DWK 1");
+                        }
                     }
                 }
                 sprintf(cExt2, "2.dwk");
@@ -1121,16 +1155,26 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         std::cout<<"File creation/opening failed (dwk2). Aborting.\n";
                     }
                     else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
+                        bAscii = false;
                         file.seekg(0,std::ios::beg);
-                        Model.Dwk2.reset(new DWK());
-                        std::vector<char> & sBufferRef = Model.Dwk2->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Dwk2->SetFilePath(cDwk);
-                        AppendTab(hTabs, "DWK 2");
+                        char cBinary [8];
+                        file.read(cBinary, 8);
+                        //First check whether it's an ascii or a binary
+                        if(std::string(cBinary, 8) != "BWM V1.0"){
+                            bAscii = true;
+                        }
+                        if(!bAscii){
+                            //We may begin reading
+                            file.seekg(0, std::ios::end);
+                            std::streampos length = file.tellg();
+                            file.seekg(0,std::ios::beg);
+                            Model.Dwk2.reset(new DWK());
+                            std::vector<char> & sBufferRef = Model.Dwk2->CreateBuffer(length);
+                            file.read(&sBufferRef[0], length);
+                            file.close();
+                            Model.Dwk2->SetFilePath(cDwk);
+                            AppendTab(hTabs, "DWK 2");
+                        }
                     }
                 }
 
