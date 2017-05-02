@@ -957,28 +957,28 @@ fn ExAuroraTrimesh mesh name mat wkmesh:false =
 
 
 	-- bead-v modification: texindices-style export	-- build faces entry
-	format "%texindices1 %%" strIndent1 mesh.numfaces g_delim to:g_strBuffer
-	for i=1 to mesh.numfaces do(
-        local l0, l1, l2
-        l0=0
-        l1=0
-        l2=0
-
-        -- bead-v: check if there are more than the default number of channels (2)
-        if (meshop.getNumMaps mesh > 2 and meshop.getMapSupport mesh 2) then
+    -- bead-v: check if there are more than the default number of channels (2)
+    if (meshop.getNumMaps mesh > 2 and meshop.getMapSupport mesh 2) then
+    (
+        if(meshop.getNumMapFaces mesh 2 > 0) do
         (
-            if(meshop.getNumMapFaces mesh 2 > 0) do
-            (
+            format "%texindices1 %%" strIndent1 mesh.numfaces g_delim to:g_strBuffer
+            for i=1 to mesh.numfaces do(
+                local l0, l1, l2
+                l0=0
+                l1=0
+                l2=0
+
                 local l
                 tvl = meshop.getMapFace mesh 2 i
                 l0 = (tvl.x as integer) - 1
                 l1 = (tvl.y as integer) - 1
                 l2 = (tvl.z as integer) - 1
+
+                format  "%% % %%" strIndent2 l0 l1 l2 g_delim to:g_strBuffer
+                nx_FlushBuffer()
             )
          )
-
-		format  "%% % %%" strIndent2 l0 l1 l2 g_delim to:g_strBuffer
-		nx_FlushBuffer()
 	)
 	-- end bead-v modification
 
@@ -1468,6 +1468,7 @@ function do_tiletrimesh dnode parentDeltaPos parentRot =
 -------------------------------------------------
 -- Function to process master Node Geometry data
 -------------------------------------------------
+sExtraNames = #()
 fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
 (
     /*
@@ -1511,6 +1512,10 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
     	(node_class == "Dummy"):
     	(
         	node_type = "dummy"
+        	if matchPattern node.name pattern:"*_pwk" and (classof node.parent as string == "aurorabase") then node_type = "pwk_dummy"
+        	else if matchPattern node.name pattern:"*_dwk" and (classof node.parent as string == "aurorabase") then node_type = "dwk_dummy"
+        	if (node.parent.modifiers["AuroraWalkmesh"] != undefined and node.parent.modifiers["AuroraWalkmesh"].meshtype > 1) then node_type = "dp"
+        	/* --old code
         	if(node.modifiers["AuroraPlaceable"] !=undefined) then
         	(
             	case (node.modifiers["AuroraPlaceable"].meshtype) of
@@ -1519,6 +1524,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             	    2: node_type = "dwk_dummy"
         	    )
         	)
+        	*/
     	)
     	-------------//-------------
     	(node_superclass == "GeometryClass"):
@@ -1531,6 +1537,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
 	        	-------------==-------------
             	(node.modifiers["AuroraAniMesh"] !=undefined): node_type = "animmesh"
             	-------------==-------------
+            	/* --old code
             	(node.modifiers["AuroraPlaceable"] !=undefined):
             	(
                 	case (node.modifiers["AuroraPlaceable"].meshtype) of
@@ -1539,6 +1546,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
                 	    2: node_type = "dwk"
             	    )
             	)
+            	*/
             	-------------==-------------
             	(node.modifiers["AuroraWalkmesh"] !=undefined):
             	(
@@ -1547,6 +1555,8 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
                     	1: node_type = "aabb"
                     	2: node_type = "pwk"
                     	3: node_type = "dwk"
+                    	4: node_type = "dwk"
+                    	5: node_type = "dwk"
                 	)
             	)
             	-------------==-------------
@@ -1563,6 +1573,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
     	default:
     	(
         	node_type = "dummy"
+        	/*
         	if(node.modifiers["AuroraPlaceable"] !=undefined) then
         	(
             	case (node.modifiers["AuroraPlaceable"].meshtype) of
@@ -1571,6 +1582,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             	    2: node_type = "dwk_dummy"
         	    )
         	)
+        	*/
     	)
     )
     if DEBUG then format "#Node_Geometry:: node_type=%%" node_type g_delim to:g_strBuffer
@@ -1699,7 +1711,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
         (node_type=="pwk_dummy"):
         (
             local filename
-            filename = nx_lowercase( g_exportPath + g_ModelName + ".pwk" )
+            filename = nx_lowercase( g_exportPath + g_ModelName + "-nwmax.pwk" )
             if g_ismax then (
                nx_push g_FileHandles g_strBuffer
                g_strBuffer = createFile filename
@@ -1715,9 +1727,10 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             format "# pwk file%" g_delim to:g_strBuffer
             format "#%" g_delim to:g_strBuffer
            	format "#NWmax PWKMESH  ASCII%" g_delim to:g_strBuffer
+            append sExtraNames node.name
         )
 
-        ((node_type=="pwk")and(type=="pwk")):
+        (node_type=="pwk"):
         (
             -- the only time this should be processed is when
             -- exporting trimesh to a PWK file (pwk's not included in mdl file)
@@ -1725,12 +1738,23 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             do_dummy node
             do_trimesh node wkmesh:true
             format "endnode%" g_delim to:g_strBuffer
+            append sExtraNames node.name
+        )
+
+        (node_type=="dp"):
+        (
+            -- the only time this should be processed is when
+            -- exporting trimesh to a PWK file (pwk's not included in mdl file)
+            format "node dummy %%" node.name g_delim to:g_strBuffer
+            do_dummy node
+            format "endnode%" g_delim to:g_strBuffer
+            append sExtraNames node.name
         )
 
         (node_type=="dwk_dummy"):
         (
            	local filename
-           	filename = nx_lowercase( g_exportPath + g_ModelName + ".dwk" )
+           	filename = nx_lowercase( g_exportPath + g_ModelName + "-nwmax.dwk" )
             if g_ismax then (
                nx_push g_FileHandles g_strBuffer
                g_strBuffer = createFile filename
@@ -1746,9 +1770,10 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             format "# dwk file%" g_delim to:g_strBuffer
             format "#%" g_delim to:g_strBuffer
            	format "#NWmax DWKMESH  ASCII%" g_delim to:g_strBuffer
+            append sExtraNames node.name
         )
 
-        ((node_type=="dwk")and(type=="dwk")):
+        (type=="dwk"):
         (
             -- the only time this should be processed is when
             -- exporting trimesh to a DWK file
@@ -1756,6 +1781,7 @@ fn Node_Geometry node type:"mdl" isTile:false prntDeltaPos: prntRot: =
             do_dummy node
             do_trimesh node wkmesh:true
             format "endnode%" g_delim to:g_strBuffer
+            append sExtraNames node.name
         )
 
         ((node_type=="skin")and(type=="mdl")):
@@ -1960,7 +1986,9 @@ fn ExAuroraGeometry node =
             format "%layoutposition % % %%" strIndent1 objPos.x objPos.y objPos.z g_delim to:g_strBuffer
         )
     )
+    sExtraNames = #()
     Node_Geometry node
+    for sName in sExtraNames do format "name %%" sName g_delim to:g_strBuffer
 	format "endmodelgeom %%" node.name g_delim to:g_strBuffer
 
 	nx_FlushBuffer()
@@ -2233,6 +2261,8 @@ fn ExportAnimKeys node firstframe lastframe=
                 	    1: node_type = "aabb"
                 	    2: node_type = "pwk"
                 	    3: node_type = "dwk"
+                	    4: node_type = "dwk"
+                	    5: node_type = "dwk"
             	    )
         	    )
             	(node.modifiers["AuroraFlex"] != undefined): node_type = "danglymesh"
@@ -2261,7 +2291,7 @@ fn ExportAnimKeys node firstframe lastframe=
     if to_export then
     (
 	    -- build the start of the animation node
-	    format "    node % %%" node_type (node.name) g_delim to:g_strBuffer
+	    format "    node dummy %%" (node.name) g_delim to:g_strBuffer
 	    if (node.parent != undefined) then
 	        format "        parent %%" (node.parent.name) g_delim to:g_strBuffer
 	    else

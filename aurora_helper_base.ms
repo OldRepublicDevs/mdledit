@@ -106,6 +106,8 @@ invisible:true
 		group "Animation Parameters" (
 			--label animlabel "Animation Parameters"
 			spinner spn_animscale "Animation scale:" type:#float scale:0.01 range:[0,10,1] fieldwidth:40 align:#left
+			button btn_animeditor "Open Animation Editor"
+			/*
 			listbox list_animations "Animations on Model" height:g_guiAnimListSize
 			button  btn_add_anim "Add" align:#left height:14 width:45 across:3
 			button  btn_delete_anim "Delete" align:#center height:14 width:45 enabled:false
@@ -126,8 +128,9 @@ invisible:true
 			--button button_selanimroot "Select Anim Root" align:#center    -- not yet supported
 			--label lbl_animlist "Animation Name List"
 			--combobox lst_animnames "" height:5
+			*/
 		)
-
+    /*
     group "Events" (
 	    listBox list_events "" height:5
 	    editText edit_event_name "Name:"
@@ -146,7 +149,7 @@ invisible:true
 	    button btn_qe_sndfootstep "footstep" align:#left width:67 height:14 across:2
 	    button btn_qe_sndhitground "hitground" align:#right width:67 height:14
 	    button btn_qe_detonate "detonate" align:#center width:67 height:14
-    )
+    ) */
 
 		-- read list of animation names from a file
 		fn ReadAnimationNameList filename =
@@ -468,6 +471,11 @@ invisible:true
         )
     )
 
+    on btn_animeditor pressed do
+    (
+        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animeditor.ms")) catch(format "Opening nx_animeditor.ms failed!\n")
+    )
+/*
     on btn_zoom_reset pressed do
     (
         animationRange = (interval 0 max_anim_frame)
@@ -511,7 +519,7 @@ invisible:true
         )
 
         on btn_zoom_to_anim pressed do ZoomToAnim()
-
+*/
         --
         -- Support direct edits to the frame and transition times
         --
@@ -539,6 +547,7 @@ invisible:true
         --on spn_last_frame changed new_val do ChangeSelAnimEntry()
         --on spn_transition changed new_val do ChangeSelAnimEntry()
         --on chk_will_export changed new_val do ChangeSelAnimEntry()
+/*
         on btn_animeditapply pressed do
         (
 	        ChangeSelAnimEntry()
@@ -623,7 +632,7 @@ invisible:true
             )
             updateanimlist()
         )
-
+*/
         --
         -- Animation Event Processing
         --
@@ -657,7 +666,7 @@ invisible:true
                 params.btn_event_delete.enabled = false
             )
         )
-
+/*
         on btn_event_add pressed do
         (
             format "btn_add_event\r\n"
@@ -700,7 +709,7 @@ invisible:true
         )
 
         on list_events selected list_idx do LoadSelectedAnimEvent()
-
+*/
       fn add_event strEvent =
       (
          local str_frame = (sliderTime.frame as integer)  as string
@@ -708,7 +717,7 @@ invisible:true
          updateeventlist()
          list_events.selection = events.count
       )
-
+/*
       on btn_qe_blurstart pressed do ( add_event "blur_start" )
       on btn_qe_blurend pressed do ( add_event "blur_end" )
       on btn_qe_drawarrow pressed do ( add_event "draw_arrow" )
@@ -719,6 +728,7 @@ invisible:true
       on btn_qe_sndfootstep pressed do ( add_event "snd_footstep" )
       on btn_qe_sndhitground pressed do ( add_event "snd_hitground" )
       on btn_qe_detonate pressed do ( add_event "detonate" )
+*/
 
 		--
         -- Aurora base rollout has been opened
@@ -729,10 +739,10 @@ invisible:true
 			--	classification = classui.selected
 
 			current =0;
-			list_animations.selection=0;
-			list_events.selection=0
-			updateanimlist()
-			updateeventlist()
+			--list_animations.selection=0;
+			--list_events.selection=0
+			--updateanimlist()
+			--updateeventlist()
 			edit_supermodel.text = setsupermodel
 
 			-- This is required in order to activate the 'classui selected' callback.
@@ -749,13 +759,13 @@ invisible:true
 			if (classification == "Character") then
 				spn_animscale.enabled = true
 			*/
-
+            /*
 		    if max_anim_frame == undefined then max_anim_frame = 0
 		    if max_anim_frame < (animationrange.end) then max_anim_frame = animationrange.end
 
 		    if edit_anim_name.items.count < 1 then (
 			    refresh_anim_namelist()
-		    )
+		    )*/
 
 		    -- make sure sanity bit string is correct length
 		    --if sanity_tests.count < 20 then sanity_tests = sanity_tests + "1"

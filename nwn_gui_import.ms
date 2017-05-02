@@ -133,7 +133,7 @@ fn nx_importer =
         max tool zoomextents all
         max views redraw
 
-        ImportRollout.progress.value = 0
+        --ImportRollout.progress.value = 0
         percent = 0
 
         --format "Finished.\n\r\n"
@@ -171,7 +171,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	)
 	*/
 
-	progressBar progress "" width:136 height:14
+	--progressBar progress "" width:136 height:14
 
 	on chk_uselyt changed val do
 	(
@@ -181,11 +181,9 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		spn_loc_y.enabled = val
 	)
 
-	/*
  	on btn_loadgrp pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_loadgrp.ms")) catch() )
 
  	on btn_masstileload pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_masstileload.ms")) catch() )
-	*/
 
 	on rdo_options changed val do
 	(
@@ -200,7 +198,6 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		)
 	)
 
-	/*
 	on btn_removepointer pressed do
 	(
 		for obj in $objects do
@@ -211,7 +208,6 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 			)
 		)
 	)
-	*/
 
 	on import_browse_button pressed do
 	(
@@ -222,5 +218,32 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	on import_button pressed do
 	(
 		nx_importer()
+	)
+)
+
+rollout nx_util6 "Area Tools" width:162 height:68
+(
+    -- ui
+    button btn_minimap "MiniMap Maker" width:144 height:18 align:#center
+    button btn_exportlyt "Export Layout File" width:144 height:18 align:#center
+    button btn_importlyt "Import Layout File" width:144 height:18 align:#center
+    checkbox chk_withmodels "With Models" checked:false
+
+    -- ensure only active if running max version of nwmax
+    on nx_util6 open do
+    (
+	    if ( not g_ismax ) then
+	    (
+		    btn_minimap.enabled = false
+	    )
+    )
+
+    -- actions
+    on btn_minimap pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_minimap_maker.ms")) catch() )
+
+	on btn_importlyt pressed do
+	(
+	    local filename = getOpenFileName caption:"Import lyt" types:"KOTOR layout file (*.lyt)|*.lyt|"
+	    if (filename != undefined) then ImportKOTORlyt filename showprogress:true withmodels:chk_withmodels.checked
 	)
 )

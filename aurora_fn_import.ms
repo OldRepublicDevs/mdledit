@@ -415,9 +415,8 @@ fn ImportNWNwk pFile type =
                             local matName = "NWN_WalkMaterial"
                             -- if we are in a trimesh in a pwk or dwk file it
                             -- needs a walkmesh material against it
-                            objMaterial = undefined
-                            objMaterial = sceneMaterials[matName]
-                            if(objMaterial == undefined) then objMaterial = nx_createNWNWalkMaterial()
+
+                            objMaterial = nx_createNWNWalkMaterial()
 
                             -- Make an editable mesh
                             local newObj = mesh name:objName \
@@ -434,9 +433,27 @@ fn ImportNWNwk pFile type =
                             )
                             update newObj
 
+                            --set vertex colors to work
+                            meshop.setMapSupport newObj 0 true
+                            setNumCPVVerts newObj 1
+                            meshop.setMapVert newObj 0 1 [1, 1, 1]
+                            buildVCFaces newObj
+                            for i = 1 to faces.count do
+                            (
+                                local cei = #(1, 1, 1)
+                                setVCFace newObj i [cei[1], cei[2], cei[3]]
+                            )
+
                             -- Assign smoothing groups
                             for i = 1 to smoothGroups.count do
                                 setFaceSmoothGroup newObj i smoothGroups[i]
+
+                            aurora_mod = aurorawalkmesh()
+                            if(matchPattern objName pattern:"*_wg_closed") then aurora_mod.meshtype = 3
+                            else if(matchPattern objName pattern:"*_wg_open1") then aurora_mod.meshtype = 4
+                            else if(matchPattern objName pattern:"*_wg_open2") then aurora_mod.meshtype = 5
+                            else if(matchPattern objName pattern:"*_wg") then aurora_mod.meshtype = 2
+                            addModifier newObj aurora_mod
 
                             -- Update the mesh
                             update newObj
@@ -468,19 +485,21 @@ fn ImportNWNwk pFile type =
                     ) else
                     (
                         -- Build the parent node as it doesn't exist
-                        local modelbase = getNodeByName (getFilenameFile pFile) exact:true
+                        --local modelbase = getNodeByName (getFilenameFile pFile) exact:true
                         local newParent = dummy name:parent
+                        /*
                         aurora_mod = auroraplaceable()
                         case type of
                         (
                             "pwk": aurora_mod.meshtype = 1
                             "dwk": aurora_mod.meshtype = 2
                         )
-                        max modify mode
-                        modPanel.setCurrentObject newParent
-                        modPanel.addModToSelection aurora_mod
+                        */
+                        --max modify mode
+                        --modPanel.setCurrentObject newParent
+                        --modPanel.addModToSelection aurora_mod
                         -- link parent to the model base
-                        newParent.parent = modelbase
+                        --newParent.parent = modelbase
                         -- configure the new object linked to parent
                         newObj.parent = newParent
                         newObj.scale.controller = linear_scale()
@@ -788,14 +807,14 @@ global gblDynBuildList_Node
 fn ImportNWNmdl pFile importAnims showWarnings \
                 loadGeom:true \
                 animLoadBase:undefined \
-                insertpoint:0 \
+                insertpoint:0 \                    -- time from which new animations are inserted
                 mappingtbl:undefined \
                 loadanimlist:undefined \
                 animloadtype:0 \
                 showprogress:false \
                 loadtiff:false \
-                location:[0,0,0] \
-                uselytposition:false
+                location:[0,0,0] \                 -- import location, only used if the following is false
+                uselytposition:false               -- use layout position. If ascii does not specify it, then import at 0,0,0
 =
 (
     -- Model heirarchy defs
@@ -2232,6 +2251,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         a_flarecolorshifts = #()
                                     )
 
+                                    /*
                                     (objType == "reference"):
                                     (
                                         newObj = aurorareference name:objName
@@ -2239,6 +2259,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objRefModel!=undefined then newObj.refModel = objRefModel
                                         if objReattachable!=undefined then newObj.reattachable = objReattachable
                                     )
+                                    */
 
                                     default:
                                     (
@@ -3070,21 +3091,25 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                         lineNum += 1
                                                     ) -- end while
 
-                                                    -- Write last two extra keys
-                                                    local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
-                                                    lastkey.value = newkey.value
-                                                    lastkey.inTangentType = newkey.inTangentType
-                                                    lastkey.outTangentType = newkey.outTangentType
-                                                    lastkey.x_locked = newkey.x_locked
-                                                    lastkey.y_locked = newkey.y_locked
-                                                    lastkey.z_locked = newkey.z_locked
-                                                    lastkey.inTangent = newkey.inTangent
-                                                    lastkey.outTangent = newkey.outTangent
+                                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                        with animate on(
+                                                            -- Write last two extra keys
+                                                            local lastkey = addNewKey animObj.pos.controller (lastFrame + 1)
+                                                            lastkey.value = newkey.value
+                                                            lastkey.inTangentType = newkey.inTangentType
+                                                            lastkey.outTangentType = newkey.outTangentType
+                                                            lastkey.x_locked = newkey.x_locked
+                                                            lastkey.y_locked = newkey.y_locked
+                                                            lastkey.z_locked = newkey.z_locked
+                                                            lastkey.inTangent = newkey.inTangent
+                                                            lastkey.outTangent = newkey.outTangent
 
-                                                    lastkey = addNewKey animObj.pos.controller (lastFrame + 2)
-                                                    lastkey.value = zeroPos
-                                                    lastkey.inTangentType = #linear
-                                                    lastkey.outTangentType = #linear
+                                                            lastkey = addNewKey animObj.pos.controller (lastFrame + 2)
+                                                            lastkey.value = zeroPos
+                                                            lastkey.inTangentType = #linear
+                                                            lastkey.outTangentType = #linear
+                                                        )
+                                                    )
                                                 )
                                             )
                                             "rotation":(
@@ -3118,8 +3143,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                                                         if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
                                                             --with animate on at time keytime animObj.rotation = objRot
-                                                            local newkey = addnewkey animObj.rotation.controller keytime
-                                                            newkey.value = objRot
+                                                            with animate on(
+                                                                local newkey = addnewkey animObj.rotation.controller keytime
+                                                                newkey.value = objRot
+                                                            )
                                                         )
 
                                                         if (existingPosKey == 0) then(
@@ -3144,10 +3171,14 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                             tok.SetString (getNextNonBlankLine mdlStream)
                                                     )
 
-                                                    local lastkey = addNewKey animObj.rotation.controller (lastFrame + 1)
-                                                    lastkey.value = newkey.value
-                                                    lastkey = addNewKey animObj.rotation.controller (lastFrame + 2)
-                                                    lastkey.value = zeroRot
+                                                    if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
+                                                        with animate on(
+                                                            local lastkey = addNewKey animObj.rotation.controller (lastFrame + 1)
+                                                            lastkey.value = newkey.value
+                                                            lastkey = addNewKey animObj.rotation.controller (lastFrame + 2)
+                                                            lastkey.value = zeroRot
+                                                        )
+                                                    )
                                                 )
                                             )
                                             "color":(
@@ -3174,19 +3205,21 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     if DEBUG then format "line:% keytime:%   color:%\r\n" lineNum keytime this_value
 
                                                     if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                                        newkey = addNewKey objController keytime
-                                                        newkey.value = this_value
-                                                        if(bBezier) then(
-                                                            newkey.inTangentType = #custom
-                                                            newkey.outTangentType = #custom
-                                                            newkey.x_locked = false
-                                                            newkey.inTangent = in_value
-                                                            newkey.outTangent = out_value
+                                                        with animate on(
+                                                            newkey = addNewKey objController keytime
+                                                            newkey.value = this_value
+                                                            if(bBezier) then(
+                                                                newkey.inTangentType = #custom
+                                                                newkey.outTangentType = #custom
+                                                                newkey.x_locked = false
+                                                                newkey.inTangent = in_value
+                                                                newkey.outTangent = out_value
 
-                                                        )
-                                                        else(
-                                                            newkey.inTangentType = #linear
-                                                            newkey.outTangentType = #linear
+                                                            )
+                                                            else(
+                                                                newkey.inTangentType = #linear
+                                                                newkey.outTangentType = #linear
+                                                            )
                                                         )
                                                     )
 
@@ -3225,20 +3258,22 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     --format "Adding float % (bezier % %) at time %\n" this_value in_value out_value keytime
 
                                                     if (loadanimlist == undefined) or ((findItem loadanimlist animname) > 0) then (
-                                                        newkey = addnewkey objController keytime
-                                                        newkey.value = this_value
-                                                        if(bBezier) then(
-                                                            newkey.inTangentType = #custom
-                                                            newkey.outTangentType = #custom
-                                                            newkey.x_locked = false
-                                                            newkey.inTangent = in_value
-                                                            newkey.outTangent = out_value
+                                                        with animate on(
+                                                            newkey = addnewkey objController keytime
+                                                            newkey.value = this_value
+                                                            if(bBezier) then(
+                                                                newkey.inTangentType = #custom
+                                                                newkey.outTangentType = #custom
+                                                                newkey.x_locked = false
+                                                                newkey.inTangent = in_value
+                                                                newkey.outTangent = out_value
 
-                                                        )
-                                                        else
-                                                        (
-                                                            newkey.inTangentType = #linear
-                                                            newkey.outTangentType = #linear
+                                                            )
+                                                            else
+                                                            (
+                                                                newkey.inTangentType = #linear
+                                                                newkey.outTangentType = #linear
+                                                            )
                                                         )
                                                     )
 
@@ -3292,6 +3327,173 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     (
         progressEnd()
     )
+)
+
+
+--------------------------------------------------------------------------------
+-- Import LYT file
+--------------------------------------------------------------------------------
+fn ImportKOTORlyt pFile showprogress:false withmodels:false =
+(
+    local currentPath = getFilenamePath pFile
+
+    -- only progress further if there IS a file available to process
+    if not (nx_existFile pFile) then return false
+
+    -- make sure we reset base panel status
+    setCommandPanelTaskMode mode:#create
+
+    -- Open up the file
+    local mdlStream = openFile pFile mode:"r"
+
+    local lineNum = 0
+    local quitEarly = false
+
+    try (
+        -- Go through the whole mdl file
+        if showprogress then progressStart "Importing LYT"
+        local fsize = nx_filesize mdlStream
+        while not (eof mdlStream) and not quitEarly do
+        (
+            if showprogress then progressUpdate ((((filepos mdlStream) as float)/fsize) * 100)
+            local tok = nx_Tokenizer()
+            local line = getNextNonBlankLine mdlStream
+            tok.SetString (line)
+            lineNum += 1
+
+            -- Read the data ID tag
+            local idToken = tok.ReadToken()
+
+            -- if idToken is a string token then convert to lowercase
+            if (isKindOf idToken string) then idToken = nx_lowercase idToken
+
+            if (idToken[1] == "#") then idToken = "#"
+            if (idToken == "donelayout") then quitEarly = true
+
+            case idToken of
+            (
+                "#": () -- ignore comments
+                "filedependancy": () -- nothing to do with filedependancy
+                "beginlayout": () -- nothing to do with beginlayout
+                "roomcount":
+                (
+                    -- Get count
+                    local nCount = undefined;
+                    if (tok.PeekToken() != undefined) then nCount = tok.ReadInteger()
+
+                    -- Go to first row
+                    tok.SetString (getNextNonBlankLine mdlStream)
+
+                    while (tok.PeekToken() != "endlist" and nCount != 0) do
+                    (
+                        lineNum += 1
+
+                        ---- DO STUFF
+                        local sNode = tok.ReadToken()
+                        local fX = tok.ReadFloat() * 100.0
+                        local fY = tok.ReadFloat() * 100.0
+                        local fZ = tok.ReadFloat() * 100.0
+                        local oNode = getNodeByName sNode exact:true
+                        if(oNode != undefined) then oNode.pos = [fX, fY, fZ]
+
+                        -- read in next line from import data stream
+                        if (nCount != undefined) then
+                        (
+                            nCount -= 1
+                            if nCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                        )
+                        else tok.SetString (getNextNonBlankLine mdlStream)
+                    )
+                )
+                "trackcount":
+                (
+                    -- Get count
+                    local nCount = undefined;
+                    if (tok.PeekToken() != undefined) then nCount = tok.ReadInteger()
+
+                    -- Go to first row
+                    tok.SetString (getNextNonBlankLine mdlStream)
+
+                    while (tok.PeekToken() != "endlist" and nCount != 0) do
+                    (
+                        lineNum += 1
+
+                        ---- DO STUFF
+
+
+                        -- read in next line from import data stream
+                        if (nCount != undefined) then
+                        (
+                            nCount -= 1
+                            if nCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                        )
+                        else tok.SetString (getNextNonBlankLine mdlStream)
+                    )
+                )
+                "obstaclecount":
+                (
+                    -- Get count
+                    local nCount = undefined;
+                    if (tok.PeekToken() != undefined) then nCount = tok.ReadInteger()
+
+                    -- Go to first row
+                    tok.SetString (getNextNonBlankLine mdlStream)
+
+                    while (tok.PeekToken() != "endlist" and nCount != 0) do
+                    (
+                        lineNum += 1
+
+                        ---- DO STUFF
+
+
+                        -- read in next line from import data stream
+                        if (nCount != undefined) then
+                        (
+                            nCount -= 1
+                            if nCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                        )
+                        else tok.SetString (getNextNonBlankLine mdlStream)
+                    )
+                )
+                "doorhookcount":
+                (
+                    -- Get count
+                    local nCount = undefined;
+                    if (tok.PeekToken() != undefined) then nCount = tok.ReadInteger()
+
+                    -- Go to first row
+                    tok.SetString (getNextNonBlankLine mdlStream)
+
+                    while (tok.PeekToken() != "endlist" and nCount != 0) do
+                    (
+                        lineNum += 1
+
+                        ---- DO STUFF
+
+
+                        -- read in next line from import data stream
+                        if (nCount != undefined) then
+                        (
+                            nCount -= 1
+                            if nCount > 0 then tok.SetString (getNextNonBlankLine mdlStream)
+                        )
+                        else tok.SetString (getNextNonBlankLine mdlStream)
+                    )
+                )
+                "donelayout": () -- nothing to do with donelayout
+
+            ) -- END case of
+        ) -- END while()
+    ) -- END try()
+    catch
+    (
+        messageBox ("Aurora importer Script Error reading lyt file at line:" + lineNum as string)
+        close mdlStream
+        throw
+    )
+    close mdlStream
+    nx_FlushBuffer()
+    if showprogress then progressEnd()
 )
 
 

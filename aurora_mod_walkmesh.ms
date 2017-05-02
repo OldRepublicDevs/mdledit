@@ -48,7 +48,7 @@ version:2
 
     on create do (
         local node = selection[1]
-        if(node != undefined) then (
+        if(node != undefined and classof node as string == "Editable_mesh") then (
             if(not (meshop.GetMapSupport node 0)) then (
                 meshop.setMapSupport node 0 true
             )
@@ -66,9 +66,9 @@ version:2
 	parameters paramblock rollout:mdlWalkmeshParams
 	(
 		ig_boxes type:#stringtab tabsizevariable:true
-    	meshtype        type:#integer default:1 --ui:radio_meshtype
+    	meshtype        type:#integer default:0 --ui:radio_meshtype
     	ig_recalc type:#integer default:1 --ui:chk_recalc
-    	ig_multimode type:#integer default:1 ui:chk_multimode
+    	ig_multimode type:#integer default:1 --ui:chk_multimode
     	room type:#integer default:-1 ui:spn_transition
 
     	-- exportwok is deemed redundant based on user input from DLA
@@ -82,7 +82,11 @@ version:2
 
 	rollout mdlWalkmeshParams "Walkmesh Options" width:162 height:335
     (
-        --radiobuttons radio_meshtype "" labels:#("Tile [aabb]", "Placeable [PWK]", "Door [DWK]") align:#left
+        group "Walkmesh Type"
+        (
+            radiobuttons radio_meshtype "" default:0 labels:#("Area (aabb)", "Placeable (pwk)", "Door (dwk, closed)", "Door (dwk, open1)", "Door (dwk, open2)") align:#left
+            --button btn_meshtypeconvert "Set Up" toolTip:"Creates necessary dummies, changes name, moves under correct node."
+        )
         --checkbox box_exportwok "Export WOK File" align:#left
         --checkbox box_autogrpfaces "Auto-Group Faces" align:#left
         --spinner spn_angle "Angle:" align:#right
@@ -92,12 +96,13 @@ version:2
             listbox list_links height:5 selection:0
             button btn_removetrans "Remove Link" align:#center toolTip:"Removes selected link."
         )
-        group "Add Link To Edge(s)"
+        group "Add Room Link To Edge(s)"
         (
             spinner spn_transition "Room:" range:[-1,100,-1] offset:[0,3] align:#right type:#integer across:2
             button btn_addtrans "Apply" align:#center toolTip:"Adds room link to the currently selected edge(s)."
         )
 
+        /*
         group "AABB Details"
         (
             listbox list_boxes "Boxes" height:5 selection:0
@@ -110,6 +115,7 @@ version:2
             --checkbox chk_recalc "Recalc AABB on export"
             checkbox chk_multimode "Across multiple meshes"
         )
+        */
 
         fn GetLinks =
         (
@@ -200,7 +206,9 @@ version:2
         )
 
         on mdlWalkmeshParams open do
-        (
+        ( 
+	    if not classof node as string == "Editable_mesh" then return 0
+
             -- make sure there is a walk material for this node
             local node = selection[1]
             --local originalobject = modPanel.getCurrentObject()
@@ -209,11 +217,12 @@ version:2
             --modPanel.setCurrentObject originalobject
             --setSelectionLevel node {#edge}
             --subObjectLevel = 2
-            if node.material == undefined then
+            local matName = "NWN_WalkMaterial"
+            if node.material == undefined or node.material.name != matName then
             (
                 node.material = nx_createNWNWalkMaterial()
             )
-
+            /*
             if ig_boxes.count == 0 then
             (
                 format "Rebuilding AABB list\r\n"
@@ -225,8 +234,11 @@ version:2
 					ig_boxes[ig_boxes.count+1] = p
 				)
 			)
+            */
 
             GetLinks()
+
+            if(meshtype > 0) then radio_meshtype.state = meshtype
 
             -- populate list box
             /*
@@ -334,6 +346,266 @@ version:2
 			(
 				format "%\r\n" b
 			)
+        )
+
+        on radio_meshtype changed nmeshtype do
+        (
+            if(nmeshtype > 0) then
+            (
+                local oAuroraBase = undefined
+                oParentBitchyOne = undefined
+                local oMesh = selection[1]
+                if oMesh != undefined then
+                (
+                    oParentBitchyOne = oMesh.parent
+                    while(oAuroraBase == undefined and oParentBitchyOne != undefined) do
+                    (
+                        --format "Currently checking: % \n(class: %)\n" oParentBitchyOne (classof oParentBitchyOne)
+                        if(classof oParentBitchyOne as string == "aurorabase") then
+                        (
+                            --format "Found aurorabase!\n"
+                            oAuroraBase = oParentBitchyOne
+                        )
+                        else
+                         oParentBitchyOne = oParentBitchyOne.parent
+                    )
+                )
+                if (oAuroraBase == undefined) then messageBox "The mesh does not seem to be descended from an AuroraBase. Make sure that the mesh or one of its parents/ancestors is linked to an AuroraBase and try again." title:"Message" beep:false
+                else
+                (
+                    meshtype = nmeshtype
+                    local oWalkRoot = undefined
+                    for oChild in oAuroraBase.children do
+                    (
+                        if(matchPattern oChild.name pattern:"*_pwk" or matchPattern oChild.name pattern:"*_dwk") then
+                        (
+                            oWalkRoot = oChild
+                            exit
+                        )
+                    )
+
+                    if nmeshtype == 1 then
+                    (
+                        for oChild in oAuroraBase.children do
+                        (
+                            if(oChild.modifiers["AuroraWalkmesh"] != undefined and oChild.modifiers["AuroraWalkmesh"].meshtype == 1 and oChild != oMesh) then
+                            (
+                                messageBox "This model already has an area walkmesh. It will be unlinked from the model." title:"Warning"
+                                oChild.parent = undefined
+                                oChild.modifiers["AuroraWalkmesh"].meshtype = 0
+                                --exit
+                            )
+                        )
+
+                        if oMesh.parent != oAuroraBase then
+                        (
+                            oMesh.parent = oAuroraBase
+                        )
+
+                        if oWalkRoot != undefined then
+                        (
+                            delete oWalkRoot
+                        )
+
+                        local oUse1 = undefined
+                        local oUse2 = undefined
+                        for oChild in oMesh.children do
+                        (
+                            if(matchPattern oChild.name pattern:"*pwk_*01" or matchPattern oChild.name pattern:"*dwk_*01") then
+                            (
+                                oUse1 = oChild
+                            )
+                            if(matchPattern oChild.name pattern:"*pwk_*02" or matchPattern oChild.name pattern:"*dwk_*02") then
+                            (
+                                oUse2 = oChild
+                            )
+                            if(oUse1 != undefined and oUse2 != undefined) then exit
+                        )
+                        if(oUse1 != undefined) then
+                        (
+                            delete oUse1
+                        )
+                        if(oUse2 != undefined) then
+                        (
+                            delete oUse2
+                        )
+
+                        if(matchPattern oMesh.name pattern:"*_wg*") then
+                        (
+                            oMesh.name = "WALKMESH"
+                        )
+
+                    )
+                    else if nmeshtype == 2 then
+                    (
+                        for oChild in oAuroraBase.children do
+                        (
+                            if(oChild.modifiers["AuroraWalkmesh"] != undefined and oChild.modifiers["AuroraWalkmesh"].meshtype == 1 and oChild != oMesh) then
+                            (
+                                messageBox "This model already has an area walkmesh. It will be unlinked from the model." title:"Warning"
+                                oChild.parent = undefined
+                                oChild.modifiers["AuroraWalkmesh"].meshtype = 0
+                                --exit
+                            )
+                        )
+
+                        if(oWalkRoot == undefined) then
+                        (
+                            oWalkRoot = dummy pos:oAuroraBase.pos
+                            oWalkRoot.boxsize = [10,10,10]
+                            oWalkRoot.parent = oAuroraBase
+                        )
+
+                        if oMesh.parent != oWalkRoot then
+                        (
+                            oMesh.parent = oWalkRoot
+                        )
+
+                        for oChild in oWalkRoot.children do
+                        (
+                            if(oChild.modifiers["AuroraWalkmesh"] != undefined and oChild.modifiers["AuroraWalkmesh"].meshtype > 1 and oChild != oMesh) then
+                            (
+                                messageBox "This model already has a pwk/dwk walkmesh. It will be unlinked from the model." title:"Warning"
+                                oChild.parent = undefined
+                                oChild.modifiers["AuroraWalkmesh"].meshtype = 0
+                                --exit
+                            )
+                        )
+
+                        local oUse1 = undefined
+                        local oUse2 = undefined
+                        for oChild in oMesh.children do
+                        (
+                            if(matchPattern oChild.name pattern:"*pwk_*01" or matchPattern oChild.name pattern:"*dwk_*01") then
+                            (
+                                oUse1 = oChild
+                            )
+                            if(matchPattern oChild.name pattern:"*pwk_*02" or matchPattern oChild.name pattern:"*dwk_*02") then
+                            (
+                                oUse2 = oChild
+                            )
+                            if(oUse1 != undefined and oUse2 != undefined) then exit
+                        )
+                        if(oUse1 == undefined) then
+                        (
+                            oUse1 = dummy name:"pwk_use01" pos:[0,85,0]
+                            oUse1.boxsize = [10,10,10]
+                            oUse1.parent = oMesh
+                        )
+                        if(oUse2 == undefined) then
+                        (
+                            oUse2 = dummy name:"pwk_use02" pos:[0,-85,0]
+                            oUse2.boxsize = [10,10,10]
+                            oUse2.parent = oMesh
+                        )
+
+                        oUse1.name = "pwk_use01"
+                        oUse2.name = "pwk_use02"
+
+                        oWalkRoot.name = (oAuroraBase.name + "_pwk")
+
+                        oMesh.name = (oAuroraBase.name + "_wg")
+                    )
+                    else if(nmeshtype == 3 or nmeshtype == 4 or nmeshtype == 5) then
+                    (
+                        for oChild in oAuroraBase.children do
+                        (
+                            if(oChild.modifiers["AuroraWalkmesh"] != undefined and oChild.modifiers["AuroraWalkmesh"].meshtype ==1 and oChild != oMesh) then
+                            (
+                                messageBox "This model already has an area walkmesh. It will be unlinked from the model." title:"Warning"
+                                oChild.parent = undefined
+                                oChild.modifiers["AuroraWalkmesh"].meshtype = 0
+                                --exit
+                            )
+                        )
+
+                        if(oWalkRoot == undefined) then
+                        (
+                            oWalkRoot = dummy pos:oAuroraBase.pos
+                            oWalkRoot.boxsize = [10,10,10]
+                            oWalkRoot.parent = oAuroraBase
+                        )
+
+                        if oMesh.parent != oWalkRoot then
+                        (
+                            oMesh.parent = oWalkRoot
+                        )
+
+                        for oChild in oWalkRoot.children do
+                        (
+                            if(oChild.modifiers["AuroraWalkmesh"] != undefined and oChild.modifiers["AuroraWalkmesh"].meshtype > 1 and oChild != oMesh) then
+                            (
+                                if(oChild.modifiers["AuroraWalkmesh"].meshtype < 3 or oChild.modifiers["AuroraWalkmesh"].meshtype == nmeshtype) then
+                                (
+                                    messageBox "This model already has a conflicting walkmesh. It will be unlinked from the model." title:"Warning"
+                                    oChild.parent = undefined
+                                    oChild.modifiers["AuroraWalkmesh"].meshtype = 0
+                                    --exit
+                                )
+                            )
+                        )
+
+                        local oUse1 = undefined
+                        local oUse2 = undefined
+                        for oChild in oMesh.children do
+                        (
+                            if(matchPattern oChild.name pattern:"*pwk_*01" or matchPattern oChild.name pattern:"*dwk_*01") then
+                            (
+                                oUse1 = oChild
+                            )
+                            if(matchPattern oChild.name pattern:"*pwk_*02" or matchPattern oChild.name pattern:"*dwk_*02") then
+                            (
+                                oUse2 = oChild
+                            )
+                            if(oUse1 != undefined and oUse2 != undefined) then exit
+                        )
+                        if(oUse1 == undefined) then
+                        (
+                            oUse1 = dummy pos:[0,85,0]
+                            oUse1.boxsize = [10,10,10]
+                            oUse1.parent = oMesh
+                        )
+                        if(oUse2 == undefined) then
+                        (
+                            oUse2 = dummy pos:[0,-85,0]
+                            oUse2.boxsize = [10,10,10]
+                            oUse2.parent = oMesh
+                        )
+
+                        local sName
+                        local sName1
+                        local sName2
+                        case nmeshtype of(
+                            3:
+                            (
+                                sName1 = "DWK_dp_closed_01"
+                                sName2 = "DWK_dp_closed_02"
+                                sName = "DWK_wg_closed"
+                            )
+                            4:
+                            (
+                                sName1 = "DWK_dp_open1_01"
+                                sName2 = "DWK_dp_open1_02"
+                                sName = "DWK_wg_open1"
+                            )
+                            5:
+                            (
+                                sName1 = "DWK_dp_open2_01"
+                                sName2 = "DWK_dp_open2_02"
+                                sName = "DWK_wg_open2"
+                            )
+                        )
+
+                        oUse1.name = sName1
+                        oUse2.name = sName2
+
+                        oWalkRoot.name = (oAuroraBase.name + "_DWK")
+
+                        oMesh.name = sName
+                    )
+                    radio_meshtype.state = nmeshtype
+                )
+            )
         )
     )
 
