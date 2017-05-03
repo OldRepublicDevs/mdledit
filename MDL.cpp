@@ -512,7 +512,7 @@ void MDL::CheckPeculiarities(){
     std::stringstream ssReturn;
     bool bUpdate = false;
     Report("Checking for peculiarities...");
-    ssReturn<<"Lucky you! Your model has some rare peculiarities:";
+    ssReturn<<"Lucky you! Your model has some peculiarities:";
     if(!Data.MH.GH.RuntimeArray1.empty()){
         ssReturn<<"\r\n - First empty runtime array in the GH has a some nonzero value!";
         bUpdate = true;
@@ -686,8 +686,8 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                               GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
                               ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                     else{
-                        ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
-                        bUpdate = true;
+                        //ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
+                        //bUpdate = true;
                     }
                 }
             }

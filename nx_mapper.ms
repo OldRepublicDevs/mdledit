@@ -41,27 +41,35 @@ global nx_animpartsmapper_flag
 -- parts anim mapper gui
 rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:524
 (
+    local oTargetBase = undefined
+
+	fn is_modelbase obj =
+	(
+    	(iskindof obj aurorabase)
+	)
+
 	GroupBox grp1 "1. Sources to Targets" pos:[4,7] width:154 height:507
 	edittext edt_mdl "" pos:[14,26] width:126 height:24
 	button btn_browse "Browse MDL" pos:[19,53] width:80 height:19
 	button btn_loadmdl "Load" pos:[103,53] width:36 height:19
 	listbox lst_mdlobjs "Source MDL Nodes" pos:[13,78] width:136 height:13
-	listbox lst_trgnobhs "Target Scene Nodes" pos:[13,285] width:136 height:13
-	button btn_refresh "Refresh Scene Nodes" pos:[20,485] width:121 height:21
+	pickbutton btn_setbase "Pick Target MDL Base" filter:is_modelbase pos:[20,275] width:121 height:21
+	listbox lst_trgnobhs "Target MDL Nodes" pos:[13,300] width:136 height:12
+	button btn_refresh "Refresh Target Nodes" pos:[20,485] width:121 height:21
 
 	button btn_addmap ">>" pos:[165,335] width:40 height:28
 	button btn_delmap "<<" pos:[165,375] width:40 height:28
 	button btn_automap "Auto" pos:[165,414] width:40 height:28
 
-	GroupBox grp3 "Mappings: Source --> Target" pos:[213,280] width:374 height:195
-	listbox lst_mappings "" pos:[225,296] width:354 height:13
+	GroupBox grp3 "Mappings: Source --> Target" pos:[213,280] width:374 height:190
+	listbox lst_mappings "" pos:[225,296] width:354 height:12
 	GroupBox grp4 "2. Anim Data" pos:[213,8] width:373 height:264
-	spinner spn_inserrtpoint "Insert Point:" pos:[422,240] width:125 height:16 enabled:false range:[0,100000,0] type:#integer scale:1
 	button btn_selectall "Sel All" pos:[225,202] width:50 height:16
 	button btn_deselectall "Desel All" pos:[280,202] width:50 height:16
 	button btn_addanim "Add" pos:[335,203] width:50 height:16
 	multiListBox lst_availanims "Anim names available:" pos:[224,30] width:161 height:11
-	dropdownList drp_options "Options" pos:[226,221] width:146 height:40 items:#("Anim Names Defined", "Append To End", "Use Insert Point")
+	dropdownList drp_options "Options" pos:[226,221] width:146 height:40 items:#("Append To End", "Use Insert Point")
+	spinner spn_inserrtpoint "Insert Point:" pos:[422,240] width:125 height:16 enabled:false range:[0,100000,0] type:#integer scale:1
 	multiListBox lst_animstoproc "Anims to process:" pos:[415,30] width:161 height:11
 	button btn_selectall2 "Sel All" pos:[416,203] width:50 height:16
 	button btn_deselectall2 "Desel All" pos:[471,203] width:50 height:16
@@ -69,16 +77,51 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 	button btn_import "Import" pos:[213,486] width:136 height:26
 	checkbox chk_resetorient "Reset Orientation" pos:[360,490] checked:false
 
+	fn RefreshTargetNodes =
+	(
+        if(oTargetBase != undefined) then
+        (
+            local temp = #()
+            -- load scene objects
+            for o in $objects do
+            (
+                if isdescendantof o oTargetBase then append temp o.name
+            )
+            lst_trgnobhs.items = temp
+        )
+    )
+
 	on nx_animpartsmapper open do
 	(
-		local temp = #()
+        oTargetBase = undefined
+	    local base = undefined
+        local basecount = 0
+	    for o in selection do
+        (
+            if (iskindof o aurorabase) then
+            (
+                basecount += 1
+                base = o
+            )
+        )
+        if basecount == 0 then
+        (
+    	    -- no model base was selected so see if only 1 in the scene.
+    	    -- If there is only 1 then select it
+    	    for o in $objects do
+    	    (
+        	    if (iskindof o aurorabase) then
+        	    (
+            	    basecount += 1
+            	    base = o
+        	    )
+    	    )
+	    )
+        if basecount == 1 then (
+            oTargetBase = base
+        )
 
-		-- load scene objects
-		for o in $objects do
-		(
-			append temp o.name
-		)
-		lst_trgnobhs.items = temp
+        RefreshTargetNodes()
 
 		nx_animpartsmapper_flag = true
 	)
@@ -86,6 +129,12 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 	on nx_animpartsmapper close do
 	(
     	nx_animpartsmapper_flag = false
+	)
+
+	on btn_setbase picked obj do
+	(
+        oTargetBase = obj
+        RefreshTargetNodes()
 	)
 
 	on btn_browse pressed do
@@ -148,14 +197,7 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 
 	on btn_refresh pressed do
 	(
-		local temp = #()
-
-		-- load scene objects
-		for o in $objects do
-		(
-			append temp o.name
-		)
-		lst_trgnobhs.items = temp
+        RefreshTargetNodes()
 	)
 
 	on drp_options selected val do
@@ -163,8 +205,7 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 		case val of
 		(
 			1: spn_inserrtpoint.enabled = false
-			2: spn_inserrtpoint.enabled = false
-			3: spn_inserrtpoint.enabled = true
+			2: spn_inserrtpoint.enabled = true
 		)
 	)
 
@@ -188,63 +229,7 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 	    local isNotBinary = ReadByte binMdlStream
 	    fclose binMdlStream
 
-	    if (isNotBinary == 0) then
-	    (
-            MessageBox("MDL file is binary!")
-            /*
-	        -- we need to decompile this model. We assume it is a real model and not junk
-	        local tstamp = (timestamp() as string)
-	        fControl = scriptsPath+"nwmax\\scratch\\"+tstamp+".txt"
-	        local pFilePath = getFilenamePath pFile
-	        local chkLoop
-	        local bDecompiled = false
-
-	        if g_ismax then
-	        (
-		        local cmdFile
-		        local strCmd
-		        cmdFile = createFile (scriptsPath+"nwmax\\scratch\\import.bat")
-		        format "\"%\" -d \"%\" \"%\\\"\r\n" g_compiler pFile pFilePath to:cmdFile
-		        flush cmdFile
-		        close cmdFile
-		        strCmd = "\"" + scriptsPath + "nwmax\\scratch\\import.bat\""
-		        DOSCommand (strCmd)
-	        ) else
-	        (
-		        clearListener()
-		        nx_FlushBuffer reset:true
-		        -- Have to hard code the delim here into verbose mode
-		        format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\scratch.txt") "~\n" to:g_strBuffer
-		        format "Processing ...%" g_delim to:g_strBuffer
-		        format "\"%\" -d \"%\" \"%\\\" > \"%\"%" g_compiler pFile pFilePath (scriptsPath+"nwmax\\scratch\\decomp.txt") "~\n" to:g_strBuffer
-		        format "echo \"done\" > \"%\"%" fControl "~\n" to:g_strBuffer
-
-		        format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\import.bat") "~\n" to:g_strBuffer
-		        format "\"%\" -d \"%\" \"%\\\" > \"%\"%" g_compiler pFile pFilePath (scriptsPath+"nwmax\\scratch\\decomp.txt") "~\n" to:g_strBuffer
-		        format "echo \"done\" > \"%\"%" fControl "~\n" to:g_strBuffer
-		        format "</snoopstart>%" "~\n" to:g_strBuffer
-
-		        format "<commandstart>%" "~\n" to:g_strBuffer
-		        format "\"%import.bat\"%" (scriptsPath+"nwmax\\scratch\\") "~\n" to:g_strBuffer
-		        format "</commandstart>%" "~\n" to:g_strBuffer
-
-		        format "</snoopstart>%" "~\n" to:g_strBuffer
-		        format "</snoopend>%" "~" to:g_strBuffer
-		        if g_delim == "~\n" then format "\r\n" to:g_strBuffer
-		        nx_FlushBuffer force:true
-
-		        -- Start up model dialog to wait for this processing to complete
-		        createdialog rl_binmdl modal:true
-		     )
-	        -- check for ascii model exists
-	        pFile = pFile + ".ascii"
-	        if (nx_existFile pFile) == false then
-	        (
-	            MessageBox("Binary MDL File not decompiled. Check file is valid or NWNmdlcomp is present.")
-	            return false
-	        )
-            */
-	    )
+	    if (isNotBinary == 0) then MessageBox("Invalid ascii MDL file!")
 
 	    -- Open up the file
 	    local mdlStream = openFile pFile mode:"r"
@@ -404,40 +389,12 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 
 	on btn_import pressed do
 	(
-	    /*
-	    The call structure for the import function
-			fn ImportNWNmdl pFile importAnims showWarnings \
-				loadGeom:true \
-				animLoadBase:undefined \
-				loadsingleanim:undefined \
-				insertpoint:0 \
-				mappingtbl:undefined \
-	    */
-
 	    -- make sure the model base is selected
-	    local base = selection[1]
-	    if not (iskindof base aurorabase) then
+	    local base = oTargetBase
+	    if base == undefined then
 	    (
-    	    -- no model base was selected so see if only 1 in the scene.
-    	    -- If there is only 1 then select it, else show message.
-    	    local basecount = 0
-    	    for o in $objects do
-    	    (
-        	    if (iskindof o aurorabase) then
-        	    (
-            	    basecount += 1
-            	    base = o
-        	    )
-    	    )
-
-    	    if basecount != 1 then
-    	    (
-    		    messagebox "Model base not selected"
-    		    return false
-		    )
-
-		    -- set the selection
-		    selection = base
+            messagebox "Target Model Base not selected"
+            return false
 	    )
 
 	    -- make sure there are anims marked for processing
@@ -472,14 +429,8 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
         insertframe = -1
         case drp_options.selection of
         (
-	        -- insert based on named anims
-	        1:
-	        (
-		        insertframe = 0
-	        )
-
 	        -- insert at end of last named anim
-	        2:
+	        1:
 	        (
 		        -- find the largets frame ref on model base
 		        local largestframe = 0
@@ -495,7 +446,7 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 	        )
 
 	        -- insert at specified point
-	        3: insertframe = spn_inserrtpoint.value
+	        2: insertframe = spn_inserrtpoint.value
         )
 
         bStopWork = not (ProgressUpdate ((animcount * 100)/animlist.count))
@@ -515,10 +466,8 @@ rollout nx_animpartsmapper "Animation Parts Importing Mapper" width:598 height:5
 	            animloadtype:(drp_options.selection) \
 	            showprogress:true
 	        enableSceneRedraw()
-        ) else
-        (
-            format "Anim: Insert frame is -1\r\n"
         )
+        else format "Anim: Insert frame < 0\r\n"
 
         if(chk_resetorient.checked) then
         (

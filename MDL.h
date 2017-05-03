@@ -969,7 +969,7 @@ class MDL: public BinaryFile{
 
     //Version
     bool bK2 = true;
-    bool bDebug = true;
+    bool bDebug = false;
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;

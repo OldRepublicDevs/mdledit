@@ -934,6 +934,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             for(int n = 0; n < 32; n++){
                 if(pown(2, n) & face->nSmoothingGroup) sPrint << n+1 <<" ";
             }
+            /*
             sPrint << "\r\n";
             sPrint << "\r\nBounding Box Min: "<<std::setprecision(5)<<face->vBBmin.fX;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmin.fY;
@@ -941,6 +942,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\nBounding Box Max: "<<std::setprecision(5)<<face->vBBmax.fX;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fY;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fZ;
+            */
         }
         else if(cItem.at(0) == "Vertex Indices 2"){
             VertIndicesStruct * vert = (VertIndicesStruct * ) lParam;
@@ -1245,6 +1247,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\nMaterial ID: " << face->nMaterialID;
             if(face->nMaterialID != 7) sPrint << "\r\nAdjacent Edges: "<<face->nAdjacentFaces[0]<<", "<<face->nAdjacentFaces[1]<<", "<<face->nAdjacentFaces[2];
             sPrint << "\r\nVertex Indices: "<<face->nIndexVertex[0]<<", "<<face->nIndexVertex[1]<<", "<<face->nIndexVertex[2];
+            /*
             sPrint << "\r\n";
             sPrint << "\r\nBounding Box Min: "<<std::setprecision(5)<<face->vBBmin.fX;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmin.fY;
@@ -1252,6 +1255,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\nBounding Box Max: "<<std::setprecision(5)<<face->vBBmax.fX;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fY;
             sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fZ;
+            */
         }
         else if(cItem.at(0) == "Edges"){
             sPrint << "Edges";

@@ -97,7 +97,7 @@ rollout nx_util2 "Skin Tools" width:162 height:68
 
 rollout nx_util3 "Mesh Tools" width:162 height:68
 (
-    button btn_trimesh "Trimesh"  width:144 height:18 align:#center toolTip:"Convert mesh into a trimesh, preserving modifiers"
+    button btn_trimesh "To Trimesh"  width:144 height:18 align:#center toolTip:"Convert mesh into a trimesh, preserving modifiers"
     --button btn_cryomesh "Cryomesh" width:144 height:18 align:#center toolTip:"Save selected mesh states to file for later reload"
     button btn_shadowchecker "Check Shadows" width:144 height:18 align:#center toolTip:"Check shadow validity of all selected objects"
     button btn_tidy_materials "Rationalise Materials" width:144 height:18 align:#center toolTip:"Rationalise the materials in the scene"
@@ -425,13 +425,13 @@ rollout nx_util3 "Mesh Tools" width:162 height:68
 rollout nx_util4 "Anim Tools" width:162 height:68
 (
     button btn_animeditor "Anim Editor" width:144 height:18
-    button btn_reset_controllers "Reset Orientation" width:144 height:18 toolTip:"Resets the rotation controller to tcb then back to linear"
-    button btn_animcopy "Copy animation keys" width:144 height:18 toolTip:"Copy Anim keys in the specified range to a target start frame"
     button btn_animapper "Anim Mapper" width:144 height:18 toolTip:"Import animations off nodes in an MDL and map to scene nodes"
     button btn_keymaster "Key Master" width:144 height:18 toolTip:"A number of mass key manipulation functions"
     button btn_keytweak "Mass Key Tweaker" width:144 height:18 toolTip:"Mass tweaking of rot and pos keys"
-    button btn_bakeanim "Bake Anims" width:144 height:18
+    button btn_animcopy "Copy Anim Keys" width:144 height:18 toolTip:"Copy Anim keys in the specified range to a target start frame"
     button btn_keyreduct "Reduce Anim Keys" width:144 height:18 toolTip:"Rationalise the animation keys for the selected nodes"
+    button btn_bakeanim "Bake Anims" width:144 height:18
+    button btn_reset_controllers "Reset Orientation" width:144 height:18 toolTip:"Resets the rotation controller to tcb then back to linear"
     --button btn_animbrowse "Anim Broswer" width:144 height:18
     --button btn_eventbrowse "Event Broswer" width:144 height:18
     --button btn_mayakeyrests "Reset Maya Rot Keys" width:144 height:18
@@ -589,7 +589,7 @@ rollout nx_util1 "General Utils" width:162 height:68
     button btn_sel_child "Children" width:68 height:18 align:#right toolTip:"Select Children"
     checkbutton btn_make_dummy_helper "Dummy" width:68 height:18 align:#left across:2 toolTip:"Create a stock Dummy helper"
     button btn_environ "Set Environ" width:68 height:18 align:#right toolTip:"Set default unit scales (cm)"
-    button btn_makeintodummy "IntoDummy" width:68 height:18 align:#left across:2 tooltop:"Make selected objects into Dummy helpers"
+    button btn_makeintodummy "To Dummy" width:68 height:18 align:#left across:2 tooltop:"Make selected objects into Dummy helpers"
     button btn_linker "Fast Linker" width:68 height:18 align:#right toolTip:"Link all selected objects to the AuroraBase in the selection"
 
     -- speedbar #2

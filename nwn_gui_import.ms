@@ -40,26 +40,64 @@ fn nx_importer =
 	    2: ( bDoGeom=true; bDoAnims=false; )
 	    3: (
 				bDoGeom=false; bDoAnims=true;
+
+                local base = undefined
+                local basecount = 0
+                for o in selection do
+                (
+                    if (iskindof o aurorabase) then
+                    (
+                        basecount += 1
+                        base = o
+                    )
+                )
+                if basecount == 0 then
+                (
+                    -- no model base was selected so see if only 1 in the scene.
+                    -- If there is only 1 then select it
+                    for o in $objects do
+                    (
+                        if (iskindof o aurorabase) then
+                        (
+                            basecount += 1
+                            base = o
+                        )
+                    )
+                )
+                if basecount == 1 then (
+                    targetAnimBase = base
+                )
+
+                if(targetAnimBase != undefined) then
+                (
+                    -- find the largets frame ref on model base
+                    local largestframe = 0
+                    for an in base.animations do
+                    (
+                        tempstr = filterString an " "
+                        if (tempstr.count > 3) and ((tempstr[3] as integer) > largestframe) then
+                        (
+                            largestframe = tempstr[3] as integer
+                        )
+                    )
+                    insertpoint = largestframe + 10
+                )
+
 				if ImportRollout.edt_animname.text.count > 0 then
 				(
 					animname = #()
 	    	        append animname (ImportRollout.edt_animname.text)
     	        )
-    	        if animname == undefined then
-    	        (
-        	        insertpoint = 10
-    	        ) else (
-        	        insertpoint = ImportRollout.spn_startframe.value
+
+    	        if ImportRollout.spn_startframe.value > -1 then(
+        	        insertpoint = ImportRollout.spn_startframe.value + 10
     	        )
 
 	            -- check to make sure we have only a model base selected
-	            if (nx_strclassof selection[1]) != "aurorabase" then
+	            if targetAnimBase == undefined then
 	            (
-    	            MessageBox "No target model base selected for Animation Import" title:"No Selelction Found"
+    	            MessageBox "No target model aurorabase selected for Animation Import" title:"No Selection Found"
     	            return 0
-	            ) else
-	            (
-    	            targetAnimBase = selection[1]
 	            )
 	       )
     )
@@ -70,15 +108,6 @@ fn nx_importer =
     )
     else
     (
-    /*
-    The call structure for the import function
-		fn ImportNWNmdl pFile importAnims showWarnings \
-			loadGeom:true \
-			animLoadBase:undefined \
-			loadsingleanim:undefined \
-			insertpoint:0 \
-			mappingtbl:undefined \
-    */
         clearListener()
         disableSceneRedraw()
         local ImportLocation
@@ -153,7 +182,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		radioButtons rdo_options "" width:123 height:48 labels:#("Import Geom+Anims", "Import Geom Only", "Import Anims Only") default:1
 		label lbl_animname "Anim name to load:" enabled:false
 		edittext edt_animname enabled:false
-		spinner spn_startframe "Insert Frame:" type:#integer range:[0,100000,0] enabled:false
+		spinner spn_startframe "Insert Frame:" type:#integer range:[-1,100000,-1] enabled:false
 		checkbox chk_resetctrl "Reset Orientation" checked:false
 		checkbox warn_checkbox "Show warnings" width:128 height:16
 		checkbox chk_uselyt "Use Layout Position" checked:true
@@ -225,9 +254,12 @@ rollout nx_util6 "Area Tools" width:162 height:68
 (
     -- ui
     button btn_minimap "MiniMap Maker" width:144 height:18 align:#center
-    button btn_exportlyt "Export Layout File" width:144 height:18 align:#center
-    button btn_importlyt "Import Layout File" width:144 height:18 align:#center
-    checkbox chk_withmodels "With Models" checked:false
+    group "Layout File"
+    (
+        button btn_importlyt "Import" width:68 height:18 align:#left across:2 toolTip:"Import layout file. 'With Models' also imports relevant models from the same directory."
+        button btn_exportlyt "Export" width:68 height:18 align:#right enabled:false toolTip:"Export layout file. 'With Models' also exports relevant models to the same directory."
+        checkbox chk_withmodels "With Models" checked:false enabled:false
+    )
 
     -- ensure only active if running max version of nwmax
     on nx_util6 open do
