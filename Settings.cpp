@@ -27,13 +27,13 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             HWND hList4 = CreateWindowEx(WS_EX_CLIENTEDGE, WC_LISTVIEW, "", WS_CHILD | WS_VISIBLE | LVS_EDITLABELS | LVS_NOCOLUMNHEADER | LVS_REPORT | LVS_SINGLESEL,
                                          240, 25 + 190, 230, 60,
                                          hwnd, (HMENU) IDC_TEXTURE_LISTVIEW4, NULL, NULL);
-            ListView_SetExtendedListViewStyle(hList1, LVS_EX_DOUBLEBUFFER | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_CHECKBOXES);
-            ListView_SetExtendedListViewStyle(hList2, LVS_EX_DOUBLEBUFFER | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_CHECKBOXES);
-            ListView_SetExtendedListViewStyle(hList3, LVS_EX_DOUBLEBUFFER | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_CHECKBOXES);
-            ListView_SetExtendedListViewStyle(hList4, LVS_EX_DOUBLEBUFFER | LVS_EX_AUTOSIZECOLUMNS | LVS_EX_CHECKBOXES);
+            ListView_SetExtendedListViewStyle(hList1, LVS_EX_DOUBLEBUFFER /*| LVS_EX_AUTOSIZECOLUMNS */ | LVS_EX_CHECKBOXES);
+            ListView_SetExtendedListViewStyle(hList2, LVS_EX_DOUBLEBUFFER /*| LVS_EX_AUTOSIZECOLUMNS */ | LVS_EX_CHECKBOXES);
+            ListView_SetExtendedListViewStyle(hList3, LVS_EX_DOUBLEBUFFER /*| LVS_EX_AUTOSIZECOLUMNS */ | LVS_EX_CHECKBOXES);
+            ListView_SetExtendedListViewStyle(hList4, LVS_EX_DOUBLEBUFFER /*| LVS_EX_AUTOSIZECOLUMNS */ | LVS_EX_CHECKBOXES);
             LVCOLUMN col;
             col.mask = LVCF_FMT | LVCF_SUBITEM | LVCF_WIDTH;
-            col.fmt = LVCFMT_FIXED_WIDTH;
+            /*col.fmt = LVCFMT_FIXED_WIDTH; */
             col.iSubItem = 0;
             col.cx = 120;
             ListView_InsertColumn(hList1, 0, &col);

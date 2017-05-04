@@ -1,8 +1,8 @@
 #ifndef GENERAL_H_INCLUDED
 #define GENERAL_H_INCLUDED
 
-#define _WIN32_WINNT 0x0602
-#define _WIN32_IE 0x601
+#define _WIN32_WINNT 0x0501 //0x0602
+#define _WIN32_IE 0x0500 //0x601
 #include <windows.h>
 #include <commctrl.h>
 #include <math.h>

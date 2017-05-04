@@ -71,13 +71,14 @@ bool Frame::Run(int nCmdShow){
     icc.dwSize = sizeof(icc);
     icc.dwICC = ICC_BAR_CLASSES; // ICC_WIN95_CLASSES;
     InitCommonControlsEx(&icc);
-    /**/
+    /** /
 
     // Ensure common control DLL is loaded
     INITCOMMONCONTROLSEX icx;
     icx.dwSize = sizeof(INITCOMMONCONTROLSEX);
-    //icx.dwICC = ICC_BAR_CLASSES; // Specify BAR classes
+    icx.dwICC = ICC_BAR_CLASSES; // Specify BAR classes
     InitCommonControlsEx(&icx); // Load the common control DLL
+    /**/
 
     hFrame = CreateWindowEx(NULL, cClassName, "MDLedit", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                         CW_USEDEFAULT, CW_USEDEFAULT, 368, 610,
