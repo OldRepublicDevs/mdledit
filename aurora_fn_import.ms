@@ -505,7 +505,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
     local objProps = ""
     local quitEarly = false
     local bAnimIsThere = false
-    local bHadAnimKey = false
     local zeroPos
     local zeroRot
 
@@ -618,7 +617,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             objName = tok.ReadToken()
                             objWireColor = color 255 255 255
                             objAmbient = color 255 255 255
-                            objDiffuse = color 0 0 255
+                            objDiffuse = color 255 255 255
                             objSpecular = color 0 0 0
                             objSelfIllum = color 0 0 0
                             objAlpha = 1
@@ -761,7 +760,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "scale":
                         (
                             objScale_float = tok.ReadFloat()
-                            objScale = [1,1,1] --* objScale_float
+                            --objScale = [objScale_float,objScale_float,objScale_float]
+                            --format "Read scale prop: % \n" objScale_float
                         )
                         "aabb":
                         (
@@ -810,7 +810,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 objRender = tok.ReadInteger()
                         )
                         "wirecolor": objWireColor = tok.ReadColor()
-                        "IconSize": objIconSize = tok.ReadFloat()
                         "ambient": objAmbient = tok.ReadColor()
                         "diffuse": objDiffuse = tok.ReadColor()
                         "specular": objSpecular = tok.ReadColor()
@@ -819,21 +818,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                         "transparencyhint": objTransparencyhint = tok.ReadInteger()
 
-                        "tilefade":
-                        (
-                            objTilefadeprop = tok.ReadInteger()
-                            case objTilefadeprop of
-                            (
-                                0: objTilefadeprop = 1
-                                1: objTilefadeprop = 2
-                                2: objTilefadeprop = 4
-                                4: objTilefadeprop = 3
-                                default: objTilefadeprop = 1
-                            )
-                        )
-
                         "selfillumcolor": objSelfIllum = tok.ReadColor()
-                        "setfillumcolor": objSelfIllum = tok.ReadColor()
 
                         "danglymesh": objDanglymesh = tok.ReadInteger()
                         "period": objPeriod = tok.ReadFloat()
@@ -1254,7 +1239,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     ((objType == "trimesh") or
                                      (objType == "danglymesh") or
                                      (objType == "skin") or
-                                     (objType == "aabb")):
+                                     (objType == "aabb") or
+                                     (objType == "lightsaber")):
                                     (
                                         -- Make material, if necessary
                                         local texturepresent = false
@@ -1389,160 +1375,188 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                     if (showWarnings) then messagebox ("Missing texture file: " + textureName1)
                                                 )
                                             )
-                                            /*
-                                            --format "About to set new material name\n"
-                                            --assignNewName objMaterial
-                                            if(NewMaterialName == undefined) then assignNewName objMaterial
-                                            else objMaterial.name = assignNewName objMaterial
-                                            --format "Material with new name: %\n" objMaterial
-                                            */
                                         )
 
-                                        -- Make an editable mesh
-                                        if (objMaterial != undefined) then
-                                        (
-                                            if DEBUG then format "%BUILD MESH OBJECT: make the actual mesh with material\r\n" strIndent1
-                                            newObj = mesh name:objName \
-                                                            vertices:verts \
-                                                            faces:faces \
-                                                            wirecolor:objWireColor \
-                                                            material:objMaterial \
-                                                            materialIDS:surfacemats
-                                        ) else (
-                                            if DEBUG then format "%BUILD MESH OBJECT: make the actual mesh with NO material\r\n" strIndent1
-                                            newObj = mesh name:objName \
-                                                            vertices:verts \
-                                                            faces:faces \
-                                                            wirecolor:objWireColor \
-                                                            materialIDS:surfacemats
-                                        )
 
-                                        -- if aabb, adjust colors.
-                                        if (objType == "aabb") then
+                                        if (objType == "lightsaber") then
                                         (
-                                            meshop.setMapSupport newObj 0 true
-                                            setNumCPVVerts newObj (edgeIndices.count + 1)
-                                            meshop.setMapVert newObj 0 1 [1, 1, 1]
-                                            for i = 2 to (edgeTransitions.count + 1) do meshop.setMapVert newObj 0 i [0, ((100 + edgeTransitions[i-1]) / 255.0), 0]
-                                            buildVCFaces newObj
-                                            for i = 1 to numFaces do
+                                            newObj = AuroraSaber name:objName wirecolor:objWireColor
+
+                                            -- Add in the data
+                                            if verts.count >= 16 then
                                             (
-                                                local cei = #(1, 1, 1)
-                                                for nindex = 1 to 3 do(
-                                                    for j = 1 to edgeIndices.count do
+                                                --blade1
+                                                newObj.blade1p1x = verts[1].x
+                                                newObj.blade1p1y = verts[1].y
+                                                newObj.blade1p1z = verts[1].z
+                                                newObj.blade1p2x = verts[2].x
+                                                newObj.blade1p2y = verts[2].y
+                                                newObj.blade1p2z = verts[2].z
+                                                newObj.blade1p3x = verts[3].x
+                                                newObj.blade1p3y = verts[3].y
+                                                newObj.blade1p3z = verts[3].z
+                                                newObj.blade1p4x = verts[4].x
+                                                newObj.blade1p4y = verts[4].y
+                                                newObj.blade1p4z = verts[4].z
+
+                                                --control point
+                                                newObj.ctrlptx = verts[5].x - verts[1].x
+                                                newObj.ctrlpty = verts[5].y - verts[1].y
+                                                newObj.ctrlptz = verts[5].z - verts[1].z
+
+                                                --blade2
+                                                if verts.count == 176 then
+                                                (
+                                                    newObj.blade2p1x = verts[89].x
+                                                    newObj.blade2p1y = verts[89].y
+                                                    newObj.blade2p1z = verts[89].z
+                                                    newObj.blade2p2x = verts[90].x
+                                                    newObj.blade2p2y = verts[90].y
+                                                    newObj.blade2p2z = verts[90].z
+                                                    newObj.blade2p3x = verts[91].x
+                                                    newObj.blade2p3y = verts[91].y
+                                                    newObj.blade2p3z = verts[91].z
+                                                    newObj.blade2p4x = verts[92].x
+                                                    newObj.blade2p4y = verts[92].y
+                                                    newObj.blade2p4z = verts[92].z
+                                                )
+                                                else
+                                                (
+                                                    newObj.blade2p1x = verts[9].x
+                                                    newObj.blade2p1y = verts[9].y
+                                                    newObj.blade2p1z = verts[9].z
+                                                    newObj.blade2p2x = verts[10].x
+                                                    newObj.blade2p2y = verts[10].y
+                                                    newObj.blade2p2z = verts[10].z
+                                                    newObj.blade2p3x = verts[11].x
+                                                    newObj.blade2p3y = verts[11].y
+                                                    newObj.blade2p3z = verts[11].z
+                                                    newObj.blade2p4x = verts[12].x
+                                                    newObj.blade2p4y = verts[12].y
+                                                    newObj.blade2p4z = verts[12].z
+                                                )
+
+                                                --newObj.UpdateMesh()
+                                            )
+                                            if tverts.count >= 16 then
+                                            (
+                                                for i = 1 to 16 do
+                                                (
+                                                    local index = i
+                                                    if TVerts.count == 176 and index > 8 then index += 80
+                                                    setTVert newObj.mesh i TVerts[i]
+                                                )
+                                            )
+
+                                            -- apply material if defined
+                                            if objMaterial != undefined then newObj.material = objMaterial
+
+                                            -- apply scale
+                                            newObj.saberscale = objScale_float
+                                            --format "Scale value is %, it should be %.\n" newObj.saberscale objScale_float
+                                        )
+                                        else(
+                                            -- Make an editable mesh
+                                            if (objMaterial != undefined) then
+                                            (
+                                                if DEBUG then format "%BUILD MESH OBJECT: make the actual mesh with material\r\n" strIndent1
+                                                newObj = mesh name:objName \
+                                                                vertices:verts \
+                                                                faces:faces \
+                                                                wirecolor:objWireColor \
+                                                                material:objMaterial \
+                                                                materialIDS:surfacemats
+                                            )
+                                            else (
+                                                if DEBUG then format "%BUILD MESH OBJECT: make the actual mesh with NO material\r\n" strIndent1
+                                                newObj = mesh name:objName \
+                                                                vertices:verts \
+                                                                faces:faces \
+                                                                wirecolor:objWireColor \
+                                                                materialIDS:surfacemats
+                                            )
+
+                                            -- special post processing to deal with some sort of odd Max vert position distortion
+                                            for verti = 1 to verts.count do
+                                            (
+                                                setVert newObj verti verts[verti]
+                                            )
+                                            update newObj
+
+                                            if DEBUG then format "%BUILD MESH OBJECT: Created type: %\r\n" strIndent1 (classof newObj)
+
+                                            if DEBUG then format "%BUILD MESH OBJECT: set up smoothing groups\r\n" strIndent1
+                                            -- Assign smoothing groups
+                                            for i = 1 to smoothGroups.count do
+                                            (
+                                                setFaceSmoothGroup newObj i smoothGroups[i]
+                                            )
+
+                                            if DEBUG then format "%BUILD MESH OBJECT: add texture verts\r\n" strIndent1
+                                            -- Add texture verts, if we have them
+                                            if numTVerts > 0 do
+                                            (
+                                                if not meshop.getMapSupport newObj 1 then meshop.setMapSupport newObj 1 true
+                                                setNumTVerts newObj numTVerts
+                                                for i = 1 to numTVerts do setTVert newObj i TVerts[i]
+                                                buildTVFaces newObj
+                                                for i = 1 to numFaces do setTVFace newObj i TVfaces[i]
+                                            )
+                                            if numTVerts1 > 0 do
+                                            (
+                                                meshop.setNumMaps newObj 3
+                                                meshop.setMapSupport newObj 2 true
+                                                meshop.setNumMapVerts newObj 2 numTVerts1
+                                                for i = 1 to numTVerts1 do meshop.setMapVert newObj 2 i TVerts1[i]
+                                                meshop.buildMapFaces newObj 2
+                                                for i = 1 to numFaces do meshop.setMapFace newObj 2 i TVfaces1[i]
+                                            )
+
+                                            if DEBUG then format "%BUILD MESH OBJECT: apply constraints if have them\r\n" strIndent1
+                                            if (objType == "danglymesh") then
+                                            (
+                                                -- we have a danglymesh so apply constraints
+                                                if numConstraints > 0 then
+                                                (
+                                                    for i = 1 to numConstraints do
                                                     (
-                                                        if((edgeIndices[j] / 3 + 1) == i and ((mod edgeIndices[j] 3) + 1) == nindex) then
-                                                            cei[nindex] = j+1
+                                                        local c = (color danglyConstraints[i] danglyConstraints[i] danglyConstraints[i])
+                                                        if DEBUG then format "%apply constraint: % %\r\n" strIndent2 i c
+                                                        meshop.SetVertColor newObj 0 i c
                                                     )
                                                 )
-                                                setVCFace newObj i [cei[1], cei[2], cei[3]]
                                             )
-                                        )
 
-                                        -- special post processing to deal with some sort of odd Max vert position distortion
-                                        for verti = 1 to verts.count do
-                                        (
-                                            setVert newObj verti verts[verti]
-                                        )
-                                        update newObj
-
-                                        if DEBUG then format "%BUILD MESH OBJECT: Created type: %\r\n" strIndent1 (classof newObj)
-
-                                        if DEBUG then format "%BUILD MESH OBJECT: set up smoothing groups\r\n" strIndent1
-                                        -- Assign smoothing groups
-                                        for i = 1 to smoothGroups.count do
-                                        (
-                                            setFaceSmoothGroup newObj i smoothGroups[i]
-                                        )
-
-                                        if DEBUG then format "%BUILD MESH OBJECT: add texture\r\n" strIndent1
-                                        -- Add texture, if we have them
-                                        if numTVerts > 0 do
-                                        (
-                                            setNumTVerts newObj numTVerts
-                                            for i = 1 to numTVerts do setTVert newObj i TVerts[i]
-                                            buildTVFaces newObj
-                                            for i = 1 to numFaces do setTVFace newObj i TVfaces[i]
-                                        )
-                                        if numTVerts1 > 0 do
-                                        (
-                                            meshop.setNumMaps newObj 3
-                                            meshop.setMapSupport newObj 2 true
-                                            meshop.setNumMapVerts newObj 2 numTVerts1
-                                            for i = 1 to numTVerts1 do meshop.setMapVert newObj 2 i TVerts1[i]
-                                            meshop.buildMapFaces newObj 2
-                                            for i = 1 to numFaces do meshop.setMapFace newObj 2 i TVfaces1[i]
-                                        )
-
-                                        if DEBUG then format "%BUILD MESH OBJECT: apply constraints if have them\r\n" strIndent1
-                                        -- we have a danglymesh so apply constraints
-                                        if numConstraints > 0 then
-                                        (
-                                            for i = 1 to numConstraints do
+                                            -- if aabb, import links
+                                            if (objType == "aabb") then
                                             (
-                                                local c = (color danglyConstraints[i] danglyConstraints[i] danglyConstraints[i])
-                                                if DEBUG then format "%apply constraint: % %\r\n" strIndent2 i c
-                                                meshop.SetVertColor newObj 0 i c
+                                                meshop.setMapSupport newObj 0 true
+                                                setNumCPVVerts newObj (edgeIndices.count + 1)
+                                                meshop.setMapVert newObj 0 1 [1, 1, 1]
+                                                for i = 2 to (edgeTransitions.count + 1) do meshop.setMapVert newObj 0 i [0, ((100 + edgeTransitions[i-1]) / 255.0), 0]
+                                                buildVCFaces newObj
+                                                for i = 1 to numFaces do
+                                                (
+                                                    local cei = #(1, 1, 1)
+                                                    for nindex = 1 to 3 do(
+                                                        for j = 1 to edgeIndices.count do
+                                                        (
+                                                            if((edgeIndices[j] / 3 + 1) == i and ((mod edgeIndices[j] 3) + 1) == nindex) then
+                                                                cei[nindex] = j+1
+                                                        )
+                                                    )
+                                                    setVCFace newObj i [cei[1], cei[2], cei[3]]
+                                                )
                                             )
-                                        )
 
-                                        --
-                                        -- We need to process for the appropriate
-                                        -- modifiers to be applied to the mesh.
-                                        --
-                                        if DEBUG then format "%BUILD MESH OBJECT: process for modifiers\r\n" strIndent1
-                                        case objType of
-                                        (
-                                            "danglymesh":
+                                            --
+                                            -- We need to process for the appropriate
+                                            -- modifiers to be applied to the mesh.
+                                            --
+                                            if DEBUG then format "%BUILD MESH OBJECT: process for modifiers\r\n" strIndent1
+                                            if (objType == "trimesh" or objType == "danglymesh" or objType == "skin") then
                                             (
-                                                if DEBUG then format "%--> dangly mesh\r\n" strIndent1
-                                                -- create and apply the flex modifier
-                                                aurora_mod = auroraflex()
-                                                aurora_mod.period = objPeriod
-                                                aurora_mod.tightness = objTightness
-                                                aurora_mod.displacement = objDisplacement
-                                                addModifier newObj aurora_mod
-
-                                                -- assume is always a danglymesh
-                                                aurora_mod = auroratrimesh()
-                                                aurora_mod.tilefadeprop = objTilefadeprop
-                                                aurora_mod.scale = objScale_float
-                                                aurora_mod.render = objRender
-                                                aurora_mod.shadow = objShadow
-                                                if objBeaming!=undefined then aurora_mod.beaming = objBeaming
-                                                aurora_mod.inheritcolor = objInheritcolor
-                                                aurora_mod.selfillumcolor = objSelfillum
-                                                aurora_mod.rotatetexture = objRotatetexture
-                                                aurora_mod.alpha = objAlpha
-                                                aurora_mod.transparencyhint = objTransparencyhint
-                                                aurora_mod.ambient = objAmbient
-                                                aurora_mod.diffuse = objDiffuse
-                                                aurora_mod.specular = objSpecular
-                                                aurora_mod.shininess = objShine
-                                        -- bead-v modification: added kotor props
-                                                if objAnimateuv != undefined then aurora_mod.animateuv = objAnimateuv
-                                                if objUvdirectionx != undefined then aurora_mod.uvdirectionx = objUvdirectionx
-                                                if objUvdirectiony != undefined then aurora_mod.uvdirectiony = objUvdirectiony
-                                                if objUvjitter != undefined then aurora_mod.uvjitter = objUvjitter
-                                                if objUvjitterspeed != undefined then aurora_mod.uvjitterspeed = objUvjitterspeed
-                                                if objLightmapped != undefined then aurora_mod.lightmapped = objLightmapped
-                                                if objBackgroundgeometry != undefined then aurora_mod.m_blsBackgroundGeometry = objBackgroundgeometry
-                                                if objDirt_enabled != undefined then aurora_mod.dirt_enabled = objDirt_enabled
-                                                if objDirt_texture != undefined then aurora_mod.dirt_texture = objDirt_texture
-                                                if objDirt_worldspace != undefined then aurora_mod.dirt_worldspace = objDirt_worldspace
-                                                if objHologram_donotdraw != undefined then aurora_mod.hologram_donotdraw = objHologram_donotdraw
-                                                if objTangentspace != undefined then aurora_mod.tangentspace = objTangentspace
-                                        -- end bead-v modification
-                                                -- we now force extra data to always be true
-                                                --if newObj.material == undefined then
-                                                --(
-                                                    aurora_mod.extra_mat_data = 1
-                                                --)
-                                                addModifier newObj aurora_mod
-                                            )
-                                            "trimesh":
-                                            (
-                                                if DEBUG then format "%--> trimesh\r\n" strIndent1
+                                                if DEBUG then format "%--> AuroraTrimesh\r\n" strIndent1
                                                 -- not sure if should do this
                                                 -- for all trimesh nodes or not.
                                                 aurora_mod = auroratrimesh()
@@ -1556,11 +1570,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 aurora_mod.rotatetexture = objRotatetexture
                                                 aurora_mod.alpha = objAlpha
                                                 aurora_mod.transparencyhint = objTransparencyhint
-                                                aurora_mod.ambient = objAmbient
-                                                aurora_mod.diffuse = objDiffuse
-                                                aurora_mod.specular = objSpecular
-                                                aurora_mod.shininess = objShine
-                                        -- bead-v modification: added kotor props
+                                                -- bead-v modification: added kotor props
                                                 if objAnimateuv != undefined then aurora_mod.animateuv = objAnimateuv
                                                 if objUvdirectionx != undefined then aurora_mod.uvdirectionx = objUvdirectionx
                                                 if objUvdirectiony != undefined then aurora_mod.uvdirectiony = objUvdirectiony
@@ -1573,30 +1583,43 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 if objDirt_worldspace != undefined then aurora_mod.dirt_worldspace = objDirt_worldspace
                                                 if objHologram_donotdraw != undefined then aurora_mod.hologram_donotdraw = objHologram_donotdraw
                                                 if objTangentspace != undefined then aurora_mod.tangentspace = objTangentspace
-                                        -- end bead-v modification
+                                                -- end bead-v modification
                                                 -- we now force extra data to always be true
-                                                --if newObj.material == undefined then
-                                                --(
-                                                    aurora_mod.extra_mat_data = 1
-                                                --)
+                                                aurora_mod.extra_mat_data = 1
+                                                aurora_mod.ambient = objAmbient
+                                                aurora_mod.diffuse = objDiffuse
+                                                aurora_mod.specular = objSpecular
+                                                aurora_mod.shininess = objShine
+
                                                 addModifier newObj aurora_mod
                                             )
 
-                                            "aabb":
+                                            if objType == "danglymesh" then
                                             (
-                                                if DEBUG then format "%--> aabb\r\n" strIndent1
+                                                if DEBUG then format "%--> AuroraFlex\r\n" strIndent1
+                                                -- create and apply the flex modifier
+                                                aurora_mod = auroraflex()
+                                                aurora_mod.period = objPeriod
+                                                aurora_mod.tightness = objTightness
+                                                aurora_mod.displacement = objDisplacement
+                                                addModifier newObj aurora_mod
+                                            )
+
+                                            if objType == "aabb" then
+                                            (
+                                                if DEBUG then format "%--> AuroraWalkmesh\r\n" strIndent1
                                                 -- As the only aabb we have in an mdl file is a wok
                                                 -- mesh there is only one possible meshtype.
-                                                -- Remember that pwk/dwk are imported seperately from
+                                                -- Remember that pwk/dwk are imported separately from
                                                 -- their own files.
                                                 aurora_mod = aurorawalkmesh()
                                                 aurora_mod.meshtype = 1
                                                 addModifier newObj aurora_mod
                                             )
-                                        )
 
-                                        -- Update the mesh
-                                        update newObj
+                                            -- Update the mesh
+                                            update newObj
+                                        )
 
                                     ) --End trimesh, danglymesh, skin, aabb CASE
 
@@ -1689,7 +1712,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objLightningRadius!=undefined then newObj.lightningRadius = objLightningRadius
                                         if objLightningSubDiv!=undefined then newObj.lightningSubDiv = objLightningSubDiv
                                         if objLightningScale!=undefined then newObj.lightningScale = objLightningScale
-                             -- bead-v modification: add kotor props
+                                        -- bead-v modification: add kotor props
                                         if objLightningzigzag!=undefined then newObj.lightningzigzag = objLightningzigzag
                                         if objColorMid!=undefined then newObj.colorMid = objColorMid
                                         if objAlphaMid!=undefined then newObj.alphaMid = objAlphaMid
@@ -1711,7 +1734,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         if objFrameBlending!=undefined then newObj.m_bFrameBlending = objFrameBlending
                                         if objDepth_texture!=undefined then newObj.depth_texture = objDepth_texture
                                         if objDepthTextureName!=undefined then newObj.m_sDepthTextureName = objDepthTextureName
-                             -- end bead-v modification
+                                        -- end bead-v modification
                                         if objBlastRadius!=undefined then newObj.blastRadius = objBlastRadius
                                         if objBlastLength!=undefined then newObj.blastLength = objBlastLength
                                         if objOpacity!=undefined then newObj.opacity = objOpacity
@@ -1741,10 +1764,10 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         newObj.delegate.boxsize = [10,10,10]
                                         newObj.wirecolor = objWireColor
                                         if objRadius!=undefined then newObj.radius = objRadius * 100
-                            -- bead-v modification: add kotor props
-                                        if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius
-                                        if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement
-                            -- end bead-v modification
+                                        -- bead-v modification: add kotor props
+                                        if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius * 100
+                                        if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement * 100
+                                        -- end bead-v modification
                                         if objMultiplier!=undefined then newObj.multiplier = objMultiplier -- bead-v: fixed multipler to multiplier
                                         if objLightpriority!=undefined then newObj.lightpriority = objLightpriority
                                         if objNdynamictype!=undefined then newObj.nDynamicType = objNdynamictype
@@ -1789,7 +1812,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- aurorabase
                                     (newModelName == objName):
                                     (
-                                        if DEBUG then format "%BUILD MESH OBJECT: Model Base\r\n" strIndent1
+                                        if DEBUG then format "%BUILD OBJECT: Model Base\r\n" strIndent1
                                         -- this is the base
                                         newObj = aurorabase name:objName
                                         newObj.delegate.boxsize = [100,100,5]
@@ -1837,13 +1860,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     newObj.parent = itsParent[1]
 
                                     -- check the controller types are correct!
-                                    newObj.scale.controller = bezier_scale()
+                                    --newObj.scale.controller = bezier_scale()
                                     newObj.position.controller = bezier_position()
                                     newObj.rotation.controller = linear_rotation()
 
                                     in coordsys parent
                                     (
-                                        at time 0 newObj.scale = objScale
+                                        --at time 0 newObj.scale = objScale
                                         at time 0 newObj.rotation = objRot
                                         at time 0 newObj.position = objPos
                                     )
@@ -2053,7 +2076,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 -- Add event data to animation root
                                 if not bDupEvent then
                                 (
-                                    numEvents += 1 -- bead-v: move this here, as it makes more sense
+                                    numEvents += 1 -- bead-v: moved this here, as it makes more sense
                                     animRoot.events[animRoot.events.count+1] = \
                                         event_name + " " + (event_frame as string)
                                 )
@@ -2101,7 +2124,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                         "node":
                         (
                             objType = tok.ReadString()
-                            bHadAnimKey = false -- start re looking for anim key processing
                             -- deal with part mapping at this point
                             -- see if the object name needs to be over-ridden. If there is no mapping table then we do nothing,
                             -- else we look for a part name to map to. no part name found means a blank string or undefined is
@@ -2140,43 +2162,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         in coordsys parent
                                         (
                                             -- collect some data on objAnim in timeslider time zero
-                                            zeroPos = at time 0 objAnim.pos
-                                            zeroRot = at time 0 objAnim.rotation
-
-                                            -- then proceed to generate some starting animation info.
-                                        /*
-                                            -- record lower and upper bounds
-                                            local lowerbound = (firstFrame - 1)
-                                            local upperbound = (lastFrame + 1)
-
-                                            if DEBUG then format "zeroPos=% zeroRot=%\r\n" zeroPos zeroRot
-                                            --keytime = 0
-                                            keytime = (firstFrame - 1)
-                                            -- using 'animate on' context generate some key frames
-                                            if DEBUG then format "zeroPos = %, zeroRot = %\r\n" zeroPos zeroRot
-                                            local newkey = addNewKey objAnim.pos.controller keytime
-                                            newkey.value = zeroPos
-                                            if(classof objAnim.pos.controller == bezier_position) then(
-                                                newkey.inTangentType = #linear
-                                                newkey.outTangentType = #linear
-                                            )
-                                            --with animate on at time keytime objAnim.pos = zeroPos
-                                            with animate on at time keytime objAnim.rotation = zeroRot
-                                            -- stop key frame generate
-                                            if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" objAnim keytime (at time keytime objAnim.pos) (at time keytime objAnim.rotation)
-
-                                            /*
-                                            -- move keytime to last frame plus 1.
-                                            keytime = (lastFrame + 1)
-                                            -- using 'animate on' context generate some key frames
-                                            -- Sets a key frame at the last frame + 1
-                                -- bead-v modification: do not create last frame here
-                                            --with animate on at time keytime objAnim.pos = zeroPos
-                                            --with animate on at time keytime objAnim.rotation = zeroRot
-                                -- end bead-v modification
-                                            -- stop key frame generate
-                                            if DEBUG then format "Obj=% keytime=% Pos=% Rot=%\r\n" objAnim keytime (at time keytime objAnim.pos) (at time keytime objAnim.rotation)
-                                        */
+                                            zeroPos = objAnim.pos
+                                            zeroRot = objAnim.rotation
                                         )
                                     )
                                 )
@@ -2188,79 +2175,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             if DEBUG then format "endnode processing START\r\n"
                             if DEBUG then format "objName = % : objAnim = %\r\n" objName objAnim
                             objAnim = undefined
-                            /*
-                            if (bHadAnimKey == false) and (objAnim != undefined) then
-                            (
-	                            -- want to remove the redundant rot and pos keys created at the start of node processing.
-	                            -- bead-v: currently only position and orientation are removed. What about scale?
-
-	                            -- position 1st
-	                            if DEBUG then format "get pos keys count\r\n"
-	                            ksize = objAnim.pos.controller.keys.count
-	                            got_lower = false
-	                            got_upper = false
-	                            i = 1
-                    -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
-	                            --while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
-                    -- end bead-v modification
-	                            while (i <= ksize) and ((got_lower == false) and (got_upper == false)) do
-	                            (
-                                    if(numKeys objAnim.pos.controller > 0) then
-                                    (
-                                        if (objAnim.pos.controller.keys[i].time == lowerbound) then
-                                        (
-                                            if DEBUG then format "delete lower\r\n"
-                                            got_lower = true
-                                            if DEBUG then format "deleting lower\r\n"
-                                            deleteKey objAnim.pos.controller.keys i
-                                            if DEBUG then format "deleted lower\r\n"
-                                        )
-                                        else --4
-                                        (
-                                            if (objAnim.pos.controller.keys[i].time == upperbound) then
-                                            (
-                                                if DEBUG then format "delete upper\r\n"
-                                                got_upper = true
-                                                deleteKey objAnim.pos.controller.keys i
-                                            )
-                                        )
-                                    )
-		                            i += 1
-	                            )
-
-	                            -- rotation 2nd
-	                            if DEBUG then format "get rot keys count\r\n"
-	                            ksize = objAnim.rotation.controller.keys.count
-	                            got_lower = false
-	                            got_upper = false
-	                            i = 1
-                    -- bead-v modification: while !got_lower OR !got_upper, otherwise it quits as soon as it finds one of them
-	                            --while (i <= ksize) and ((got_lower == false) or (got_upper == false)) do
-                    -- end bead-v modification
-	                            while (i <= ksize) and ((got_lower == false) and (got_upper == false)) do
-	                            (
-                                    if(numKeys objAnim.rotation.controller > 0) then
-                                    (
-                                        if (objAnim.rotation.controller.keys[i].time == lowerbound) then
-                                        (
-                                            if DEBUG then format "delete lower (rot)\r\n"
-                                            got_lower = true
-                                            deleteKey objAnim.rotation.controller.keys i
-                                        )
-                                        else --5
-                                        (
-                                            if (objAnim.rotation.controller.keys[i].time == upperbound) then
-                                            (
-                                                if DEBUG then format "delete upper\r\n"
-                                                got_upper = true
-                                                deleteKey objAnim.rotation.controller.keys i
-                                            )
-                                        )
-                                    )
-		                            i += 1
-	                            )
-                            )
-                            */
                             if DEBUG then format "endnode (in anim) processing END\r\n"
                         )   -- end "endnode"
                         "doneanim":
@@ -2292,7 +2206,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                    str_token == "alpha" or
                                    str_token == "selfillumcolor") then
                                 (
-                                    if (classof objAnimTemp) == Editable_mesh then (
+                                    if objAnimTemp.modifiers["AuroraTrimesh"] != undefined then (
+                                        --format "Getting AuroraTrimesh as source.\n"
                                         -- we have a trimesh and not a emitter
                                         objAnimTemp = objAnimTemp.modifiers["AuroraTrimesh"]
                                     )
@@ -2300,6 +2215,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                                 local ctrl_data = "float"
                                 local objController
+                                local defval
                                 case str_token of
                                 (
                                     -- pos & orient
@@ -2308,11 +2224,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         ctrl_data = "position"
                                         if(objAnimTemp.position.controller == undefined) then objAnimTemp.position.controller = bezier_position()
                                         objController = objAnimTemp.position.controller
+                                        defval = objAnimTemp.position
                                     )
                                     "orientation": (
                                         ctrl_data = "rotation"
                                         if(objAnimTemp.rotation.controller == undefined) then objAnimTemp.rotation.controller = linear_rotation()
                                         objController = objAnimTemp.rotation.controller
+                                        defval = objAnimTemp.rotation
                                     )
 
                                     -- colors
@@ -2321,252 +2239,324 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                         ctrl_data = "color"
                                         if(objAnimTemp.selfillumcolor.controller == undefined) then objAnimTemp.selfillumcolor.controller = bezier_color()
                                         objController = objAnimTemp.selfillumcolor.controller
+                                        defval = objAnimTemp.selfillumcolor
                                     )
                                     --- light
                                     "color": (
                                         ctrl_data = "color"
                                         if(objAnimTemp.rgb.controller == undefined) then objAnimTemp.rgb.controller = bezier_color()
                                         objController = objAnimTemp.rgb.controller
+                                        defval = objAnimTemp.rgb
                                     )
                                     --- emitter
                                     "colorstart": (
                                         ctrl_data = "color"
                                         if(objAnimTemp.colorStart.controller == undefined) then objAnimTemp.colorStart.controller = bezier_color()
                                         objController = objAnimTemp.colorStart.controller
+                                        defval = objAnimTemp.colorStart
                                     )
                                     "colormid": (
                                         ctrl_data = "color"
                                         if(objAnimTemp.colorMid.controller == undefined) then objAnimTemp.colorMid.controller = bezier_color()
                                         objController = objAnimTemp.colorMid.controller
+                                        defval = objAnimTemp.colorMid
                                     )
                                     "colorend": (
                                         ctrl_data = "color"
                                         if(objAnimTemp.colorEnd.controller == undefined) then objAnimTemp.colorEnd.controller = bezier_color()
                                         objController = objAnimTemp.colorEnd.controller
+                                        defval = objAnimTemp.colorEnd
                                     )
 
                                     -- floats
                                     --- header
                                     "scale": (
-                                        if(objAnimTemp.scale.controller == undefined) then objAnimTemp.scale.controller = bezier_float()
-                                        objController = objAnimTemp.scale.controller
+                                        if classof objAnimTemp as string == "aurorasaber" then (
+                                            --format "Will try to get Saber Scale (value is %).\n" objAnimTemp.saberscale
+                                            if(objAnimTemp.saberscale.controller == undefined) then objAnimTemp.saberscale.controller = bezier_float()
+                                            objController = objAnimTemp.saberscale.controller
+                                            defval = objAnimTemp.saberscale
+                                            --format "Will try to get Saber Scale (value is %).\n" objAnimTemp.saberscale
+                                        )
+                                        else (
+                                            if(objAnimTemp.scale.controller == undefined) then objAnimTemp.scale.controller = bezier_float()
+                                            objController = objAnimTemp.scale.controller
+                                            defval = objAnimTemp.scale
+                                        )
                                     )
                                     --- mesh
                                     "alpha": (
                                         if(objAnimTemp.alpha.controller == undefined) then objAnimTemp.alpha.controller = bezier_float()
                                         objController = objAnimTemp.alpha.controller
+                                        defval = objAnimTemp.alpha
                                     )
                                     --- light
                                     "radius": (
                                         if(objAnimTemp.radius.controller == undefined) then objAnimTemp.radius.controller = bezier_float()
                                         objController = objAnimTemp.radius.controller
+                                        defval = objAnimTemp.radius
                                     )
                                     "shadowradius": (
                                         if(objAnimTemp.shadowradius.controller == undefined) then objAnimTemp.shadowradius.controller = bezier_float()
                                         objController = objAnimTemp.shadowradius.controller
+                                        defval = objAnimTemp.shadowradius
                                     )
                                     "verticaldisplacement": (
                                         if(objAnimTemp.verticaldisplacement.controller == undefined) then objAnimTemp.verticaldisplacement.controller = bezier_float()
                                         objController = objAnimTemp.verticaldisplacement.controller
+                                        defval = objAnimTemp.verticaldisplacement
                                     )
                                     "multiplier": (
                                         if(objAnimTemp.multiplier.controller == undefined) then objAnimTemp.multiplier.controller = bezier_float()
                                         objController = objAnimTemp.multiplier.controller
+                                        defval = objAnimTemp.multiplier
                                     )
                                     --- emitter
                                     "alphastart": (
                                         if(objAnimTemp.alphaStart.controller == undefined) then objAnimTemp.alphaStart.controller = bezier_float()
                                         objController = objAnimTemp.alphaStart.controller
+                                        defval = objAnimTemp.alphaStart
                                     )
                                     "alphamid": (
                                         if(objAnimTemp.alphaMid.controller == undefined) then objAnimTemp.alphaMid.controller = bezier_float()
                                         objController = objAnimTemp.alphaMid.controller
+                                        defval = objAnimTemp.alphaMid
                                     )
                                     "alphaend": (
                                         if(objAnimTemp.alphaEnd.controller == undefined) then objAnimTemp.alphaEnd.controller = bezier_float()
                                         objController = objAnimTemp.alphaEnd.controller
+                                        defval = objAnimTemp.alphaEnd
                                     )
                                     "percentstart": (
                                         if(objAnimTemp.percentStart.controller == undefined) then objAnimTemp.percentStart.controller = bezier_float()
                                         objController = objAnimTemp.percentStart.controller
+                                        defval = objAnimTemp.percentStart
                                     )
                                     "percentmid": (
                                         if(objAnimTemp.percentMid.controller == undefined) then objAnimTemp.percentMid.controller = bezier_float()
                                         objController = objAnimTemp.percentMid.controller
+                                        defval = objAnimTemp.percentMid
                                     )
                                     "percentend": (
                                         if(objAnimTemp.percentEnd.controller == undefined) then objAnimTemp.percentEnd.controller = bezier_float()
                                         objController = objAnimTemp.percentEnd.controller
+                                        defval = objAnimTemp.percentEnd
                                     )
                                     "sizestart": (
                                         if(objAnimTemp.sizeStart.controller == undefined) then objAnimTemp.sizeStart.controller = bezier_float()
                                         objController = objAnimTemp.sizeStart.controller
+                                        defval = objAnimTemp.sizeStart
                                     )
                                     "sizemid": (
                                         if(objAnimTemp.sizeMid.controller == undefined) then objAnimTemp.sizeMid.controller = bezier_float()
                                         objController = objAnimTemp.sizeMid.controller
+                                        defval = objAnimTemp.sizeMid
                                     )
                                     "sizeend": (
                                         if(objAnimTemp.sizeEnd.controller == undefined) then objAnimTemp.sizeEnd.controller = bezier_float()
                                         objController = objAnimTemp.sizeEnd.controller
+                                        defval = objAnimTemp.sizeEnd
                                     )
                                     "sizestart_y": (
                                         if(objAnimTemp.sizeStart_y.controller == undefined) then objAnimTemp.sizeStart_y.controller = bezier_float()
                                         objController = objAnimTemp.sizeStart_y.controller
+                                        defval = objAnimTemp.sizeStart_y
                                     )
                                     "sizemid_y": (
                                         if(objAnimTemp.sizeMid_y.controller == undefined) then objAnimTemp.sizeMid_y.controller = bezier_float()
                                         objController = objAnimTemp.sizeMid_y.controller
+                                        defval = objAnimTemp.sizeMid_y
                                     )
                                     "sizeend_y": (
                                         if(objAnimTemp.sizeEnd_y.controller == undefined) then objAnimTemp.sizeEnd_y.controller = bezier_float()
                                         objController = objAnimTemp.sizeEnd_y.controller
+                                        defval = objAnimTemp.sizeEnd_y
                                     )
                                     "framestart": (
                                         if(objAnimTemp.frameStart.controller == undefined) then objAnimTemp.frameStart.controller = bezier_float()
                                         objController = objAnimTemp.frameStart.controller
+                                        defval = objAnimTemp.frameStart
                                     )
                                     "frameend": (
                                         if(objAnimTemp.frameEnd.controller == undefined) then objAnimTemp.frameEnd.controller = bezier_float()
                                         objController = objAnimTemp.frameEnd.controller
+                                        defval = objAnimTemp.frameEnd
                                     )
                                     "fps": (
                                         if(objAnimTemp.fps.controller == undefined) then objAnimTemp.fps.controller = bezier_float()
                                         objController = objAnimTemp.fps.controller
+                                        defval = objAnimTemp.fps
                                     )
                                     "lightningdelay": (
                                         if(objAnimTemp.lightningDelay.controller == undefined) then objAnimTemp.lightningDelay.controller = bezier_float()
                                         objController = objAnimTemp.lightningDelay.controller
+                                        defval = objAnimTemp.lightningDelay
                                     )
                                     "lightningradius": (
                                         if(objAnimTemp.lightningRadius.controller == undefined) then objAnimTemp.lightningRadius.controller = bezier_float()
                                         objController = objAnimTemp.lightningRadius.controller
+                                        defval = objAnimTemp.lightningRadius
                                     )
                                     "lightningscale": (
                                         if(objAnimTemp.lightningScale.controller == undefined) then objAnimTemp.lightningScale.controller = bezier_float()
                                         objController = objAnimTemp.lightningScale.controller
+                                        defval = objAnimTemp.lightningScale
                                     )
                                     "lightningsubdiv": (
                                         if(objAnimTemp.lightningSubDiv.controller == undefined) then objAnimTemp.lightningSubDiv.controller = bezier_float()
                                         objController = objAnimTemp.lightningSubDiv.controller
+                                        defval = objAnimTemp.lightningSubDiv
                                     )
                                     "lightningzigzag": (
                                         if(objAnimTemp.lightningzigzag.controller == undefined) then objAnimTemp.lightningzigzag.controller = bezier_float()
                                         objController = objAnimTemp.lightningzigzag.controller
+                                        defval = objAnimTemp.lightningzigzag
                                     )
                                     "birthrate": (
                                         if(objAnimTemp.birthrate.controller == undefined) then objAnimTemp.birthrate.controller = bezier_float()
                                         objController = objAnimTemp.birthrate.controller
+                                        defval = objAnimTemp.birthrate
                                     )
                                     "m_frandombirthrate": (
                                         if(objAnimTemp.m_fRandomBirthRate.controller == undefined) then objAnimTemp.m_fRandomBirthRate.controller = bezier_float()
                                         objController = objAnimTemp.m_fRandomBirthRate.controller
+                                        defval = objAnimTemp.m_fRandomBirthRate
                                     )
                                     "lifeexp": (
                                         if(objAnimTemp.lifeExp.controller == undefined) then objAnimTemp.lifeExp.controller = bezier_float()
                                         objController = objAnimTemp.lifeExp.controller
+                                        defval = objAnimTemp.lifeExp
                                     )
                                     "mass": (
                                         if(objAnimTemp.mass.controller == undefined) then objAnimTemp.mass.controller = bezier_float()
                                         objController = objAnimTemp.mass.controller
+                                        defval = objAnimTemp.mass
                                     )
                                     "spread": (
                                         if(objAnimTemp.spread.controller == undefined) then objAnimTemp.spread.controller = bezier_float()
                                         objController = objAnimTemp.spread.controller
+                                        defval = objAnimTemp.spread
                                     )
                                     "particlerot": (
                                         if(objAnimTemp.particleRot.controller == undefined) then objAnimTemp.particleRot.controller = bezier_float()
                                         objController = objAnimTemp.particleRot.controller
+                                        defval = objAnimTemp.particleRot
                                     )
                                     "velocity": (
                                         if(objAnimTemp.velocity.controller == undefined) then objAnimTemp.velocity.controller = bezier_float()
                                         objController = objAnimTemp.velocity.controller
+                                        defval = objAnimTemp.velocity
                                     )
                                     "randvel": (
                                         if(objAnimTemp.randvel.controller == undefined) then objAnimTemp.randvel.controller = bezier_float()
                                         objController = objAnimTemp.randvel.controller
+                                        defval = objAnimTemp.randvel
                                     )
                                     "bounce_co": (
                                         if(objAnimTemp.bounce_co.controller == undefined) then objAnimTemp.bounce_co.controller = bezier_float()
                                         objController = objAnimTemp.bounce_co.controller
+                                        defval = objAnimTemp.bounce_co
                                     )
                                     "blurlength": (
                                         if(objAnimTemp.blurlength.controller == undefined) then objAnimTemp.blurlength.controller = bezier_float()
                                         objController = objAnimTemp.blurlength.controller
+                                        defval = objAnimTemp.blurlength
                                     )
                                     "targetsize": (
                                         if(objAnimTemp.targetsize.controller == undefined) then objAnimTemp.targetsize.controller = bezier_float()
                                         objController = objAnimTemp.targetsize.controller
+                                        defval = objAnimTemp.targetsize
                                     )
                                     "numcontrolpts": (
                                         if(objAnimTemp.numcontrolpts.controller == undefined) then objAnimTemp.numcontrolpts.controller = bezier_float()
                                         objController = objAnimTemp.numcontrolpts.controller
+                                        defval = objAnimTemp.numcontrolpts
                                     )
                                     "controlptradius": (
                                         if(objAnimTemp.controlptradius.controller == undefined) then objAnimTemp.controlptradius.controller = bezier_float()
                                         objController = objAnimTemp.controlptradius.controller
+                                        defval = objAnimTemp.controlptradius
                                     )
                                     "controlptdelay": (
                                         if(objAnimTemp.controlptdelay.controller == undefined) then objAnimTemp.controlptdelay.controller = bezier_float()
                                         objController = objAnimTemp.controlptdelay.controller
+                                        defval = objAnimTemp.controlptdelay
                                     )
                                     "tangentspread": (
                                         if(objAnimTemp.tangentspread.controller == undefined) then objAnimTemp.tangentspread.controller = bezier_float()
                                         objController = objAnimTemp.tangentspread.controller
+                                        defval = objAnimTemp.tangentspread
                                     )
                                     "tangentlength": (
                                         if(objAnimTemp.tangentlength.controller == undefined) then objAnimTemp.tangentlength.controller = bezier_float()
                                         objController = objAnimTemp.tangentlength.controller
+                                        defval = objAnimTemp.tangentlength
                                     )
                                     "detonate": (
                                         if(objAnimTemp.detonate.controller == undefined) then objAnimTemp.detonate.controller = bezier_float()
                                         objController = objAnimTemp.detonate.controller
+                                        defval = objAnimTemp.detonate
                                     )
                                     "p2p_bezier2": (
                                         if(objAnimTemp.p2p_bezier2.controller == undefined) then objAnimTemp.p2p_bezier2.controller = bezier_float()
                                         objController = objAnimTemp.p2p_bezier2.controller
+                                        defval = objAnimTemp.p2p_bezier2
                                     )
                                     "p2p_bezier3": (
                                         if(objAnimTemp.p2p_bezier3.controller == undefined) then objAnimTemp.p2p_bezier3.controller = bezier_float()
                                         objController = objAnimTemp.p2p_bezier3.controller
+                                        defval = objAnimTemp.p2p_bezier3
                                     )
                                     "grav": (
                                         if(objAnimTemp.grav.controller == undefined) then objAnimTemp.grav.controller = bezier_float()
                                         objController = objAnimTemp.grav.controller
+                                        defval = objAnimTemp.grav
                                     )
                                     "drag": (
                                         if(objAnimTemp.drag.controller == undefined) then objAnimTemp.drag.controller = bezier_float()
                                         objController = objAnimTemp.drag.controller
+                                        defval = objAnimTemp.drag
                                     )
                                     "xsize": (
                                         if(objAnimTemp.xsize.controller == undefined) then objAnimTemp.xsize.controller = bezier_float()
                                         objController = objAnimTemp.xsize.controller
+                                        defval = objAnimTemp.xsize
                                     )
                                     "ysize": (
                                         if(objAnimTemp.ysize.controller == undefined) then objAnimTemp.ysize.controller = bezier_float()
                                         objController = objAnimTemp.ysize.controller
+                                        defval = objAnimTemp.ysize
                                     )
                                     "threshold": (
                                         if(objAnimTemp.threshold.controller == undefined) then objAnimTemp.threshold.controller = bezier_float()
                                         objController = objAnimTemp.threshold.controller
+                                        defval = objAnimTemp.threshold
                                     )
                                     "combinetime": (
                                         if(objAnimTemp.combinetime.controller == undefined) then objAnimTemp.combinetime.controller = bezier_float()
                                         objController = objAnimTemp.combinetime.controller
+                                        defval = objAnimTemp.combinetime
                                     )
                                 )
 
                                 if(objController != undefined) then(
-                                    --format "About to read %\n" ctrl_data
+                                    --format "About to read % as % in %\n" str_token ctrl_data objName
                                     case ctrl_data of
                                     (
                                         "position":(
-                                            bHadAnimKey = true
-
                                             local keyCount = undefined;
                                             if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
 
                                             in coordsys parent(
+                                                /*
+                                                -- first, create the default value at time 0 if controller has no keys
+                                                if (numKeys objController == 0) then
+                                                (
+                                                    local nullkey = addnewkey objController 0
+                                                    nullkey.value = defval
+                                                )
+                                                */
+
                                                 tok.SetString (getNextNonBlankLine mdlStream)
                                                 lineNum += 1
 
@@ -2659,12 +2649,19 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             local angle
                                             local objRot
                                             local originalObjRot
-                                            bHadAnimKey = true
 
                                             local keyCount = undefined
                                             if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
 
                                             in coordsys parent(
+                                                /*
+                                                -- first, create the default value at time 0 if controller has no keys
+                                                if (numKeys objController == 0) then
+                                                (
+                                                    local nullkey = addnewkey objController 0
+                                                    nullkey.value = defval
+                                                )
+                                                */
 
                                                 tok.SetString (getNextNonBlankLine mdlStream)
 
@@ -2736,6 +2733,13 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             )
                                         )
                                         "color":(
+                                            -- first, create the default value at time 0 if controller has no keys
+                                            if (numKeys objController == 0) then
+                                            (
+                                                local nullkey = addnewkey objController 0
+                                                nullkey.value = defval
+                                            )
+
                                             -- Get key count
                                             local keyCount = undefined;
                                             if (tok.PeekToken() != undefined) then keyCount = tok.ReadInteger()
@@ -2786,8 +2790,12 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                             )
                                         )
                                         "float":(
-                                            -- set bHadAnimKey if scale (presumably for the main animation track)
-                                            if(str_token == "scale") then bHadAnimKey = true
+                                            -- first, create the default value at time 0 if controller has no keys
+                                            if (numKeys objController == 0) then
+                                            (
+                                                local nullkey = addnewkey objController 0
+                                                nullkey.value = defval
+                                            )
 
                                             -- Get key count
                                             local keyCount = undefined;
@@ -2803,6 +2811,8 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                                                 local this_value = tok.ReadFloat()
                                                 if str_token == "radius" then this_value *= 100
+                                                if str_token == "shadowradius" then this_value *= 100
+                                                if str_token == "verticaldisplacement" then this_value *= 100
                                                 local in_value
                                                 local out_value
                                                 if(bBezier) then(

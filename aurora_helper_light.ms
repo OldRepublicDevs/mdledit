@@ -30,6 +30,7 @@
 format "load: aurora_helper_light.ms\r\n"
 nx_progressPlus()
 
+/*
 plugin light auroralight
 name:"AuroraLight"
 classID:#(0x91e8a664, 0x39b92e97)
@@ -232,6 +233,7 @@ invisible:true
 
 	) -- End "Lens Flares" rollout
 )
+*/
 
 
 
@@ -242,8 +244,8 @@ invisible:true
 /*
 	New light based on dummy
 */
-plugin helper auroraDlight
-name:"AuroraDLight"
+plugin helper auroralight
+name:"AuroraLight"
 classID:#(0x678e80c2, 0xb6c98009)
 version:1
 extends:dummy
@@ -309,7 +311,7 @@ replaceUI:true
 		(
 			radiobuttons rdo_mainlights "" align:#left labels:#("No preset","Mainlight 1","Mainlight 2")
 		)
-		*/
+        */
 
 		fn Mainlight_Preset suffix radius =
 		(

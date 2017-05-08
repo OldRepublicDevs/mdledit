@@ -61,7 +61,7 @@ version:1
 		render		    type:#integer   ui:box_render   default:1      -- defaults to render
 		shadow		    type:#integer   ui:box_shadow   default:0      -- defaults to cast shadow
 		beaming	        type:#integer   ui:box_beaming  default:0     -- defaults to off
-		inheritcolor	type:#integer   ui:box_inheritcolor default:0   -- defaults to off
+		inheritcolor	type:#integer    default:0  --ui:box_inheritcolor   -- defaults to off
 		rotatetexture	type:#integer   ui:box_rotatetexture animatable:false   default:0 -- defaults to off
 		alpha           type:#float     animatable:true ui:spn_alpha default:1.0   -- defaults to no opacity
 		transparencyhint type:#integer  animatable:true ui:spn_transparencyhint   default:0
@@ -70,13 +70,13 @@ version:1
 		extra_mat_data	            type:#integer	ui:chk_xtra_mat_data    default:0
 		ambient			            type:#color		ui:colorpicker_ambient default:[255,255,255]
 		diffuse			            type:#color		ui:colorpicker_diffuse default:[255,255,255]
-		specular		            type:#color		ui:colorpicker_specular default:[0,0,0]
-		shininess		            type:#integer	ui:spn_shininess default:1
-        animateuv                   type:#integer   default: 0
-        uvdirectionx                type:#float     default: 0.0
-        uvdirectiony                type:#float     default: 0.0
-        uvjitter                    type:#float     default: 0.0
-        uvjitterspeed               type:#float     default: 0.0
+		specular		            type:#color		default:[0,0,0] --ui:colorpicker_specular
+		shininess		            type:#integer	default:1       --ui:spn_shininess
+        animateuv                   type:#integer   default: 0     ui:box_animateuv
+        uvdirectionx                type:#float     default: 0.0   ui:spn_uvdirectionx
+        uvdirectiony                type:#float     default: 0.0   ui:spn_uvdirectiony
+        uvjitter                    type:#float     default: 0.0   ui:spn_uvjitter
+        uvjitterspeed               type:#float     default: 0.0   ui:spn_uvjitterspeed
         lightmapped                 type:#integer   default: 0     ui:box_lightmapped
         m_blsBackgroundGeometry     type:#integer   default: 0     ui:box_backgroundgeometry
         dirt_enabled                type:#integer   default: 0     ui:box_dirtenabled
@@ -84,6 +84,7 @@ version:1
         dirt_worldspace             type:#integer   default: 1     ui:spn_dirtworldspace
         hologram_donotdraw          type:#integer   default: 0     ui:box_hideinhologram
         tangentspace                type:#integer   default: 0     ui:box_bumpmappable
+        --lightsaber                  type:#integer   default: 0     ui:box_lightsaber
 
 	)
 
@@ -99,13 +100,22 @@ version:1
 		checkbox box_backgroundgeometry "Background Geometry"  --height:15 align:#left across:2 --  pos:[13,67] width:95
 		checkbox box_hideinhologram "Hide In Hologram"  --height:15 align:#left across:2 --  pos:[13,67] width:95
 		checkbox box_bumpmappable "Bumpmappable"  --height:15 align:#left across:2 --  pos:[13,67] width:95
-		checkbox box_inheritcolor "Inherit Color" --height:15 align:#left -- pos:[13,87]  width:80
+		--checkbox box_inheritcolor "Inherit Color" --height:15 align:#left -- pos:[13,87]  width:80
+		--checkbox box_lightsaber "Is Saber Mesh" --height:15 align:#left -- pos:[13,87]  width:80
 
 		group "Dirt"
 		(
             checkbox box_dirtenabled "Dirt Enabled"
             spinner spn_dirttexture "Texture" fieldwidth:30 range:[1,4,1] type:#integer
             spinner spn_dirtworldspace "World Space" fieldwidth:30 range:[1,4,1] type:#integer
+		)
+		group "Animated UV"
+		(
+            checkbox box_animateuv "Animate UV"
+            spinner spn_uvdirectionx "Direction X" range:[-10000,10000,0] type:#float
+            spinner spn_uvdirectiony "Direction Y" range:[-10000,10000,0] type:#float
+            spinner spn_uvjitter "Jitter" range:[-10000,10000,0] type:#float
+            spinner spn_uvjitterspeed "Jitter Speed" range:[-10000,10000,0] type:#float
 		)
         /*
 		group "Fading Tile Properties"
@@ -115,8 +125,8 @@ version:1
 		*/
 
 		spinner spn_scale "Scale Factor" range:[0,1000,1] scale:0.1 fieldwidth:46 --pos:[31,198] width:118 height:16
-		spinner spn_transparencyhint "Transparency Hint" range:[0,9,0] type:#integer fieldwidth:30 --pos:[17,224] width:132 height:16 ---align:#center
-		spinner spn_alpha "Alpha" range:[0,1,1] fieldwidth:30 --pos:[77,263] width:72 height:16 ---align:#center
+		spinner spn_transparencyhint "Transparency Hint" range:[0,9,0] type:#integer fieldwidth:46 --pos:[17,224] width:132 height:16 ---align:#center
+		spinner spn_alpha "Alpha" range:[0,1,1] fieldwidth:46 --pos:[77,263] width:72 height:16 ---align:#center
 
 		/*
 		GroupBox grp1 "Fading Tile Properties" pos:[4,106] width:154 height:85
@@ -140,8 +150,8 @@ version:1
             checkbox chk_xtra_mat_data "Over-ride Mat Values" default:false
             colorPicker colorpicker_ambient "Ambient" color:[255,255,255] enabled:false align:#right
             colorPicker colorpicker_diffuse "Diffuse" color:[255,255,255] enabled:false align:#right
-            colorPicker colorpicker_specular "Specular" color:[0,0,0] enabled:false align:#right
-            spinner spn_shininess "Shininess" type:#integer enabled:false align:#right fieldwidth:33
+            --colorPicker colorpicker_specular "Specular" color:[0,0,0] enabled:false align:#right
+            --spinner spn_shininess "Shininess" type:#integer enabled:false align:#right fieldwidth:33
 		)
 
 		-- refresh the alpha spinner control
@@ -226,8 +236,8 @@ version:1
 				(
 					colorpicker_ambient.enabled = true
 					colorpicker_diffuse.enabled = true
-					colorpicker_specular.enabled = true
-					spn_shininess.enabled = true
+					--colorpicker_specular.enabled = true
+					--spn_shininess.enabled = true
 				)
 				local parentname = ""
 				if selection[1].parent != undefined then
@@ -302,14 +312,14 @@ version:1
 				(
 					colorpicker_ambient.enabled = true
 					colorpicker_diffuse.enabled = true
-					colorpicker_specular.enabled = true
-					spn_shininess.enabled = true
+					--colorpicker_specular.enabled = true
+					--spn_shininess.enabled = true
 				) else
 				(
 					colorpicker_ambient.enabled = false
 					colorpicker_diffuse.enabled = false
-					colorpicker_specular.enabled = false
-					spn_shininess.enabled = false
+					--colorpicker_specular.enabled = false
+					--spn_shininess.enabled = false
 				)
 		)
 

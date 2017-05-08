@@ -467,6 +467,7 @@ filein (g_startpath+"nw_ie_inc/aurora_mod_walkmesh.ms")
 filein (g_startpath+"nw_ie_inc/aurora_helper_base.ms")
 filein (g_startpath+"nw_ie_inc/aurora_helper_light.ms")
 filein (g_startpath+"nw_ie_inc/aurora_helper_emitter.ms")
+filein (g_startpath+"nw_ie_inc/aurora_mesh_lightsaber.ms")
 
 --filein (g_startpath+"nw_ie_inc/aurora_helper_tools.ms")
 --------------------------------------------------------------------------------

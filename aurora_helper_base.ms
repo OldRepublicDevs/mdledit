@@ -59,7 +59,7 @@ invisible:true
 		events          type:#stringtab  tabsizevariable:true
 		export_path     type:#string default:(getdir #export) ui:edit_exportpath
 		export_binary   type:#integer default:0 --ui:chk_binary
-		sanity_check	type:#integer default:0 ui:chk_check
+		sanity_check	type:#integer default:1 ui:chk_check
 		uselyt      	type:#integer default:1 ui:chk_uselyt
 		sanity_tests	type:#string default:gnx_sanity
 		copy_tga		type:#integer default:0 ui:chk_copytga
@@ -219,12 +219,11 @@ invisible:true
 
         		-- set the external control snoop bracket.
         		if not g_ismax then format "<snoopstart file=%%>%" scriptsPath "NWmax\\scratch\\exportcontrol.txt" g_delim to:g_strBuffer
+
         		-- Tell GMAX Snoop what fully qualified file name to use and keep a global copy
         		g_exportPath = export_path
-        		--if chk_binary.checked then
-        		--    mdlextn = "mdl.ascii"
-    		    --else
-    		        mdlextn = "mdl"
+
+                mdlextn = "mdl"
 				model_name = node.name + "-nwmax"
 
 				-- we need to make sure that the model_name has no tabs in it
@@ -238,69 +237,50 @@ invisible:true
 	    		if not g_ismax then format "<snoopstart file=%%.%>%" export_path model_name mdlextn g_delim to:g_strBuffer
 	    		-- we can now do some sanity checks and record the results for review
 
-	    		if not g_ismax then (
-	    		   format "<snoopstart file=%%_sanitycheck.txt>%" (scriptsPath+"nwmax/sanity/") model_name g_delim to:g_strBuffer
-				) else (
+	    		if not g_ismax then
+	    		    format "<snoopstart file=%%_sanitycheck.txt>%" (scriptsPath+"nwmax/sanity/") model_name g_delim to:g_strBuffer
+                else
 					g_strBuffer = createFile (scriptsPath+"nwmax/sanity/" + model_name + "_sanitycheck.txt")
-				) -- end ismax
 
+                -- DO SANITY CHECK IF APPLICABLE
 				if chk_check.checked then
 		    		bSanityCheck = SanityCheck node
 	    		else
 	    			bSanityCheck = 1
 
-	    		if not g_ismax then (
+	    		if not g_ismax then
+                (
 		       		format "</snoopstart>%" g_delim to:g_strBuffer
-	    		) else (
+	    		)
+                else
+                (
 		       		flush g_strBuffer
 		       		close g_strBuffer
-	    		) -- end ismax
+	    		)
 
 				if bSanityCheck == 0 then
 				(
 					-- Ask user if want to continue export anyway
 	  				str = "SanityCheck failed for "+model_name+". Push YES to continue export."
-	  				if (queryBox str  title:"Failed Sanity Check" beep:true) then
+	  				if (queryBox str title:"Failed Sanity Check" beep:true) then
 	  				    bSanityCheck = 1    -- over-ride and export
 	      		)
 
 	      		if bSanityCheck == 1 then
 	      		(
-	         		if g_ismax then (
+	         		if g_ismax then
 	            		g_strBuffer = createFile (export_path + model_name + "." + mdlextn)
-	         		) -- end ismax
 
 	         		ExAuroraMDL node anim:doanim
 
-	         		if g_ismax then (
+	         		if g_ismax then
+                    (
 	            		flush g_strBuffer
 	            		close g_strBuffer
-	         		) -- end ismax
+	         		)
 	      		)
 
 	      		if not g_ismax then format "</snoopstart>%" g_delim to:g_strBuffer  -- closes model export
-
-	      		-- if we need to compile model we do it here
-	      		/*
-	      		if chk_binary.checked and (not g_ismax) then
-	      		(
-					format "<snoopstart file=%>%" (scriptsPath+"nwmax\\scratch\\export.bat") g_delim to:g_strBuffer
-					format "\"%\" -c \"%%%\" \"%\\\" > \"%\"%" g_compiler export_path model_name ".mdl.ascii" export_path (scriptsPath+"nwmax\\scratch\\compile.txt") g_delim to:g_strBuffer
-					format "</snoopstart>%" g_delim to:g_strBuffer
-
-					format "<commandstart>%" g_delim to:g_strBuffer
-					format "\"%export.bat\"%" (scriptsPath+"nwmax\\scratch\\") g_delim to:g_strBuffer
-					format "</commandstart>%" g_delim to:g_strBuffer
-	      		) else if chk_binary.checked and g_ismax then
-	      		(
-					format "Compile model.\r\n"
-					strCmd = createFile (scriptsPath+"nwmax\\scratch\\export.bat")
-					format "\"%\" -c \"%%%\" \"%\\\" > \"%\"%" g_compiler export_path model_name ".mdl.ascii" export_path (scriptsPath+"nwmax\\scratch\\compile.txt") g_delim to:strCmd
-					flush strCmd
-					close strCmd
-					DOSCommand (scriptsPath+"nwmax\\scratch\\export.bat")
-	      		)
-                */
 
 	      		-- copy the tga files to export dir. If converting to dds then put in a tga dir inside export dir
 	      		if node.copy_tga == 1 then
@@ -325,9 +305,8 @@ invisible:true
 	      			format "</snoopstart>%" g_delim to:g_strBuffer  -- closes exportcontrol.txt
 	      			format "</snoopend>%" g_delim to:g_strBuffer
 				)
-    		) else (
-    		    messagebox "Directory does not exist."
-		    )
+    		)
+            else messagebox "Directory does not exist."
 
     	    clearSelection()
     	    select node

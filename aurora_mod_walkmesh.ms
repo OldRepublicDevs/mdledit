@@ -44,11 +44,9 @@ classID:#(0x882d65e4, 0xcd666735)
 version:2
 --replaceUI:true
 (
-	local ShapeArray = #()
-
     on create do (
         local node = selection[1]
-        if(node != undefined and classof node as string == "Editable_mesh") then (
+        if(node != undefined and node.baseobject as string == "Editable_mesh") then (
             if(not (meshop.GetMapSupport node 0)) then (
                 meshop.setMapSupport node 0 true
             )
@@ -65,19 +63,8 @@ version:2
 
 	parameters paramblock rollout:mdlWalkmeshParams
 	(
-		ig_boxes type:#stringtab tabsizevariable:true
     	meshtype        type:#integer default:0 --ui:radio_meshtype
-    	ig_recalc type:#integer default:1 --ui:chk_recalc
-    	ig_multimode type:#integer default:1 --ui:chk_multimode
     	room type:#integer default:-1 ui:spn_transition
-
-    	-- exportwok is deemed redundant based on user input from DLA
-    	--exportwok       type:#integer default:1 ui:box_exportwok
-
-    	-- The next two properties will not be used at this point
-    	-- I need to work out the code to support them
-    	--autogrpfaces    type:#integer ui:box_autogrpfaces
-    	--angle           type:#float ui:spn_angle
 	)
 
 	rollout mdlWalkmeshParams "Walkmesh Options" width:162 height:335
@@ -87,9 +74,6 @@ version:2
             radiobuttons radio_meshtype "" default:0 labels:#("Area (aabb)", "Placeable (pwk)", "Door (dwk, closed)", "Door (dwk, open1)", "Door (dwk, open2)") align:#left
             --button btn_meshtypeconvert "Set Up" toolTip:"Creates necessary dummies, changes name, moves under correct node."
         )
-        --checkbox box_exportwok "Export WOK File" align:#left
-        --checkbox box_autogrpfaces "Auto-Group Faces" align:#left
-        --spinner spn_angle "Angle:" align:#right
 
         group "Room Links"
         (
@@ -101,21 +85,6 @@ version:2
             spinner spn_transition "Room:" range:[-1,100,-1] offset:[0,3] align:#right type:#integer across:2
             button btn_addtrans "Apply" align:#center toolTip:"Adds room link to the currently selected edge(s)."
         )
-
-        /*
-        group "AABB Details"
-        (
-            listbox list_boxes "Boxes" height:5 selection:0
-            label lbl_bl align:#left
-            label lbl_tr align:#left
-            label lbl_face align:#left
-            radiobuttons rdo_display labels:#("No Display","Selected","All")
-            button btn_listboxes "List aabb" width:144 align:#center toolTip:"List aabb data to Listener"
-            button btn_makeaabb "Build WOK Data" width:144 align:#center toolTip:"Build the WOK aabb data"
-            --checkbox chk_recalc "Recalc AABB on export"
-            checkbox chk_multimode "Across multiple meshes"
-        )
-        */
 
         fn GetLinks =
         (
@@ -206,146 +175,24 @@ version:2
         )
 
         on mdlWalkmeshParams open do
-        ( 
-	    if not classof node as string == "Editable_mesh" then return 0
+        (
+            local node = selection[1]
+            if not classof node as string == "Editable_mesh" then return 0
 
             -- make sure there is a walk material for this node
-            local node = selection[1]
-            --local originalobject = modPanel.getCurrentObject()
-            --modPanel.setCurrentObject node.baseObject
-            --subObjectLevel = 2
-            --modPanel.setCurrentObject originalobject
-            --setSelectionLevel node {#edge}
-            --subObjectLevel = 2
             local matName = "NWN_WalkMaterial"
             if node.material == undefined or node.material.name != matName then
             (
                 node.material = nx_createNWNWalkMaterial()
             )
-            /*
-            if ig_boxes.count == 0 then
-            (
-                format "Rebuilding AABB list\r\n"
-				local b = WriteAABBTree selection[1] verbose:false
-				ig_boxes.count=0
-				local p
-				local tmp = #()
-				for p in b do (
-					ig_boxes[ig_boxes.count+1] = p
-				)
-			)
-            */
 
             GetLinks()
 
             if(meshtype > 0) then radio_meshtype.state = meshtype
-
-            -- populate list box
-            /*
-			local p
-			local tmp = #()
-			for p in ig_boxes do (
-				join tmp #(p)
-			)
-			list_boxes.items = tmp
-			*/
         )
+
         on mdlWalkmeshParams close do
         (
-			-- delete the array of existing boxes
-			for e in ShapeArray do
-				delete e
-			ShapeArray = #()
-        )
-
-        fn RedrawDisplayBoxes =
-        (
-			-- delete the array of existing boxes
-			for e in ShapeArray do
-				delete e
-			ShapeArray = #()
-			-- determine what to draw
-			local tok
-			local bot_left
-			local top_right
-			local boxpos
-			if rdo_display.state == 2 then
-			(
-    			tok = filterString (list_boxes.selected) " "
-    			bot_left = point3 (tok[1] as float) (tok[2] as float) (tok[3] as float)
-    			top_right = point3 (tok[4] as float) (tok[5] as float) (tok[6] as float)
-    			-- convert back to gmax cm units
-    			bot_left *= 100
-    			top_right *= 100
-    			boxpos = (bot_left+top_right)/2
-    			boxpos.z = bot_left.z
-    			in coordsys parent ( boxpos += selection[1].pos )
-        		s = box position:boxpos \
-        		    length:(top_right.y-bot_left.y) \
-        		    width:(top_right.x-bot_left.x) \
-        		    height:(top_right.z-bot_left.z)
-        		s.wirecolor = (color 255 0 0)
-                append ShapeArray s
-            ) else if rdo_display.state == 3 then
-            (
-                for b in ig_boxes do
-                (
-        			tok = filterString (b as string) " "
-        			bot_left = point3 (tok[1] as float) (tok[2] as float) (tok[3] as float)
-        			top_right = point3 (tok[4] as float) (tok[5] as float) (tok[6] as float)
-        			-- convert back to gmax cm units
-        			bot_left *= 100
-        			top_right *= 100
-        			boxpos = (bot_left+top_right)/2
-        			boxpos.z = bot_left.z
-        			in coordsys parent ( boxpos += selection[1].pos )
-            		s = box position:boxpos \
-            		    length:(top_right.y-bot_left.y) \
-            		    width:(top_right.x-bot_left.x) \
-            		    height:(top_right.z-bot_left.z)
-                    append ShapeArray s
-                )
-            )
-        )
-        on list_boxes selected sel do
-        (
-            -- update the details labels
-            local s = list_boxes.selected
-            if s[1] != "#" then
-            (
-                local tok = filterString s " "
-                lbl_bl.text = "BL: "+tok[1]+" "+tok[2]+" "+tok[3]
-                lbl_tr.text = "TR: "+tok[4]+" "+tok[5]+" "+tok[6]
-                lbl_face.text = "Face: "+tok[7]
-            )
-            -- Do drawing
-            RedrawDisplayBoxes()
-        )
-
-        on btn_makeaabb pressed do
-        (
-            if meshtype != 1 then return 0  -- aabb not relevant
-	        clearListener()
-
-			local b = WriteAABBTree selection[1] verbose:false
-			ig_boxes.count=0
-			local p
-			local tmp = #()
-			for p in b do (
-				ig_boxes[ig_boxes.count+1] = p
-				join tmp #(p)
-			)
-			list_boxes.items = tmp
-        )
-
-        on btn_listboxes pressed do
-        (
-			local b
-			clearListener()
-			for b in ig_boxes do
-			(
-				format "%\r\n" b
-			)
         )
 
         on radio_meshtype changed nmeshtype do

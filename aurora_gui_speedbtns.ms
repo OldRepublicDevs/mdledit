@@ -615,19 +615,19 @@ rollout nx_util1 "General Utils" width:162 height:68
 
     group "Reset Sanity Check"
     (
-        checkbox box_AuraEmitterCheck "Emitter Validity" checked:runAuraEmitterCheck
-        checkbox box_AuraRefCheck "AuraRef Existence" checked:runAuraRefCheck
+        --checkbox box_AuraEmitterCheck "Emitter Validity" checked:runAuraEmitterCheck
+        --checkbox box_AuraRefCheck "AuraRef Existence" checked:runAuraRefCheck
         checkbox box_NameCheck "Node Name Validity" checked:runNameCheck
         checkbox box_ScaleCheck "Zero World Scale" checked:runScaleCheck
         checkbox box_PartTextureCheck "Material Bitmap Name Chk" checked:runPartTextureCheck
         checkbox box_BitmapNameCheck "Bitmap Name Validity" checked:runBitmapNameCheck
         checkbox box_WeldCheck "Weld To Nearest cm" checked:runWeldCheck
         checkbox box_ClassCheck "Node Type 'boolean'" checked:runClassCheck
-        --checkbox box_ControllerCheck "Valid Controllers on Keys" checked:runControllerCheck
+        checkbox box_ControllerCheck "Valid Controllers on Keys" checked:runControllerCheck
         --checkbox box_AnimMeshCheck "Animated Mesh Validity" checked:runAnimMeshCheck
         checkbox box_DoganCheck "Texvert Validity" checked:runDoganCheck
         checkbox box_FaceCheck "Zero Faces On a Node" checked:runFaceCheck
-        checkbox box_BSACheck "Bumpy-shiny Alignmt Chk" checked:runBSACheck
+        --checkbox box_BSACheck "Bumpy-shiny Alignmt Chk" checked:runBSACheck
         checkbox box_AnimrootCheck "Animroot Node Existence" checked:runAnimrootCheck
         checkbox box_BoneCountCheck "Skinning:4 Bones per Vert" checked:runBoneCountCheck
         --checkbox box_WOKchecker "Check WOK" checked:runWOKCheck
