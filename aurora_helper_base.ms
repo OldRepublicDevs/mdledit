@@ -39,10 +39,8 @@ replaceUI:true
 invisible:true
 (
 	-- local vars
-    local max_anim_frame
-    local master_anim_range
-    --#("Character", "BodyPart", "Item", "Tile","GUI", "Effects", "Door","WalkMesh")
-    --#("BodyPart", "Item", "GUI")
+    --local max_anim_frame
+    --local master_anim_range
 	local class_types = #("Character","Tile", "Door","Effect","WalkMesh","Other", "BodyPart", "Item", "GUI")
 
 	-- parameters
@@ -58,7 +56,6 @@ invisible:true
 		setanimationscale  type:#float default:1.0 ui:spn_animscale
 		events          type:#stringtab  tabsizevariable:true
 		export_path     type:#string default:(getdir #export) ui:edit_exportpath
-		export_binary   type:#integer default:0 --ui:chk_binary
 		sanity_check	type:#integer default:1 ui:chk_check
 		uselyt      	type:#integer default:1 ui:chk_uselyt
 		sanity_tests	type:#string default:gnx_sanity
@@ -90,119 +87,29 @@ invisible:true
 		-- export data button widgets
 		group "Export"
 		(
-  		editText edit_exportpath "Dir:"
-  		button btn_exportbrowse "Browse" align:#left across:2
-		button btn_exportreset "Reset" align:#right
-  		button  btn_export_mdl	"Export Model+Anim " align:#center width:140
-  		button  btn_export_noanims "Export Geom only" align:#center width:140 toolTip:"Export ONLY the geometry, no animations"
-  		--checkbox chk_binary "Compile exported model" align:#left checked:false
-  		checkbox chk_uselyt "Export Layout Position" align:#left
-  		checkbox chk_check "Do Sanity Checks" align:#left
-  		checkbox chk_copytga "Copy TGAs" align:#left checked:false
-  		checkbox chk_convdds "Convert to DDS" align:#left checked:false enabled:false
-  		button btn_viewsanity "View Sanity Check Results" align:#center width:140
-  	)
+            editText edit_exportpath "Dir:"
+            button btn_exportbrowse "Browse" align:#left across:2
+            button btn_exportreset "Reset" align:#right
+            button  btn_export_mdl	"Export Model+Anim " align:#center width:140
+            button  btn_export_noanims "Export Geom only" align:#center width:140 toolTip:"Export ONLY the geometry, no animations"
+            --checkbox chk_binary "Compile exported model" align:#left checked:false
+            checkbox chk_uselyt "Export Layout Position" align:#left
+            checkbox chk_check "Do Sanity Checks" align:#left
+            checkbox chk_copytga "Copy TGAs" align:#left checked:false
+            checkbox chk_convdds "Convert to DDS" align:#left checked:false enabled:false
+            button btn_viewsanity "View Sanity Check Results" align:#center width:140
+        )
 
-		group "Animation Parameters" (
-			--label animlabel "Animation Parameters"
-			spinner spn_animscale "Animation scale:" type:#float scale:0.01 range:[0,10,1] fieldwidth:40 align:#left
-			button btn_animeditor "Open Animation Editor"
-			/*
-			listbox list_animations "Animations on Model" height:g_guiAnimListSize
-			button  btn_add_anim "Add" align:#left height:14 width:45 across:3
-			button  btn_delete_anim "Delete" align:#center height:14 width:45 enabled:false
-			button  btn_zoom_to_anim "Zoom" align:#right height:14 width:45 enabled:false
-			button  btn_zoom_reset "Reset Zoom" align:#center height:14 width:(3*45) enabled:true
-			button  btn_moveup "Move Up" align:#left height:14 width:66 across:2
-			button  btn_movedown "Move Down" align:#right height:14 width:66
-			button  btn_allanim_y "All Active" align:#left height:14 width:66 across:2 toolTip:"Enable all animations so they export"
-			button  btn_allanim_n "None Active" align:#right height:14 width:66 toolTip:"Inactivate all animations, so they don't export"
+        group "Animation Parameters" (
+            spinner spn_animscale "Animation scale:" type:#float scale:0.01 range:[0,10,1] fieldwidth:40 align:#left
+            button btn_animeditor "Open Animation Editor"
+        )
 
-			dropdownlist  edit_anim_name "Anim name\available anims:" align:#center height:10 width:135
-			spinner spn_first_frame "Start Frame:" type:#integer range:[0,1000000,0] fieldwidth:47
-			spinner spn_last_frame   "End Frame:"   type:#integer range:[0,1000000,0] fieldwidth:47
-			spinner spn_transition "Transition:" range:[0,1000000,0.25] scale:0.01 fieldwidth:55
-			checkbox chk_will_export "Export Anim:" checked:true
-			edittext edit_animroot "Anim root:"
-			button  btn_animeditapply "Apply Edits" align:#center height:14
-			--button button_selanimroot "Select Anim Root" align:#center    -- not yet supported
-			--label lbl_animlist "Animation Name List"
-			--combobox lst_animnames "" height:5
-			*/
-		)
-    /*
-    group "Events" (
-	    listBox list_events "" height:5
-	    editText edit_event_name "Name:"
-	    spinner spn_event_frame "Frame:" type:#integer range:[0,100000,0]
-	    button btn_event_add "Add" align:#left width:65 height:14 across:2
-	    button btn_event_delete "Delete" align:#right width:65 height:14 enabled:false
-		button  btn_eventeditapply "Apply Edits" align:#center height:14
-	    label lbl_quickevents "Quick Events"
-	    button btn_qe_blurstart "blur start" align:#left width:67 height:14 across:2
-	    button btn_qe_blurend "blur end" align:#right width:67 height:14
-	    button btn_qe_drawarrow "draw arrow" align:#left width:67 height:14 across:2
-	    button btn_qe_drawweapon "draw weapon" align:#right width:67 height:14
-	    button btn_qe_hit "hit" width:40 height:14 align:#left across:3
-	    button btn_qe_parry "parry" align:#center width:40 height:14
-	    button btn_qe_cast "cast" align:#right width:40 height:14
-	    button btn_qe_sndfootstep "footstep" align:#left width:67 height:14 across:2
-	    button btn_qe_sndhitground "hitground" align:#right width:67 height:14
-	    button btn_qe_detonate "detonate" align:#center width:67 height:14
-    ) */
-
-		-- read list of animation names from a file
-		fn ReadAnimationNameList filename =
-		(
-			namelist = #()
-			fh = openFile filename mode:"r"
-			if (fh != undefined) then
-			(
-				while not eof(fh) do
-				(
-					animname = readDelimitedString fh " \n"
-					if (animname != "") then
-					(
-						append namelist animname
-					)
-					else
-					(
-						exit
-					)
-				)
-				close fh
-			)
-			return namelist
-		)
-
-
-		fn refresh_anim_namelist =
-		(
-			if (classification != undefined) then
-			(
-				namelist = readAnimationNameList (scriptsPath + "\\NWmax\\"+ classification + ".nam")
-				edit_anim_name.items = namelist
-			)
-		)
-
-		on open params do
-		(
-			refresh_anim_namelist()
-		)
-
-		on droplist_classui selected val do
-		(
-    		-- update the anim list
-    		refresh_anim_namelist()
-		)
-
-
-		on edit_exportpath entered val do
-		(
-    		if not (nx_existDir val) then
-    		    messagebox "Directory does not exist!"
-		)
-
+        on edit_exportpath entered val do
+        (
+            if not (nx_existDir val) then
+                messagebox "Directory does not exist!"
+        )
 
 		fn export_start doanim:true =
 		(
@@ -385,523 +292,25 @@ invisible:true
 
 		)
 
-  	fn updateanimlist =
-  	(
-  		local tmpList = #()
-  		for a in animations do (
-  			join tmpList #(a)
-  		)
-  		if (nx_strclassof(selection[1]) == "aurorabase") then
-  			selection[1].params.list_animations.items = tmpList
-  	)
-
-    fn LoadSelectedAnimation=
-    (
-      local str_anim = params.list_animations.selected
-      if (str_anim != undefined) then
-      (
-          -- parse the animation string
-          tokens = filterString str_anim " "
-          params.edit_anim_name.selection = (findItem params.edit_anim_name.items tokens[1])
-          params.spn_first_frame.value = (tokens[2] as integer)
-          params.spn_last_frame.value = (tokens[3] as integer)
-          params.spn_transition.value = (tokens[4] as float)
-          -- to be backwards compatable we need to check if [5] is null
-          if tokens[5] == undefined then
-              params.chk_will_export.checked = true
-          else
-              params.chk_will_export.checked = (nx_itob (tokens[5] as integer))
-          -- need to check if there is animroot data
-          if tokens.count > 5 then
-          (
-            -- we have anim root data
-            params.edit_animroot.text = tokens[6]
-          ) else (
-            params.edit_animroot.text = ""
-          )
-          -- enable the delete button
-          params.btn_delete_anim.enabled = true
-          -- enable zoom button
-          params.btn_zoom_to_anim.enabled = true
-      )
-      else
-      (
-          params.edit_anim_name.selection = 1
-          params.edit_animroot.text = ""
-          params.spn_first_frame.value = 0
-          params.spn_last_frame.value = 0
-          params.spn_transition.value = 0
-          params.chk_will_export.checked = true
-          -- unenable the delete button
-          params.btn_delete_anim.enabled = false
-          -- unenable zoom button
-          params.btn_zoom_to_anim.enabled = false
-      )
-    )
-
-    fn ZoomToAnim=
-    (
-        local firstframe = params.spn_first_frame.value
-        local lastframe = params.spn_last_frame.value
-        if (firstframe < lastframe) then
+        on btn_animeditor pressed do
         (
-            animationRange = (interval firstframe lastframe)
-            sliderTime = firstframe
+            try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animeditor.ms")) catch(format "Opening nx_animeditor.ms failed!\n")
         )
-    )
-
-    on btn_animeditor pressed do
-    (
-        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animeditor.ms")) catch(format "Opening nx_animeditor.ms failed!\n")
-    )
-/*
-    on btn_zoom_reset pressed do
-    (
-        animationRange = (interval 0 max_anim_frame)
-    )
-
-    on list_animations selected list_idx do LoadSelectedAnimation()
-
-    on list_animations doubleClicked list_idx do ZoomToAnim()
-
-        on btn_add_anim pressed do
-        (
-            local str_name = (params.edit_anim_name.text as string)
-            if str_name != "" then
-            (
-                local str_firstframe = (params.spn_first_frame.value as string)
-                local str_lastframe = (params.spn_last_frame.value as string)
-                local str_transition = (params.spn_transition.value as string)
-                local str_willexport = ((nx_btoi params.chk_will_export.checked) as string)
-                local str_animroot = (params.edit_animroot.text as string)
-                animations[animations.count+1] = \
-                    (str_name+" "+str_firstframe+" "+ \
-                    str_lastframe+" "+str_transition+" "+ \
-                    str_willexport+" "+str_animroot)
-                updateanimlist()
-                list_animations.selection = animations.count
-            )
-        )
-
-        on btn_delete_anim pressed do
-        (
-            local sel = params.list_animations.selection
-            if (sel > 0) then
-            (
-                -- select nothing
-                params.list_animations.selection = 0
-                -- delete the item from list
-                deleteItem animations sel
-                updateanimlist()
-                params.btn_delete_anim.enabled = false
-            )
-        )
-
-        on btn_zoom_to_anim pressed do ZoomToAnim()
-*/
-        --
-        -- Support direct edits to the frame and transition times
-        --
-        fn ChangeSelAnimEntry =
-        (
-            -- get current selection in list box
-            local selindex = list_animations.selection
-            --if selindex is 0 then nothing selected so don't do anything more
-            if selindex == 0 then return 0
-            -- rebuild the entry and put it back in
-            local str_name = (params.edit_anim_name.text as string)
-            local str_firstframe = (params.spn_first_frame.value as string)
-            local str_lastframe = (params.spn_last_frame.value as string)
-            local str_transition = (params.spn_transition.value as string)
-            local str_willexport = ((nx_btoi params.chk_will_export.checked) as string)
-            local str_animroot = (params.edit_animroot.text as string)
-            animations[selindex] = \
-                (str_name+" "+str_firstframe+" "+ \
-                str_lastframe+" "+str_transition+" "+ \
-                str_willexport+" "+str_animroot)
-            updateanimlist()
-            list_animations.selection = selindex
-        )
-        --on spn_first_frame changed new_val do ChangeSelAnimEntry()
-        --on spn_last_frame changed new_val do ChangeSelAnimEntry()
-        --on spn_transition changed new_val do ChangeSelAnimEntry()
-        --on chk_will_export changed new_val do ChangeSelAnimEntry()
-/*
-        on btn_animeditapply pressed do
-        (
-	        ChangeSelAnimEntry()
-        )
-
-        on btn_moveup pressed do
-        (
-            -- get current selection in list box
-            local selindex = list_animations.selection
-            local tempStr = ""
-            --if selindex is 0 then nothing selected so don't do anything more
-            if selindex == 0 or selindex == 1 then return 0
-
-            tempstr = animations[selindex]
-            animations[selindex] = animations[selindex-1]
-            animations[selindex-1] = tempstr
-
-            -- after our changes do the update to the list
-            updateanimlist()
-
-            -- update selection
-            list_animations.selection = selindex-1
-        )
-
-        on btn_movedown pressed do
-        (
-            -- get current selection in list box
-            local selindex = list_animations.selection
-            local tempStr = ""
-            --if selindex is 0 then nothing selected so don't do anything more
-            if selindex == 0 or selindex == animations.count then return 0
-
-            tempstr = animations[selindex]
-            animations[selindex] = animations[selindex+1]
-            animations[selindex+1] = tempstr
-
-            -- after our changes do the update to the list
-            updateanimlist()
-
-            -- update selection
-            list_animations.selection = selindex+1
-        )
-
-        on btn_allanim_y pressed do
-        (
-            local i, tokens, animroot
-            for i =1 to animations.count do
-            (
-                tokens = filterString animations[i] " "
-                if tokens.count > 5 then (
-	                animroot = tokens[6]
-                ) else (
-	                animroot = ""
-                )
-                animations[i] = tokens[1]+" "+ \
-                                tokens[2]+" "+ \
-                                tokens[3]+" "+ \
-                                tokens[4]+" "+ \
-                                "1 "+ \
-                                animroot
-            )
-            updateanimlist()
-        )
-
-        on btn_allanim_n pressed do
-        (
-            local i, tokens, animroot
-            for i =1 to animations.count do
-            (
-                tokens = filterString animations[i] " "
-                if tokens.count > 5 then (
-	                animroot = tokens[6]
-                ) else (
-	                animroot = ""
-                )
-                animations[i] = tokens[1]+" "+ \
-                                tokens[2]+" "+ \
-                                tokens[3]+" "+ \
-                                tokens[4]+" "+ \
-                                "0 "+ \
-                                animroot
-            )
-            updateanimlist()
-        )
-*/
-        --
-        -- Animation Event Processing
-        --
-        fn updateeventlist=
-        (
-    		local tmpList = #()
-    		for e in events do (
-    			join tmpList #(e)
-    		)
-    		if (classof($) == aurorabase) then
-    			params.list_events.items = tmpList
-        )
-
-        fn LoadSelectedAnimEvent=
-        (
-            local str_event = params.list_events.selected
-            if (str_event != undefined) then
-            (
-                -- parse the event string
-                tokens = filterString str_event " "
-                params.edit_event_name.text = tokens[1]
-                params.spn_event_frame.value = (tokens[2] as integer)
-                -- enable the delete button
-                params.btn_event_delete.enabled = true
-            )
-            else
-            (
-                params.list_events.items = #()
-                params.edit_event_name.text = ""
-                params.spn_event_frame.value = 0
-                params.btn_event_delete.enabled = false
-            )
-        )
-/*
-        on btn_event_add pressed do
-        (
-            format "btn_add_event\r\n"
-            local str_name = (params.edit_event_name.text as string)
-            if str_name != "" then
-            (
-                local str_frame = (params.spn_event_frame.value as string)
-                format "% %\r\n" str_name str_frame
-                events[events.count+1] = (str_name+" "+str_frame)
-                updateeventlist()
-                list_events.selection = events.count
-            )
-        )
-
-        on btn_event_delete pressed do
-        (
-            local sel = params.list_events.selection
-            if (sel > 0) then
-            (
-                -- select nothing
-                params.list_events.selection = 0
-                -- delete the item from list
-                deleteItem events sel
-                updateeventlist()
-                params.btn_event_delete.enabled = false
-            )
-        )
-
-        on btn_eventeditapply pressed do
-        (
-            local str_name = (params.edit_event_name.text as string)
-            if str_name != "" then
-            (
-                local str_frame = (params.spn_event_frame.value as string)
-                local sel = params.list_events.selection
-                events[sel] = (str_name+" "+str_frame)
-                updateeventlist()
-                list_events.selection = sel
-            )
-        )
-
-        on list_events selected list_idx do LoadSelectedAnimEvent()
-*/
-      fn add_event strEvent =
-      (
-         local str_frame = (sliderTime.frame as integer)  as string
-         events[events.count+1] = (strEvent+" "+str_frame)
-         updateeventlist()
-         list_events.selection = events.count
-      )
-/*
-      on btn_qe_blurstart pressed do ( add_event "blur_start" )
-      on btn_qe_blurend pressed do ( add_event "blur_end" )
-      on btn_qe_drawarrow pressed do ( add_event "draw_arrow" )
-      on btn_qe_drawweapon pressed do ( add_event "draw_weapon" )
-      on btn_qe_hit pressed do ( add_event "hit" )
-      on btn_qe_parry pressed do ( add_event "parry" )
-      on btn_qe_cast pressed do ( add_event "cast" )
-      on btn_qe_sndfootstep pressed do ( add_event "snd_footstep" )
-      on btn_qe_sndhitground pressed do ( add_event "snd_hitground" )
-      on btn_qe_detonate pressed do ( add_event "detonate" )
-*/
 
 		--
         -- Aurora base rollout has been opened
         --
 		on params open do
 		(
-			--if (classification == undefined) then
-			--	classification = classui.selected
-
-			current =0;
-			--list_animations.selection=0;
-			--list_events.selection=0
-			--updateanimlist()
-			--updateeventlist()
+			current = 0;
 			edit_supermodel.text = setsupermodel
-
-			-- This is required in order to activate the 'classui selected' callback.
-			-- See comments at the top for 'classification'
-			--droplist_classui.selection = findItem droplist_classui.items classification
 
 			if ($ != undefined) then
 				modelname.text = "Model:  " + $.name
 			else
 				modelname.text = "Model: "
-
-			/*
-			spn_animscale.enabled = false
-			if (classification == "Character") then
-				spn_animscale.enabled = true
-			*/
-            /*
-		    if max_anim_frame == undefined then max_anim_frame = 0
-		    if max_anim_frame < (animationrange.end) then max_anim_frame = animationrange.end
-
-		    if edit_anim_name.items.count < 1 then (
-			    refresh_anim_namelist()
-		    )*/
-
-		    -- make sure sanity bit string is correct length
-		    --if sanity_tests.count < 20 then sanity_tests = sanity_tests + "1"
-
-    		--runRotationCheck = nx_itob(sanity_tests[1] as integer)
-			--runAnimCheck = nx_itob(sanity_tests[2] as integer)
-			--runCollisionMeshCheck = nx_itob(sanity_tests[3] as integer)
-			--runTileNodeBoundaryCheck = nx_itob(sanity_tests[4] as integer)
-			--runAuraEmitterCheck = nx_itob(sanity_tests[5] as integer)
-			--runAuraRefCheck = nx_itob(sanity_tests[6] as integer)
-			--runNameCheck = nx_itob(sanity_tests[7] as integer)
-			--runScaleCheck = nx_itob(sanity_tests[8] as integer)
-			--runPartTextureCheck = nx_itob(sanity_tests[9] as integer)
-			--runWeldCheck = nx_itob(sanity_tests[10] as integer)
-			--runClassCheck = nx_itob(sanity_tests[11] as integer)
-			--runControllerCheck = nx_itob(sanity_tests[12] as integer)
-			--runAnimMeshCheck = nx_itob(sanity_tests[13] as integer)
-			--runDoganCheck = nx_itob(sanity_tests[14] as integer)
-			--runBitmapNameCheck = nx_itob(sanity_tests[15] as integer)
-			--runFaceCheck = nx_itob(sanity_tests[16] as integer)
-			--runBSACheck = nx_itob(sanity_tests[17] as integer)
-			--runAnimrootCheck = nx_itob(sanity_tests[18] as integer)
-			--runBoneCountCheck = nx_itob(sanity_tests[19] as integer)
-			--runWOKCheck = nx_itob(sanity_tests[20] as integer)
 		)
 	) ---- rollout params "MDL Base Parameters"
-
-
-
-	--
-	-- Sanity Checks gui
-	--
-	/*
-	No longer used
-	rollout ActiveChecks "Active Sanity Checks" rolledUp:true
-	(
-		group "AuraBase Checks" (
-			checkbox box_RotationCheck "Zero Rotation" checked:runRotationCheck
-			checkbox box_AnimCheck "Valid Anim Keys" checked:runAnimCheck
-		)
-		group "Tile Checks" (
-			checkbox box_CollisionMeshCheck "Collision/WOK Mesh Validity" checked:runCollisionMeshCheck
-			checkbox box_TileNodeBoundaryCheck "Tile Node Boundary Chk" checked:runTileNodeBoundaryCheck
-		)
-
-		checkbox box_AuraEmitterCheck "Emitter Validity" checked:runAuraEmitterCheck
-		checkbox box_AuraRefCheck "AuraRef Existence" checked:runAuraRefCheck
-		checkbox box_NameCheck "Node Name Validity" checked:runNameCheck
-		checkbox box_ScaleCheck "Zero World Scale" checked:runScaleCheck
-		checkbox box_PartTextureCheck "Material Bitmap Name Chk" checked:runPartTextureCheck
-		checkbox box_BitmapNameCheck "Bitmap Name Validity" checked:runBitmapNameCheck
-		checkbox box_WeldCheck "Weld To Nearest cm" checked:runWeldCheck
-		checkbox box_ClassCheck "Node Type 'boolean'" checked:runClassCheck
-		checkbox box_ControllerCheck "Valid Controllers on Keys" checked:runControllerCheck
-		checkbox box_AnimMeshCheck "Animated Mesh Validity" checked:runAnimMeshCheck
-		checkbox box_DoganCheck "Texvert Validity" checked:runDoganCheck
-		checkbox box_FaceCheck "Zero Faces On a Node" checked:runFaceCheck
-		checkbox box_BSACheck "Bumpy-shiny Alignmt Chk" checked:runBSACheck
-		checkbox box_AnimrootCheck "Animroot Node Existence" checked:runAnimrootCheck
-		checkbox box_BoneCountCheck "Skinning:4 Bones per Vert" checked:runBoneCountCheck
-		checkbox box_WOKchecker "Check WOK" checked:runWOKCheck
-
-		fn setsanity i val =
-		(
-			local t = sanity_tests
-
-			-- make sure string bit array is correct min size
-			if (t.count <20) then t = t + "1"
-
-			t[i] = val
-			sanity_tests = t
-		)
-
-		on box_RotationCheck changed newState do (
-			runRotationCheck = newState
-			setsanity 1 (nx_btoi(newState) as string)
-		)
-		on box_AnimCheck changed newState do (
-			runAnimCheck = newState
-			setsanity 2 (nx_btoi(newState) as string)
-		)
-		on box_CollisionMeshCheck changed newState do (
-			runCollisionMeshCheck = newState
-			setsanity 3 (nx_btoi(newState) as string)
-		)
-		on box_TileNodeBoundaryCheck changed newState do (
-			runTileNodeBoundaryCheck = newState
-			setsanity 4 (nx_btoi(newState) as string)
-		)
-		on box_AuraEmitterCheck changed newState do (
-			runAuraEmitterCheck = newState
-			setsanity 5 (nx_btoi(newState) as string)
-		)
-		on box_AuraRefCheck changed newState do (
-			runAuraRefCheck = newState
-			setsanity 6 (nx_btoi(newState) as string)
-		)
-		on box_NameCheck changed newState do (
-			runNameCheck = newState
-			setsanity 7 (nx_btoi(newState) as string)
-		)
-		on box_ScaleCheck changed newState do (
-			runScaleCheck = newState
-			setsanity 8 (nx_btoi(newState) as string)
-		)
-		on box_PartTextureCheck changed newState do (
-			runPartTextureCheck = newState
-			setsanity 9 (nx_btoi(newState) as string)
-		)
-		on box_WeldCheck changed newState do (
-			runWeldCheck = newState
-			setsanity 10 (nx_btoi(newState) as string)
-		)
-		on box_ClassCheck changed newState do (
-			runClassCheck = newState
-			setsanity 11 (nx_btoi(newState) as string)
-		)
-		on box_ControllerCheck changed newState do (
-			runControllerCheck = newState
-			setsanity 12 (nx_btoi(newState) as string)
-		)
-		on box_AnimMeshCheck changed newState do (
-			runAnimMeshCheck = newState
-			setsanity 13 (nx_btoi(newState) as string)
-		)
-		on box_DoganCheck changed newState do (
-			runDoganCheck = newState
-			setsanity 14 (nx_btoi(newState) as string)
-		)
-		on box_BitmapNameCheck changed newState do (
-			runBitmapNameCheck = newState
-			setsanity 15 (nx_btoi(newState) as string)
-		)
-		on box_FaceCheck changed newState do (
-			runFaceCheck = newState
-			setsanity 16 (nx_btoi(newState) as string)
-		)
-		on box_BSACheck changed newState do (
-			runBSACheck = newState
-			setsanity 17 (nx_btoi(newState) as string)
-		)
-		on box_AnimrootCheck changed newState do (
-			runAnimrootCheck = newState
-			setsanity 18 (nx_btoi(newState) as string)
-		)
-		on box_BoneCountCheck changed newState do (
-			runBoneCountCheck = newState
-			setsanity 19 (nx_btoi(newState) as string)
-		)
-		on box_WOKchecker changed newState do (
-			runWOKCheck = newState
-			setsanity 20 (nx_btoi(newState) as string)
-		)
-
-	) ---- rollout ActiveChecks
-	*/
-
 )
 
 -- ModelBase Wizard - beta, by Joco
@@ -933,13 +342,13 @@ rollout basewiz "Model Base Wizard"
         	with animate on
         	(
             	-- start
-               	at time (parsedkey[2] as integer) node.scale = [1,1,1] -- 1:1
-                at time (parsedkey[2] as integer) node.rotation = (quat 0 [0,0,0]) -- zero rot
-                at time (parsedkey[2] as integer) node.position = [0,0,0]
+               	at time (parsedkey[2] as integer - 1) node.scale = [1,1,1] -- 1:1
+                at time (parsedkey[2] as integer - 1) node.rotation = (quat 0 [0,0,0]) -- zero rot
+                at time (parsedkey[2] as integer - 1) node.position = [0,0,0]
                 -- end
-               	at time (parsedkey[3] as integer) node.scale = [1,1,1] -- 1:1
-                at time (parsedkey[3] as integer) node.rotation = (quat 0 [0,0,0]) -- zero rot
-                at time (parsedkey[3] as integer) node.position = [0,0,0]
+               	at time (parsedkey[3] as integer + 1) node.scale = [1,1,1] -- 1:1
+                at time (parsedkey[3] as integer + 1) node.rotation = (quat 0 [0,0,0]) -- zero rot
+                at time (parsedkey[3] as integer + 1) node.position = [0,0,0]
             )
             if (parsedkey[3] as integer) > maxkey then maxkey = (parsedkey[3] as integer)
         )
@@ -955,7 +364,6 @@ rollout basewiz "Model Base Wizard"
 	(
    	-- Set the models name
    	modelbase.name = ed_name.text
-    	--#("Character","Tile", "Door","Effect","WalkMesh","Other")
     	modelbase.classification_sel = ddl_type.selection
     	local key_list = #()
     	local maxframe = 0
@@ -1133,22 +541,7 @@ rollout basewiz "Model Base Wizard"
 
 					if chk_helpers.checked then
 					(
-						-- place stock helper/light objects for a tile
-						local mlight1
-						local mlight2
-						max modify mode
-						try (
-							mlight1 = auroralight()
-							mlight2 = auroralight()
-                     mlight1.pos = [0,0,1000]
-                     mlight1.radius = 5.0
-                     mlight1.affectDynamic = 1
-                     mlight2.pos = [0,0,400]
-                     mlight2.radius = 5.0
-                     mlight2.affectDynamic = 1
-                     mlight1.name = "ml1"
-                     mlight2.name = "ml2"
-						) catch (format "error in creating lights\r\n")
+                        --nothing
 					)
         	)
         	3:()

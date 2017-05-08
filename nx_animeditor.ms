@@ -100,10 +100,10 @@ rollout nx_animeditor "Animation Editor"
     (
         if (nodesel != undefined and nodesel.classification != undefined) then
         (
-            namelist = readAnimationNameList (scriptsPath + "\\NWmax\\"+ nodesel.classification + ".nam")
+            namelist = readAnimationNameList (scriptsPath + "\\NWmax\\names\\"+ nodesel.classification + ".nam")
             ddl_name.items = namelist
         )
-        namelist = readAnimationNameList (scriptsPath + "\\NWmax\\"+ "events.nam")
+        namelist = readAnimationNameList (scriptsPath + "\\NWmax\\names\\"+ "events.nam")
         ddl_event_name.items = namelist
     )
 

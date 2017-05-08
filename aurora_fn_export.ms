@@ -1366,7 +1366,6 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
 
     local objController
     local bIsNegLight = false
-    local ssKeyList = stringstream ""
 
     local strMdlName
     if mdlname != "" then
@@ -1377,7 +1376,7 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
     -- only continue if node is valid
     if node == undefined then
     (
-        if DEBUG then format "    #DEBUG: node not valid - exit DynBuildKeyList fn%" g_delim to:ssKeyList
+        if DEBUG then format "    #DEBUG: node not valid - exit DynBuildKeyList fn%" g_delim to:g_strBuffer
         return false
     )
 
@@ -1390,7 +1389,7 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
         objController = undefined
     )
 
-    if DEBUG then format "    #DEBUG: objController=% %" objController g_delim to:ssKeyList
+    if DEBUG then format "    #DEBUG: objController=% %" objController g_delim to:g_strBuffer
 
     local keycount = 0
     local bBezier = true;
@@ -1424,9 +1423,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                 -- we have an obj index > 0 so add a keylist entry
                 if (keycount == 0) then
                 (
-                    format "        %" strMdlName to:ssKeyList
-                    if (bBezier) then format "bezier" to:ssKeyList
-                    format "key%" g_delim to:ssKeyList
+                    format "        %" strMdlName to:g_strBuffer
+                    if (bBezier) then format "bezier" to:g_strBuffer
+                    format "key%" g_delim to:g_strBuffer
                 )
                 keycount += 1;
                 at time t in coordsys parent
@@ -1457,9 +1456,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         (
                             objIn = objController.keys[key_index].inTangent
                             objOut = objController.keys[key_index].outTangent
-                            format "            % % % % %" key_time objVal objIn objOut g_delim to:ssKeyList
+                            format "            % % % % %" key_time objVal objIn objOut g_delim to:g_strBuffer
                         )
-                        else format "            % % %" key_time objVal g_delim to:ssKeyList
+                        else format "            % % %" key_time objVal g_delim to:g_strBuffer
                     )
                     "integer":
                     (
@@ -1467,9 +1466,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         (
                             objIn = objController.keys[key_index].inTangent
                             objOut = objController.keys[key_index].outTangent
-                            format "            % % % % %" key_time objVal objIn objOut g_delim to:ssKeyList
+                            format "            % % % % %" key_time objVal objIn objOut g_delim to:g_strBuffer
                         )
-                        else format "            % % %" key_time objVal g_delim to:ssKeyList
+                        else format "            % % %" key_time objVal g_delim to:g_strBuffer
                     )
                     "color":
                     (
@@ -1483,9 +1482,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         (
                             objIn = objController.keys[key_index].inTangent
                             objOut = objController.keys[key_index].outTangent
-                            format "            % % % % % % % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) objIn.r objIn.g objIn.b objOut.r objOut.g objOut.b g_delim to:ssKeyList
+                            format "            % % % % % % % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) objIn.r objIn.g objIn.b objOut.r objOut.g objOut.b g_delim to:g_strBuffer
                         )
-                        else format "            % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) g_delim to:ssKeyList
+                        else format "            % % % % %" key_time (copyVal.r / 255) (copyVal.g / 255) (copyVal.b / 255) g_delim to:g_strBuffer
                     )
                     "point3":
                     (
@@ -1493,11 +1492,11 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         (
                             objIn = objController.keys[key_index].inTangent
                             objOut = objController.keys[key_index].outTangent
-                            format "            % % % % % % % % % % %" key_time objVal.x objVal.y objVal.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:ssKeyList
+                            format "            % % % % % % % % % % %" key_time objVal.x objVal.y objVal.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
                         )
-                        else format "            % % % % %" key_time objVal.x objVal.y objVal.z g_delim to:ssKeyList
+                        else format "            % % % % %" key_time objVal.x objVal.y objVal.z g_delim to:g_strBuffer
                     )
-                    "point4":   format "            % % % % % %" key_time objVal.x objVal.y objVal.z objVal.r g_delim to:ssKeyList
+                    "point4":   format "            % % % % % %" key_time objVal.x objVal.y objVal.z objVal.r g_delim to:g_strBuffer
                     "position":
                     (
                         at time t in coordsys parent
@@ -1509,9 +1508,9 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                             (
                                 objIn = objController.keys[key_index].inTangent
                                 objOut = objController.keys[key_index].outTangent
-                                format "            % % % % % % % % % %%" key_time objPos.x objPos.y objPos.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:ssKeyList
+                                format "            % % % % % % % % % %%" key_time objPos.x objPos.y objPos.z objIn.x objIn.y objIn.z objOut.x objOut.y objOut.z g_delim to:g_strBuffer
                             )
-                            else format "            % % % %%" key_time objPos.x objPos.y objPos.z g_delim to:ssKeyList
+                            else format "            % % % %%" key_time objPos.x objPos.y objPos.z g_delim to:g_strBuffer
                         )
                     )
                     "orientation":
@@ -1545,16 +1544,14 @@ fn DynBuildKeyList node firstframe lastframe datatype keyname mdlname:"" nodetyp
                         -- bead-v modification: getting rid of the minus signs that are flipping our original values
                         local angle = DegToRad(objVal.angle)
                         -- end bead-v modification
-                        format "            % % % % %%" key_time rotVector.x rotVector.y rotVector.z angle g_delim to:ssKeyList
+                        format "            % % % % %%" key_time rotVector.x rotVector.y rotVector.z angle g_delim to:g_strBuffer
                     )
                     default:    format "#ERROR - keylist data type not defined in code. Contact the author for support. %"
                 )
+                if(mod keycount 10 == 0) then nx_FlushBuffer()
             )
         )
-    )
-    if (keycount > 0) then(
-        format "        endlist%" g_delim to:ssKeyList
-        format "%" (ssKeyList as string) to:g_strBuffer
+        if(keycount > 0) then format "        endlist%" g_delim to:g_strBuffer
         nx_FlushBuffer()
     )
 

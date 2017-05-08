@@ -56,7 +56,7 @@ version:1
 		    - alpha channel options
 		*/
 
-		tilefadeprop	type:#integer   default:1  --ui:radio_cap     -- defaults to "Not a cap"
+		--tilefadeprop	type:#integer   default:1  --ui:radio_cap     -- defaults to "Not a cap"
 		scale		    type:#float     ui:spn_scale    default:1.0
 		render		    type:#integer   ui:box_render   default:1      -- defaults to render
 		shadow		    type:#integer   ui:box_shadow   default:0      -- defaults to cast shadow

@@ -56,49 +56,16 @@ fn LoadPlugIns =
 --------------------------------------------------------------------------------
 rollout nx_util2 "Skin Tools" width:162 height:68
 (
-    --button btn_armourer "Armour Maker" width:144 height:18
-    --button btn_cutter "Armour Cutter" width:144 height:18
     button btn_skindumper "Skin Dumper" width:144 height:18
     button btn_weightmaster "Weight Master" width:144 height:18
-    /*
-    button btn_pivotsnap "PivotSnap" across:2
-    dropdownlist drp_snaptypes items:#( "pmh","pfh", \
-                                        "pma","pfa", \
-                                        "pmd","pfd", \
-                                        "pme","pfe", \
-                                        "pmg","pfg", \
-                                        "pmo","pfo")
-    checkbox chk_pivotonly "Pivot Only" checked:false align:#left across:2
-    dropdownlist drp_snappheno items:#("0","2") align:#right
-    */
 
-    on btn_armourer pressed do ( try (filein (scriptsPath+"NWmax/ramaker/nwmax_ramaker.ms")) catch() )
-    on btn_cutter pressed do ( try (filein (scriptsPath+"NWmax/ramaker/nwmax_armourcutter.ms")) catch() )
-    on btn_skindumper pressed do ( try (filein (scriptsPath+"NWmax/ramaker/nwmax_skindumper.ms")) catch() )
+    on btn_skindumper pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nwmax_skindumper.ms")) catch() )
     on btn_weightmaster pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_weightmaster.ms")) catch() )
-
-    on btn_pivotsnap pressed do (
-        nx_snaptonormalpivots (drp_snaptypes.selected + drp_snappheno.selected) pivotonly:(chk_pivotonly.checked)
-    )
-
-    on nx_util2 open do
-    (
-            -- make sure some utils are available
-        if not nx_existFile(scriptsPath+"NWmax\\ramaker\\nwmax_armourcutter.ms") then
-        (
-            btn_cutter.enabled = false
-        )
-        if not nx_existFile(scriptsPath+"NWmax\\ramaker\\nwmax_skindumper.ms") then
-        (
-            btn_skindumper.enabled = false
-        )
-    )
 )
 
 rollout nx_util3 "Mesh Tools" width:162 height:68
 (
     button btn_trimesh "To Trimesh"  width:144 height:18 align:#center toolTip:"Convert mesh into a trimesh, preserving modifiers"
-    --button btn_cryomesh "Cryomesh" width:144 height:18 align:#center toolTip:"Save selected mesh states to file for later reload"
     button btn_shadowchecker "Check Shadows" width:144 height:18 align:#center toolTip:"Check shadow validity of all selected objects"
     button btn_tidy_materials "Rationalise Materials" width:144 height:18 align:#center toolTip:"Rationalise the materials in the scene"
     button btn_tvertdisplace "TVert Displacer" width:144 height:18 align:#center toolTip:"Scale/Move tverts on a material that has been resized"
@@ -107,9 +74,9 @@ rollout nx_util3 "Mesh Tools" width:162 height:68
     checkbox chk_keeppivots "Safe Pivots" checked:true
     checkbutton btn_linkcopy "Copy/Paste Links" width:90 height:18 align:#left across:2 toolTip:"Copy linkages of selected nodes, then on 2nd push restore them."
     button btn_copyreset "Reset" width:44 height:18 align:#right toolTip:"Clear copy link buffer"
-    button btn_orderchildren "Order Children" width:144 height:18 align:#center toolTip:"Manually reorder children of selected object"
     button btn_desparkle "\"Desparkle\" Model" width:144 height:18 align:#center toolTip:"Desparkle by rounding all verts to nearest cm"
-    --button btn_woktool "WOK Checker Tool" width:144 height:18 align:#center toolTip:"Tests WOKs for validty and assist in finding the offending Verts/Edges"
+    button btn_modelscaler "Scale Wizard" width:144 height:18 align:#center
+    button btn_chilliskinner "Chilli Skinner" width:144 height:18 align:#center
 
     on btn_trimesh pressed do undo on
     (
@@ -130,10 +97,9 @@ rollout nx_util3 "Mesh Tools" width:162 height:68
         )
     )
 
-    on btn_cryomesh pressed do
-    (
-        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_cryomesh.ms")) catch()
-    )
+    on btn_chilliskinner pressed do ( try (filein (scriptsPath+"NWmax/CSv3.0.2/CSv3-0-2.ms")) catch() )
+
+    on btn_modelscaler pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nwmax_scalewiz.ms")) catch() )
 
     on btn_tvertdisplace pressed do
     (
@@ -144,26 +110,6 @@ rollout nx_util3 "Mesh Tools" width:162 height:68
     (
         g_linkCopy = #()
         btn_linkcopy.checked = false
-    )
-
-    on btn_orderchildren pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_orderchildren.ms")) catch() )
-
-    -- Perform a model desparkle
-    on btn_desparkle pressed do
-    (
-        if (nx_strclassof selection[1]) == "aurorabase" then
-        (
-            clearListener()
-            --format "<snoopstart file=%>\r\n" (selection[1].name + "_desparklelog.txt")
-            nx_mesh_desparkle selection[1]
-            --format "</snoopstart>\r\n"
-        ) else
-            MessageBox "No AuroraBase selected."
-    )
-
-    on btn_woktool pressed do
-    (
-        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_woktool.ms")) catch()
     )
 
     on btn_linkcopy changed down do
@@ -432,9 +378,6 @@ rollout nx_util4 "Anim Tools" width:162 height:68
     button btn_keyreduct "Reduce Anim Keys" width:144 height:18 toolTip:"Rationalise the animation keys for the selected nodes"
     button btn_bakeanim "Bake Anims" width:144 height:18
     button btn_reset_controllers "Reset Orientation" width:144 height:18 toolTip:"Resets the rotation controller to tcb then back to linear"
-    --button btn_animbrowse "Anim Broswer" width:144 height:18
-    --button btn_eventbrowse "Event Broswer" width:144 height:18
-    --button btn_mayakeyrests "Reset Maya Rot Keys" width:144 height:18
 
     on btn_keymaster pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animkeymaster.ms")) catch() )
 
@@ -490,30 +433,10 @@ rollout nx_util4 "Anim Tools" width:162 height:68
         try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_keyreduct.ms")) catch()
     )
 
-    on btn_animbrowse pressed do
-    (
-        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animbrowse.ms")) catch()
-    )
-
     on btn_animeditor pressed do
     (
         --format "Opening nx_animeditor.ms...\n"
         try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_animeditor.ms")) catch(format "Opening nx_animeditor.ms failed!\n")
-    )
-
-    on btn_eventbrowse pressed do
-    (
-        try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_eventbrowse.ms")) catch()
-    )
-
-    on btn_mayakeyrests pressed do
-    (
-        -- go through all scene objects and for each rotation key value
-        -- swap the x and y parts of the axis
-        for obj in $objects do
-        (
-            -- trap for errors
-        )
     )
 )
 
@@ -537,27 +460,7 @@ rollout nx_util5 "Texture Tools" width:162 height:68
     on btn_texlib pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_texturelib.ms")) catch() )
     on btn_texlibmaker pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_texturelibmaker.ms")) catch() )
 )
-/*
-rollout nx_util6 "Area Tools" width:162 height:68
-(
-    -- ui
-    button btn_minimap "MiniMap Maker" width:144 height:18 align:#center
-    button btn_exportlyt "Export Layout File" width:144 height:18 align:#center
-    button btn_importlyt "Import Layout File" width:144 height:18 align:#center
 
-    -- ensure only active if running max version of nwmax
-    on nx_util6 open do
-    (
-	    if ( not g_ismax ) then
-	    (
-		    btn_minimap.enabled = false
-	    )
-    )
-
-    -- actions
-    on btn_minimap pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_minimap_maker.ms")) catch() )
-)
-*/
 /*
 rollout nx_prefs "Preferences" width:162 height:68
 (
@@ -588,23 +491,22 @@ rollout nx_util1 "General Utils" width:162 height:68
     button btn_sel_parent "Parent" width:68 height:18 align:#left across:2 toolTip:"Select Parent"
     button btn_sel_child "Children" width:68 height:18 align:#right toolTip:"Select Children"
     checkbutton btn_make_dummy_helper "Dummy" width:68 height:18 align:#left across:2 toolTip:"Create a stock Dummy helper"
-    button btn_environ "Set Environ" width:68 height:18 align:#right toolTip:"Set default unit scales (cm)"
+    button btn_environ "Def Units" width:68 height:18 align:#right toolTip:"Set default unit scales (cm)"
     button btn_makeintodummy "To Dummy" width:68 height:18 align:#left across:2 tooltop:"Make selected objects into Dummy helpers"
     button btn_linker "Fast Linker" width:68 height:18 align:#right toolTip:"Link all selected objects to the AuroraBase in the selection"
 
     -- speedbar #2
     --button btn_veltools "VelTools" width:144 height:18 align:#center
-    button btn_chilliskinner "Chilli Skinner" width:144 height:18 align:#center
-    --button btn_tileslicer "Tile Slicer" width:144 height:18 align:#center
-    button btn_modelscaler "Scale Wizard" width:144 height:18 align:#center
-    button btn_massops "Mass Operations" width:144 height:18 align:#center
-
-
-    button btn_export_all "Export all or Selected" width:144 height:18 align:#center toolTip:"Export selected models or all models if none selected."
-    group "Reset Export Directory" (
+    button btn_removepointer "Delete Base Arrow Pointers" width:144 height:18 align:#center
+    button btn_orderchildren "Order Children" width:144 height:18 align:#center toolTip:"Manually reorder children of selected object"
+    group "Export Utilities" (
+        button btn_massops "Mass Operations" width:144 height:18 align:#center toolTip:"Mass Sanity Check and Mass Export."
+        button btn_export_all "Export All or Selected" width:144 height:18 align:#center toolTip:"Export selected models or all models if none selected."
+    )
+    group "Set Export Directory" (
         edittext edt_resetdir "Dir:" text:(getdir #export)
-        button btn_resetdir "Reset" width:68 height:18 across:2 toolTip:"Reset the export directory of all selected model bases"
-        button btn_resetdirbrowse "Browse" width:68 height:18 toolTip:"Select the export path"
+        button btn_resetdirbrowse "Browse" width:68 height:18 tooltip:"Select the export path" across:2
+        button btn_resetdir "Set" width:68 height:18 tooltip:"Set as export directory for all selected model bases."
     )
 
     group "Plug-Ins"
@@ -613,23 +515,23 @@ rollout nx_util1 "General Utils" width:162 height:68
         button btn_prefab_do "Go" height:20 width:20 offset:[7,0] align:#right
     )
 
-    group "Reset Sanity Check"
+    group "Sanity Check Options"
     (
+        checkbox box_NameCheck "Valid Node Name" checked:runNameCheck
+        checkbox box_ScaleCheck "Valid World Scale" checked:runScaleCheck
+        checkbox box_PartTextureCheck "BodyPart: Node=Texture" checked:runPartTextureCheck
+        checkbox box_BitmapNameCheck "Bitmap Name < 16 chars" checked:runBitmapNameCheck
+        checkbox box_WeldCheck "Welded To Nearest cm" checked:runWeldCheck
+        checkbox box_ClassCheck "Node Type 'boolean'" checked:runClassCheck
+        checkbox box_ControllerCheck "Valid Pos/Rot Controllers" checked:runControllerCheck
+        checkbox box_DoganCheck "Valid Tvert Values" checked:runDoganCheck
+        checkbox box_FaceCheck "Mesh: Faces > 0" checked:runFaceCheck
+        checkbox box_AnimrootCheck "Animroot Node Exists" checked:runAnimrootCheck
+        checkbox box_BoneCountCheck "Skin: 4 Bones per Vert" checked:runBoneCountCheck
+        --checkbox box_AnimMeshCheck "Animated Mesh Validity" checked:runAnimMeshCheck
+        --checkbox box_BSACheck "Bumpy-shiny Alignmt Chk" checked:runBSACheck
         --checkbox box_AuraEmitterCheck "Emitter Validity" checked:runAuraEmitterCheck
         --checkbox box_AuraRefCheck "AuraRef Existence" checked:runAuraRefCheck
-        checkbox box_NameCheck "Node Name Validity" checked:runNameCheck
-        checkbox box_ScaleCheck "Zero World Scale" checked:runScaleCheck
-        checkbox box_PartTextureCheck "Material Bitmap Name Chk" checked:runPartTextureCheck
-        checkbox box_BitmapNameCheck "Bitmap Name Validity" checked:runBitmapNameCheck
-        checkbox box_WeldCheck "Weld To Nearest cm" checked:runWeldCheck
-        checkbox box_ClassCheck "Node Type 'boolean'" checked:runClassCheck
-        checkbox box_ControllerCheck "Valid Controllers on Keys" checked:runControllerCheck
-        --checkbox box_AnimMeshCheck "Animated Mesh Validity" checked:runAnimMeshCheck
-        checkbox box_DoganCheck "Texvert Validity" checked:runDoganCheck
-        checkbox box_FaceCheck "Zero Faces On a Node" checked:runFaceCheck
-        --checkbox box_BSACheck "Bumpy-shiny Alignmt Chk" checked:runBSACheck
-        checkbox box_AnimrootCheck "Animroot Node Existence" checked:runAnimrootCheck
-        checkbox box_BoneCountCheck "Skinning:4 Bones per Vert" checked:runBoneCountCheck
         --checkbox box_WOKchecker "Check WOK" checked:runWOKCheck
         --button btn_setsanities "Set Sanity Checks" tooltip:"Sets these sanity check options on all selected model bases"
     )
@@ -648,38 +550,16 @@ rollout nx_util1 "General Utils" width:162 height:68
 		gnx_sanity = t
 	)
 
-
-    /*  No longer used
-    on btn_setsanities pressed do
-    (
-        for s in selection do
-        (
-            if (iskindof s aurorabase) then
-            (
-                setsanity 1 s (nx_btoi(runRotationCheck) as string)
-                setsanity 2 s (nx_btoi(runAnimCheck) as string)
-                setsanity 3 s (nx_btoi(runCollisionMeshCheck) as string)
-                setsanity 4 s (nx_btoi(runTileNodeBoundaryCheck) as string)
-                setsanity 5 s (nx_btoi(runAuraEmitterCheck) as string)
-                setsanity 6 s (nx_btoi(runAuraRefCheck) as string)
-                setsanity 7 s (nx_btoi(runNameCheck) as string)
-                setsanity 8 s (nx_btoi(runScaleCheck) as string)
-                setsanity 9 s (nx_btoi(runPartTextureCheck) as string)
-                setsanity 10 s (nx_btoi(runWeldCheck) as string)
-                setsanity 11 s (nx_btoi(runClassCheck) as string)
-                setsanity 12 s (nx_btoi(runControllerCheck) as string)
-                setsanity 13 s (nx_btoi(runAnimMeshCheck) as string)
-                setsanity 14 s (nx_btoi(runDoganCheck) as string)
-                setsanity 15 s (nx_btoi(runBitmapNameCheck) as string)
-                setsanity 16 s (nx_btoi(runFaceCheck) as string)
-                setsanity 17 s (nx_btoi(runBSACheck) as string)
-                setsanity 18 s (nx_btoi(runAnimrootCheck) as string)
-                setsanity 19 s (nx_btoi(runBoneCountCheck) as string)
-                setsanity 20 s (nx_btoi(runWOKCheck) as string)
-            )
-        )
-    )
-    */
+	on btn_removepointer pressed do
+	(
+		for obj in $objects do
+		(
+			if (matchPattern obj.name pattern:"ignore_NGon*") then (
+				select obj
+				max delete
+			)
+		)
+	)
 
 	on box_RotationCheck changed newState do (
     	-- 1
@@ -975,12 +855,6 @@ rollout nx_util1 "General Utils" width:162 height:68
 
     on btn_veltools pressed do ( try (filein (scriptsPath+"VelTools\\VT_start.ms")) catch() )
 
-    on btn_chilliskinner pressed do ( try (filein (scriptsPath+"NWmax/CSv3.0.2/CSv3-0-2.ms")) catch() )
-
-    on btn_tileslicer pressed do ( try (filein (scriptsPath+"NWmax/TileSlicer/tile-slicer.ms")) catch() )
-
-    on btn_modelscaler pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nwmax_scalewiz.ms")) catch() )
-
     on btn_massops pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_massutils.ms")) catch() )
 
     on btn_export_all pressed do
@@ -1027,5 +901,20 @@ rollout nx_util1 "General Utils" width:162 height:68
         if (dirpath!=undefined) then (
             edt_resetdir.text = dirpath
         )
+    )
+
+    on btn_orderchildren pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_orderchildren.ms")) catch() )
+
+    -- Perform a model desparkle
+    on btn_desparkle pressed do
+    (
+        if (nx_strclassof selection[1]) == "aurorabase" then
+        (
+            clearListener()
+            --format "<snoopstart file=%>\r\n" (selection[1].name + "_desparklelog.txt")
+            nx_mesh_desparkle selection[1]
+            --format "</snoopstart>\r\n"
+        ) else
+            MessageBox "No AuroraBase selected."
     )
 )

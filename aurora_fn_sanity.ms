@@ -537,10 +537,10 @@ function AnimCheck AuroraBaseNode =
         )
 
         local str = filterstring anim " "
---      if ((str[4] as integer) == 1) then
---      (
-            local start = str[2] as integer
-            local end = str[3] as integer
+        if ((str[5] as integer) == 1) then
+        (
+            local start = str[2] as integer - 1
+            local end = str[3] as integer + 1
             if (end < start) then
             (
                 format "The animation \"%\" has an end frame % less than it's start frame % %" str[1] str[3] str[2] g_delim to:g_strBuffer
@@ -548,6 +548,7 @@ function AnimCheck AuroraBaseNode =
                 nx_FlushBuffer()
                 return 0
             )
+         /*
             for n in AuroraBaseNode.children do
             (
                 foundPosStart = foundRGBStart = foundRotStart = false
@@ -637,7 +638,8 @@ function AnimCheck AuroraBaseNode =
                 )
 
             ) --// for n in AuroraBaseNode.children do
---      ) --// if ((str[4] as integer) == 1) then
+         */
+      ) --// if ((str[4] as integer) == 1) then
     ) --// for anim in animations do
     progressEnd()
 

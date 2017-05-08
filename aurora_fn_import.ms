@@ -86,17 +86,6 @@ rollout rl_binmdl "Decompile MDL"
     )
 )
 
-
------------------------------------
--- Activity Bar update functions --
------------------------------------
-fn ImportActivityBar =
-(
-    percent +=0.1
-    if percent > 100 then percent = 0
-    ImportRollout.progress.value = percent
-)
-
 -------------------------------
 --- Get Next Non-Blank line ---
 -------------------------------
@@ -145,7 +134,6 @@ fn addMDLSkin node buf =
     -- Work through the weight data
     for data in buf do
     (
-        --ImportActivityBar()
         v += 1; -- increment vertex
         tok = nx_Tokenizer()
         tok.SetString(data)
@@ -639,7 +627,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                             textureName3 = ""
 
 
-                            objTilefadeprop = 1
                             objRender = 1
                             objShadow = 1   -- it appears the default behaviour in the engine is for shadow unless explicitly turned off
                             objBeaming = undefined
@@ -1236,6 +1223,233 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                 newObj = undefined
                                 case of
                                 (
+                                    -- aurorabase
+                                    (newModelName == objName):
+                                    (
+                                        if DEBUG then format "%BUILD OBJECT: Model Base\r\n" strIndent1
+                                        -- this is the base
+                                        newObj = aurorabase name:objName
+                                        newObj.delegate.boxsize = [100,100,5]
+                                        if(not uselytposition) then newObj.pos = location
+                                        else if(objLayoutPos != undefined) then newObj.pos = objLayoutPos
+                                        else newObj.pos = [0,0,0]
+                                        newObj.classification_sel = newModelClassification
+                                        newObj.setanimationscale = newModelAnimscale
+                                        newObj.setsupermodel = newModelSupermodel
+                                        -- set the export path to be the import path
+                                        newObj.export_path = currentPath
+
+                                        -- trap handle to model base for later use
+                                        model_base = newObj
+
+                                        --objProps += "mdl_root=true\r\n"
+                                        -- make the pointer to the front
+                                        if g_basepointer == 1 then
+                                        (
+                                            local tri = ngon()
+                                            tri.radius = 25
+                                            tri.nsides = 3
+                                            tri.rotation *= (quat 90 [0,0,1])
+                                            tri.name = "ignore_"+tri.name
+                                            tri.parent = newObj
+                                            in coordsys parent tri.pos = [0,50,0]
+                                            tri.wireColor = (color 92 179 240)
+                                        )
+                                    )
+
+                                    (objType == "dummy"):
+                                    (
+                                        if DEBUG then format "%BUILD MESH OBJECT: a Dummy!\r\n" strIndent1
+                                        newObj = dummy name:objName
+                                        newObj.boxsize = [5,5,5]
+                                    )
+
+                                    -- Joco 23-Aug-03: Create light and make sure
+                                    -- only previously defined attributes are applied.
+                                    (objType == "light"):
+                                    (
+                                        newObj = auroralight radius:1000 name:objName
+                                        newObj.delegate.boxsize = [10,10,10]
+                                        newObj.wirecolor = objWireColor
+                                        if objRadius!=undefined then newObj.radius = objRadius * 100
+                                        -- bead-v modification: add kotor props
+                                        if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius * 100
+                                        if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement * 100
+                                        -- end bead-v modification
+                                        if objMultiplier!=undefined then newObj.multiplier = objMultiplier -- bead-v: fixed multipler to multiplier
+                                        if objLightpriority!=undefined then newObj.lightpriority = objLightpriority
+                                        if objNdynamictype!=undefined then newObj.nDynamicType = objNdynamictype
+                                        if objLight_color!=undefined then
+                                        (
+                                            newObj.rgb = (color (objLight_color.x*255) (objLight_color.y*255) (objLight_color.z*255))
+                                            -- if objLight_color is < [0,0,0] then is a negtaive light
+                                            if (objLight_color.x<0) or (objLight_color.y<0) or (objLight_color.z<0) then newObj.negativeLight = 1
+                                        )
+                                        if objAmbientOnly!=undefined then newObj.ambientOnly = objAmbientOnly
+                                        if objAffectDynamic!=undefined then newObj.affectDynamic = objAffectDynamic
+                                        if objShadow!=undefined then newObj.Shadow = objShadow
+                                        format "#beaming=%\r\n" objBeaming
+                                        if objBeaming != undefined then newObj.beaming = objBeaming
+                                        if objLensflares!=undefined then newObj.lensflares = objLensflares
+                                        if objFadingLight!=undefined then newObj.fadingLight = objFadingLight
+
+                                        -- load the flare info if there is some
+                                        if a_texturenames.count > 0 then
+                                        (
+                                            newObj.lens_flares = #()    -- just making sure is a blank array
+                                            newObj.flareRadius = objFlareradius
+                                            local flareIndex
+                                            local flareAdd
+                                            for flareIndex = 1 to a_texturenames.count do
+                                            (
+                                                flareAdd = a_texturenames[flareIndex]+" "+ \
+                                                        (a_flaresizes[flareIndex] as string)+" "+ \
+                                                        (a_flarepositions[flareIndex] as string)+" "+ \
+                                                        (a_flarecolorshifts[flareIndex].x as string)+" "+ \
+                                                        (a_flarecolorshifts[flareIndex].y as string)+" "+ \
+                                                        (a_flarecolorshifts[flareIndex].z as string)
+                                                append (newObj.lens_flares) flareAdd
+                                            )
+                                        )
+                                        a_texturenames = #()
+                                        a_flaresizes = #()
+                                        a_flarepositions = #()
+                                        a_flarecolorshifts = #()
+                                    )
+
+                                    -- Joco 23-Aug-03: Create emitter and make sure
+                                    -- only previously defined attributes are applied
+                                    (objType == "emitter"):
+                                    (
+                                        if DEBUG then format "%BUILD MESH OBJECT: Is an emitter!\r\n" strIndent1
+                                        newObj = auroraemitter name:objName
+                                        objRot += quat 180 (point3 1 0 0) -- NWN Emitters starts in +z, GMax cone manipulator starts in -z
+                                        newObj.delegate.Angle = 15;      -- make the cone narrow
+                                        if objIconSize == undefined then objIconSize = 100
+                                        newObj.delegate.Distance = objIconSize;  -- Should look to use Icon Size for this value, if available.
+                                        newObj.wirecolor = objWireColor
+                                        -- Aurora emitters are actually square to make the "cone" a square one.
+                                        newObj.delegate.UseSquare = true
+                                        -- assign data values
+                                        if objUpdate!=undefined then (
+                                            newObj.update = objUpdate
+                                            case nx_lowercase(objUpdate) of
+                                            (
+                                                "fountain":     objUpdate_sel=1
+                                                "single":       objUpdate_sel=2
+                                                "explosion":    objUpdate_sel=3
+                                                "lightning":    objUpdate_sel=4
+                                            )
+                                        )
+                                        if objUpdate_sel!=undefined then newObj.update_sel = objUpdate_sel
+                                        if objBlend!=undefined then (
+                                            newObj.blend = objBlend
+                                            case nx_lowercase(objBlend) of
+                                            (
+                                                "normal": objBlend_sel = 1
+                                                "punch-through":  objBlend_sel = 2
+                                                "lighten": objBlend_sel = 3
+                                            )
+                                        )
+                                        if objBlend_sel!=undefined then (
+                                            --if objBlend_sel == 3 then objBlend_sel = 2
+                                            newObj.blend_sel = objBlend_sel
+                                        )
+                                        if objRender!=undefined then newObj.render = objRender
+                                        if objRender_sel!=undefined then newObj.render_sel = objRender_sel
+                                        if objSpawnType!=undefined then newObj.spawnType = objSpawnType
+                                        if objIconSize!=undefined then newObj.IconSize = objIconSize
+                                        if objXsize!=undefined then newObj.xsize = objXsize
+                                        if objYsize!=undefined then newObj.ysize = objYsize
+                                        if objInherit!=undefined then newObj.inherit = objInherit
+                                        if objInherit_local!=undefined then newObj.inherit_local = objInherit_local
+                                        if objInheritvel!=undefined then newObj.inheritvel = objInheritvel
+                                        if objInherit_part!=undefined then newObj.inherit_part = objInherit_part
+                                        if objRenderorder!=undefined then newObj.renderorder = objRenderorder
+                                        if objThreshold!=undefined then newObj.threshold = objThreshold
+                                        if objCombinetime!=undefined then newObj.combinetime = objCombinetime
+                                        if objDeadspace!=undefined then newObj.deadspace = objDeadspace
+                                        if objColorStart!=undefined then newObj.colorStart = objColorStart
+                                        if objColorEnd!=undefined then newObj.colorEnd = objColorEnd
+                                        if objAlphaStart!=undefined then newObj.alphaStart = objAlphaStart
+                                        if objAlphaEnd!=undefined then newObj.alphaEnd = objAlphaEnd
+                                        if objSizeStart!=undefined then newObj.sizeStart = objSizeStart
+                                        if objSizeEnd!=undefined then newObj.sizeEnd = objSizeEnd
+                                        if objSizeStart_y!=undefined then newObj.sizeStart_y = objSizeStart_y
+                                        if objSizeEnd_y!=undefined then newObj.sizeEnd_y = objSizeEnd_y
+                                        if objBirthrate!=undefined then newObj.birthrate = objBirthrate
+                                        if objLifeExp!=undefined then newObj.lifeExp = objLifeExp
+                                        if objMass!=undefined then newObj.mass = objMass
+                                        if objSpread!=undefined then newObj.spread = objSpread
+                                        if objParticleRot!=undefined then newObj.particleRot = objParticleRot
+                                        if objVelocity!=undefined then newObj.velocity = objVelocity
+                                        if objRandvel!=undefined then newObj.randvel = objRandvel
+                                        if objBounce_co!=undefined then newObj.bounce_co = objBounce_co
+                                        if objBlurlength!=undefined then newObj.blurlength = objBlurlength
+                                        if objLoop!=undefined then newObj.loop = objLoop
+                                        if objBounce!=undefined then newObj.bounce = objBounce
+                                        if objM_isTinted!=undefined then newObj.m_isTinted = objM_isTinted
+                                        if objSplat!=undefined then newObj.Splat = objSplat
+                                        if objAffectedbyWind!=undefined then newObj.affectedbyWind = objAffectedbyWind
+                                        if objTexture!=undefined then newObj.texture = objTexture
+                                        -- if objTwosidedtext!=undefined then newObj.twosidedtext = objTwosidedtext
+                                        if objTwosidedtext!=undefined then newObj.twosidedtex = objTwosidedtext
+                                        if objXgrid!=undefined then newObj.xgrid = objXgrid
+                                        if objYgrid!=undefined then newObj.ygrid = objYgrid
+                                        if objFps!=undefined then newObj.fps = objFps
+                                        if objFrameStart!=undefined then newObj.frameStart = objFrameStart
+                                        if objFrameEnd!=undefined then newObj.frameEnd = objFrameEnd
+                                        if objRandom!=undefined then newObj.random = objRandom
+                                        if objChunk!=undefined then newObj.chunkName = objChunk
+                                        if objChunk!=undefined then newObj.chunky = 1
+                                        if objLightningDelay!=undefined then newObj.lightningDelay = objLightningDelay
+                                        if objLightningRadius!=undefined then newObj.lightningRadius = objLightningRadius
+                                        if objLightningSubDiv!=undefined then newObj.lightningSubDiv = objLightningSubDiv
+                                        if objLightningScale!=undefined then newObj.lightningScale = objLightningScale
+                                        -- bead-v modification: add kotor props
+                                        if objLightningzigzag!=undefined then newObj.lightningzigzag = objLightningzigzag
+                                        if objColorMid!=undefined then newObj.colorMid = objColorMid
+                                        if objAlphaMid!=undefined then newObj.alphaMid = objAlphaMid
+                                        if objSizeMid!=undefined then newObj.sizeMid = objSizeMid
+                                        if objSizeMid_y!=undefined then newObj.sizeMid_y = objSizeMid_y
+                                        if objPercentStart!=undefined then newObj.percentStart = objPercentStart
+                                        if objPercentMid!=undefined then newObj.percentMid = objPercentMid
+                                        if objPercentEnd!=undefined then newObj.percentEnd = objPercentEnd
+                                        if objRandomBirthRate!=undefined then newObj.m_fRandomBirthRate = objRandomBirthRate
+                                        if objTargetsize!=undefined then newObj.targetsize = objTargetsize
+                                        if objNumcontrolpts!=undefined then newObj.numcontrolpts = objNumcontrolpts
+                                        if objControlptradius!=undefined then newObj.controlptradius = objControlptradius
+                                        if objControlptdelay!=undefined then newObj.controlptdelay = objControlptdelay
+                                        if objTangentspread!=undefined then newObj.tangentspread = objTangentspread
+                                        if objTangentlength!=undefined then newObj.tangentlength = objTangentlength
+                                        if objDetonate!=undefined then newObj.detonate = objDetonate
+                                        if objNumBranches!=undefined then newObj.numBranches = objNumBranches
+                                        if objControlptsmoothing!=undefined then newObj.controlptsmoothing = objControlptsmoothing
+                                        if objFrameBlending!=undefined then newObj.m_bFrameBlending = objFrameBlending
+                                        if objDepth_texture!=undefined then newObj.depth_texture = objDepth_texture
+                                        if objDepthTextureName!=undefined then newObj.m_sDepthTextureName = objDepthTextureName
+                                        -- end bead-v modification
+                                        if objBlastRadius!=undefined then newObj.blastRadius = objBlastRadius
+                                        if objBlastLength!=undefined then newObj.blastLength = objBlastLength
+                                        if objOpacity!=undefined then newObj.opacity = objOpacity
+                                        if objP2p!=undefined then newObj.p2p = objP2p
+                                        -- needs special processing
+                                        if objP2p_type!=undefined then
+                                        (
+                                            newObj.p2p_type = objP2p_type
+                                            case nx_lowercase(objP2p_type) of
+                                            (
+                                                "bezier": objP2p_sel = 1
+                                                "gravity": objP2p_sel = 2
+                                            )
+                                        )
+                                        if objP2p_sel!=undefined then newObj.p2p_sel = objP2p_sel
+                                        if objP2p_bezier2!=undefined then newObj.p2p_bezier2 = objP2p_bezier2
+                                        if objP2p_bezier3!=undefined then newObj.p2p_bezier3 = objP2p_bezier3
+                                        if objGrav!=undefined then newObj.grav = objGrav
+                                        if objDrag!=undefined then newObj.drag = objDrag
+                                    )
+
                                     ((objType == "trimesh") or
                                      (objType == "danglymesh") or
                                      (objType == "skin") or
@@ -1560,7 +1774,6 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                                 -- not sure if should do this
                                                 -- for all trimesh nodes or not.
                                                 aurora_mod = auroratrimesh()
-                                                aurora_mod.tilefadeprop = objTilefadeprop
                                                 aurora_mod.scale = objScale_float
                                                 aurora_mod.render = objRender
                                                 aurora_mod.shadow = objShadow
@@ -1623,229 +1836,9 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                                     ) --End trimesh, danglymesh, skin, aabb CASE
 
-                                    -- Joco 23-Aug-03: Create emitter and make sure
-                                    -- only previously defined attributes are applied
-                                    (objType == "emitter"):
-                                    (
-                                        if DEBUG then format "%BUILD MESH OBJECT: Is an emitter!\r\n" strIndent1
-                                        newObj = auroraemitter name:objName
-                                        objRot += quat 180 (point3 1 0 0) -- NWN Emitters starts in +z, GMax cone manipulator starts in -z
-                                        newObj.delegate.Angle = 15;      -- make the cone narrow
-                                        if objIconSize == undefined then objIconSize = 100
-                                        newObj.delegate.Distance = objIconSize;  -- Should look to use Icon Size for this value, if available.
-                                        newObj.wirecolor = objWireColor
-                                        -- Aurora emitters are actually square to make the "cone" a square one.
-                                        newObj.delegate.UseSquare = true
-                                        -- assign data values
-                                        if objUpdate!=undefined then (
-                                            newObj.update = objUpdate
-                                            case nx_lowercase(objUpdate) of
-                                            (
-                                                "fountain":     objUpdate_sel=1
-                                                "single":       objUpdate_sel=2
-                                                "explosion":    objUpdate_sel=3
-                                                "lightning":    objUpdate_sel=4
-                                            )
-                                        )
-                                        if objUpdate_sel!=undefined then newObj.update_sel = objUpdate_sel
-                                        if objBlend!=undefined then (
-                                            newObj.blend = objBlend
-                                            case nx_lowercase(objBlend) of
-                                            (
-                                                "normal": objBlend_sel = 1
-                                                "punch-through":  objBlend_sel = 2
-                                                "lighten": objBlend_sel = 3
-                                            )
-                                        )
-                                        if objBlend_sel!=undefined then (
-                                            --if objBlend_sel == 3 then objBlend_sel = 2
-                                            newObj.blend_sel = objBlend_sel
-                                        )
-                                        if objRender!=undefined then newObj.render = objRender
-                                        if objRender_sel!=undefined then newObj.render_sel = objRender_sel
-                                        if objSpawnType!=undefined then newObj.spawnType = objSpawnType
-                                        if objIconSize!=undefined then newObj.IconSize = objIconSize
-                                        if objXsize!=undefined then newObj.xsize = objXsize
-                                        if objYsize!=undefined then newObj.ysize = objYsize
-                                        if objInherit!=undefined then newObj.inherit = objInherit
-                                        if objInherit_local!=undefined then newObj.inherit_local = objInherit_local
-                                        if objInheritvel!=undefined then newObj.inheritvel = objInheritvel
-                                        if objInherit_part!=undefined then newObj.inherit_part = objInherit_part
-                                        if objRenderorder!=undefined then newObj.renderorder = objRenderorder
-                                        if objThreshold!=undefined then newObj.threshold = objThreshold
-                                        if objCombinetime!=undefined then newObj.combinetime = objCombinetime
-                                        if objDeadspace!=undefined then newObj.deadspace = objDeadspace
-                                        if objColorStart!=undefined then newObj.colorStart = objColorStart
-                                        if objColorEnd!=undefined then newObj.colorEnd = objColorEnd
-                                        if objAlphaStart!=undefined then newObj.alphaStart = objAlphaStart
-                                        if objAlphaEnd!=undefined then newObj.alphaEnd = objAlphaEnd
-                                        if objSizeStart!=undefined then newObj.sizeStart = objSizeStart
-                                        if objSizeEnd!=undefined then newObj.sizeEnd = objSizeEnd
-                                        if objSizeStart_y!=undefined then newObj.sizeStart_y = objSizeStart_y
-                                        if objSizeEnd_y!=undefined then newObj.sizeEnd_y = objSizeEnd_y
-                                        if objBirthrate!=undefined then newObj.birthrate = objBirthrate
-                                        if objLifeExp!=undefined then newObj.lifeExp = objLifeExp
-                                        if objMass!=undefined then newObj.mass = objMass
-                                        if objSpread!=undefined then newObj.spread = objSpread
-                                        if objParticleRot!=undefined then newObj.particleRot = objParticleRot
-                                        if objVelocity!=undefined then newObj.velocity = objVelocity
-                                        if objRandvel!=undefined then newObj.randvel = objRandvel
-                                        if objBounce_co!=undefined then newObj.bounce_co = objBounce_co
-                                        if objBlurlength!=undefined then newObj.blurlength = objBlurlength
-                                        if objLoop!=undefined then newObj.loop = objLoop
-                                        if objBounce!=undefined then newObj.bounce = objBounce
-                                        if objM_isTinted!=undefined then newObj.m_isTinted = objM_isTinted
-                                        if objSplat!=undefined then newObj.Splat = objSplat
-                                        if objAffectedbyWind!=undefined then newObj.affectedbyWind = objAffectedbyWind
-                                        if objTexture!=undefined then newObj.texture = objTexture
-                                        -- if objTwosidedtext!=undefined then newObj.twosidedtext = objTwosidedtext
-                                        if objTwosidedtext!=undefined then newObj.twosidedtex = objTwosidedtext
-                                        if objXgrid!=undefined then newObj.xgrid = objXgrid
-                                        if objYgrid!=undefined then newObj.ygrid = objYgrid
-                                        if objFps!=undefined then newObj.fps = objFps
-                                        if objFrameStart!=undefined then newObj.frameStart = objFrameStart
-                                        if objFrameEnd!=undefined then newObj.frameEnd = objFrameEnd
-                                        if objRandom!=undefined then newObj.random = objRandom
-                                        if objChunk!=undefined then newObj.chunkName = objChunk
-                                        if objChunk!=undefined then newObj.chunky = 1
-                                        if objLightningDelay!=undefined then newObj.lightningDelay = objLightningDelay
-                                        if objLightningRadius!=undefined then newObj.lightningRadius = objLightningRadius
-                                        if objLightningSubDiv!=undefined then newObj.lightningSubDiv = objLightningSubDiv
-                                        if objLightningScale!=undefined then newObj.lightningScale = objLightningScale
-                                        -- bead-v modification: add kotor props
-                                        if objLightningzigzag!=undefined then newObj.lightningzigzag = objLightningzigzag
-                                        if objColorMid!=undefined then newObj.colorMid = objColorMid
-                                        if objAlphaMid!=undefined then newObj.alphaMid = objAlphaMid
-                                        if objSizeMid!=undefined then newObj.sizeMid = objSizeMid
-                                        if objSizeMid_y!=undefined then newObj.sizeMid_y = objSizeMid_y
-                                        if objPercentStart!=undefined then newObj.percentStart = objPercentStart
-                                        if objPercentMid!=undefined then newObj.percentMid = objPercentMid
-                                        if objPercentEnd!=undefined then newObj.percentEnd = objPercentEnd
-                                        if objRandomBirthRate!=undefined then newObj.m_fRandomBirthRate = objRandomBirthRate
-                                        if objTargetsize!=undefined then newObj.targetsize = objTargetsize
-                                        if objNumcontrolpts!=undefined then newObj.numcontrolpts = objNumcontrolpts
-                                        if objControlptradius!=undefined then newObj.controlptradius = objControlptradius
-                                        if objControlptdelay!=undefined then newObj.controlptdelay = objControlptdelay
-                                        if objTangentspread!=undefined then newObj.tangentspread = objTangentspread
-                                        if objTangentlength!=undefined then newObj.tangentlength = objTangentlength
-                                        if objDetonate!=undefined then newObj.detonate = objDetonate
-                                        if objNumBranches!=undefined then newObj.numBranches = objNumBranches
-                                        if objControlptsmoothing!=undefined then newObj.controlptsmoothing = objControlptsmoothing
-                                        if objFrameBlending!=undefined then newObj.m_bFrameBlending = objFrameBlending
-                                        if objDepth_texture!=undefined then newObj.depth_texture = objDepth_texture
-                                        if objDepthTextureName!=undefined then newObj.m_sDepthTextureName = objDepthTextureName
-                                        -- end bead-v modification
-                                        if objBlastRadius!=undefined then newObj.blastRadius = objBlastRadius
-                                        if objBlastLength!=undefined then newObj.blastLength = objBlastLength
-                                        if objOpacity!=undefined then newObj.opacity = objOpacity
-                                        if objP2p!=undefined then newObj.p2p = objP2p
-                                        -- needs special processing
-                                        if objP2p_type!=undefined then
-                                        (
-                                            newObj.p2p_type = objP2p_type
-                                            case nx_lowercase(objP2p_type) of
-                                            (
-                                                "bezier": objP2p_sel = 1
-                                                "gravity": objP2p_sel = 2
-                                            )
-                                        )
-                                        if objP2p_sel!=undefined then newObj.p2p_sel = objP2p_sel
-                                        if objP2p_bezier2!=undefined then newObj.p2p_bezier2 = objP2p_bezier2
-                                        if objP2p_bezier3!=undefined then newObj.p2p_bezier3 = objP2p_bezier3
-                                        if objGrav!=undefined then newObj.grav = objGrav
-                                        if objDrag!=undefined then newObj.drag = objDrag
-                                    )
-
-                                    -- Joco 23-Aug-03: Create light and make sure
-                                    -- only previously defined attributes are applied.
-                                    (objType == "light"):
-                                    (
-                                        newObj = auroraDlight radius:1000 name:objName
-                                        newObj.delegate.boxsize = [10,10,10]
-                                        newObj.wirecolor = objWireColor
-                                        if objRadius!=undefined then newObj.radius = objRadius * 100
-                                        -- bead-v modification: add kotor props
-                                        if objShadowRadius!=undefined then newObj.shadowradius = objShadowRadius * 100
-                                        if objVerticalDisplacement!=undefined then newObj.verticaldisplacement = objVerticalDisplacement * 100
-                                        -- end bead-v modification
-                                        if objMultiplier!=undefined then newObj.multiplier = objMultiplier -- bead-v: fixed multipler to multiplier
-                                        if objLightpriority!=undefined then newObj.lightpriority = objLightpriority
-                                        if objNdynamictype!=undefined then newObj.nDynamicType = objNdynamictype
-                                        if objLight_color!=undefined then
-                                        (
-                                            newObj.rgb = (color (objLight_color.x*255) (objLight_color.y*255) (objLight_color.z*255))
-                                            -- if objLight_color is < [0,0,0] then is a negtaive light
-                                            if (objLight_color.x<0) or (objLight_color.y<0) or (objLight_color.z<0) then newObj.negativeLight = 1
-                                        )
-                                        if objAmbientOnly!=undefined then newObj.ambientOnly = objAmbientOnly
-                                        if objAffectDynamic!=undefined then newObj.affectDynamic = objAffectDynamic
-                                        if objShadow!=undefined then newObj.Shadow = objShadow
-                                        format "#beaming=%\r\n" objBeaming
-                                        if objBeaming != undefined then newObj.beaming = objBeaming
-                                        if objLensflares!=undefined then newObj.lensflares = objLensflares
-                                        if objFadingLight!=undefined then newObj.fadingLight = objFadingLight
-
-                                        -- load the flare info if there is some
-                                        if a_texturenames.count > 0 then
-                                        (
-                                            newObj.lens_flares = #()    -- just making sure is a blank array
-                                            newObj.flareRadius = objFlareradius
-                                            local flareIndex
-                                            local flareAdd
-                                            for flareIndex = 1 to a_texturenames.count do
-                                            (
-                                                flareAdd = a_texturenames[flareIndex]+" "+ \
-                                                        (a_flaresizes[flareIndex] as string)+" "+ \
-                                                        (a_flarepositions[flareIndex] as string)+" "+ \
-                                                        (a_flarecolorshifts[flareIndex].x as string)+" "+ \
-                                                        (a_flarecolorshifts[flareIndex].y as string)+" "+ \
-                                                        (a_flarecolorshifts[flareIndex].z as string)
-                                                append (newObj.lens_flares) flareAdd
-                                            )
-                                        )
-                                        a_texturenames = #()
-                                        a_flaresizes = #()
-                                        a_flarepositions = #()
-                                        a_flarecolorshifts = #()
-                                    )
-
-                                    -- aurorabase
-                                    (newModelName == objName):
-                                    (
-                                        if DEBUG then format "%BUILD OBJECT: Model Base\r\n" strIndent1
-                                        -- this is the base
-                                        newObj = aurorabase name:objName
-                                        newObj.delegate.boxsize = [100,100,5]
-                                        if(not uselytposition) then newObj.pos = location
-                                        else if(objLayoutPos != undefined) then newObj.pos = objLayoutPos
-                                        else newObj.pos = [0,0,0]
-                                        newObj.classification_sel = newModelClassification
-                                        newObj.setanimationscale = newModelAnimscale
-                                        newObj.setsupermodel = newModelSupermodel
-                                        -- set the export path to be the import path
-                                        newObj.export_path = currentPath
-
-                                        -- trap handle to model base for later use
-                                        model_base = newObj
-
-                                        --objProps += "mdl_root=true\r\n"
-                                        -- make the pointer to the front
-                                        if g_basepointer == 1 then
-                                        (
-                                            local tri = ngon()
-                                            tri.radius = 25
-                                            tri.nsides = 3
-                                            tri.rotation *= (quat 90 [0,0,1])
-                                            tri.name = "ignore_"+tri.name
-                                            tri.parent = newObj
-                                            in coordsys parent tri.pos = [0,50,0]
-                                            tri.wireColor = (color 92 179 240)
-                                        )
-                                    )
-
                                     default:
                                     (
-                                        if DEBUG then format "%BUILD MESH OBJECT: Is a Dummy!\r\n" strIndent1
+                                        if DEBUG then format "%BUILD MESH OBJECT: Make it a Dummy!\r\n" strIndent1
                                         newObj = dummy name:objName
                                         newObj.boxsize = [5,5,5]
                                     )
@@ -1866,7 +1859,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
 
                                     in coordsys parent
                                     (
-                                        --at time 0 newObj.scale = objScale
+                                        -- at time 0 newObj.scale = objScale
                                         at time 0 newObj.rotation = objRot
                                         at time 0 newObj.position = objPos
                                     )
@@ -1899,7 +1892,7 @@ fn ImportNWNmdl pFile importAnims showWarnings \
                                     -- the addMDLSkin function where it should be.
                                     -- I think its a gmax maxscript bug.
                                     addmodifier newObj (skin()) -- Add skin modifier to created obj
-                                    --addMDLSkin newObj weightBuffer  -- Apply weight info to the skin modifer
+                                    newObj.skin.always_deform = false -- bead-v: this should allow the skin to move with the bones
 
                                     -- Joco 24-Aug-03
                                     -- Add data to the list of Weights structures

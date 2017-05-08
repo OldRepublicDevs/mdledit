@@ -22,7 +22,7 @@
 ---
 ----------------------------------------------------------------------------
 ----------------------------------------------------------------------------
-filein (g_startpath+"nw_ie_inc/aurora_fn_import.ms")
+filein (g_startpath+"nw_ie_inc/aurora_fn_import.ms") -- this shouldn't be necessary because NWmax imports it globally on startup
 
 -- import function for rollout and supporting utils
 fn nx_importer =
@@ -110,25 +110,30 @@ fn nx_importer =
     (
         clearListener()
         disableSceneRedraw()
-        local ImportLocation
-        ImportNWNmdl \
-            mdlFileName \
-            bDoAnims \
-            ImportRollout.warn_checkbox.checked \
-            loadGeom:bDoGeom \
-            animLoadBase:targetAnimBase \
-            loadanimlist:animname \
-            insertpoint:insertpoint \
-            showprogress:true \
-            location:[ImportRollout.spn_loc_x.value, ImportRollout.spn_loc_y.value, 0] \
-            uselytposition:ImportRollout.chk_uselyt.checked
-
-        -- import pwk file if available
         local pwk_file = (getFilenamePath mdlFileName)+(getFilenameFile  mdlFileName)+".pwk"
-        if ( nx_existFile pwk_file ) then ImportNWNwk pwk_file "pwk"
-        -- import dwk file if available
         local dwk_file = (getFilenamePath mdlFileName)+(getFilenameFile  mdlFileName)+".dwk"
-        if ( nx_existFile dwk_file ) then ImportNWNwk dwk_file "dwk"
+
+        -- import MDL file
+        ImportNWNmdl \
+            mdlFileName \                            -- filename
+            bDoAnims \                               -- import anims
+            ImportRollout.warn_checkbox.checked \    -- show warnings
+            loadGeom:bDoGeom \                       -- import geometry
+            animLoadBase:targetAnimBase \            -- target aurorabase (if importing anims only)
+            loadanimlist:animname \                  -- specific animation to import
+            insertpoint:insertpoint \                                                       -- where to insert the new animation.
+            showprogress:true \                                                             -- show progress
+            location:[ImportRollout.spn_loc_x.value, ImportRollout.spn_loc_y.value, 0] \    -- import location
+            uselytposition:ImportRollout.chk_uselyt.checked                                 -- use layout position
+
+        -- import PWK file if available
+        if (nx_existFile pwk_file) then
+            ImportNWNwk pwk_file "pwk"
+
+        -- import DWK file if available
+        if (nx_existFile dwk_file) then
+            ImportNWNwk dwk_file "dwk"
+
         enableSceneRedraw()
 
         if ImportRollout.chk_resetctrl.checked then
@@ -140,8 +145,6 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = tcb_rotation()
-			    		--o.pos.controller = tcb_position()
-			    		--o.scale.controller = tcb_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
 					)
@@ -149,8 +152,6 @@ fn nx_importer =
 					for o in $objects do
 					(
 			    		o.rotation.controller = linear_rotation()
-			    		--o.pos.controller = linear_position()
-			    		--o.scale.controller = linear_scale()
 			    		cnt += 1
 			    		if (progressUpdate (((cnt*100)/objSum) as integer)) == false then return 0
 					)
@@ -162,11 +163,8 @@ fn nx_importer =
         max tool zoomextents all
         max views redraw
 
-        --ImportRollout.progress.value = 0
-        percent = 0
-
-        --format "Finished.\n\r\n"
-        gc()
+        percent = 0   -- does this do anything?
+        gc() -- now wat iz dis?
     )
 )
 
@@ -191,17 +189,6 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	)
 	button import_button "Import" width:144 height:24
 
-	/*
-	group "Specialist Tools"
-	(
-		button btn_removepointer "Del Base Pointer" width:144 height:18
-		button btn_loadgrp "Load Tile Group" width:144 height:18
-		button btn_masstileload "Mass Tile Load" width:144 height:18
-	)
-	*/
-
-	--progressBar progress "" width:136 height:14
-
 	on chk_uselyt changed val do
 	(
         if(val) then val = false
@@ -210,31 +197,17 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 		spn_loc_y.enabled = val
 	)
 
- 	on btn_loadgrp pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_loadgrp.ms")) catch() )
-
- 	on btn_masstileload pressed do ( try (filein (scriptsPath+"NWmax/nw_ie_inc/nx_masstileload.ms")) catch() )
-
 	on rdo_options changed val do
 	(
 		if val == 3 then (
 			edt_animname.enabled = true
 			lbl_animname.enabled = true
 			spn_startframe.enabled = true
-		) else (
+		)
+		else (
 			edt_animname.enabled = false
 			lbl_animname.enabled = false
 			spn_startframe.enabled = false
-		)
-	)
-
-	on btn_removepointer pressed do
-	(
-		for obj in $objects do
-		(
-			if (matchPattern obj.name pattern:"ignore_NGon*") then (
-				select obj
-				max delete
-			)
 		)
 	)
 
@@ -244,6 +217,7 @@ rollout ImportRollout "MDL Loading" width:162 height:250
 	    if (filename == undefined) then filename = ""
 	    import_filename_edit.text = filename
 	)
+
 	on import_button pressed do
 	(
 		nx_importer()
