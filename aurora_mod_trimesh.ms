@@ -125,7 +125,7 @@ version:1
 		*/
 
 		spinner spn_scale "Scale Factor" range:[0,1000,1] scale:0.1 fieldwidth:46 --pos:[31,198] width:118 height:16
-		spinner spn_transparencyhint "Transparency Hint" range:[0,9,0] type:#integer fieldwidth:46 --pos:[17,224] width:132 height:16 ---align:#center
+		spinner spn_transparencyhint "Transparency Hint" range:[0,15,0] type:#integer fieldwidth:46 --pos:[17,224] width:132 height:16 ---align:#center
 		spinner spn_alpha "Alpha" range:[0,1,1] fieldwidth:46 --pos:[77,263] width:72 height:16 ---align:#center
 
 		/*
