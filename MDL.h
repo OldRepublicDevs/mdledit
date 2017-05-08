@@ -541,8 +541,8 @@ struct EmitterHeader{
     double fDeadSpace = 0.0;
     double fBlastRadius = 0.0;
     double fBlastLength = 0.0;
-    unsigned int nBranchCount = 0;    // Not supported by NWMax
-    double fControlPointSmoothing = 0.0;    // Not supported by NWMax
+    unsigned int nBranchCount = 0;
+    double fControlPointSmoothing = 0.0;
     unsigned int nxGrid = 0;
     unsigned int nyGrid = 0;
     unsigned int nSpawnType = 0;
@@ -554,8 +554,8 @@ struct EmitterHeader{
     unsigned int nTwosidedTex = 0;
     unsigned int nLoop = 0;
     unsigned short nUnknown1 = 0;
-    unsigned char nFrameBlending = 0;   // Not supported by NWMax
-    std::string cDepthTextureName; //32B   // Not supported by NWMax
+    unsigned char nFrameBlending = 0;
+    std::string cDepthTextureName; //32B
     unsigned char nUnknown2 = 0;
     unsigned int nFlags = 0; //unsure
 };
@@ -580,13 +580,9 @@ struct MeshHeader{
     Vector vAverage; //not exported
     Color fDiffuse;
     Color fAmbient;
-    unsigned int nTransparencyHint = 0;
-        /* MagnusII:
-         * 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
-         * Blend Factor, SamplerStageStates, TextureOperation?
-         */
+    unsigned int nTransparencyHint = 0; // 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
     std::string cTexture1;
-    std::string cTexture2;   // Not supported by NWMax (export only with magnusll's script)
+    std::string cTexture2;
     std::string cTexture3;   // Not supported by NWMax
     std::string cTexture4;   // Not supported by NWMax
     ArrayHead IndexCounterArray;
@@ -601,7 +597,7 @@ struct MeshHeader{
          * 399..?
          */
     std::array<int, 3> nUnknown3 = {-1, -1, 0}; //int nUnknown3 [3] = {-1, -1, 0};
-    char nSaberUnknown1 = 0; // 3 for non-saber
+    char nSaberUnknown1 = 3; // 3 for non-saber
     char nSaberUnknown2 = 0; // 0 for non-saber
     char nSaberUnknown3 = 0; // 0 for non-saber
     char nSaberUnknown4 = 0; // 0 for non-saber
@@ -636,11 +632,11 @@ struct MeshHeader{
     char nBackgroundGeometry = 0;  // Not supported by NWMax
     char nShadow = 0;
     char nBeaming = 0;
-    char nRender = 0;
+    char nRender = 1;
     char nDirtEnabled = 0; //K2  // Not supported by NWMax
     char nUnknown1 = 0; //K2
-    short nDirtTexture = 0; //K2  // Not supported by NWMax
-    short nDirtCoordSpace = 0; //K2  // Not supported by NWMax
+    short nDirtTexture = 1; //K2  // Not supported by NWMax
+    short nDirtCoordSpace = 1; //K2  // Not supported by NWMax
     char nHideInHolograms = 0; //K2  // Not supported by NWMax
     char nUnknown2 = 0; //K2
     short nUnknown4 = 0;

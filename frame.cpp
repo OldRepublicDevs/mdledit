@@ -617,19 +617,17 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     bool bReturn = false;
 
     cFile.resize(MAX_PATH);
-    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";
+        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
-            cExt = PathFindExtension(cFile.c_str());
-            if(cExt != ".mdl"){
-                if(strlen(cFile.c_str()) + 5 < MAX_PATH){
-                    cFile += ".mdl";
-                }
-                else{
-                    Error("The file is not an .mdl file! Unable to save!");
-                    return false;
-                }
+            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
+                Error("The specified file is not an .mdl file! Unable to save!");
+                return false;
             }
+            std::string sFileNoExt = cFile.c_str();
+            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
+            cFile = sFileNoExt + std::string(".mdl");
 
             //Create file
             std::ofstream file(cFile, std::fstream::out);
@@ -652,10 +650,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save Pwk
             if(Model.Pwk){
-                std::string cPwk;
-                cPwk = cFile;
-                char * cExt2 = PathFindExtension(cPwk.c_str());
-                sprintf(cExt2, ".pwk");
+                std::string cPwk = sFileNoExt + ".pwk";
 
                 file.open(cPwk, std::fstream::out);
 
@@ -672,10 +667,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save Dwk
             if(Model.Dwk0 || Model.Dwk1 || Model.Dwk2){
-                std::string cDwk;
-                cDwk = cFile;
-                char * cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, ".dwk");
+                std::string cDwk = sFileNoExt + ".dwk";
 
                 file.open(cDwk, std::fstream::out);
 
@@ -694,19 +686,17 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";
+        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
-            cExt = PathFindExtension(cFile.c_str());
-            if(cExt != ".mdl"){
-                if(strlen(cFile.c_str()) + 5 < MAX_PATH){
-                    cFile += ".mdl";
-                }
-                else{
-                    Error("The file is not an .mdl file! Unable to save!");
-                    return false;
-                }
+            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
+                Error("The specified file is not an .mdl file! Unable to save!");
+                return false;
             }
+            std::string sFileNoExt = cFile.c_str();
+            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
+            cFile = sFileNoExt + std::string(".mdl");
 
             //Create file
             std::ofstream file(cFile, std::ios::binary | std::fstream::out);
@@ -727,10 +717,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save mdx
             if(Model.Mdx){
-                std::string cMdx;
-                cMdx = cFile;
-                char * cExt2 = PathFindExtension(cMdx.c_str());
-                sprintf(cExt2, ".mdx");
+                std::string cMdx = sFileNoExt + ".mdx";
 
                 file.open(cMdx, std::ios::binary | std::fstream::out);
 
@@ -747,10 +734,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save Wok
             if(Model.Wok){
-                std::string cWok;
-                cWok = cFile;
-                char * cExt2 = PathFindExtension(cWok.c_str());
-                sprintf(cExt2, ".wok");
+                std::string cWok = sFileNoExt + ".wok";
 
                 file.open(cWok, std::ios::binary | std::fstream::out);
 
@@ -767,10 +751,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save Pwk
             if(Model.Pwk){
-                std::string cPwk;
-                cPwk = cFile;
-                char * cExt2 = PathFindExtension(cPwk.c_str());
-                sprintf(cExt2, ".pwk");
+                std::string cPwk = sFileNoExt + ".pwk";
 
                 file.open(cPwk, std::ios::binary | std::fstream::out);
 
@@ -787,11 +768,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //Save Dwk
             if(Model.Dwk0){
-                std::string cDwk;
-                cDwk = cFile.c_str();
-                cDwk.push_back('k');
-                char * cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, "0.dwk");
+                std::string cDwk = sFileNoExt + "0.dwk";
 
                 file.open(cDwk, std::ios::binary | std::fstream::out);
 
@@ -806,11 +783,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 sBinaryExport.shrink_to_fit();
             }
             if(Model.Dwk1){
-                std::string cDwk;
-                cDwk = cFile.c_str();
-                cDwk.push_back('k');
-                char * cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, "1.dwk");
+                std::string cDwk = sFileNoExt + "1.dwk";
 
                 file.open(cDwk, std::ios::binary | std::fstream::out);
 
@@ -825,11 +798,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 sBinaryExport.shrink_to_fit();
             }
             if(Model.Dwk2){
-                std::string cDwk;
-                cDwk = cFile.c_str();
-                cDwk.push_back('k');
-                char * cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, "2.dwk");
+                std::string cDwk = sFileNoExt + "2.dwk";
 
                 file.open(cDwk, std::ios::binary | std::fstream::out);
 
@@ -847,14 +816,17 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else std::cout<<"Selecting file failed. :( \n";
     }
-    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
+        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
-            cExt = PathFindExtension(cFile.c_str());
-            if(cExt != ".mdl"){
-                Error("The file is not an .mdl file!");
+            if (ofn.Flags & OFN_EXTENSIONDIFFERENT) {
+                Error("The specified file is not an .mdl file!");
                 return false;
             }
+            std::string sFileNoExt = cFile.c_str();
+            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1).c_str();
+            cFile = sFileNoExt + std::string(".mdl");
 
             //Create file
             std::ifstream file(cFile, std::ios::binary);
@@ -896,10 +868,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 AppendTab(hTabs, "MDX");
 
                 //Open and process .pwk if it exists
-                std::string cPwk;
-                cPwk = cFile;
-                char * cExt2 = PathFindExtension(cPwk.c_str());
-                sprintf(cExt2, ".pwk");
+                std::string cPwk = sFileNoExt + ".pwk";
                 if(PathFileExists(cPwk.c_str())){
                     file.open(cPwk);
                     if(!file.is_open()){
@@ -930,10 +899,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 }
 
                 //Open and process .dwk if it exists
-                std::string cDwk;
-                cDwk = cFile;
-                cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, ".dwk");
+                std::string cDwk = sFileNoExt + ".dwk";
                 if(PathFileExists(cDwk.c_str())){
                     file.open(cDwk);
                     if(!file.is_open()){
@@ -992,10 +958,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 AppendTab(hTabs, "MDL");
 
                 //Open and process .mdx if it exists
-                std::string cMdx;
-                cMdx = cFile;
-                char * cExt2 = PathFindExtension(cMdx.c_str());
-                sprintf(cExt2, ".mdx");
+                std::string cMdx = sFileNoExt + ".mdx";
                 if(PathFileExists(cMdx.c_str())){
                     file.open(cMdx, std::ios::binary);
                     if(!file.is_open()){
@@ -1019,10 +982,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 }
 
                 //Open and process .wok if it exists
-                std::string cWok;
-                cWok = cFile;
-                cExt2 = PathFindExtension(cWok.c_str());
-                sprintf(cExt2, ".wok");
+                std::string cWok = sFileNoExt + ".wok";
                 if(PathFileExists(cWok.c_str())){
                     file.open(cWok, std::ios::binary);
                     if(!file.is_open()){
@@ -1053,10 +1013,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 }
 
                 //Open and process .pwk if it exists
-                std::string cPwk;
-                cPwk = cFile;
-                cExt2 = PathFindExtension(cPwk.c_str());
-                sprintf(cExt2, ".pwk");
+                std::string cPwk = sFileNoExt + ".pwk";
                 if(PathFileExists(cPwk.c_str())){
                     file.open(cPwk, std::ios::binary);
                     if(!file.is_open()){
@@ -1087,11 +1044,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 }
 
                 //Open and process .dwk if it exists
-                std::string cDwk;
-                cDwk = cFile.c_str();
-                cDwk.push_back('k');
-                cExt2 = PathFindExtension(cDwk.c_str());
-                sprintf(cExt2, "0.dwk");
+                std::string cDwk = sFileNoExt + "0.dwk";
                 if(PathFileExists(cDwk.c_str())){
                     file.open(cDwk, std::ios::binary);
                     if(!file.is_open()){
@@ -1120,7 +1073,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         }
                     }
                 }
-                sprintf(cExt2, "1.dwk");
+                cDwk = sFileNoExt + "1.dwk";
                 if(PathFileExists(cDwk.c_str())){
                     file.open(cDwk, std::ios::binary);
                     if(!file.is_open()){
@@ -1149,7 +1102,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                         }
                     }
                 }
-                sprintf(cExt2, "2.dwk");
+                cDwk = sFileNoExt + "2.dwk";
                 if(PathFileExists(cDwk.c_str())){
                     file.open(cDwk, std::ios::binary);
                     if(!file.is_open()){

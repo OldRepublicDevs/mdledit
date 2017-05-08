@@ -1966,38 +1966,7 @@ bool ASCII::Read(MDL & Mdl){
     Mdl.AsciiPostProcess();
     return true;
 }
-/* Binary tree reading
-    //Seems best to take care of aabb immediately
-    for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
-        Node & node = FH->MH.ArrayOfNodes[n];
-        if(node.Head.nType & NODE_HAS_AABB){
-            node.Walkmesh.RootAabb = node.Walkmesh.ArrayOfAabb.front();
-            int nCounter = 1;
-            BuildAabb(node.Walkmesh.RootAabb, node.Walkmesh.ArrayOfAabb, nCounter);
-        }
-    }
 
-    return true;
-}
-
-void ASCII::BuildAabb(Aabb & AABB, std::vector<Aabb> & ArrayOfAabb, int & nCounter){
-    if(AABB.nID == -1){
-        if(nCounter >= ArrayOfAabb.size()) return;
-        AABB.nChild1 = 1;
-        AABB.nChild2 = 1;
-        AABB.Child1.push_back(ArrayOfAabb[nCounter]);
-        nCounter++;
-        BuildAabb(AABB.Child1.front(), ArrayOfAabb, nCounter);
-        AABB.Child2.push_back(ArrayOfAabb[nCounter]);
-        nCounter++;
-        BuildAabb(AABB.Child2.front(), ArrayOfAabb, nCounter);
-    }
-    else{
-        AABB.nChild1 = 0;
-        AABB.nChild2 = 0;
-    }
-}
-*/
 void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector vFromRoot){
     node.Head.ChildIndices.resize(0); //Reset child array
     node.Head.ChildIndices.reserve(ArrayOfNodes.size());
@@ -2006,7 +1975,7 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
         /// Let's do the transformations/translations here. First orientation, then translation.
         Location loc = node.GetLocation();
         vFromRoot.Rotate(loc.oOrientation.GetQuaternion());
-        vFromRoot+= loc.vPosition;
+        vFromRoot += loc.vPosition;
 
         node.Head.vFromRoot = vFromRoot;
     }
@@ -2014,6 +1983,7 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
     //Update the animation node IDs
     if(node.nAnimation != -1){
         node.Head.nID1 = GetNodeByNameIndex(node.Head.nNameIndex).Head.nID1;
+        if(node.Head.nID1 == -1) node.Head.nID1 = node.Head.nNameIndex;
     }
 
     for(int n = 0; n < ArrayOfNodes.size(); n++){
