@@ -13,15 +13,8 @@ HWND hTree;
 HWND hStatusBar;
 HWND hDisplayEdit;
 HWND hTabs;
-HWND hProgress;
-bool bShowHex = false;
 MDL Model;
-//WOK Walkmesh;
-HANDLE hThread;
-bool FileEditor(HWND hwnd, int nID, std::string & cFile);
-DWORD WINAPI ThreadReprocess(LPVOID lpParam);
-DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
-DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
+bool bShowHex;
 
 bool AppendTab(HWND hTabControl, std::string sName){
     int nTabs = TabCtrl_GetItemCount(hTabControl);
@@ -132,7 +125,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 CLIP_DEFAULT_PRECIS	,	// clipping precision
                 DEFAULT_QUALITY	,	    // output quality
                 DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
-                "Segoe UI" 	// pointer to typeface name string
+                "MS Shell Dlg" //"Segoe UI" 	// pointer to typeface name string
             );
 
             int nLabelOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X;
@@ -317,6 +310,12 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_FILE_EXIT:
                 {
                     SendMessage(hwnd, WM_DESTROY, NULL, NULL);
+                }
+                break;
+                case IDM_MASS_TO_ASCII:
+                case IDM_MASS_TO_BIN:
+                {
+                    FileEditor(hwnd, nID, sFile);
                 }
                 break;
                 case IDM_MDL_OPEN:
@@ -517,14 +516,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                 }
                 break;
-                case IDPM_OPEN_CONTROLLER_DATA:
+                case IDPM_VIEW_ASCII:
                 {
                     ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_OPEN_VIEWER, NULL);
-                }
-                break;
-                case IDPM_OPEN_GEO_VIEWER:
-                {
-                    ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_OPEN_GEO_VIEWER, NULL);
                 }
                 break;
                 case IDPM_OPEN_EDITOR:
@@ -569,7 +563,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if(bShowHex) Edit1.Resize();
 
             // Resize the statusbar;
+            RECT rcStatus;
+            GetClientRect(hStatusBar, &rcStatus);
             SendMessage(hStatusBar,message,wParam,lParam);
+            InvalidateRect(hStatusBar, &rcStatus, false);
         }
         break;
         case WM_CTLCOLORSTATIC:
@@ -606,675 +603,6 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
     }
 
     return 0;
-}
-
-bool FileEditor(HWND hwnd, int nID, std::string & cFile){
-    OPENFILENAME ofn;
-    HANDLE hFile;
-    DWORD dwBytesRead = 0;
-    DWORD dwBytesWritten = 0;
-    std::string cExt;
-    bool bReturn = false;
-
-    cFile.resize(MAX_PATH);
-    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";
-        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
-
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
-                Error("The specified file is not an .mdl file! Unable to save!");
-                return false;
-            }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
-            cFile = sFileNoExt + std::string(".mdl");
-
-            //Create file
-            std::ofstream file(cFile, std::fstream::out);
-
-            if(!file.is_open()){
-                std::cout<<"File creation failed. Aborting.\n";
-                return false;
-            }
-
-            //Convert the data and put it into a string
-            std::string sAsciiExport;
-            Model.ExportAscii(sAsciiExport);
-
-            //Write and close file
-            file<<sAsciiExport;
-            file.close();
-
-            sAsciiExport.clear();
-            sAsciiExport.shrink_to_fit();
-
-            //Save Pwk
-            if(Model.Pwk){
-                std::string cPwk = sFileNoExt + ".pwk";
-
-                file.open(cPwk, std::fstream::out);
-
-                sAsciiExport.clear();
-                Model.ExportPwkAscii(sAsciiExport);
-
-                //Write and close file
-                file<<sAsciiExport;
-                file.close();
-
-                sAsciiExport.clear();
-                sAsciiExport.shrink_to_fit();
-            }
-
-            //Save Dwk
-            if(Model.Dwk0 || Model.Dwk1 || Model.Dwk2){
-                std::string cDwk = sFileNoExt + ".dwk";
-
-                file.open(cDwk, std::fstream::out);
-
-                sAsciiExport.clear();
-                Model.ExportDwkAscii(sAsciiExport);
-
-                //Write and close file
-                file<<sAsciiExport;
-                file.close();
-
-                sAsciiExport.clear();
-                sAsciiExport.shrink_to_fit();
-            }
-
-
-            bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";
-    }
-    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";
-        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
-
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
-                Error("The specified file is not an .mdl file! Unable to save!");
-                return false;
-            }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
-            cFile = sFileNoExt + std::string(".mdl");
-
-            //Create file
-            std::ofstream file(cFile, std::ios::binary | std::fstream::out);
-            //std::ofstream file(cFile);
-
-            if(!file.is_open()){
-                std::cout<<"File creation failed. Aborting.\n";
-                return false;
-            }
-
-            //Put data into a string
-            std::string sBinaryExport;
-            Model.Export(sBinaryExport);
-
-            //Write and close file
-            file<<sBinaryExport;
-            file.close();
-
-            //Save mdx
-            if(Model.Mdx){
-                std::string cMdx = sFileNoExt + ".mdx";
-
-                file.open(cMdx, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Mdx->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-
-            //Save Wok
-            if(Model.Wok){
-                std::string cWok = sFileNoExt + ".wok";
-
-                file.open(cWok, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Wok->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-
-            //Save Pwk
-            if(Model.Pwk){
-                std::string cPwk = sFileNoExt + ".pwk";
-
-                file.open(cPwk, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Pwk->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-
-            //Save Dwk
-            if(Model.Dwk0){
-                std::string cDwk = sFileNoExt + "0.dwk";
-
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Dwk0->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-            if(Model.Dwk1){
-                std::string cDwk = sFileNoExt + "1.dwk";
-
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Dwk1->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-            if(Model.Dwk2){
-                std::string cDwk = sFileNoExt + "2.dwk";
-
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
-                sBinaryExport.clear();
-                Model.Dwk2->Export(sBinaryExport);
-
-                //Write and close file
-                file<<sBinaryExport;
-                file.close();
-
-                sBinaryExport.clear();
-                sBinaryExport.shrink_to_fit();
-            }
-
-            bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";
-    }
-    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
-        ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
-
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT) {
-                Error("The specified file is not an .mdl file!");
-                return false;
-            }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1).c_str();
-            cFile = sFileNoExt + std::string(".mdl");
-
-            //Create file
-            std::ifstream file(cFile, std::ios::binary);
-
-
-            if(!file.is_open()){
-                std::cout<<"File creation/opening failed. Aborting.\n";
-                return false;
-            }
-
-            //If everything checks out, we may begin reading
-            bool bAscii = false;
-            file.seekg(0,std::ios::beg);
-            char cBinary [4];
-            file.read(cBinary, 4);
-            //First check whether it's an ascii or a binary
-            if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0'){
-                bAscii = true;
-            }
-
-            //Now we need to check our current data
-            if(Model.GetFileData()){
-                //A model is already open. Flush it to make room for the new one.
-                TabCtrl_DeleteAllItems(hTabs);
-                TreeView_DeleteAllItems(hTree);
-                Model.FlushData();
-            }
-
-            if(bAscii){
-                std::cout<<"Reading ascii...\n";
-                file.seekg(0, std::ios::end);
-                std::streampos length = file.tellg();
-                file.seekg(0,std::ios::beg);
-                Model.Ascii.reset(new ASCII());
-                std::vector<char> & sBufferRef = Model.CreateAsciiBuffer(length);
-                file.read(&sBufferRef[0], length);
-                file.close();
-                AppendTab(hTabs, "MDL");
-                AppendTab(hTabs, "MDX");
-
-                //Open and process .pwk if it exists
-                std::string cPwk = sFileNoExt + ".pwk";
-                if(PathFileExists(cPwk.c_str())){
-                    file.open(cPwk);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (pwk). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.PwkAscii.reset(new ASCII());
-                            std::vector<char> & sBufferRef = Model.PwkAscii->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.PwkAscii->SetFilePath(cPwk);
-                            AppendTab(hTabs, "PWK");
-                        }
-                    }
-                }
-
-                //Open and process .dwk if it exists
-                std::string cDwk = sFileNoExt + ".dwk";
-                if(PathFileExists(cDwk.c_str())){
-                    file.open(cDwk);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (pwk). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.DwkAscii.reset(new ASCII());
-                            std::vector<char> & sBufferRef = Model.DwkAscii->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.DwkAscii->SetFilePath(cDwk);
-                            AppendTab(hTabs, "DWK 0");
-                            AppendTab(hTabs, "DWK 1");
-                            AppendTab(hTabs, "DWK 2");
-                        }
-                    }
-                }
-
-                //Process the data
-                Model.SetFilePath(cFile);
-                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1)){
-                    bReturn = true;
-                }
-                else{
-                    //We failed reading the ascii, so we need to clean up
-                    TabCtrl_DeleteAllItems(hTabs);
-                    TreeView_DeleteAllItems(hTree);
-                    Model.FlushData();
-                    Edit1.LoadData();
-                    ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
-                    bReturn = false;
-                }
-            }
-            else{
-                std::cout<<"Reading binary...\n";
-                file.seekg(0, std::ios::end);
-                std::streampos length = file.tellg();
-                file.seekg(0,std::ios::beg);
-                std::vector<char> & sBufferRef = Model.CreateBuffer(length);
-                file.read(&sBufferRef[0], length);
-                file.close();
-                Model.SetFilePath(cFile);
-                AppendTab(hTabs, "MDL");
-
-                //Open and process .mdx if it exists
-                std::string cMdx = sFileNoExt + ".mdx";
-                if(PathFileExists(cMdx.c_str())){
-                    file.open(cMdx, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (mdx). Aborting.\n";
-                    }
-                    else{
-                        //We may begin reading
-                        file.seekg(0, std::ios::end);
-                        std::streampos length = file.tellg();
-                        file.seekg(0,std::ios::beg);
-                        Model.Mdx.reset(new MDX());
-                        std::vector<char> & sBufferRef = Model.Mdx->CreateBuffer(length);
-                        file.read(&sBufferRef[0], length);
-                        file.close();
-                        Model.Mdx->SetFilePath(cMdx);
-                        AppendTab(hTabs, "MDX");
-                    }
-                }
-                else{                    PathStripPath(&cMdx.front());
-                    Warning("Could not find "+std::string(cMdx.c_str())+" in the same directory. Will load without the MDX data.");
-                }
-
-                //Open and process .wok if it exists
-                std::string cWok = sFileNoExt + ".wok";
-                if(PathFileExists(cWok.c_str())){
-                    file.open(cWok, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(!bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.Wok.reset(new WOK());
-                            std::vector<char> & sBufferRef = Model.Wok->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.Wok->SetFilePath(cWok);
-                            AppendTab(hTabs, "WOK");
-                        }
-                    }
-                }
-
-                //Open and process .pwk if it exists
-                std::string cPwk = sFileNoExt + ".pwk";
-                if(PathFileExists(cPwk.c_str())){
-                    file.open(cPwk, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (wok). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(!bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.Pwk.reset(new PWK());
-                            std::vector<char> & sBufferRef = Model.Pwk->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.Pwk->SetFilePath(cPwk);
-                            AppendTab(hTabs, "PWK");
-                        }
-                    }
-                }
-
-                //Open and process .dwk if it exists
-                std::string cDwk = sFileNoExt + "0.dwk";
-                if(PathFileExists(cDwk.c_str())){
-                    file.open(cDwk, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (dwk0). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(!bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.Dwk0.reset(new DWK());
-                            std::vector<char> & sBufferRef = Model.Dwk0->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.Dwk0->SetFilePath(cDwk);
-                            AppendTab(hTabs, "DWK 0");
-                        }
-                    }
-                }
-                cDwk = sFileNoExt + "1.dwk";
-                if(PathFileExists(cDwk.c_str())){
-                    file.open(cDwk, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (dwk1). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(!bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.Dwk1.reset(new DWK());
-                            std::vector<char> & sBufferRef = Model.Dwk1->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.Dwk1->SetFilePath(cDwk);
-                            AppendTab(hTabs, "DWK 1");
-                        }
-                    }
-                }
-                cDwk = sFileNoExt + "2.dwk";
-                if(PathFileExists(cDwk.c_str())){
-                    file.open(cDwk, std::ios::binary);
-                    if(!file.is_open()){
-                        std::cout<<"File creation/opening failed (dwk2). Aborting.\n";
-                    }
-                    else{
-                        bAscii = false;
-                        file.seekg(0,std::ios::beg);
-                        char cBinary [8];
-                        file.read(cBinary, 8);
-                        //First check whether it's an ascii or a binary
-                        if(std::string(cBinary, 8) != "BWM V1.0"){
-                            bAscii = true;
-                        }
-                        if(!bAscii){
-                            //We may begin reading
-                            file.seekg(0, std::ios::end);
-                            std::streampos length = file.tellg();
-                            file.seekg(0,std::ios::beg);
-                            Model.Dwk2.reset(new DWK());
-                            std::vector<char> & sBufferRef = Model.Dwk2->CreateBuffer(length);
-                            file.read(&sBufferRef[0], length);
-                            file.close();
-                            Model.Dwk2->SetFilePath(cDwk);
-                            AppendTab(hTabs, "DWK 2");
-                        }
-                    }
-                }
-
-                //Process the data
-                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2)){
-                    bReturn = true;
-                }
-                else{
-                    //Something failed, cleanup
-                    Edit1.LoadData();
-                    ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
-                    bReturn = false;
-                }
-            }        }
-        else std::cout<<"Selecting file failed. :( \n";    }
-    return bReturn;
-}
-
-INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    switch(message){
-        case WM_INITDIALOG:
-        {
-            RECT rcStatus;
-            GetClientRect(hwnd, &rcStatus);
-            hProgress = CreateWindowEx(NULL, PROGRESS_CLASS, "", WS_VISIBLE | WS_CHILD,
-                                            10, 25, rcStatus.right - 20, 18,
-                                            hwnd, (HMENU) IDC_STATUSBAR_PROGRESS, NULL, NULL);
-            SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
-
-            Model.PtrReport = Report;
-            Model.PtrProgressSize = ProgressSize;
-            Model.PtrProgressPos = ProgressPos;
-
-            if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
-            else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessBinary, hwnd, 0, NULL);
-            else if(lParam == 3) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadReprocess, hwnd, 0, NULL);
-            else EndDialog(hwnd, NULL);
-        }
-        break;
-        case 69:
-        {
-            CloseHandle(hThread);
-            if(wParam == 1){
-                EndDialog(hwnd, false);
-            }
-            else EndDialog(hwnd, true);
-        }
-        break;
-        case WM_CLOSE:
-            PostQuitMessage(0);
-        break;
-        default:
-            return FALSE;
-    }
-    return TRUE;
-}
-
-void Report(std::string sMessage){
-    SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sMessage.c_str());
-}
-void ProgressSize(int nMin, int nMax){
-    SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(nMin, nMax));
-}
-void ProgressPos(int nPos){
-    SendMessage(hProgress, PBM_SETPOS, (WPARAM) nPos, (LPARAM) NULL);
-}
-
-DWORD WINAPI ThreadReprocess(LPVOID lpParam){
-    Model.Compile();
-    //This should bring us to a state where all data is ready,
-    //even the binary-file-specific data
-
-    //Load the data
-    Report("Loading data...");
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData(); //Loads up the binary file onto the screen
-    BuildTree(Model); //Fills the TreeView control
-    std::cout<<"Data loaded!\n";
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
-    bool bReadWell = Model.ReadAscii();
-    //Just read it.
-    if(!bReadWell){
-        SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
-        return 0;
-    }
-
-    /// Now we know whether we have WOK data
-    if(Model.Wok) AppendTab(hTabs, "WOK");
-
-    Model.Compile();
-    //This should bring us to a state where all data is ready,
-    //even the binary-file-specific data
-
-    //Load the data
-    Report("Loading data...");
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData(); //Loads up the binary file onto the screen
-    BuildTree(Model); //Fills the TreeView control
-    if(Model.Pwk) BuildTree(*Model.Pwk);
-    if(Model.Dwk0) BuildTree(*Model.Dwk0);
-    if(Model.Dwk1) BuildTree(*Model.Dwk1);
-    if(Model.Dwk2) BuildTree(*Model.Dwk2);
-    if(Model.Wok){
-        std::string sWok = ".wok"; //Model.GetFullPath();
-        //char * cExt2 = PathFindExtension(sWok.c_str());
-        //sprintf(cExt2, ".wok");
-        Model.Wok->SetFilePath(sWok);
-        std::cout<< "About to build wok tree.\n";
-        BuildTree(*Model.Wok);
-    }
-    std::cout<<"Data loaded!\n";
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
-    Model.DecompileModel();
-    Report("Processing walkmesh...");
-    if(Model.Wok){
-        Model.Wok->ProcessBWM();
-        Model.GetLytPositionFromWok();
-    }
-    if(Model.Pwk) Model.Pwk->ProcessBWM();
-    if(Model.Dwk0) Model.Dwk0->ProcessBWM();
-    if(Model.Dwk1) Model.Dwk1->ProcessBWM();
-    if(Model.Dwk2) Model.Dwk2->ProcessBWM();
-
-    //Load the data
-    Report("Loading data...");
-    BuildTree(Model);
-    if(Model.Wok) BuildTree(*Model.Wok);
-    if(Model.Pwk) BuildTree(*Model.Pwk);
-    if(Model.Dwk0) BuildTree(*Model.Dwk0);
-    if(Model.Dwk1) BuildTree(*Model.Dwk1);
-    if(Model.Dwk2) BuildTree(*Model.Dwk2);
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData();
-    std::cout<<"Data loaded!\n";
-
-    Model.CheckPeculiarities(); //Finally, check for peculiarities
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
@@ -1327,9 +655,6 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     }
     else if(nAction == ACTION_OPEN_VIEWER){
         OpenViewer(Model, cItem, lParam);
-    }
-    else if(nAction == ACTION_OPEN_GEO_VIEWER){
-        OpenGeoViewer(Model, cItem, lParam);
     }
     else if(nAction == ACTION_OPEN_EDITOR){
         OpenEditorDlg(Model, cItem, lParam);

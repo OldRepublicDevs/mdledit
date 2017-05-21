@@ -157,15 +157,15 @@ void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam){
 
     /// Saber Vertex ///
     else if(cItem[1] == "Saber Data" && bVertex){
-        SaberDataStruct * saberdata = (SaberDataStruct*) lParam;
+        VertexData * saberdata = (VertexData*) lParam;
         sName<<"Editing Saber Data for "<<cItem[0];
 
         sPrint<<"vert_x "<< saberdata->vVertex.fX << "\r\n";
         sPrint<<"vert_y "<< saberdata->vVertex.fY << "\r\n";
         sPrint<<"vert_z "<< saberdata->vVertex.fZ << "\r\n";
         sPrint << "\r\n";
-        sPrint<<"UV_x "<< saberdata->vUV.fX << "\r\n";
-        sPrint<<"UV_y "<< saberdata->vUV.fY << "\r\n";
+        sPrint<<"UV_x "<< saberdata->vUV1.fX << "\r\n";
+        sPrint<<"UV_y "<< saberdata->vUV1.fY << "\r\n";
         sPrint << "\r\n";
         sPrint<<"normal_x "<< saberdata->vNormal.fX << "\r\n";
         sPrint<<"normal_y "<< saberdata->vNormal.fY << "\r\n";
@@ -323,7 +323,7 @@ bool EditorDlgWindow::SaveData(){
         break;
         case EDITOR_DLG_SABER_DATA:
         {
-            SaberDataStruct * saberdata = (SaberDataStruct*) lpData;
+            VertexData * saberdata = (VertexData*) lpData;
             while(nPosition < sBuffer.size()){
                 ssCompare.str(std::string());
                 if(EmptyRow()) SkipLine();
@@ -416,12 +416,12 @@ bool EditorDlgWindow::SaveData(){
                     }
                     else if(sID == "UV_x"){
                         if(ReadFloat(fConvert, sGet)){
-                            ssCompare << saberdata->vUV.fX;
+                            ssCompare << saberdata->vUV1.fX;
                             if(ssCompare.str() != sGet){
                                 std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
-                                saberdata->vUV.fX = fConvert;
+                                saberdata->vUV1.fX = fConvert;
                                 ByteBlock4.f = fConvert;
-                                Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV);
+                                Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV1);
                             }
                             else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }
@@ -430,12 +430,12 @@ bool EditorDlgWindow::SaveData(){
                     }
                     else if(sID == "UV_y"){
                         if(ReadFloat(fConvert, sGet)){
-                            ssCompare << saberdata->vUV.fY;
+                            ssCompare << saberdata->vUV1.fY;
                             if(ssCompare.str() != sGet){
                                 std::cout<<sID<<" "<<sGet<<" does not equal "<<ssCompare.str()<<"\n";
-                                saberdata->vUV.fY = fConvert;
+                                saberdata->vUV1.fY = fConvert;
                                 ByteBlock4.f = fConvert;
-                                Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV + 4);
+                                Mdl.WriteUintToPlaceholder(ByteBlock4.ui, saberdata->nOffsetUV1 + 4);
                             }
                             else std::cout<<sID<<" "<<sGet<<" equals "<<ssCompare.str()<<"\n";
                         }

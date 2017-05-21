@@ -45,7 +45,7 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName<<"animated node "<<Mdl.GetFileData()->MH.Names[node->Head.nNameIndex].sName;
+        sName<<"animated node "<<Mdl.GetFileData()->MH.Names[node->Head.nNodeNumber].sName;
         Mdl.ConvertToAscii(CONVERT_ANIMATION_NODE, sPrint, (void*) lParam);
         Mdl.ConvertToAscii(CONVERT_ENDNODE, sPrint, (void*) lParam);
 
@@ -60,7 +60,7 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName<<"node "<<Mdl.GetFileData()->MH.Names[node->Head.nNameIndex].sName;
+        sName<<"node "<<Mdl.GetFileData()->MH.Names[node->Head.nNodeNumber].sName;
         sPrint<<"";
         //sPrint = "";
         Mdl.ConvertToAscii(CONVERT_HEADER, sPrint, (void*) lParam);
@@ -110,11 +110,11 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         else{
             sLocation = "animation '" + std::string(Mdl.GetFileData()->MH.Animations[ctrl->nAnimation].sName.c_str()) + "'";
         }
-        std::string sController = ReturnControllerName(ctrl->nControllerType, Mdl.GetNodeByNameIndex(ctrl->nNameIndex).Head.nType);
+        std::string sController = ReturnControllerName(ctrl->nControllerType, Mdl.GetNodeByNameIndex(ctrl->nNodeNumber).Head.nType);
         if(ctrl->nColumnCount & 16) sController+="bezierkey";
         else if(ctrl->nAnimation != -1) sController+="key";
-        sName<<sLocation<<" > node '"<<Mdl.GetFileData()->MH.Names[ctrl->nNameIndex].sName<<"' > controller '"<<sController<<"'";
-        //sName<<"controller '"<<sController<<"' in node '"<<Mdl.GetFileData()->MH.Names[ctrl->nNameIndex].sName<<"' in "<<sLocation;
+        sName<<sLocation<<" > node '"<<Mdl.GetFileData()->MH.Names[ctrl->nNodeNumber].sName<<"' > controller '"<<sController<<"'";
+        //sName<<"controller '"<<sController<<"' in node '"<<Mdl.GetFileData()->MH.Names[ctrl->nNodeNumber].sName<<"' in "<<sLocation;
         if(!(cItem[3] == "Geometry")){
             Mdl.ConvertToAscii(CONVERT_CONTROLLER_KEYED, sPrint, (void*) lParam);
         }

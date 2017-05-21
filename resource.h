@@ -23,6 +23,7 @@
 #define IDM_FILE_EXPORT     114
 #define IDM_FILE_OPEN       115
 #define IDM_DRAW_H          116
+
 #define IDM_MDL_OPEN        117
 #define IDM_ASCII_OPEN      118
 #define IDM_BIN_SAVE        119
@@ -37,6 +38,8 @@
 #define IDM_EDIT_TEXTURES   128
 #define IDM_VIEW_HEX        129
 #define IDM_HELP            130
+#define IDM_MASS_TO_ASCII   131
+#define IDM_MASS_TO_BIN     132
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -62,31 +65,38 @@
 #define IDC_SBS_SBV      231
 #define IDC_SBS_SBC      232
 
-#define IDC_STATUSBAR           251
-#define IDC_STATUSBAR_PROGRESS  252
+#define IDC_STATUSBAR               251
+#define IDC_STATUSBAR_PROGRESS      252
+#define IDC_STATUSBAR_PROGRESSMASS  253
 
 #define IDPM_TV_FOLD                301
 #define IDPM_TV_EXPAND              302
 #define IDPM_TV_FOLD_CHILDREN       303
 #define IDPM_TV_EXPAND_CHILDREN     304
-#define IDPM_OPEN_CONTROLLER_DATA   305
+#define IDPM_VIEW_ASCII   305
 #define IDPM_OPEN_GEO_VIEWER        306
 #define IDPM_OPEN_EDITOR            307
 
-#define IDP_DISPLAY_UPDATE          350
+#define IDP_DISPLAY_UPDATE      350
 
-#define DLG_SETTINGS         401
-#define DLG_ID_AREA_WEIGHT   402
-#define DLG_ID_ANGLE_WEIGHT  403
-#define DLG_ID_STATIC        404
-#define DLG_PROGRESS         405
-#define DLG_EDIT_TEXTURES    406
-#define DLG_ID_CALC_SMOOTHING 407
-#define DLG_ABOUT 408
+#define DLG_SETTINGS            401
+#define DLG_ID_AREA_WEIGHT      402
+#define DLG_ID_ANGLE_WEIGHT     403
+#define DLG_ID_STATIC           404
+#define DLG_PROGRESS            405
+#define DLG_EDIT_TEXTURES       406
+#define DLG_ID_CALC_SMOOTHING   407
+#define DLG_ABOUT               408
+#define DLG_ID_SKIN_TRIMESH     409
+#define DLG_ID_SABER_TRIMESH    410
+#define DLG_ID_DO_ANIMATIONS    411
+#define DLG_ID_BEZIER_LINEAR    412
+#define DLG_ID_EXPORT_WOK       413
+#define DLG_PROGRESSMASS        414
 
-#define IDDB_EDIT                   500
-#define IDDB_SAVE                   501
+#define IDDB_EDIT               500
+#define IDDB_SAVE               501
 
-#define IDDB_DIALOG_TYPE_1          1200
+#define IDDB_DIALOG_TYPE_1      1200
 
 #endif // RESOURCE_H_INCLUDED

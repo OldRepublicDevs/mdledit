@@ -22,14 +22,16 @@ class Frame{
 #define ACTION_UPDATE_DISPLAY      0
 #define ACTION_ADD_MENU_LINES      1
 #define ACTION_OPEN_VIEWER         2
-#define ACTION_OPEN_GEO_VIEWER     3
-#define ACTION_OPEN_EDITOR         4
+#define ACTION_OPEN_EDITOR         3
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
+bool FileEditor(HWND hwnd, int nID, std::string & cFile);
+bool AppendTab(HWND hTabControl, std::string sName);
 INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK ProgressMassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 void BuildTree(MDL & Mdl);
 void BuildTree(BWM & Bwm);
 void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam);

@@ -329,3 +329,11 @@ std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen){
     if(nStart < 0) nStart = 0;
     return sParam.substr(nStart, nLen);
 }
+
+std::string PrepareFloat(double fFloat){
+    std::stringstream ssReturn;
+    ssReturn.precision(6);
+    ssReturn.setf(std::ios::showpoint);
+    ssReturn << RoundDec(fFloat, 8);
+    return TruncateDec(ssReturn.str());
+}

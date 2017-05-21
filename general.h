@@ -6,7 +6,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <math.h>
-#include <array>
+#include <array> //for std::array
 #include <iostream> //for std::cout
 #include <vector> //for std::vector
 #include <memory> //for std::unique_ptr
@@ -82,6 +82,7 @@ void AAToQuaternion(double * fAA, double * fQuaternion);
 double RoundDec(double fNumber, int nDecPlaces);
 double RoundDec(float fNumber, int nDecPlaces);
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset);
+std::string PrepareFloat(double fFloat);
 
 struct MenuLineAdder{
     HMENU hMenu;

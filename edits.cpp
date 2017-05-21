@@ -667,9 +667,9 @@ void Edits::UpdateStatusPositionMdx(){
     else if(NODE != nullptr){
         nMin = NODE->Mesh.nOffsetIntoMdx;
         if((nPos - nMin) / (NODE->Mesh.nMdxDataSize) == NODE->Mesh.nNumberOfVerts){
-            ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNameIndex).sName.c_str()<<" > Extra Data";
+            ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str()<<" > Extra Data";
         }
-        else ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNameIndex).sName.c_str()<<" > Vertex "<<(nPos - nMin) / (NODE->Mesh.nMdxDataSize);
+        else ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str()<<" > Vertex "<<(nPos - nMin) / (NODE->Mesh.nMdxDataSize);
     }
     else{
         ssPrint<<"MDX > Unknown";
@@ -771,7 +771,7 @@ void Edits::UpdateStatusPositionModel(){
                     ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > Unknown";
                 }
                 else{
-                    int nNode = NODE->Head.nNameIndex;
+                    int nNode = NODE->Head.nNodeNumber;
                     nMin += ANIM_OFFSET;
                     if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
                         if(nPos < NODE->nOffset + 12 + NODE_SIZE_HEADER){
@@ -822,7 +822,7 @@ void Edits::UpdateStatusPositionModel(){
             ssPrint<<"Geometry > Unknown";
         }
         else{
-            int nNode = NODE->Head.nNameIndex;
+            int nNode = NODE->Head.nNodeNumber;
             int nType = NODE->Head.nType;
             if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
                 int nHeaderSize = 12;
@@ -966,18 +966,18 @@ void Edits::UpdateStatusPositionModel(){
                     }
                 }
                 if(nType & NODE_HAS_SABER && !bFound){
-                    if(nPos >= NODE->Saber.nOffsetToSaberData2 + 12){
-                        nMin = NODE->Saber.nOffsetToSaberData2 + 12;
+                    if(nPos >= NODE->Saber.nOffsetToSaberUVs + 12){
+                        nMin = NODE->Saber.nOffsetToSaberUVs + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data2 > Member "<<(nPos - nMin)/8;
                         bFound = true;
                     }
-                    else if(nPos >= NODE->Saber.nOffsetToSaberData3 + 12){
-                        nMin = NODE->Saber.nOffsetToSaberData3 + 12;
+                    else if(nPos >= NODE->Saber.nOffsetToSaberNormals + 12){
+                        nMin = NODE->Saber.nOffsetToSaberNormals + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data3 > Member "<<(nPos - nMin)/12;
                         bFound = true;
                     }
-                    else if(nPos >= NODE->Saber.nOffsetToSaberData1 + 12){
-                        nMin = NODE->Saber.nOffsetToSaberData1 + 12;
+                    else if(nPos >= NODE->Saber.nOffsetToSaberVerts + 12){
+                        nMin = NODE->Saber.nOffsetToSaberVerts + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data1 > Member "<<(nPos - nMin)/12;
                         bFound = true;
                     }

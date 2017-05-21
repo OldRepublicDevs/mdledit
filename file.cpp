@@ -208,14 +208,14 @@ bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"EditorDlgWindow::ReadFloat(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadFloat()2: Reading: "<<sCheck<<". ";
 
     try{
         fNew = std::stof(sCheck, (size_t*) NULL);
         sGetFloat = sCheck;
     }
     catch(std::invalid_argument){
-        std::cout<<"EditorDlgWindow::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
+        std::cout<<"TextFile::ReadFloat()2: There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
         fNew = 0.0;
         return false;
     }
@@ -254,18 +254,18 @@ bool TextFile::ReadFloat(double & fNew, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Ascii::ReadFloat(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadFloat(): Reading: "<<sCheck<<". ";
 
     try{
         fNew = std::stof(sCheck, (size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"Ascii::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
+        std::cout<<"TextFile::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
         fNew = 0.0;
         return false;
     }
     catch(...){
-        std::cout<<"Ascii::ReadFloat(): There was an unknown error converting the string: "<<sCheck<<". Printing 0.0. \n";
+        std::cout<<"TextFile::ReadFloat(): There was an unknown error converting the string: "<<sCheck<<". Printing 0.0. \n";
         fNew = 0.0;
         return false;
     }
@@ -304,13 +304,13 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Ascii::ReadInt(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadInt(): Reading: "<<sCheck<<". ";
 
     try{
         nNew = stoi(sCheck,(size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"Ascii::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        std::cout<<"TextFile::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
         nNew = 0xFFFFFFFF;
         return false;
     }

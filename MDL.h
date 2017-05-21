@@ -33,12 +33,12 @@
 
 #define CLASS_OTHER           0x00
 #define CLASS_EFFECT          0x01
-#define CLASS_TILE            0x02
+#define CLASS_TILE            0x02 /// ???
 #define CLASS_CHARACTER       0x04
 #define CLASS_DOOR            0x08
-#define CLASS_SABER           0x10 //Probably more general, weapon or item
+#define CLASS_LIGHTSABER      0x10
 #define CLASS_PLACEABLE       0x20
-//#define CLASS_40            0x40
+#define CLASS_FLYER           0x40
 //#define CLASS_80            0x80
 
 #define NODE_HAS_HEADER       0x0001
@@ -69,7 +69,7 @@
 #define NODE_SIZE_DANGLY      28
 #define NODE_SIZE_AABB        1
 //#define NODE_SIZE_400       0
-#define NODE_SIZE_SABER       20   // Not supported by NWMax
+#define NODE_SIZE_SABER       20
 
 #define EMITTER_FLAG_P2P                0x0001
 #define EMITTER_FLAG_P2P_SEL            0x0002
@@ -82,8 +82,8 @@
 #define EMITTER_FLAG_INHERIT_LOCAL      0x0100
 #define EMITTER_FLAG_SPLAT              0x0200
 #define EMITTER_FLAG_INHERIT_PART       0x0400
-#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //ndix UR¸  // Not supported by NWMax
-#define EMITTER_FLAG_RENDER_ORDER       0x1000 //ndix UR   // Not supported by NWMax
+#define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //maybe, per ndix UR
+#define EMITTER_FLAG_RENDER_ORDER       0x1000 //maybe, per ndix UR
 //#define EMITTER_FLAG_2000             0x2000
 //#define EMITTER_FLAG_3000             0x4000
 //#define EMITTER_FLAG_4000             0x8000
@@ -94,7 +94,7 @@
 #define MDX_FLAG_HAS_UV3               0x0008
 #define MDX_FLAG_HAS_UV4               0x0010
 #define MDX_FLAG_HAS_NORMAL            0x0020
-#define MDX_FLAG_0040         /*??*/   0x0040
+#define MDX_FLAG_HAS_COLOR             0x0040
 #define MDX_FLAG_HAS_TANGENT1          0x0080
 #define MDX_FLAG_HAS_TANGENT2 /*??*/   0x0100
 #define MDX_FLAG_HAS_TANGENT3 /*??*/   0x0200
@@ -137,7 +137,7 @@
 #define MATERIAL_SNOW           19
 #define MATERIAL_SAND           20
 
-///All controller numbers apparently must be divisible by 4
+///All controller numbers apparently must be divisible by 4? Except for detonate
 #define CONTROLLER_HEADER_POSITION              8
 #define CONTROLLER_HEADER_ORIENTATION           20
 #define CONTROLLER_HEADER_SCALING               36
@@ -147,8 +147,8 @@
 ///------------------------------------------------
 #define CONTROLLER_LIGHT_COLOR                  76
 #define CONTROLLER_LIGHT_RADIUS                 88
-#define CONTROLLER_LIGHT_SHADOWRADIUS           96   // Not supported by NWMax
-#define CONTROLLER_LIGHT_VERTICALDISPLACEMENT   100  // Not supported by NWMax
+#define CONTROLLER_LIGHT_SHADOWRADIUS           96
+#define CONTROLLER_LIGHT_VERTICALDISPLACEMENT   100
 #define CONTROLLER_LIGHT_MULTIPLIER             140
 ///------------------------------------------------
 #define CONTROLLER_EMITTER_ALPHAEND             80
@@ -181,49 +181,48 @@
 #define CONTROLLER_EMITTER_LIGHTNINGRADIUS      188
 #define CONTROLLER_EMITTER_LIGHTNINGSCALE       192
 #define CONTROLLER_EMITTER_LIGHTNINGSUBDIV      196
-#define CONTROLLER_EMITTER_LIGHTNINGZIGZAG      200  // Not supported by NWMax
+#define CONTROLLER_EMITTER_LIGHTNINGZIGZAG      200
 //#define CONTROLLER_EMITTER_204                204
 //#define CONTROLLER_EMITTER_208                208
 //#define CONTROLLER_EMITTER_212                212
-#define CONTROLLER_EMITTER_ALPHAMID             216  // Not supported by NWMax
-#define CONTROLLER_EMITTER_PERCENTSTART         220  // Not supported by NWMax
-#define CONTROLLER_EMITTER_PERCENTMID           224  // Not supported by NWMax
-#define CONTROLLER_EMITTER_PERCENTEND           228  // Not supported by NWMax
-#define CONTROLLER_EMITTER_SIZEMID              232  // Not supported by NWMax
-#define CONTROLLER_EMITTER_SIZEMID_Y            236  // Not supported by NWMax
-#define CONTROLLER_EMITTER_RANDOMBIRTHRATE      240  // Not supported by NWMax
+#define CONTROLLER_EMITTER_ALPHAMID             216
+#define CONTROLLER_EMITTER_PERCENTSTART         220
+#define CONTROLLER_EMITTER_PERCENTMID           224
+#define CONTROLLER_EMITTER_PERCENTEND           228
+#define CONTROLLER_EMITTER_SIZEMID              232
+#define CONTROLLER_EMITTER_SIZEMID_Y            236
+#define CONTROLLER_EMITTER_RANDOMBIRTHRATE      240
 //#define CONTROLLER_EMITTER 244                244
 //#define CONTROLLER_EMITTER 248                248
-#define CONTROLLER_EMITTER_TARGETSIZE           252  // Not supported by NWMax
-#define CONTROLLER_EMITTER_NUMCONTROLPTS        256  // Not supported by NWMax
-#define CONTROLLER_EMITTER_CONTROLPTRADIUS      260  // Not supported by NWMax
-#define CONTROLLER_EMITTER_CONTROLPTDELAY       264  // Not supported by NWMax
-#define CONTROLLER_EMITTER_TANGENTSPREAD        268  // Not supported by NWMax
-#define CONTROLLER_EMITTER_TANGENTLENGTH        272  // Not supported by NWMax
+#define CONTROLLER_EMITTER_TARGETSIZE           252
+#define CONTROLLER_EMITTER_NUMCONTROLPTS        256
+#define CONTROLLER_EMITTER_CONTROLPTRADIUS      260
+#define CONTROLLER_EMITTER_CONTROLPTDELAY       264
+#define CONTROLLER_EMITTER_TANGENTSPREAD        268
+#define CONTROLLER_EMITTER_TANGENTLENGTH        272
 //#define CONTROLLER_EMITTER_276                276
 //#define CONTROLLER_EMITTER_280                280
-#define CONTROLLER_EMITTER_COLORMID             284  // Not supported by NWMax
+#define CONTROLLER_EMITTER_COLORMID             284
 /// ... many controller numbers ... ///
 #define CONTROLLER_EMITTER_COLOREND             380
 //#define CONTROLLER_EMITTER_384                384
 //#define CONTROLLER_EMITTER_388                388
 #define CONTROLLER_EMITTER_COLORSTART           392
 /// ... many controller numbers ... ///
-#define CONTROLLER_EMITTER_DETONATE             502  // Not supported by NWMax
+#define CONTROLLER_EMITTER_DETONATE             502
 
 //Data structures
+struct Edge;
 struct Face;
 struct Aabb;
 struct Controller;
-struct Sound;
+struct Event;
 struct Name;
-struct SaberDataStruct;
-struct VertIndicesStruct;
-struct MDXDataStruct;
+struct VertexData;
 struct Vertex;
 struct Color;
-struct Triples;
 struct Bone;
+struct Location;
 
 //Node structs
 struct Node;
@@ -250,9 +249,7 @@ class PWK;
 class DWK;
 class Ascii;
 
-//bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels);
 bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel);
-
 
 /**** DATA STRUCTS ****/
 
@@ -273,15 +270,15 @@ struct Face{
     Vector vNormal;
     double fDistance = 0.0;
     int nMaterialID = 0;
-    std::array<short, 3> nAdjacentFaces = {-1, -1, -1}; //short nAdjacentFaces [3] = {-1, -1, -1};
-    std::array<short, 3> nIndexVertex = {-1, -1, -1}; //short nIndexVertex[3] = {-1, -1, -1};
+    std::array<short, 3> nAdjacentFaces = {-1, -1, -1};
+    std::array<short, 3> nIndexVertex = {-1, -1, -1};
 
     //Added members
-    std::array<short, 3> nIndexTvert = {-1, -1, -1}; //short nIndexTvert[3] = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert1 = {-1, -1, -1}; //short nIndexTvert1[3] = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert2 = {-1, -1, -1}; //short nIndexTvert2[3] = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert3 = {-1, -1, -1}; //short nIndexTvert3[3] = {-1, -1, -1};
-    std::array<bool, 3> bProcessed = {false, false, false}; //bool bProcessed[3] = {false, false, false};
+    std::array<short, 3> nIndexTvert = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert1 = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert2 = {-1, -1, -1};
+    std::array<short, 3> nIndexTvert3 = {-1, -1, -1};
+    std::array<bool, 3> bProcessed = {false, false, false};
     bool bProcessedSG = false;
     std::array<short, 3> nEdgeTransitions = {-1, -1, -1};
     int nTextureCount = 0;
@@ -321,14 +318,14 @@ struct Controller{
     unsigned short nTimekeyStart = 0;
     unsigned short nDataStart = 0;
     char nColumnCount = 0;
-    std::array<char, 3> nPadding = {0, 0, 0};//char nPadding [3] = {0, 0, 0};
+    std::array<char, 3> nPadding = {0, 0, 0};
 
     //Added members
-    int nNameIndex = -1;
+    int nNodeNumber = -1;
     int nAnimation = -1;
 };
 
-struct Sound{
+struct Event{
     double fTime = 0.0;
     std::string sName;
 };
@@ -338,27 +335,12 @@ struct Name{
     std::string sName;
 };
 
-struct SaberDataStruct{
-    int nOffsetVertex = 0;
-    int nOffsetUV = 0;
-    int nOffsetNormal = 0;
-    Vector vVertex;
-    Vector vUV;
-    Vector vNormal;
-    SaberDataStruct(){}
-    SaberDataStruct(const Vector & v1, const Vector & v2): vVertex(v1), vUV(v2) {}
-};
-
-struct VertIndicesStruct{
-    std::array<short, 3> nValues = {-1, -1, -1};//short nValues[3] = {-1, -1, -1};
-};
-
 struct Weight{
-    std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0}; //double fWeightValue[4] = {1.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> fWeightIndex = {-1.0, -1.0, -1.0, -1.0}; //double fWeightIndex[4] = {-1.0, -1.0, -1.0, -1.0};
+    std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
+    std::array<double, 4> fWeightIndex = {-1.0, -1.0, -1.0, -1.0};
 };
 
-struct MDXDataStruct{
+struct VertexData{
     //Binary members
     Vector vVertex;
     Vector vNormal;
@@ -366,14 +348,30 @@ struct MDXDataStruct{
     Vector vUV2;
     Vector vUV3;
     Vector vUV4;
-    std::array<Vector, 3> vTangent1; //Vector vTangent1[3];
-    std::array<Vector, 3> vTangent2; //Vector vTangent2[3];
-    std::array<Vector, 3> vTangent3; //Vector vTangent3[3];
-    std::array<Vector, 3> vTangent4; //Vector vTangent4[3];
+    Vector vColor;
+    std::array<Vector, 3> vTangent1;
+    std::array<Vector, 3> vTangent2;
+    std::array<Vector, 3> vTangent3;
+    std::array<Vector, 3> vTangent4;
     Weight Weights;
 
     //Added members
-    int nNameIndex = -1;
+    int nOffsetVertex = 0;
+    int nOffsetNormal = 0;
+    int nOffsetUV1 = 0;
+    int nOffsetUV2 = 0;
+    int nOffsetUV3 = 0;
+    int nOffsetUV4 = 0;
+    int nOffsetColor = 0;
+    std::array<int, 3> nOffsetTangent1 = {0,0,0};
+    std::array<int, 3> nOffsetTangent2 = {0,0,0};
+    std::array<int, 3> nOffsetTangent3 = {0,0,0};
+    std::array<int, 3> nOffsetTangent4 = {0,0,0};
+    int nNodeNumber = -1;
+
+    VertexData(){}
+    VertexData(const Vector & v1, const Vector & v2): vVertex(v1), vUV1(v2) {}
+    VertexData(const Vector & v1, const Vector & v2, const Vector & v3): vVertex(v1), vUV1(v2), vNormal(v3) {}
 };
 
 // ArrayHeads should only be relevant during (de)compilation. Otherwise, use vector lengths.
@@ -398,21 +396,21 @@ struct ArrayHead{
 };
 
 struct LinkedFace{
-    unsigned int nNameIndex = -1; //This is the index of the mesh with our face
+    unsigned int nNodeNumber = -1; //This is the index of the mesh with our face
     unsigned int nFace = -1; //This is the index of our face
     unsigned int nVertex = -1; //This is the index of the matchin vertex of our face
     bool bAssignedToPatch = false;
 
     LinkedFace(){}
     LinkedFace(const int & name, const int & face, const int & vert){
-        nNameIndex = name;
+        nNodeNumber = name;
         nFace = face;
         nVertex = vert;
     }
 };
 
 struct Patch{
-    unsigned int nNameIndex = -1; //This is the index of the mesh with our face
+    unsigned int nNodeNumber = -1; //This is the index of the mesh with our face
     unsigned int nVertex = -1; //This is the index of the matchin vertex of our face
     unsigned int nSmoothingGroups = 0;
     std::vector<unsigned int> FaceIndices;
@@ -423,7 +421,7 @@ struct Patch{
 
 struct Vertex: public Vector{
     int nOffset = 0;
-    MDXDataStruct MDXData;
+    VertexData MDXData;
     int nLinkedFacesIndex = -1;
     Vertex assign(const Vector & v){
         fX = v.fX;
@@ -467,8 +465,8 @@ struct Bone{
 struct Header{
     //Binary members
     unsigned short nType = 0;
-    short nID1 = -1;
-    short nNameIndex = -1;
+    short nSupernodeNumber = -1;
+    short nNodeNumber = -1;
     unsigned short nPadding1 = 0;
     unsigned int nOffsetToRoot = 0;
     unsigned int nOffsetToParent = 0;
@@ -596,7 +594,7 @@ struct MeshHeader{
          * 199..101, 200
          * 399..?
          */
-    std::array<int, 3> nUnknown3 = {-1, -1, 0}; //int nUnknown3 [3] = {-1, -1, 0};
+    std::array<int, 3> nUnknown3 = {-1, -1, 0};
     char nSaberUnknown1 = 3; // 3 for non-saber
     char nSaberUnknown2 = 0; // 0 for non-saber
     char nSaberUnknown3 = 0; // 0 for non-saber
@@ -627,17 +625,17 @@ struct MeshHeader{
 
     unsigned short nNumberOfVerts = 0;
     unsigned short nTextureNumber = 0;
-    char nHasLightmap = 0;  // Not supported by NWMax
+    char nHasLightmap = 0;
     char nRotateTexture = 0;
-    char nBackgroundGeometry = 0;  // Not supported by NWMax
+    char nBackgroundGeometry = 0;
     char nShadow = 0;
     char nBeaming = 0;
     char nRender = 1;
-    char nDirtEnabled = 0; //K2  // Not supported by NWMax
+    char nDirtEnabled = 0; //K2
     char nUnknown1 = 0; //K2
-    short nDirtTexture = 1; //K2  // Not supported by NWMax
-    short nDirtCoordSpace = 1; //K2  // Not supported by NWMax
-    char nHideInHolograms = 0; //K2  // Not supported by NWMax
+    short nDirtTexture = 1; //K2
+    short nDirtCoordSpace = 1; //K2
+    char nHideInHolograms = 0; //K2
     char nUnknown2 = 0; //K2
     short nUnknown4 = 0;
     double fTotalArea = 0.0; //not exported
@@ -662,14 +660,14 @@ struct MeshHeader{
 
     //Added members
     std::vector<Face> Faces;
-    std::vector<VertIndicesStruct> VertIndices;
+    std::vector<std::array<short, 3>> VertIndices;
     std::vector<Vertex> Vertices;
     std::vector<Vector> TempVerts;
     std::vector<Vector> TempTverts;
     std::vector<Vector> TempTverts1;
     std::vector<Vector> TempTverts2;
     std::vector<Vector> TempTverts3;
-    MDXDataStruct MDXData;
+    VertexData MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;
     unsigned int nMeshInvertedCounter = 0;
@@ -692,10 +690,10 @@ struct SkinHeader{
     ArrayHead QBoneArray;
     ArrayHead TBoneArray;
     ArrayHead Array8Array; //empty, data irrelevant
-    std::array<short, 18> nBoneIndexes = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //short nBoneIndexes[18] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::array<short, 18> nBoneIndices = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
     std::vector<Bone> Bones;
-    std::vector<int> BoneNameIndexes;
+    std::vector<int> BoneNameIndices;
     std::vector<Weight> TempWeights;
 };
 
@@ -727,15 +725,14 @@ struct WalkmeshHeader{
 // if NODE_HAS_SABER
 struct SaberHeader{
     //Binary members
-    unsigned int nOffsetToSaberData1 = 0;
-    unsigned int nOffsetToSaberData2 = 0;
-    unsigned int nOffsetToSaberData3 = 0;
+    unsigned int nOffsetToSaberVerts = 0;
+    unsigned int nOffsetToSaberUVs = 0;
+    unsigned int nOffsetToSaberNormals = 0;
     int nInvCount1 = 0;
     int nInvCount2 = 0;
 
     //Added members
-    int nNumberOfSaberData = 0;
-    std::vector<SaberDataStruct> SaberData;
+    std::vector<VertexData> SaberData;
 };
 
 struct Node{
@@ -752,7 +749,6 @@ struct Node{
     WalkmeshHeader Walkmesh;
     SaberHeader Saber;
 
-    std::string & GetName();
     Location GetLocation();
 };
 
@@ -771,19 +767,19 @@ struct Animation{
     ArrayHead RuntimeArray2; //Always 0
     unsigned int nRefCount = 0; //Always 0
     unsigned char nModelType = 5; //1 - geometry, 2 - model, 5 - animation
-    std::array<unsigned char, 3> nPadding = {0, 0, 0}; //unsigned char nPadding [3] = {0, 0, 0};
+    std::array<unsigned char, 3> nPadding = {0, 0, 0};
 
     /// Animation-specific part
     double fLength = 0.0;
     double fTransition = 0.0;
     std::string sAnimRoot;
-    ArrayHead SoundArray; //MDLOps: events
+    ArrayHead EventArray; //MDLOps: events
     unsigned int nPadding2 = 0; //Always 0
 
     //Added members
     unsigned int nOffset = 0;
     Node RootAnimationNode;
-    std::vector<Sound> Sounds;
+    std::vector<Event> Events;
     std::vector<Node> ArrayOfNodes;
 };
 
@@ -798,13 +794,13 @@ struct GeometryHeader{
     ArrayHead RuntimeArray2; //Always 0
     unsigned int nRefCount = 0;  //Always 0
     unsigned char nModelType = 2; //1 - geometry, 2 - model, 5 - animation
-    std::array<unsigned char, 3> nPadding = {0, 0, 0}; //unsigned char nPadding[3] = {0, 0, 0};
+    std::array<unsigned char, 3> nPadding = {0, 0, 0};
 };
 
 struct ModelHeader{
     //Binary members
     unsigned char nClassification = 0;
-    std::array<unsigned char, 3> nUnknown1 = {0, 0, 1}; //unsigned char nUnknown1 [3] = {0, 0, 1};
+    std::array<unsigned char, 3> nUnknown1 = {0, 0, 1};
     unsigned int nChildModelCount = 0; //Always 0
     ArrayHead AnimationArray;
 
@@ -863,7 +859,7 @@ struct BWMHeader{
     unsigned int nNumberOfVerts = 0;
     unsigned int nOffsetToVerts = 0;
     unsigned int nNumberOfFaces = 0;
-    unsigned int nOffsetToIndexes = 0;
+    unsigned int nOffsetToIndices = 0;
     unsigned int nOffsetToMaterials = 0;
     unsigned int nOffsetToNormals = 0;
     unsigned int nOffsetToDistances = 0;
@@ -901,8 +897,7 @@ class MDX: public BinaryFile{
 class ASCII: public TextFile{
   public:
     bool Read(MDL & Mdl);
-    bool ReadPwk(MDL & Mdl);
-    bool ReadDwk(MDL & Mdl);
+    bool ReadWalkmesh(MDL & Mdl, bool bPwk);
 };
 
 class MDL: public BinaryFile{
@@ -932,8 +927,7 @@ class MDL: public BinaryFile{
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
                            std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
-    //void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream & file);
-    std::string MakeUniqueName(int nNameIndex);
+    std::string MakeUniqueName(int nNodeNumber);
 
     //Getters
     const std::string GetName(){ return sClassName; }
@@ -963,12 +957,17 @@ class MDL: public BinaryFile{
     friend ASCII;
     friend Node;
 
-    //Version
+    //Options
     bool bK2 = true;
     bool bDebug = false;
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;
+    bool bWriteAnimations = true;
+    bool bSkinToTrimesh = false;
+    bool bLightsaberToTrimesh = false;
+    bool bBezierToLinear = false;
+    bool bExportWok = false;
 
     //Getters
     std::unique_ptr<FileHeader> & GetFileData();

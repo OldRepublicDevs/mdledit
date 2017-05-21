@@ -58,7 +58,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
                         //std::cout<<"Checking node\n";
                         Node & node = Data.MH.ArrayOfNodes.at(n);
-                        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB)){
+                        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB) && !(node.Head.nType & NODE_HAS_SABER)){
                             if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
                                 find.psz = &node.Mesh.cTexture1;
                                 if(ListView_FindItem(hList1, -1, &find) == -1){
@@ -128,7 +128,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                     Node & node = Data.MH.ArrayOfNodes.at(n);
                                     if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB)){
                                         if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture1.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1))){
-                                            //std::cout<<"Found difference. ("<<Data.MH.Names.at(node.Head.nNameIndex).sName<<")\n";
+                                            //std::cout<<"Found difference. ("<<Data.MH.Names.at(node.Head.nNodeNumber).sName<<")\n";
                                             bChange = true;
                                             node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_HAS_TANGENT1;
                                         }
@@ -240,6 +240,11 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             if(Mdl->bSmoothAngleWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_ANGLE_WEIGHT), BST_CHECKED);
             if(Mdl->bSmoothAreaWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_AREA_WEIGHT), BST_CHECKED);
             if(Mdl->bDetermineSmoothing) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_CALC_SMOOTHING), BST_CHECKED);
+            if(Mdl->bWriteAnimations) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_DO_ANIMATIONS), BST_CHECKED);
+            if(Mdl->bSkinToTrimesh) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SKIN_TRIMESH), BST_CHECKED);
+            if(Mdl->bLightsaberToTrimesh) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SABER_TRIMESH), BST_CHECKED);
+            if(Mdl->bBezierToLinear) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_BEZIER_LINEAR), BST_CHECKED);
+            if(Mdl->bExportWok) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_EXPORT_WOK), BST_CHECKED);
         }
         break;
         case WM_COMMAND:
@@ -250,16 +255,17 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             MDL * Mdl = nullptr;
             if(GetWindowLongPtr(hwnd, GWLP_USERDATA) != 0) Mdl = (MDL*) GetWindowLongPtr(hwnd, GWLP_USERDATA);
             if(Mdl != nullptr){
-                bChange = true;
                 switch(nID){
                     case DLG_ID_AREA_WEIGHT:
                     {
+                        bChange = true;
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSmoothAreaWeighting = true;
                         else Mdl->bSmoothAreaWeighting = false;
                     }
                     break;
                     case DLG_ID_ANGLE_WEIGHT:
                     {
+                        bChange = true;
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSmoothAngleWeighting = true;
                         else Mdl->bSmoothAreaWeighting = false;
                     }
@@ -268,6 +274,35 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                     {
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bDetermineSmoothing = true;
                         else Mdl->bDetermineSmoothing = false;
+                    }
+                    break;
+                    case DLG_ID_DO_ANIMATIONS:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bWriteAnimations = true;
+                        else Mdl->bWriteAnimations = false;
+                    }
+                    break;
+                    case DLG_ID_SKIN_TRIMESH:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSkinToTrimesh = true;
+                        else Mdl->bSkinToTrimesh = false;
+                    }
+                    break;
+                    case DLG_ID_SABER_TRIMESH:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bLightsaberToTrimesh = true;
+                        else Mdl->bLightsaberToTrimesh = false;
+                    }
+                    break;
+                    case DLG_ID_BEZIER_LINEAR:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bBezierToLinear = true;
+                        else Mdl->bBezierToLinear = false;
+                    }
+                    case DLG_ID_EXPORT_WOK:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bExportWok = true;
+                        else Mdl->bExportWok = false;
                     }
                     break;
                 }

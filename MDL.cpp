@@ -55,7 +55,7 @@ void MDL::LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
     for(int n = 0; n < NODE.Head.Children.size(); n++){
         LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
     }
-    ArrayOfNodes.at(NODE.Head.nNameIndex) = std::move(NODE);
+    ArrayOfNodes.at(NODE.Head.nNodeNumber) = std::move(NODE);
 }
 
 void MDL::LinearizeAnimations(Node & NODE, std::vector<Node> & ArrayOfNodes){
@@ -70,11 +70,17 @@ std::unique_ptr<FileHeader> & MDL::GetFileData(){
     return FH;
 }
 
-std::string MDL::MakeUniqueName(int nNameIndex){
+std::string MDL::MakeUniqueName(int nNodeNumber){
     std::vector<Name> & Names = FH->MH.Names;
-    std::string sReturn = Names.at(nNameIndex).sName.c_str();
-    for(int n = 0; n < nNameIndex; n++){
-        if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNameIndex);
+    std::string sReturn = Names.at(nNodeNumber).sName.c_str();
+    if(FH){
+        std::vector<Node> & Nodes = FH->MH.ArrayOfNodes;
+        if(Nodes.size() > nNodeNumber){
+            if(Nodes.at(nNodeNumber).Head.nType & NODE_HAS_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
+        }
+    }
+    for(int n = 0; n < nNodeNumber; n++){
+        if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNodeNumber);
     }
     return sReturn;
 }
@@ -87,7 +93,7 @@ Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
         std::vector<Node> & Array = FH->MH.Animations[nAnimation].ArrayOfNodes;
         for(int n = 0; n < Array.size(); n++){
             //std::cout<<"Looping through animation nodes for our node\n";
-            if(Array[n].Head.nNameIndex == nIndex) return Array[n];
+            if(Array[n].Head.nNodeNumber == nIndex) return Array[n];
         }
     }
 }
@@ -95,7 +101,7 @@ Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
 bool MDL::HeadLinked(){
     for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
         if(FH->MH.ArrayOfNodes.at(n).nOffset == FH->MH.nOffsetToHeadRootNode){
-            if(FH->MH.Names.at(FH->MH.ArrayOfNodes.at(n).Head.nNameIndex).sName == "neck_g") return true;
+            if(FH->MH.Names.at(FH->MH.ArrayOfNodes.at(n).Head.nNodeNumber).sName == "neck_g") return true;
             else return false;
         }
     }
@@ -125,12 +131,12 @@ void MDL::FlushData(){
 bool MDL::LinkHead(bool bLink){
     unsigned int nOffset;
     if(bLink){
-        int nNameIndex = -1;
-        for(int n = 0; n < FH->MH.Names.size() && nNameIndex == -1; n++){
-            if(FH->MH.Names.at(n).sName == "neck_g") nNameIndex = n;
+        int nNodeNumber = -1;
+        for(int n = 0; n < FH->MH.Names.size() && nNodeNumber == -1; n++){
+            if(FH->MH.Names.at(n).sName == "neck_g") nNodeNumber = n;
         }
-        if(nNameIndex != -1){
-            nOffset = GetNodeByNameIndex(nNameIndex).nOffset;
+        if(nNodeNumber != -1){
+            nOffset = GetNodeByNameIndex(nNodeNumber).nOffset;
         }
         else return false;
     }
@@ -204,14 +210,14 @@ bool MDL::ReadAscii(){
         else std::cout<<"Mdl ascii read succesfully!\n";
     }
     if(PwkAscii){
-        if(!PwkAscii->ReadPwk(*this)){
+        if(!PwkAscii->ReadWalkmesh(*this, true)){
             FlushData();
             return false;
         }
         else std::cout<<"Pwk ascii read succesfully!\n";
     }
     if(DwkAscii){
-        if(!DwkAscii->ReadDwk(*this)){
+        if(!DwkAscii->ReadWalkmesh(*this, false)){
             FlushData();
             return false;
         }
@@ -475,10 +481,10 @@ void MDL::CreatePatches(){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){
                 Patch newpatch;
                 LinkedFace & patchhead = LinkedFaceVector.at(lf);
-                newpatch.nNameIndex = patchhead.nNameIndex;
+                newpatch.nNodeNumber = patchhead.nNodeNumber;
                 newpatch.nVertex = patchhead.nVertex;
                 patchhead.bAssignedToPatch = true;
-                newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNameIndex).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
+                newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNodeNumber).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
                 newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
 
                 for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
@@ -486,17 +492,17 @@ void MDL::CreatePatches(){
                         //The following check is the whole point of this whole patch business
                         //The patch only contains those faces which are welded, ie. they have one and the same vertex, ie.
                         //they have the same mesh index and vert index as the point we are constructing this patch for
-                        if(LinkedFaceVector.at(plf).nNameIndex == newpatch.nNameIndex &&
+                        if(LinkedFaceVector.at(plf).nNodeNumber == newpatch.nNodeNumber &&
                            LinkedFaceVector.at(plf).nVertex == newpatch.nVertex){
                             LinkedFace & linked = LinkedFaceVector.at(plf);
                             linked.bAssignedToPatch = true;
-                            newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(linked.nNameIndex).Mesh.Faces.at(linked.nFace).nSmoothingGroup;
+                            newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(linked.nNodeNumber).Mesh.Faces.at(linked.nFace).nSmoothingGroup;
                             newpatch.FaceIndices.push_back(linked.nFace); //Assign linked face index to the patch
                             //ssReport << linked.nFace << " ";
                         }
                     }
                 }
-                //file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNameIndex).sName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
+                //file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNodeNumber).sName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
                 PatchVector.push_back(std::move(newpatch));
             }
         }
@@ -574,12 +580,12 @@ void MDL::CheckPeculiarities(){
             ssReturn<<"\r\n   - Animation counterpart to RefCount has a value!";
             bUpdate = true;
         }
-        if(Data.MH.Animations.at(a).SoundArray.GetDoCountsDiffer()){
-            ssReturn<<"\r\n   - SoundArray counts differ!";
+        if(Data.MH.Animations.at(a).EventArray.GetDoCountsDiffer()){
+            ssReturn<<"\r\n   - EventArray counts differ!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).nPadding2 != 0){
-            ssReturn<<"\r\n   - Unknown int32 after SoundArrayHead has a value!";
+            ssReturn<<"\r\n   - Unknown int32 after EventArrayHead has a value!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).nModelType != 5){
@@ -608,7 +614,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
             std::string sCont;
             if(nAnimation == -1) sCont = "geometry";
             else sCont = FH->MH.Animations.at(nAnimation).sName.c_str();
-            ssAdd<<"\r\n - "<<FH->MH.Names.at(NodeArray.at(b).Head.nNameIndex).sName<<" ("<<sCont<<")";
+            ssAdd<<"\r\n - "<<FH->MH.Names.at(NodeArray.at(b).Head.nNodeNumber).sName<<" ("<<sCont<<")";
             if(NodeArray.at(b).Head.nType & NODE_HAS_HEADER){
                 if(NodeArray.at(b).Head.nPadding1 != 0){
                     ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
@@ -641,7 +647,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                         std::string sLoc;
                         if(ctrl.nAnimation == -1) sLoc = "geometry";
                         else sLoc = FH->MH.Animations.at(ctrl.nAnimation).sName.c_str();
-                        ssAdd<<"\r\n     - Header: New controller unknown2 value! ("<<ctrl.nUnknown2<<" - "<<ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNameIndex).Head.nType)<<" controller in node "<<FH->MH.Names.at(ctrl.nNameIndex).sName<<" in "<<sLoc<<")";
+                        ssAdd<<"\r\n     - Header: New controller unknown2 value! ("<<ctrl.nUnknown2<<" - "<<ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNodeNumber).Head.nType)<<" controller in node "<<FH->MH.Names.at(ctrl.nNodeNumber).sName<<" in "<<sLoc<<")";
                         bUpdate = true;
                     }
                     /***
@@ -673,7 +679,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
-                              GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
+                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
                              (ctrl.nPadding[0] == 50 &&
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
@@ -682,8 +688,8 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
                     /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
-                    else if( (GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_EMITTER ||
-                              GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_MESH) &&
+                    else if( (GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_EMITTER ||
+                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_MESH) &&
                               ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                     else{
                         //ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
@@ -779,13 +785,14 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
 
 std::string ReturnClassificationName(int nClassification){
     switch(nClassification){
-        case CLASS_OTHER: return "Other";
-        case CLASS_EFFECT: return "Effect";
-        case CLASS_TILE: return "Tile";
-        case CLASS_CHARACTER: return "Character";
-        case CLASS_DOOR: return "Door";
-        case CLASS_SABER: return "";
-        case CLASS_PLACEABLE: return "Placeable";
+        case CLASS_OTHER: return "other";
+        case CLASS_EFFECT: return "effect";
+        case CLASS_TILE: return "tile";
+        case CLASS_CHARACTER: return "character";
+        case CLASS_DOOR: return "door";
+        case CLASS_LIGHTSABER: return "lightsaber";
+        case CLASS_PLACEABLE: return "placeable";
+        case CLASS_FLYER: return "flyer";
     }
     std::cout<<"ReturnClassification() ERROR: Unknown classification "<<nClassification<<".\n";
     return "unknown";

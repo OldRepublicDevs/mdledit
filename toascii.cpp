@@ -14,8 +14,9 @@
 /**/
 
 void MDL::ExportAscii(std::string &sExport){
+    if(!FH) return;
     std::stringstream ss;
-    ConvertToAscii(CONVERT_MODEL, ss, (void*) &FH->MH);
+    ConvertToAscii(CONVERT_MODEL, ss, (void*) &(FH->MH));
     sExport = ss.str();
 }
 void MDL::ExportPwkAscii(std::string &sExport){
@@ -39,21 +40,19 @@ void MDL::ExportWokAscii(std::string &sExport){
 }
 
 void RecursiveAabb(Aabb * AABB, std::stringstream &str){
-    str << "\n    "<<AABB->vBBmin.fX<<" "<<AABB->vBBmin.fY<<" "<<AABB->vBBmin.fZ<<" "<<AABB->vBBmax.fX<<" "<<AABB->vBBmax.fY<<" "<<AABB->vBBmax.fZ<<" "<<AABB->nID;
+    str << "\n    " << PrepareFloat(AABB->vBBmin.fX) <<
+                " " << PrepareFloat(AABB->vBBmin.fY) <<
+                " " << PrepareFloat(AABB->vBBmin.fZ) <<
+                " " << PrepareFloat(AABB->vBBmax.fX) <<
+                " " << PrepareFloat(AABB->vBBmax.fY) <<
+                " " << PrepareFloat(AABB->vBBmax.fZ) <<
+                " " << AABB->nID;
     if(AABB->nChild1 > 0){
         RecursiveAabb(&AABB->Child1[0], str);
     }
     if(AABB->nChild2 > 0){
         RecursiveAabb(&AABB->Child2[0], str);
     }
-}
-
-std::string PrepareFloat(double fFloat){
-    std::stringstream ssReturn;
-    ssReturn.precision(6);
-    ssReturn.setf(std::ios::showpoint);
-    ssReturn << RoundDec(fFloat, 8);
-    return TruncateDec(ssReturn.str());
 }
 
 void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data){
@@ -99,7 +98,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
                 ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
             }
-            else if(node.Head.nType & NODE_HAS_SKIN){
+            else if(node.Head.nType & NODE_HAS_SKIN && !bSkinToTrimesh){
                 ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
                 ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
             }
@@ -116,9 +115,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         sReturn << "\nendmodelgeom "<<mh->GH.sName.c_str()<<"\n";
 
-        for(int n = 0; n < mh->Animations.size(); n++){
-            ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
+        if(bWriteAnimations){
+            for(int n = 0; n < mh->Animations.size(); n++){
+                ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
+            }
         }
+
         sReturn << "\n\ndonemodel "<<mh->GH.sName.c_str()<<"\n";
     }
     else if(nDataType == CONVERT_ANIMATION){
@@ -127,16 +129,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  length " << PrepareFloat(anim->fLength);
         sReturn << "\n  transtime " << PrepareFloat(anim->fTransition);
         sReturn << "\n  animroot " << anim->sAnimRoot.c_str();
-        if(anim->Sounds.size() > 0){
+        if(anim->Events.size() > 0){
             /** old MDLOps list format
             sReturn << "\n  eventlist";
-            for(int s = 0; s < anim->Sounds.size(); s++){
-                sReturn << "\n    " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
+            for(int s = 0; s < anim->Events.size(); s++){
+                sReturn << "\n    " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
             }
             sReturn << "\n  endlist";
             /**/
-            for(int s = 0; s < anim->Sounds.size(); s++){
-                sReturn << "\n  event " << anim->Sounds.at(s).fTime << " " << anim->Sounds.at(s).sName.c_str();
+            for(int s = 0; s < anim->Events.size(); s++){
+                sReturn << "\n  event " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
             }
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
@@ -149,7 +151,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
         sReturn << "\n    node dummy ";
-        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << MakeUniqueName(node->Head.nNodeNumber);//FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
         sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
@@ -162,15 +164,15 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\nnode ";
         if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
         else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
-        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << "skin ";
-        else if(node->Head.nType & NODE_HAS_SABER) sReturn << (true ? "lightsaber " : "trimesh 2081__");
+        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << (!bSkinToTrimesh ? "skin " : "trimesh ");
+        else if(node->Head.nType & NODE_HAS_SABER) sReturn << (!bLightsaberToTrimesh ? "lightsaber " : "trimesh ");
         else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh ";
         else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
         else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
         else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
-        sReturn << MakeUniqueName(node->Head.nNameIndex);//FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        sReturn << MakeUniqueName(node->Head.nNodeNumber);//FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
         sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
-        //sReturn << FH->MH.Names[node->Head.nNameIndex].sName.c_str();
+        //sReturn << FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
         //sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
         if(node->Head.Controllers.size() > 0){
             /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
@@ -359,13 +361,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn << "\n   ";
                 int i = 0;
                 int nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
-                //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndexes.size()<<"\n";
+                //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndices.size()<<"\n";
                 while(nBoneNumber != -1 && i < 4){
                     //std::cout<<"Reading bone number "<<nBoneNumber;
-                    //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndexes.at(nBoneNumber)).sName.c_str()<<".\n";
-                    int nNameIndex = node->Skin.BoneNameIndexes.at(nBoneNumber);
-                    //sReturn << " "<<FH->MH.Names.at(nNameIndex).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
-                    sReturn << " "<<MakeUniqueName(nNameIndex)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
+                    //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str()<<".\n";
+                    int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
+                    //sReturn << " "<<FH->MH.Names.at(nNodeNumber).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
+                    sReturn << " "<<MakeUniqueName(nNodeNumber)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
                     i++;
                     nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
                 }
@@ -489,7 +491,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             vOut = node->Saber.SaberData.at(91).vVertex - vDiff;
             sReturn << "\n    "<<PrepareFloat(vOut.fX)<<" "<<PrepareFloat(vOut.fY)<<" "<<PrepareFloat(vOut.fZ);
 
-            sReturn << "\n  faces 24";
+            sReturn << "\n  faces 12";
             /// SIDE 1
             sReturn << "\n    5 4 0  1  5 4 0  0";
             sReturn << "\n    0 1 5  1  0 1 5  0";
@@ -506,6 +508,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "\n    15 11 14  1  15 11 14  0";
             sReturn << "\n    10 14 11  1  10 14 11  0";
             /// SIDE 2
+            /*
             sReturn << "\n    4 5 0  1  4 5 0  0";
             sReturn << "\n    1 0 5  1  1 0 5  0";
             sReturn << "\n    8 13 12  1  8 13 12  0";
@@ -520,34 +523,35 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "\n    3 6 7  1  3 6 7  0";
             sReturn << "\n    11 15 14  1  11 15 14  0";
             sReturn << "\n    14 10 11  1  14 10 11  0";
+            */
 
             sReturn << "\n  tverts 16";
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(1).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(1).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(2).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(2).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(3).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(3).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(4).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(4).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(5).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(5).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(6).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(6).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(7).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(7).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(88).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(88).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(89).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(89).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(90).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(90).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(91).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(91).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(92).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(92).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(93).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(93).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(94).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(94).vUV.fY);
-            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(95).vUV.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(95).vUV.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(0).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(0).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(1).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(1).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(2).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(2).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(3).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(3).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(4).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(4).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(5).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(5).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(6).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(6).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(7).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(7).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(88).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(88).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(89).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(89).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(90).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(90).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(91).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(91).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(92).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(92).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(93).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(93).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(94).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(94).vUV1.fY);
+            sReturn << "\n    "<<PrepareFloat(node->Saber.SaberData.at(95).vUV1.fX)<<" "<<PrepareFloat(node->Saber.SaberData.at(95).vUV1.fY);
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0
     else if(nDataType == CONVERT_CONTROLLER_KEYED){
         Controller * ctrl = (Controller*) Data;
-        Node & geonode = GetNodeByNameIndex(ctrl->nNameIndex);
+        Node & geonode = GetNodeByNameIndex(ctrl->nNodeNumber);
         Location loc = geonode.GetLocation();
-        Node & node = GetNodeByNameIndex(ctrl->nNameIndex, ctrl->nAnimation);
+        Node & node = GetNodeByNameIndex(ctrl->nNodeNumber, ctrl->nAnimation);
         sReturn<<"\n      "<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
-        if(ctrl->nColumnCount > 16) sReturn<<"bezier";
+        if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn<<"bezier";
         sReturn<<"key";
         double PI = 3.14159;
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
@@ -597,7 +601,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         /// positionbezierkey
-        else if(ctrl->nColumnCount > 16 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+        else if(ctrl->nColumnCount > 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn << "\n        " <<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n]);
@@ -613,7 +617,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         /// regular bezierkey
-        else if(ctrl->nColumnCount > 16){
+        else if(ctrl->nColumnCount > 16 && !bBezierToLinear){
             //bezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
@@ -624,7 +628,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         /// positionkey
-        else if(ctrl->nColumnCount == 3 && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+        else if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //normal position
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
@@ -652,7 +656,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
             else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNodeNumber].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
         sReturn << "\n      endlist";
@@ -663,7 +667,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             Error("Error! Single controller has more than one value. Skipping.");
             return;
         }
-        Node & node = GetNodeByNameIndex(ctrl->nNameIndex);
+        Node & node = GetNodeByNameIndex(ctrl->nNodeNumber);
         sReturn<<"\n  "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
@@ -693,12 +697,52 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
             else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNameIndex].sName<<" ("<<sLocation.c_str()<<")!\n";
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNodeNumber].sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }
     else if(nDataType == CONVERT_WOK){
+        BWM * bwm = (BWM*) Data;
+        if(!bwm->GetData()) return;
+        BWMHeader & data = *bwm->GetData();
 
+        std::string sModel ("unknown");
+        if(FH) sModel = FH->MH.GH.sName.c_str();
+
+        sReturn         << "# Exported from MDLedit " << sTimestamp.str();
+        sReturn << "\n" << "# WOKMESH  ASCII";
+        sReturn << "\n" << "node trimesh WALKMESH";
+        sReturn << "\n" << "  parent "<<sModel;
+        sReturn << "\n" << "  position "<<PrepareFloat(data.vPosition.fX)<<" "<<PrepareFloat(data.vPosition.fY)<<" "<<PrepareFloat(data.vPosition.fZ);
+        sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
+
+        sReturn << "\n  verts " << data.verts.size();
+        for(int n = 0; n < data.verts.size(); n++){
+            sReturn << "\n    "<<PrepareFloat(data.verts[n].fX)<<" "<<PrepareFloat(data.verts[n].fY)<<" "<<PrepareFloat(data.verts[n].fZ);
+        }
+
+        sReturn << "\n  faces " << data.faces.size();
+        for(int n = 0; n < data.faces.size(); n++){
+            sReturn << "\n    ";
+            sReturn << data.faces[n].nIndexVertex[0];
+            sReturn << " " << data.faces[n].nIndexVertex[1];
+            sReturn << " " << data.faces[n].nIndexVertex[2];
+            sReturn << "  1";
+            sReturn << "  0 0 0";
+            sReturn << "  " << data.faces[n].nMaterialID;
+        }
+
+        int nRoomLinkSize = 0;
+        std::stringstream ssRoomlinks;
+        for(int n = 0; n < data.edges.size(); n++){
+            if(data.edges.at(n).nTransition != -1){
+                ssRoomlinks << "\n    "<<data.edges.at(n).nIndex<<" "<<data.edges.at(n).nTransition;
+                nRoomLinkSize++;
+            }
+        }
+        sReturn << "\n  roomlinks " << data.edges.size() << ssRoomlinks.str();
+
+        sReturn << "\nendnode";
     }
     else if(nDataType == CONVERT_PWK){
         BWM * bwm = (BWM*) Data;
@@ -733,9 +777,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         /// WRITE PWK
         sReturn      << "# Exported from MDLedit " << sTimestamp.str();
-        sReturn<<"\n"<< "# pwk file";
-        sReturn<<"\n"<< "#";
-        sReturn<<"\n"<< "#MDLedit PWKMESH  ASCII";
+        sReturn<<"\n"<< "# PWKMESH  ASCII";
         sReturn<<"\n"<< "node dummy "<< sRoot;
         sReturn<<"\n"<< "  parent "<<sModel;
         sReturn<<"\n"<< "endnode";
@@ -815,9 +857,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         /// WRITE DWK
         sReturn      << "# Exported from MDLedit " << sTimestamp.str();
-        sReturn<<"\n"<< "# dwk file";
-        sReturn<<"\n"<< "#";
-        sReturn<<"\n"<< "# MDLedit DWKMESH  ASCII";
+        sReturn<<"\n"<< "# DWKMESH  ASCII";
         sReturn<<"\n"<< "node dummy "<< sRoot;
         sReturn<<"\n"<< "  parent "<<sModel;
         sReturn<<"\n"<< "endnode";

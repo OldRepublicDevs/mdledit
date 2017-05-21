@@ -164,21 +164,21 @@ bool MDL::Compile(){
         anim.sAnimRoot.resize(32);
         WriteString(anim.sAnimRoot, 3);
 
-        int PHnOffsetToSoundArray = nPosition;
+        int PHnOffsetToEventArray = nPosition;
         WriteInt(0xFFFFFFFF, 6);
-        WriteInt(anim.Sounds.size(), 1);
-        WriteInt(anim.Sounds.size(), 1);
+        WriteInt(anim.Events.size(), 1);
+        WriteInt(anim.Events.size(), 1);
         WriteInt(0, 8); //Unknown constant
-        if(anim.Sounds.size() > 0){
-            anim.SoundArray.ResetToSize(anim.Sounds.size());
-            WriteIntToPH(nPosition - 12, PHnOffsetToSoundArray, anim.SoundArray.nOffset);
-            for(int b = 0; b < anim.Sounds.size(); b++){
-                WriteFloat(anim.Sounds[b].fTime, 2);
-                anim.Sounds[b].sName.resize(32);
-                WriteString(anim.Sounds[b].sName, 3);
+        if(anim.Events.size() > 0){
+            anim.EventArray.ResetToSize(anim.Events.size());
+            WriteIntToPH(nPosition - 12, PHnOffsetToEventArray, anim.EventArray.nOffset);
+            for(int b = 0; b < anim.Events.size(); b++){
+                WriteFloat(anim.Events[b].fTime, 2);
+                anim.Events[b].sName.resize(32);
+                WriteString(anim.Events[b].sName, 3);
             }
         }
-        else WriteIntToPH(0, PHnOffsetToSoundArray, Data->MH.Animations[c].SoundArray.nOffset);
+        else WriteIntToPH(0, PHnOffsetToEventArray, Data->MH.Animations[c].EventArray.nOffset);
 
         WriteIntToPH(nPosition - 12, PHnOffsetToFirstNode, Data->MH.Animations[c].nOffsetToRootAnimationNode);
         WriteNodes(anim.ArrayOfNodes.front());
@@ -230,8 +230,8 @@ void MDL::WriteNodes(Node & node){
 
     node.nOffset = nPosition - 12;
     WriteInt(node.Head.nType, 5, 2);
-    WriteInt(node.Head.nID1, 5, 2);
-    WriteInt(node.Head.nNameIndex, 5, 2);
+    WriteInt(node.Head.nSupernodeNumber, 5, 2);
+    WriteInt(node.Head.nNodeNumber, 5, 2);
     WriteInt(0, 8, 2);
 
     //Next is offset to root. For geo this is 0, for animations this is offset to animation
@@ -250,7 +250,7 @@ void MDL::WriteNodes(Node & node){
         node.Head.nOffsetToParent = 0;
     }
     else{
-        //std::cout<<"Found parent "<<parent.Head.nNameIndex<<". His offset is "<<parent.nOffset<<".\n";
+        //std::cout<<"Found parent "<<parent.Head.nNodeNumber<<". His offset is "<<parent.nOffset<<".\n";
         WriteInt(GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset, 6);
         node.Head.nOffsetToParent = GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset;
     }
@@ -578,7 +578,7 @@ void MDL::WriteNodes(Node & node){
         WriteInt(node.Skin.Bones.size(), 1);
         WriteInt(node.Skin.Bones.size(), 1);
         for(int a = 0; a < 18; a++){
-            WriteInt(node.Skin.nBoneIndexes[a], 5, 2);
+            WriteInt(node.Skin.nBoneIndices[a], 5, 2);
         }
     }
 
@@ -605,13 +605,13 @@ void MDL::WriteNodes(Node & node){
     }
 
     /// SABER HEADER
-    int PHnOffsetToSaberData1, PHnOffsetToSaberData2, PHnOffsetToSaberData3;
+    int PHnOffsetToSaberVerts, PHnOffsetToSaberUVs, PHnOffsetToSaberNormals;
     if(node.Head.nType & NODE_HAS_SABER){
-        PHnOffsetToSaberData1 = nPosition;
+        PHnOffsetToSaberVerts = nPosition;
         WriteInt(0xFFFFFFFF, 6);
-        PHnOffsetToSaberData3 = nPosition;
+        PHnOffsetToSaberNormals = nPosition;
         WriteInt(0xFFFFFFFF, 6);
-        PHnOffsetToSaberData2 = nPosition;
+        PHnOffsetToSaberUVs = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Saber.nInvCount1, 4);
         WriteInt(node.Saber.nInvCount2, 4);
@@ -620,25 +620,25 @@ void MDL::WriteNodes(Node & node){
     //now comes all the data in reversed order
     /// SABER DATA
     if(node.Head.nType & NODE_HAS_SABER){
-        WriteIntToPH(nPosition - 12, PHnOffsetToSaberData1, node.Saber.nOffsetToSaberData1);
+        WriteIntToPH(nPosition - 12, PHnOffsetToSaberVerts, node.Saber.nOffsetToSaberVerts);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
             node.Saber.SaberData[d].nOffsetVertex = nPosition;
             WriteFloat(node.Saber.SaberData[d].vVertex.fX, 2);
             WriteFloat(node.Saber.SaberData[d].vVertex.fY, 2);
             WriteFloat(node.Saber.SaberData[d].vVertex.fZ, 2);
         }
-        WriteIntToPH(nPosition - 12, PHnOffsetToSaberData3, node.Saber.nOffsetToSaberData3);
+        WriteIntToPH(nPosition - 12, PHnOffsetToSaberNormals, node.Saber.nOffsetToSaberNormals);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
             node.Saber.SaberData[d].nOffsetNormal = nPosition;
             WriteFloat(node.Saber.SaberData[d].vNormal.fX, 2);
             WriteFloat(node.Saber.SaberData[d].vNormal.fY, 2);
             WriteFloat(node.Saber.SaberData[d].vNormal.fZ, 2);
         }
-        WriteIntToPH(nPosition - 12, PHnOffsetToSaberData2, node.Saber.nOffsetToSaberData2);
+        WriteIntToPH(nPosition - 12, PHnOffsetToSaberUVs, node.Saber.nOffsetToSaberUVs);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
-            node.Saber.SaberData[d].nOffsetUV = nPosition;
-            WriteFloat(node.Saber.SaberData[d].vUV.fX, 2);
-            WriteFloat(node.Saber.SaberData[d].vUV.fY, 2);
+            node.Saber.SaberData[d].nOffsetUV1 = nPosition;
+            WriteFloat(node.Saber.SaberData[d].vUV1.fX, 2);
+            WriteFloat(node.Saber.SaberData[d].vUV1.fY, 2);
         }
 
     }
@@ -787,7 +787,7 @@ void MDL::WriteNodes(Node & node){
         }
 
         /// Also write the extra empty vert data
-        node.Mesh.MDXData.nNameIndex = node.Head.nNameIndex;
+        node.Mesh.MDXData.nNodeNumber = node.Head.nNodeNumber;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
             if(node.Head.nType & NODE_HAS_SKIN) node.Mesh.MDXData.vVertex.Set(1000000.0, 1000000.0, 1000000.0);
             else node.Mesh.MDXData.vVertex.Set(10000000.0, 10000000.0, 10000000.0);
@@ -951,9 +951,9 @@ void MDL::WriteNodes(Node & node){
             WriteInt(node.Mesh.nMeshInvertedCounter, 4);
             WriteIntToPH(nPosition - 12, PHnPointerToIndexLocation, node.Mesh.nVertIndicesLocation);
             for(int d = 0; d < node.Mesh.VertIndices.size(); d++){
-                WriteInt(node.Mesh.VertIndices.at(d).nValues[0], 5, 2);
-                WriteInt(node.Mesh.VertIndices.at(d).nValues[1], 5, 2);
-                WriteInt(node.Mesh.VertIndices.at(d).nValues[2], 5, 2);
+                WriteInt(node.Mesh.VertIndices.at(d).at(0), 5, 2);
+                WriteInt(node.Mesh.VertIndices.at(d).at(1), 5, 2);
+                WriteInt(node.Mesh.VertIndices.at(d).at(2), 5, 2);
             }
         }
     }
@@ -1118,8 +1118,8 @@ void BWM::Compile(){
         WriteFloat(vert.fZ, 2);
     }
 
-    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetVertIndices, data.nOffsetToIndexes);
-    else WriteIntToPH(nPosition, nOffsetVertIndices, data.nOffsetToIndexes);
+    if(data.faces.size() == 0) WriteIntToPH(0, nOffsetVertIndices, data.nOffsetToIndices);
+    else WriteIntToPH(nPosition, nOffsetVertIndices, data.nOffsetToIndices);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteInt(face.nIndexVertex.at(0), 4);

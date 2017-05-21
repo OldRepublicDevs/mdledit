@@ -5,18 +5,18 @@
 #endif
 
 #include "frame.h"
-#include <gdiplus.h>
+//#include <gdiplus.h>
 
 int WINAPI WinMain(HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR lpszArgument,
                      int nCmdShow){
     MSG messages;            /* Here messages to the application are saved */
-    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-    ULONG_PTR           gdiplusToken;
+    //Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+    //ULONG_PTR           gdiplusToken;
 
     // Initialize GDI+.
-    GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+    //GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     //Creation of window
     Frame *winMain = new Frame(hThisInstance);
@@ -35,7 +35,7 @@ int WINAPI WinMain(HINSTANCE hThisInstance,
     //Will only get this far after while is terminated
     delete winMain;
 
-    Gdiplus::GdiplusShutdown(gdiplusToken);
+    //Gdiplus::GdiplusShutdown(gdiplusToken);
 
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
     return messages.wParam;

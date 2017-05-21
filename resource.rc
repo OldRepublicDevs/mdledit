@@ -7,16 +7,25 @@ ID_CUR_DRAG CURSOR "cursor.cur"
 
 //IDI_ICON ICON "acdc_icon.ico"
 
-DLG_SETTINGS DIALOGEX  20, 10, 200, 80
+DLG_SETTINGS DIALOGEX  20, 10, 200, 176
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg"
 BEGIN
-    GROUPBOX "Vertex Normal Calculation", DLG_ID_STATIC, 10, 10, 180, 50
+    GROUPBOX "Vertex Normal Calculation", DLG_ID_STATIC, 10, 10, 180, 49 // size is 13 + n * 12
     AUTOCHECKBOX "Include Area Weighting", DLG_ID_AREA_WEIGHT, 15, 22, 160, 8
     AUTOCHECKBOX "Include Angle Weighting", DLG_ID_ANGLE_WEIGHT, 15, 34, 160, 8
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
-    AUTOCHECKBOX "Calculate Smoothing Groups", DLG_ID_CALC_SMOOTHING, 15, 64, 160, 8
+
+    GROUPBOX "Reading Binary", DLG_ID_STATIC, 10, 64, 180, 25 // size is 13 + n * 12
+    AUTOCHECKBOX "Calculate Smoothing Groups", DLG_ID_CALC_SMOOTHING, 15, 76, 160, 8
+
+    GROUPBOX "Writing Ascii", DLG_ID_STATIC, 10, 94, 180, 73 // size is 13 + n * 12
+    AUTOCHECKBOX "Write Animations", DLG_ID_DO_ANIMATIONS, 15, 106, 160, 8
+    AUTOCHECKBOX "Convert Skin to Trimesh", DLG_ID_SKIN_TRIMESH, 15, 118, 160, 8
+    AUTOCHECKBOX "Convert Lightsaber to Trimesh", DLG_ID_SABER_TRIMESH, 15, 130, 160, 8
+    AUTOCHECKBOX "Convert Bezier Controllers to Linear", DLG_ID_BEZIER_LINEAR, 15, 142, 160, 8
+    AUTOCHECKBOX "Export WOK File", DLG_ID_EXPORT_WOK, 15, 154, 160, 8
 END
 
 DLG_ABOUT DIALOGEX  20, 10, 316, 140
@@ -42,6 +51,13 @@ BEGIN
     LTEXT "Processing...", DLG_ID_STATIC, 10, 4, 190, 8
 END
 
+DLG_PROGRESSMASS DIALOGEX  0, 0, 200, 44
+STYLE WS_POPUP | WS_BORDER | DS_CENTER
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT "Processing...", DLG_ID_STATIC, 10, 4, 190, 8
+END
+
 IDM_EDITOR_DLG MENU DISCARDABLE
 BEGIN
     POPUP " &File "
@@ -59,6 +75,11 @@ BEGIN
             BEGIN
             MENUITEM "&Binary ...", IDM_BIN_SAVE
             MENUITEM "&ASCII ...", IDM_ASCII_SAVE
+            END
+        POPUP "Mass Convert"
+            BEGIN
+            MENUITEM "&To Binary ...", IDM_MASS_TO_BIN
+            MENUITEM "&To ASCII ...", IDM_MASS_TO_ASCII
             END
         MENUITEM SEPARATOR
         MENUITEM "E&xit", IDM_FILE_EXIT

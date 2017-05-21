@@ -13,6 +13,31 @@
     MDL::AsciiPostProcess()
 /**/
 
+/// Utility function, gets triangular face normalized normal from vert vectors
+Vector GetNormal(Vector v1, Vector v2, Vector v3){
+    Vector vNormal = (v2 - v1) / (v3 - v1);
+    vNormal.Normalize();
+    return vNormal;
+}
+
+/// Utility function for mesh->saber conversion
+/// Loops through the faces, until it finds one where both of the vert indices exits, then it returns the third index (unless it's being ignored), otherwise -1
+int FindThirdIndex(const std::vector<Face> & faces, int ind1, int ind2, int ignore = -1){
+    for(int f = 0; f < faces.size(); f++){
+        const Face & face = faces.at(f);
+        int nFound = 0;
+        for(int i = 0; i < 3; i++){
+            if(face.nIndexVertex.at(i) == ind1 || face.nIndexVertex.at(i) == ind2) nFound++;
+        }
+        if(nFound == 2){
+            for(int i = 0; i < 3; i++){
+                if(face.nIndexVertex.at(i) != ind1 && face.nIndexVertex.at(i) != ind2 && face.nIndexVertex.at(i) != ignore) return face.nIndexVertex.at(i);
+            }
+        }
+    }
+    return -1;
+}
+
 bool ASCII::Read(MDL & Mdl){
     //std::cout<<"We made it into ASCII::Read.\n";
 
@@ -62,6 +87,8 @@ bool ASCII::Read(MDL & Mdl){
     unsigned int nDataMax;
     unsigned int nDataCounter;
     int nCurrentIndex = -1;
+
+    std::vector<std::string> sBumpmapped;
 
     ///This first loop is for building the name array, which we need for the weights
     /// Actually, it seems that the ascii is potentially ambiguous. In binary, two objects may have the same name,
@@ -145,7 +172,7 @@ bool ASCII::Read(MDL & Mdl){
                     //We've already read the timekeys, we're left with the values
                     Animation & anim = FH->MH.Animations.back();
                     Node & node = anim.ArrayOfNodes.back();
-                    Node & geonode = Mdl.GetNodeByNameIndex(node.Head.nNameIndex);
+                    Node & geonode = Mdl.GetNodeByNameIndex(node.Head.nNodeNumber);
                     Location loc = geonode.GetLocation();
                     Controller & ctrl = node.Head.Controllers.back();
 
@@ -202,30 +229,44 @@ bool ASCII::Read(MDL & Mdl){
                     }
                 }
                 else if(bEventlist){
-                    Sound sound; //New sound
+                    Event sound; //New sound
                     if(ReadFloat(fConvert)) sound.fTime = fConvert;
                     else bError = true;
                     bFound = ReadUntilText(sID, false);
                     if(!bFound){
-                        std::cout<<"ReadUntilText() Sound name is missing!\n";
+                        std::cout<<"ReadUntilText() Event name is missing!\n";
                         bError = true;
                     }
                     else if(sID.size() > 32){
-                        Error("Sound name larger than the limit, 32 characters! Will truncate and continue.");
+                        Error("Event name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
-                        Warning("Sound name larger than 16 characters! This may cause problems in the game.");
+                        Warning("Event name larger than 16 characters! This may cause problems in the game.");
                     }
                     sound.sName = sID;
                     if(bFound){
                         Animation & anim = FH->MH.Animations.back();
-                        anim.Sounds.push_back(sound);
+                        anim.Events.push_back(sound);
                     }
                     else bError = true;
                 }
                 else if(bAabb){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading aabb data "<<nDataCounter<<".\n";
+                    SkipLine();
+                    int nSaveCurrentPosition = nPosition;
+                    while(ReadFloat(fConvert)){
+                        SkipLine();
+                        nSaveCurrentPosition = nPosition;
+                    }
+                    //Revert, because we still have to read this non-float in the next turn
+                    nPosition = nSaveCurrentPosition;
+
+                    //Setting these guys like this should immediately end the loop.
+                    nDataCounter = 1;
+                    nDataMax = 1;
+
+                    /*
                     Aabb aabb; //New aabb
                     bFound = true;
                     if(ReadFloat(fConvert)) aabb.vBBmin.fX = fConvert;
@@ -248,6 +289,7 @@ bool ASCII::Read(MDL & Mdl){
                         node.Walkmesh.ArrayOfAabb.push_back(aabb);
                     }
                     else bError = true;
+                    */
                 }
                 else if(bVerts){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data "<<nDataCounter<<".\n";
@@ -469,47 +511,47 @@ bool ASCII::Read(MDL & Mdl){
                     bool bPresent = false;
                     int z = 0;
                     int nBoneIndex = 0;
-                    int nNameIndex = 0;
+                    int nNodeNumber = 0;
                     Weight weight;
-                    std::vector<int> & nWeightIndexes = node.Skin.BoneNameIndexes;
+                    std::vector<int> & nWeightIndices = node.Skin.BoneNameIndices;
                     while(bFound && z < 4){
                         //Get first name
                         bFound = ReadUntilText(sID, false, true);
                         //if we found a name, loop through the name array to find our name index
-                        for(nNameIndex = 0; nNameIndex < FH->MH.Names.size() && bFound; nNameIndex++){
+                        for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size() && bFound; nNodeNumber++){
                             //check if there is a match
-                            if(FH->MH.Names[nNameIndex].sName == sID){
+                            if(FH->MH.Names[nNodeNumber].sName == sID){
                                 //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
                                 //Check if we already have this name indexed in the skin
                                 bPresent = false;
-                                for(nBoneIndex = 0; nBoneIndex < nWeightIndexes.size() && !bPresent; ){
-                                    if(nWeightIndexes[nBoneIndex] == nNameIndex){
+                                for(nBoneIndex = 0; nBoneIndex < nWeightIndices.size() && !bPresent; ){
+                                    if(nWeightIndices[nBoneIndex] == nNodeNumber){
                                         bPresent = true;
                                     }
                                     else nBoneIndex++;
                                 }
                                 if(!bPresent){
                                     //This is a new name index, so we need to add it to the skin's index list
-                                    nWeightIndexes.push_back(nNameIndex);
-                                    nBoneIndex = nWeightIndexes.size() - 1; //Update nBoneIndex so it always points to the correct bone
+                                    nWeightIndices.push_back(nNodeNumber);
+                                    nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
 
                                     //We also add it to the bonemap.
-                                    node.Skin.Bones[nNameIndex].fBonemap = (double) nBoneIndex;
+                                    node.Skin.Bones[nNodeNumber].fBonemap = (double) nBoneIndex;
 
                                     //We can just add it into the mdl's bone index list as well, what the heck
                                     if(nBoneIndex < 18){
-                                        node.Skin.nBoneIndexes[nBoneIndex] = nNameIndex;
+                                        node.Skin.nBoneIndices[nBoneIndex] = nNodeNumber;
                                     }
                                     else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
                                 }
-                                //By here, we have gotten our nNameIndex and nBoneIndex, and everything is indexed properly
+                                //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
                                 weight.fWeightIndex[z] = (double) nBoneIndex;
 
                                 //Since we found the name, we don't need to keep looping anymore
-                                nNameIndex = FH->MH.Names.size();
+                                nNodeNumber = FH->MH.Names.size();
                             }
                         }
-                        if(nNameIndex == FH->MH.Names.size() && bFound){
+                        if(nNodeNumber == FH->MH.Names.size() && bFound){
                             //we failed to find the name in the name array. This data is broken.
                             std::cout<<"Reading weights data: failed to find name in name array! Name: "<<sID<<".\n";
                             bFound = false;
@@ -655,8 +697,9 @@ bool ASCII::Read(MDL & Mdl){
                     else if(sID == "character") FH->MH.nClassification = CLASS_CHARACTER;
                     else if(sID == "door") FH->MH.nClassification = CLASS_DOOR;
                     else if(sID == "placeable") FH->MH.nClassification = CLASS_PLACEABLE;
-                    else if(sID == "saber") FH->MH.nClassification = CLASS_SABER;
-                    else if(bFound) std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
+                    else if(sID == "lightsaber") FH->MH.nClassification = CLASS_LIGHTSABER;
+                    else if(sID == "flyer") FH->MH.nClassification = CLASS_FLYER;
+                    else if(bFound) std::cout<<"ReadUntilText() has found a classification token that we cannot interpret: "<<sID<<"\n";
                     SkipLine();
                 }
                 else if(sID == "setanimationscale"){
@@ -725,14 +768,8 @@ bool ASCII::Read(MDL & Mdl){
                         std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
                     }
                     else{
-                        bool bErase = false;
-                        if(sID.substr(0, 6) == "2081__"){
-                            node.Head.nType = node.Head.nType | NODE_HAS_SABER;
-                            bErase = true;
-                        }
-                        node.Head.nNameIndex = Mdl.GetNameIndex(sID);
-                        node.Head.nID1 = node.Head.nNameIndex;
-                        if(bErase) FH->MH.Names.at(node.Head.nNameIndex).sName = FH->MH.Names.at(node.Head.nNameIndex).sName.substr(6);
+                        node.Head.nNodeNumber = Mdl.GetNameIndex(sID);
+                        node.Head.nSupernodeNumber = node.Head.nNodeNumber;
                     }
 
                     //Get animation number (automatically -1 if geo)
@@ -755,8 +792,8 @@ bool ASCII::Read(MDL & Mdl){
                     nNode = nType;
                     if(bFound){
                         if(bGeometry){
-                            nCurrentIndex = node.Head.nNameIndex;
-                            FH->MH.ArrayOfNodes.at(node.Head.nNameIndex) = std::move(node);
+                            nCurrentIndex = node.Head.nNodeNumber;
+                            FH->MH.ArrayOfNodes.at(node.Head.nNodeNumber) = std::move(node);
                         }
                         else if(bAnimation){
                             Animation & anim = FH->MH.Animations.back();
@@ -774,19 +811,19 @@ bool ASCII::Read(MDL & Mdl){
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         if(sID == "NULL") node.Head.nParentIndex = -1;
                         else if(bFound){
-                            int nNameIndex = 0;
+                            int nNodeNumber = 0;
                             //if we found a name, loop through the name array to find our name index
                             bFound = false;
-                            while(nNameIndex < FH->MH.Names.size() && !bFound){
+                            while(nNodeNumber < FH->MH.Names.size() && !bFound){
                                 //check if there is a match
-                                if(FH->MH.Names[nNameIndex].sName == sID){
+                                if(FH->MH.Names[nNodeNumber].sName == sID){
                                     //We have found the name index for the current name
                                     bFound = true;
                                 }
-                                else nNameIndex++;
+                                else nNodeNumber++;
                             }
-                            if(nNameIndex == FH->MH.Names.size()) std::cout<<"Failed to find parent.\n";
-                            else node.Head.nParentIndex = nNameIndex;
+                            if(nNodeNumber == FH->MH.Names.size()) std::cout<<"Failed to find parent.\n";
+                            else node.Head.nParentIndex = nNodeNumber;
                         }
                         else bError = true;
                     }
@@ -795,19 +832,19 @@ bool ASCII::Read(MDL & Mdl){
                         Node & animnode = anim.ArrayOfNodes.back();
                         if(sID == "NULL") animnode.Head.nParentIndex = -1;
                         else if(bFound){
-                            int nNameIndex = 0;
+                            int nNodeNumber = 0;
                             //if we found a name, loop through the name array to find our name index
                             bFound = false;
-                            while(nNameIndex < FH->MH.Names.size() && !bFound){
+                            while(nNodeNumber < FH->MH.Names.size() && !bFound){
                                 //check if there is a match
-                                if(FH->MH.Names[nNameIndex].sName == sID){
+                                if(FH->MH.Names[nNodeNumber].sName == sID){
                                     //We have found the name index for the current name
                                     bFound = true;
                                 }
-                                else nNameIndex++;
+                                else nNodeNumber++;
                             }
-                            if(nNameIndex == FH->MH.Names.size()) std::cout<<"Failed to find parent.\n";
-                            else animnode.Head.nParentIndex = nNameIndex;
+                            if(nNodeNumber == FH->MH.Names.size()) std::cout<<"Failed to find parent.\n";
+                            else animnode.Head.nParentIndex = nNodeNumber;
                         }
                         else bError = true;
                     }
@@ -1227,6 +1264,12 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
+                else if(sID == "bumpmapped_texture"){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound) sBumpmapped.push_back(sID);
+                    SkipLine();
+                }
                 else if(sID == "lightmapped" && nNode & NODE_HAS_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1505,7 +1548,7 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = anim.ArrayOfNodes.back();
                     Controller ctrl;
                     ctrl.nAnimation = nAnimation;
-                    ctrl.nNameIndex = node.Head.nNameIndex;
+                    ctrl.nNodeNumber = node.Head.nNodeNumber;
                     ctrl.nControllerType = ReturnController(safesubstr(sID, 0, sID.length()-9));
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
@@ -1516,7 +1559,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
-                       Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
+                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_HAS_MESH){
                         //For non-emitter and non-light controllers
                         ctrl.nPadding[0] = 50;
                         ctrl.nPadding[1] = 18;
@@ -1618,7 +1661,7 @@ bool ASCII::Read(MDL & Mdl){
                     Node & node = anim.ArrayOfNodes.back();
                     Controller ctrl;
                     ctrl.nAnimation = nAnimation;
-                    ctrl.nNameIndex = node.Head.nNameIndex;
+                    ctrl.nNodeNumber = node.Head.nNodeNumber;
                     ctrl.nControllerType = ReturnController(safesubstr(sID, 0, sID.length()-3));
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nUnknown2 = -1;
@@ -1629,7 +1672,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
-                       Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType % NODE_HAS_MESH){
+                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_HAS_MESH){
                         //For non-emitter and non-light controllers
                         ctrl.nPadding[0] = 50;
                         ctrl.nPadding[1] = 18;
@@ -1733,7 +1776,7 @@ bool ASCII::Read(MDL & Mdl){
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nDataStart = node.Head.ControllerData.size() + 1;
                     ctrl.nValueCount = 1;
-                    ctrl.nNameIndex = node.Head.nNameIndex;
+                    ctrl.nNodeNumber = node.Head.nNodeNumber;
                     ctrl.nAnimation = -1;
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
                         //Sometimes orientation and scaling have these values as well
@@ -1751,7 +1794,7 @@ bool ASCII::Read(MDL & Mdl){
                         ctrl.nPadding[1] = 18;
                         ctrl.nPadding[2] = 0;
                     }
-                    else if(Mdl.GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_HAS_LIGHT){
+                    else if(Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_LIGHT){
                         ctrl.nPadding[0] = -5;
                         ctrl.nPadding[1] = 54;
                         ctrl.nPadding[2] = 0;
@@ -1854,8 +1897,8 @@ bool ASCII::Read(MDL & Mdl){
                     anim.sAnimRoot = FH->MH.Names.front().sName;
                     anim.fLength = 0.0;
                     anim.fTransition = 0.0;
-                    anim.SoundArray.nCount = 0;
-                    anim.Sounds.resize(0);
+                    anim.EventArray.nCount = 0;
+                    anim.Events.resize(0);
                     anim.nPadding[0] = 0;
                     anim.nPadding[1] = 0;
                     anim.nPadding[2] = 0;
@@ -1900,25 +1943,25 @@ bool ASCII::Read(MDL & Mdl){
                     SkipLine();
                 }
                 else if(sID == "event" && bAnimation){
-                    Sound sound; //New sound
+                    Event sound; //New sound
                     if(ReadFloat(fConvert)) sound.fTime = fConvert;
                     else bError = true;
                     bFound = ReadUntilText(sID, false);
                     if(!bFound){
-                        std::cout<<"ReadUntilText() Sound name is missing!\n";
+                        std::cout<<"ReadUntilText() Event name is missing!\n";
                         bError = true;
                     }
                     else if(sID.size() > 32){
-                        Error("Sound name larger than the limit, 32 characters! Will truncate and continue.");
+                        Error("Event name larger than the limit, 32 characters! Will truncate and continue.");
                         sID.resize(32);
                     }
                     else if(sID.size() > 16){
-                        Warning("Sound name larger than 16 characters! This may cause problems in the game.");
+                        Warning("Event name larger than 16 characters! This may cause problems in the game.");
                     }
                     sound.sName = sID;
                     if(bFound){
                         Animation & anim = FH->MH.Animations.back();
-                        anim.Sounds.push_back(sound);
+                        anim.Events.push_back(sound);
                     }
                     else bError = true;
                     SkipLine();
@@ -1963,6 +2006,38 @@ bool ASCII::Read(MDL & Mdl){
         Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
         return false;
     }
+
+    /// Implementation of 'bumpmapped_texture'
+    FileHeader & Data = *FH;
+    for(int s = 0; s < sBumpmapped.size(); s++){
+        for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+            //std::cout<<"Checking node\n";
+            Node & node = Data.MH.ArrayOfNodes.at(n);
+            if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB) && !(node.Head.nType & NODE_HAS_SABER)){
+                if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
+                    if(sBumpmapped.at(s) == node.Mesh.cTexture1.c_str()){
+                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT1;
+                    }
+                }
+                if(node.Mesh.cTexture2.c_str() != std::string("") && node.Mesh.cTexture2.c_str() != std::string("NULL")){
+                    if(sBumpmapped.at(s) == node.Mesh.cTexture2.c_str()){
+                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT2;
+                    }
+                }
+                if(node.Mesh.cTexture3.c_str() != std::string("") && node.Mesh.cTexture3.c_str() != std::string("NULL")){
+                    if(sBumpmapped.at(s) == node.Mesh.cTexture3.c_str()){
+                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT3;
+                    }
+                }
+                if(node.Mesh.cTexture4.c_str() != std::string("") && node.Mesh.cTexture4.c_str() != std::string("NULL")){
+                    if(sBumpmapped.at(s) == node.Mesh.cTexture4.c_str()){
+                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT4;
+                    }
+                }
+            }
+        }
+    }
+
     Mdl.AsciiPostProcess();
     return true;
 }
@@ -1982,15 +2057,15 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
 
     //Update the animation node IDs
     if(node.nAnimation != -1){
-        node.Head.nID1 = GetNodeByNameIndex(node.Head.nNameIndex).Head.nID1;
-        if(node.Head.nID1 == -1) node.Head.nID1 = node.Head.nNameIndex;
+        node.Head.nSupernodeNumber = GetNodeByNameIndex(node.Head.nNodeNumber).Head.nSupernodeNumber;
+        if(node.Head.nSupernodeNumber == -1) node.Head.nSupernodeNumber = node.Head.nNodeNumber;
     }
 
     for(int n = 0; n < ArrayOfNodes.size(); n++){
-        if(ArrayOfNodes[n].Head.nParentIndex == node.Head.nNameIndex){
+        if(ArrayOfNodes[n].Head.nParentIndex == node.Head.nNodeNumber){
             //The nodes with this index is a child, adopt it
             //node.Head.Children.push_back(ArrayOfNodes[n]);
-            node.Head.ChildIndices.push_back(ArrayOfNodes[n].Head.nNameIndex);
+            node.Head.ChildIndices.push_back(ArrayOfNodes[n].Head.nNodeNumber);
             GatherChildren(ArrayOfNodes[n], ArrayOfNodes, vFromRoot);
         }
     }
@@ -2002,21 +2077,21 @@ void GetSupernodes(ModelHeader & MH, ModelHeader & superMH, int & nHighest, int 
     Node & node = MH.ArrayOfNodes.at(nNodeCurrent);
 
     if(nSupernodeCurrent == -1){
-        node.Head.nID1 = nHighest;
+        node.Head.nSupernodeNumber = nHighest;
         nHighest++;
         for(int n = 0; n < node.Head.ChildIndices.size(); n++){
             GetSupernodes(MH, superMH, nHighest, nTotalSupermodelNodes, node.Head.ChildIndices.at(n), -2);
         }
     }
     else if(nSupernodeCurrent == -2){
-        node.Head.nID1 += nTotalSupermodelNodes + 1;
+        node.Head.nSupernodeNumber += nTotalSupermodelNodes + 1;
         for(int n = 0; n < node.Head.ChildIndices.size(); n++){
             GetSupernodes(MH, superMH, nHighest, nTotalSupermodelNodes, node.Head.ChildIndices.at(n), -2);
         }
     }
     else{
         Node & supernode = superMH.ArrayOfNodes.at(nSupernodeCurrent);
-        node.Head.nID1 = supernode.Head.nID1;
+        node.Head.nSupernodeNumber = supernode.Head.nSupernodeNumber;
         for(int n = 0; n < node.Head.ChildIndices.size(); n++){
             bool bFound = false;
             std::string sNodeName = MH.Names.at(node.Head.ChildIndices.at(n)).sName.c_str();
@@ -2096,7 +2171,7 @@ void MDL::AsciiPostProcess(){
             //Next we need the largest supernode number.
             int nMaxSupernode = 0;
             for(int n = 0; n < Supermodel->GetFileData()->MH.ArrayOfNodes.size(); n++){
-                nMaxSupernode = std::max(nMaxSupernode, (int) Supermodel->GetFileData()->MH.ArrayOfNodes.at(n).Head.nID1);
+                nMaxSupernode = std::max(nMaxSupernode, (int) Supermodel->GetFileData()->MH.ArrayOfNodes.at(n).Head.nSupernodeNumber);
             }
             int nCurrentSupernode = nMaxSupernode + 1;
 
@@ -2111,6 +2186,71 @@ void MDL::AsciiPostProcess(){
     Report("Interpreting ascii data...");
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
+        if(node.Head.nType & NODE_HAS_SABER){
+
+            /// Saber interpretation goes here.
+            if((node.Mesh.TempVerts.size() == 16 && node.Mesh.TempTverts.size() == 16) ||
+                (node.Mesh.TempVerts.size() == 176 && node.Mesh.TempTverts.size() == 176)){
+
+                int nBase = 8;
+                if (node.Mesh.TempVerts.size() == 176) nBase = 88;
+
+                Vector v0 = node.Mesh.TempVerts.at(0);
+                Vector v1 = node.Mesh.TempVerts.at(1);
+                Vector v2 = node.Mesh.TempVerts.at(2);
+                Vector v3 = node.Mesh.TempVerts.at(3);
+                Vector v4 = node.Mesh.TempVerts.at(4);
+                Vector v5 = node.Mesh.TempVerts.at(5);
+                Vector v6 = node.Mesh.TempVerts.at(6);
+                Vector v7 = node.Mesh.TempVerts.at(7);
+                Vector v8 = node.Mesh.TempVerts.at(nBase+0);
+                Vector v9 = node.Mesh.TempVerts.at(nBase+1);
+                Vector v10 = node.Mesh.TempVerts.at(nBase+2);
+                Vector v11 = node.Mesh.TempVerts.at(nBase+3);
+                Vector v12 = node.Mesh.TempVerts.at(nBase+4);
+                Vector v13 = node.Mesh.TempVerts.at(nBase+5);
+                Vector v14 = node.Mesh.TempVerts.at(nBase+6);
+                Vector v15 = node.Mesh.TempVerts.at(nBase+7);
+
+                node.Saber.SaberData.reserve(50);
+                node.Saber.SaberData.push_back(VertexData(v0, node.Mesh.TempTverts.at(0)));
+                node.Saber.SaberData.push_back(VertexData(v1, node.Mesh.TempTverts.at(1)));
+                node.Saber.SaberData.push_back(VertexData(v2, node.Mesh.TempTverts.at(2)));
+                node.Saber.SaberData.push_back(VertexData(v3, node.Mesh.TempTverts.at(3)));
+                node.Saber.SaberData.push_back(VertexData(v4, node.Mesh.TempTverts.at(4)));
+                node.Saber.SaberData.push_back(VertexData(v5, node.Mesh.TempTverts.at(5)));
+                node.Saber.SaberData.push_back(VertexData(v6, node.Mesh.TempTverts.at(6)));
+                node.Saber.SaberData.push_back(VertexData(v7, node.Mesh.TempTverts.at(7)));
+                for(int r = 0; r < 20; r++){
+                    node.Saber.SaberData.push_back(VertexData(v0, node.Mesh.TempTverts.at(0)));
+                    node.Saber.SaberData.push_back(VertexData(v1, node.Mesh.TempTverts.at(1)));
+                    node.Saber.SaberData.push_back(VertexData(v2, node.Mesh.TempTverts.at(2)));
+                    node.Saber.SaberData.push_back(VertexData(v3, node.Mesh.TempTverts.at(3)));
+                }
+
+                node.Saber.SaberData.push_back(VertexData(v8, node.Mesh.TempTverts.at(nBase+0)));
+                node.Saber.SaberData.push_back(VertexData(v9, node.Mesh.TempTverts.at(nBase+1)));
+                node.Saber.SaberData.push_back(VertexData(v10, node.Mesh.TempTverts.at(nBase+2)));
+                node.Saber.SaberData.push_back(VertexData(v11, node.Mesh.TempTverts.at(nBase+3)));
+                node.Saber.SaberData.push_back(VertexData(v12, node.Mesh.TempTverts.at(nBase+4)));
+                node.Saber.SaberData.push_back(VertexData(v13, node.Mesh.TempTverts.at(nBase+5)));
+                node.Saber.SaberData.push_back(VertexData(v14, node.Mesh.TempTverts.at(nBase+6)));
+                node.Saber.SaberData.push_back(VertexData(v15, node.Mesh.TempTverts.at(nBase+7)));
+                for(int r = 0; r < 20; r++){
+                    node.Saber.SaberData.push_back(VertexData(v8, node.Mesh.TempTverts.at(nBase+0)));
+                    node.Saber.SaberData.push_back(VertexData(v9, node.Mesh.TempTverts.at(nBase+1)));
+                    node.Saber.SaberData.push_back(VertexData(v10, node.Mesh.TempTverts.at(nBase+2)));
+                    node.Saber.SaberData.push_back(VertexData(v11, node.Mesh.TempTverts.at(nBase+3)));
+                }
+                node.Mesh.Faces.resize(0);
+                node.Mesh.Faces.shrink_to_fit();
+            }
+            else{
+                std::cout<<"Warning! Requirements for saber mesh not met! Converting to trimesh...\n";
+                node.Head.nType = NODE_HAS_HEADER | NODE_HAS_MESH;
+            }
+        }
+
         if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
             std::vector<Vector> vectorarray;
             vectorarray.reserve(node.Mesh.Faces.size()*3);
@@ -2122,7 +2262,7 @@ void MDL::AsciiPostProcess(){
                     if(!face.bProcessed[i]){
                         bool bIgnoreVert = true, bIgnoreTvert = true, bIgnoreTvert1 = true, bIgnoreTvert2 = true, bIgnoreTvert3 = true;
                         Vertex vert;
-                        vert.MDXData.nNameIndex = node.Head.nNameIndex;
+                        vert.MDXData.nNodeNumber = node.Head.nNodeNumber;
 
                         if(node.Mesh.TempVerts.size() > 0){
                             bIgnoreVert = false;
@@ -2182,7 +2322,7 @@ void MDL::AsciiPostProcess(){
                                         face.nSmoothingGroup & face2.nSmoothingGroup)
                                     {
                                         //If we find a reference to the exact same vert, we have to link to it
-                                        //Actually we only need to link vert indexes, the correct UV are now already included in the Vertex struct
+                                        //Actually we only need to link vert indices, the correct UV are now already included in the Vertex struct
                                         face2.nIndexVertex[i2] = node.Mesh.Vertices.size();
                                         face2.bProcessed[i2] = true;
                                     }
@@ -2198,11 +2338,9 @@ void MDL::AsciiPostProcess(){
                         node.Mesh.Vertices.push_back(std::move(vert));
                     }
                 }
-                VertIndicesStruct vertindex;
-                vertindex.nValues[0] = face.nIndexVertex[0];
-                vertindex.nValues[1] = face.nIndexVertex[1];
-                vertindex.nValues[2] = face.nIndexVertex[2];
-                node.Mesh.VertIndices.push_back(std::move(vertindex));
+
+                std::array<short, 3> vertindicesarray = {face.nIndexVertex[0], face.nIndexVertex[1], face.nIndexVertex[2]};
+                node.Mesh.VertIndices.push_back(std::move(vertindicesarray));
 
                 /// Surprise! Face normal calculation! Moved here so it can be used by BuildAABB
                 Vertex & v1 = node.Mesh.Vertices.at(face.nIndexVertex[0]);
@@ -2226,8 +2364,8 @@ void MDL::AsciiPostProcess(){
                                         face.vNormal.fY * v1.fY +
                                         face.vNormal.fZ * v1.fZ);
                 //Area calculation
-                    face.fArea = HeronFormula(Edge1, Edge2, Edge3);
-                    face.fAreaUV = HeronFormula(EUV1, EUV2, EUV3);
+                    face.fArea = HeronFormulaEdge(Edge1, Edge2, Edge3);
+                    face.fAreaUV = HeronFormulaEdge(EUV1, EUV2, EUV3);
                     node.Mesh.fTotalArea += face.fArea;
                 //Tangent space vectors
                     //Now comes the calculation. Will be using edges 1 and 2
@@ -2381,42 +2519,248 @@ void MDL::AsciiPostProcess(){
             node.Dangly.TempConstraints.shrink_to_fit();
             node.Skin.TempWeights.shrink_to_fit();
         }
-        else if(node.Head.nType & NODE_HAS_SABER){
 
-            ///Saber interpretation goes here.
-            if(node.Mesh.TempVerts.size() >= 16 && node.Mesh.TempTverts.size() >= 16){
-                node.Saber.SaberData.reserve(50);
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(0), node.Mesh.TempTverts.at(0)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(1), node.Mesh.TempTverts.at(1)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(2), node.Mesh.TempTverts.at(2)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(3), node.Mesh.TempTverts.at(3)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(5), node.Mesh.TempTverts.at(5)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(6), node.Mesh.TempTverts.at(6)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(7), node.Mesh.TempTverts.at(7)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(8), node.Mesh.TempTverts.at(8)));
-                for(int r = 0; r < 20; r++){
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(0), node.Mesh.TempTverts.at(0)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(1), node.Mesh.TempTverts.at(1)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(2), node.Mesh.TempTverts.at(2)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(3), node.Mesh.TempTverts.at(3)));
-                }
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(9), node.Mesh.TempTverts.at(9)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(10), node.Mesh.TempTverts.at(10)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(11), node.Mesh.TempTverts.at(11)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(12), node.Mesh.TempTverts.at(12)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(13), node.Mesh.TempTverts.at(13)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(14), node.Mesh.TempTverts.at(14)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(15), node.Mesh.TempTverts.at(15)));
-                node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(16), node.Mesh.TempTverts.at(16)));
-                for(int r = 0; r < 20; r++){
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(9), node.Mesh.TempTverts.at(9)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(10), node.Mesh.TempTverts.at(10)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(11), node.Mesh.TempTverts.at(11)));
-                    node.Saber.SaberData.push_back(SaberDataStruct(node.Mesh.TempVerts.at(12), node.Mesh.TempTverts.at(12)));
+        if(node.Head.nType & NODE_HAS_MESH &&
+           !(node.Head.nType & NODE_HAS_SABER) &&
+           Data.MH.Names.at(node.Head.nNodeNumber).sName.substr(0, 6) == "2081__" &&
+           (node.Mesh.Faces.size() == 12  /*|| node.Mesh.Faces.size() == 24*/) &&
+           node.Mesh.Vertices.size() == 16 )
+        {
+            bool bAbort = false; /// If this is set to true at any time, we will abort the conversion to saber
+
+            std::array<int, 16> VertRefsArray = {0, 0, 0, 0, 0, 0, 0, 0,
+                                                 0, 0, 0, 0, 0, 0, 0, 0};
+
+            /// Go through the faces and build the VertRefsArray
+            /// If a reference to a higher than 16th vertex, abort
+            /// If the number of references to a vertex is greater than 4, abort
+            for(int f = 0; f < 12 && !bAbort; f++){
+                Face & face = node.Mesh.Faces.at(f);
+                for(int i = 0; i < 3; i++){
+                    if(face.nIndexVertex.at(i) < 16){
+                        VertRefsArray.at(face.nIndexVertex.at(i)) += 1;
+                        if ( VertRefsArray.at(face.nIndexVertex.at(i)) > 4) bAbort = true;
+                    }
+                    else bAbort = true;
                 }
             }
-            else std::cout<<"Warning! Requirements for saber mesh not met! The saber mesh will remain empty.\n";
+
+            /// Now we need to find these guys
+            int nOuter1 = -1;
+            int nOuter2 = -1;
+            int nCorner1 = -1;
+            int nCorner2 = -1;
+
+            /// Go through the verts, find the two that are referenced by 4 faces
+            /// Put them into outer1 and outer2
+            /// If there's more than two of those, abort
+            int nFound = 0;
+            for(int v = 0; v < 16 && !bAbort; v++){
+                if(VertRefsArray.at(v) == 4){
+                    if(nFound == 0){
+                        nOuter1 = v;
+                        nFound++;
+                    }
+                    else if(nFound == 1){
+                        nOuter2 = v;
+                        nFound++;
+                    }
+                    else bAbort = true;
+                }
+            }
+
+            /// Go through faces again and find the corners – the only ones adjacent to outer1 & 2 that have 1 ref
+            for(int f = 0; f < 12 && !bAbort; f++){
+                Face & face = node.Mesh.Faces.at(f);
+                /// Go through the indices
+                for(int i = 0; i < 3; i++){
+                    if( face.nIndexVertex.at(i) == nOuter1){
+                        /// Go through the same indices again
+                        for(int i2 = 0; i2 < 3; i2++){
+                            if(nCorner1 == -1 && VertRefsArray.at(face.nIndexVertex.at(i2)) == 1){
+                                nCorner1 = face.nIndexVertex.at(i2);
+                                break;
+                            }
+                            else if(nCorner1 != -1 && VertRefsArray.at(face.nIndexVertex.at(i2)) == 1){
+                                std::cout<<"Error! nCorner1 found several times, this shouldn't be happening!!\n";
+                                bAbort = true;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    else if( face.nIndexVertex.at(i) == nOuter2){
+                        /// Go through the same indices again
+                        for(int i2 = 0; i2 < 3; i2++){
+                            if(nCorner2 == -1 && VertRefsArray.at(face.nIndexVertex.at(i2)) == 1){
+                                nCorner2 = face.nIndexVertex.at(i2);
+                                break;
+                            }
+                            else if(nCorner2 != -1 && VertRefsArray.at(face.nIndexVertex.at(i2)) == 1){
+                                std::cout<<"Error! nCorner2 found several times, this shouldn't be happening!!\n";
+                                bAbort = true;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            if(nOuter1!=-1 && nOuter2!=-1 && nCorner1!=-1 && nCorner2!=-1 && !bAbort){
+                /// Build blade vert arrays
+                std::array<int, 8> Blade1VertArray = {-1, -1, -1, -1, -1, -1, -1, -1};
+                std::array<int, 8> Blade2VertArray = {-1, -1, -1, -1, -1, -1, -1, -1};
+
+                Blade1VertArray.at(6) = nOuter1;
+                Blade1VertArray.at(7) = nCorner1;
+                Blade1VertArray.at(3) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(6), Blade1VertArray.at(7));
+                Blade1VertArray.at(2) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(3), Blade1VertArray.at(6), Blade1VertArray.at(7));
+                Blade1VertArray.at(1) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(2), Blade1VertArray.at(6), Blade1VertArray.at(3));
+                Blade1VertArray.at(5) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(1), Blade1VertArray.at(6), Blade1VertArray.at(2));
+                Blade1VertArray.at(0) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(1), Blade1VertArray.at(5), Blade1VertArray.at(6));
+                Blade1VertArray.at(4) = FindThirdIndex(node.Mesh.Faces, Blade1VertArray.at(0), Blade1VertArray.at(5), Blade1VertArray.at(1));
+
+                Blade2VertArray.at(6) = nOuter2;
+                Blade2VertArray.at(7) = nCorner2;
+                Blade2VertArray.at(3) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(6), Blade2VertArray.at(7));
+                Blade2VertArray.at(2) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(3), Blade2VertArray.at(6), Blade2VertArray.at(7));
+                Blade2VertArray.at(1) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(2), Blade2VertArray.at(6), Blade2VertArray.at(3));
+                Blade2VertArray.at(5) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(1), Blade2VertArray.at(6), Blade2VertArray.at(2));
+                Blade2VertArray.at(0) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(1), Blade2VertArray.at(5), Blade2VertArray.at(6));
+                Blade2VertArray.at(4) = FindThirdIndex(node.Mesh.Faces, Blade2VertArray.at(0), Blade2VertArray.at(5), Blade2VertArray.at(1));
+
+                /// if there is a -1 in any of the two arrays, abort
+                if(std::find(Blade1VertArray.begin(), Blade1VertArray.end(), -1) != Blade1VertArray.end() ||
+                   std::find(Blade2VertArray.begin(), Blade2VertArray.end(), -1) != Blade2VertArray.end()) bAbort = true;
+
+                if(!bAbort){
+                    ///Now all we need to do is decide which of the two blades to invert.
+                    std::array<int, 8> Blade1, Blade2;
+                    if(node.Mesh.Vertices.at(Blade1VertArray.at(6)).fZ - node.Mesh.Vertices.at(Blade1VertArray.at(5)).fZ >
+                       node.Mesh.Vertices.at(Blade2VertArray.at(6)).fZ - node.Mesh.Vertices.at(Blade2VertArray.at(5)).fZ )
+                    {
+                        Blade1 = Blade1VertArray;
+                        Blade2 = {Blade2VertArray[3], Blade2VertArray[2], Blade2VertArray[1], Blade2VertArray[0],
+                                  Blade2VertArray[7], Blade2VertArray[6], Blade2VertArray[5], Blade2VertArray[4]};
+                    }
+                    else{
+                        Blade1 = Blade2VertArray;
+                        Blade2 = {Blade1VertArray[3], Blade1VertArray[2], Blade1VertArray[1], Blade1VertArray[0],
+                                  Blade1VertArray[7], Blade1VertArray[6], Blade1VertArray[5], Blade1VertArray[4]};
+                    }
+
+                    node.Saber.SaberData.reserve(50);
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(0)), node.Mesh.Vertices.at(Blade1.at(0)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(1)), node.Mesh.Vertices.at(Blade1.at(1)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(2)), node.Mesh.Vertices.at(Blade1.at(2)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(3)), node.Mesh.Vertices.at(Blade1.at(3)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(4)), node.Mesh.Vertices.at(Blade1.at(4)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(5)), node.Mesh.Vertices.at(Blade1.at(5)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(6)), node.Mesh.Vertices.at(Blade1.at(6)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(7)), node.Mesh.Vertices.at(Blade1.at(7)).MDXData.vUV1));
+                    for(int r = 0; r < 20; r++){
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(0)), node.Mesh.Vertices.at(Blade1.at(0)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(1)), node.Mesh.Vertices.at(Blade1.at(1)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(2)), node.Mesh.Vertices.at(Blade1.at(2)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade1.at(3)), node.Mesh.Vertices.at(Blade1.at(3)).MDXData.vUV1));
+                    }
+
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(0)), node.Mesh.Vertices.at(Blade2.at(0)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(1)), node.Mesh.Vertices.at(Blade2.at(1)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(2)), node.Mesh.Vertices.at(Blade2.at(2)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(3)), node.Mesh.Vertices.at(Blade2.at(3)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(4)), node.Mesh.Vertices.at(Blade2.at(4)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(5)), node.Mesh.Vertices.at(Blade2.at(5)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(6)), node.Mesh.Vertices.at(Blade2.at(6)).MDXData.vUV1));
+                    node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(7)), node.Mesh.Vertices.at(Blade2.at(7)).MDXData.vUV1));
+                    for(int r = 0; r < 20; r++){
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(0)), node.Mesh.Vertices.at(Blade2.at(0)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(1)), node.Mesh.Vertices.at(Blade2.at(1)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(2)), node.Mesh.Vertices.at(Blade2.at(2)).MDXData.vUV1));
+                        node.Saber.SaberData.push_back(VertexData(node.Mesh.Vertices.at(Blade2.at(3)), node.Mesh.Vertices.at(Blade2.at(3)).MDXData.vUV1));
+                    }
+
+                    /// Convert trimesh to lightsaber here
+                    node.Head.nType = node.Head.nType | NODE_HAS_SABER;
+                    Data.MH.Names.at(node.Head.nNodeNumber).sName = Data.MH.Names.at(node.Head.nNodeNumber).sName.substr(6);
+                }
+            }
         }
+
+        if(node.Head.nType & NODE_HAS_SABER){
+            std::array<std::array<int, 3>, 12> FaceIndices = {{{0,4,5},{1,0,5},{1,5,2},
+                                                              {2,5,6},{3,2,6},{3,6,7},
+                                                              {88+4,88+0,88+5},{88+0,88+1,88+5},{88+5,88+1,88+2},
+                                                              {88+5,88+2,88+6},{88+2,88+3,88+6},{88+6,88+3,88+7}}};
+
+            std::array<Vector, 12> vFaceNormals;
+            for(int v = 0; v < 12; v++){
+                vFaceNormals[v] = GetNormal(node.Saber.SaberData.at(FaceIndices[v][0]).vVertex,
+                                            node.Saber.SaberData.at(FaceIndices[v][1]).vVertex,
+                                            node.Saber.SaberData.at(FaceIndices[v][2]).vVertex);
+            }
+            /*
+            std::cout<<"Printing saber face normals:\n";
+            for(int v = 0; v < 12; v++){
+                std::cout<<vFaceNormals[v].Print()<<"\n";
+            }
+            */
+
+            std::array<double, 12> fFaceAreas;
+            for(int v = 0; v < 12; v++){
+                fFaceAreas[v] = HeronFormulaVert(node.Saber.SaberData.at(FaceIndices[v][0]).vVertex,
+                                                 node.Saber.SaberData.at(FaceIndices[v][1]).vVertex,
+                                                 node.Saber.SaberData.at(FaceIndices[v][2]).vVertex);
+            }
+
+            std::array<Vector, 8> vVertNormals;
+
+            for(int v = 0; v < 8; v++){
+                Vector & vCurrent = vVertNormals.at(v);
+                int nCurrent = v;
+                if(nCurrent > 3) nCurrent += 84;
+                for(int f = 0; f < 12; f++){
+                    for(int i = 0; i < 3; i++){
+                        if(FaceIndices[f][i] == nCurrent){
+                            Vector vAdd = vFaceNormals[f];
+                            if(bSmoothAreaWeighting) vAdd *= fFaceAreas[f];
+                            if(bSmoothAngleWeighting){
+                                if(i == 0){
+                                    vAdd *= Angle(node.Saber.SaberData.at(FaceIndices[f][2]).vVertex - node.Saber.SaberData.at(FaceIndices[f][0]).vVertex,
+                                                  node.Saber.SaberData.at(FaceIndices[f][1]).vVertex - node.Saber.SaberData.at(FaceIndices[f][0]).vVertex);
+                                }
+                                else if(i == 1){
+                                    vAdd *= Angle(node.Saber.SaberData.at(FaceIndices[f][2]).vVertex - node.Saber.SaberData.at(FaceIndices[f][1]).vVertex,
+                                                  node.Saber.SaberData.at(FaceIndices[f][0]).vVertex - node.Saber.SaberData.at(FaceIndices[f][1]).vVertex);
+                                }
+                                else if(i == 2){
+                                    vAdd *= Angle(node.Saber.SaberData.at(FaceIndices[f][1]).vVertex - node.Saber.SaberData.at(FaceIndices[f][2]).vVertex,
+                                                  node.Saber.SaberData.at(FaceIndices[f][0]).vVertex - node.Saber.SaberData.at(FaceIndices[f][2]).vVertex);
+                                }
+                            }
+                            vCurrent += vAdd;
+                        }
+                    }
+                }
+                vCurrent.Normalize();
+            }
+            /*
+            std::cout<<"Printing saber vert normals:\n";
+            for(int v = 0; v < 8; v++){
+                std::cout<<vVertNormals[v].Print()<<"\n";
+            }
+            */
+            for(int v = 0; v < node.Saber.SaberData.size(); v++){
+                if(v < node.Saber.SaberData.size()/2){
+                    node.Saber.SaberData.at(v).vNormal = vVertNormals.at(v%4);
+                }
+                else{
+                    node.Saber.SaberData.at(v).vNormal = vVertNormals.at(4 + v%4);
+                }
+            }
+        }
+
         if(node.Head.nType & NODE_HAS_AABB){
             if(Wok) Warning("Found an aabb node, but Wok already exists! Skipping this node...");
             else{
@@ -2487,7 +2831,7 @@ void MDL::AsciiPostProcess(){
                 Quaternion qOrient;
 
                 //Now we need to construct a path by adding all the locations from this node through all its parents to the root
-                int nIndex = node.Head.nNameIndex;
+                int nIndex = node.Head.nNodeNumber;
                 Vector vCurPosition;
                 Quaternion qCurOrientation;
                 while(nIndex != -1){
@@ -2516,16 +2860,16 @@ void MDL::AsciiPostProcess(){
                     Quaternion qRecord = qOrient; //Make copy
                     Node & curnode = FH->MH.ArrayOfNodes.at(n);
 
-                    nIndex = curnode.Head.nNameIndex;
-                    std::vector<int> Indexes;
+                    nIndex = curnode.Head.nNodeNumber;
+                    std::vector<int> Indices;
                     //The price we have to pay for not going recursive
                     while(nIndex != -1){
-                        Indexes.push_back(nIndex);
+                        Indices.push_back(nIndex);
                         nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
                     }
-                    //std::cout<<"Our Indexes size is: "<<Indexes.size()<<".\n";
-                    for(int a = Indexes.size() - 1; a >= 0; a--){
-                        Node & curnode2 = GetNodeByNameIndex(Indexes.at(a));
+                    //std::cout<<"Our Indices size is: "<<Indices.size()<<".\n";
+                    for(int a = Indices.size() - 1; a >= 0; a--){
+                        Node & curnode2 = GetNodeByNameIndex(Indices.at(a));
                         Location locNode = curnode2.GetLocation();
                         vCurPosition = locNode.vPosition;
                         qCurOrientation = locNode.oOrientation.GetQuaternion();
@@ -2559,16 +2903,16 @@ void MDL::AsciiPostProcess(){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
         for(int p = 0; p < nPatchCount; p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            Vertex & vert = GetNodeByNameIndex(patch.nNameIndex).Mesh.Vertices.at(patch.nVertex);
+            Vertex & vert = GetNodeByNameIndex(patch.nNodeNumber).Mesh.Vertices.at(patch.nVertex);
 
             for(int p2 = 0; p2 < nPatchCount; p2++){
                 Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(p2);
                 if(patch2.nSmoothingGroups & patch.nSmoothingGroups){
                     for(int f = 0; f < patch2.FaceIndices.size(); f++){
-                        Face & face = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Faces.at(patch2.FaceIndices.at(f));
-                        Vertex & v1 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[0]);
-                        Vertex & v2 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[1]);
-                        Vertex & v3 = GetNodeByNameIndex(patch2.nNameIndex).Mesh.Vertices.at(face.nIndexVertex[2]);
+                        Face & face = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Faces.at(patch2.FaceIndices.at(f));
+                        Vertex & v1 = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Vertices.at(face.nIndexVertex[0]);
+                        Vertex & v2 = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Vertices.at(face.nIndexVertex[1]);
+                        Vertex & v3 = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Vertices.at(face.nIndexVertex[2]);
                         Vector Edge1 = v2 - v1;
                         Vector Edge2 = v3 - v1;
                         Vector Edge3 = v3 - v2;

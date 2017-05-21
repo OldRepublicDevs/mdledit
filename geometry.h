@@ -46,7 +46,8 @@ Vector operator/(Vector v, const Vector & v2); //cross product
 Vector operator+(Vector v, const Vector & v2);
 Vector operator-(Vector v, const Vector & v2);
 double Angle(const Vector & v, const Vector & v2);
-double HeronFormula(const Vector & e1, const Vector & e2, const Vector & e3);
+double HeronFormulaVert(const Vector & v1, const Vector & v2, const Vector & v3);
+double HeronFormulaEdge(const Vector & e1, const Vector & e2, const Vector & e3);
 Vector Rotate(const Vector & v, const Quaternion & q);
 
 struct Quaternion{
