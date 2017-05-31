@@ -961,6 +961,12 @@ bool ASCII::Read(MDL & Mdl){
                     if(ReadInt(nConvert)) node.Emitter.nLoop = nConvert;
                     SkipLine();
                 }
+                else if(sID == "emitter_unknown_1" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Emitter.nUnknown1 = nConvert;
+                    SkipLine();
+                }
                 else if(sID == "m_bframeblending" && nNode & NODE_HAS_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -978,6 +984,12 @@ bool ASCII::Read(MDL & Mdl){
                         }
                         node.Emitter.cDepthTextureName = sID;
                     }
+                    SkipLine();
+                }
+                else if(sID == "emitter_unknown_2" && nNode & NODE_HAS_EMITTER){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Emitter.nUnknown2 = nConvert;
                     SkipLine();
                 }
                 else if(sID == "update" && nNode & NODE_HAS_EMITTER){
@@ -1044,7 +1056,8 @@ bool ASCII::Read(MDL & Mdl){
                             Error("ChunkName larger than the limit, 16 characters! Will truncate and continue.");
                             sID.resize(16);
                         }
-                        node.Emitter.cChunkName = sID;
+                        if(sID.c_str() != std::string("NULL")) node.Emitter.cChunkName = sID;
+                        else node.Emitter.cChunkName = "";
                     }
                     SkipLine();
                 }
@@ -1769,15 +1782,21 @@ bool ASCII::Read(MDL & Mdl){
                 /// Next we have single controllers
                 else if(ReturnController(sID)){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
-                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+
+                    Node & node = nAnimation > -1 ? FH->MH.Animations.back().ArrayOfNodes.back() : FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     Controller ctrl;
                     ctrl.nControllerType = ReturnController(sID);
                     ctrl.nUnknown2 = -1;
+                    if(nAnimation > -1 &&
+                       ( ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
+                         ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ) ){
+                        ctrl.nUnknown2 = ctrl.nControllerType + 8;
+                    }
                     ctrl.nTimekeyStart = node.Head.ControllerData.size();
                     ctrl.nDataStart = node.Head.ControllerData.size() + 1;
                     ctrl.nValueCount = 1;
                     ctrl.nNodeNumber = node.Head.nNodeNumber;
-                    ctrl.nAnimation = -1;
+                    ctrl.nAnimation = nAnimation;
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION){
                         //Sometimes orientation and scaling have these values as well
                         ctrl.nPadding[0] = 12;

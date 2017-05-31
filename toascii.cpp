@@ -200,7 +200,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  ambientonly " << node->Light.nAmbientOnly;
         sReturn << "\n  affectdynamic " << node->Light.nAffectDynamic;
         sReturn << "\n  shadow " << node->Light.nShadow;
-        sReturn << "\n  flare " << node->Light.nFlare; /// !!! Make sure that NWMax isn't expecting lensflares
+        sReturn << "\n  flare " << node->Light.nFlare;
         sReturn << "\n  fadinglight " << node->Light.nFadingLight;
         sReturn << "\n  flareradius " << PrepareFloat(node->Light.fFlareRadius); //NWmax reads this as an int
         sReturn << "\n  texturenames " << node->Light.FlareTextureNames.size();
@@ -237,8 +237,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  chunkname " << node->Emitter.cChunkName.c_str();
         sReturn << "\n  twosidedtex " << node->Emitter.nTwosidedTex;
         sReturn << "\n  loop " << node->Emitter.nLoop;
+        sReturn << "\n  emitter_unknown_1 " << node->Emitter.nUnknown1;
         sReturn << "\n  m_bFrameBlending " << (int) node->Emitter.nFrameBlending;
         sReturn << "\n  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
+        sReturn << "\n  emitter_unknown_2 " << (int) node->Emitter.nUnknown2;
 
         sReturn << "\n  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);
         sReturn << "\n  p2p_sel " << (node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0);
@@ -258,6 +260,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node * node = (Node*) Data;
         sReturn << "\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) <<" "<< PrepareFloat(node->Mesh.fDiffuse.fB);
         sReturn << "\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) <<" "<< PrepareFloat(node->Mesh.fAmbient.fB);
+        //sReturn << "\n  specular 0.0 0.0 0.0";
+        //sReturn << "\n  wirecolor 1 1 1";
         sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
         sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
         sReturn << "\n  render " << (int) node->Mesh.nRender;
@@ -268,7 +272,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  dirt_texture " << node->Mesh.nDirtTexture;
         sReturn << "\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
         sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
-        //sReturn << "\n  specular 0.0 0.0 0.0";
         sReturn << "\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\n  animateuv " << node->Mesh.nAnimateUV;
         sReturn << "\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
@@ -276,7 +279,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
         sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
         sReturn << "\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0);
-        //sReturn << string_format("\n  wirecolor 1 1 1");
         if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n  bitmap " << node->Mesh.GetTexture(1);
         if(node->Mesh.cTexture2.c_str() != std::string()) sReturn << "\n  bitmap2 " << node->Mesh.GetTexture(2);
         if(node->Mesh.cTexture3.c_str() != std::string()) sReturn << "\n  texture0 " << node->Mesh.GetTexture(3);
@@ -556,12 +558,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         double PI = 3.14159;
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
-            Quaternion qPrevious;
+            Quaternion qCurrent, qPrevious;
             AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
                 ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
-                aaCurrent = AxisAngle(DecompressQuaternion(ByteBlock4.ui));
+                qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                aaCurrent = AxisAngle(qCurrent);
                 if(n > 0){
                     aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
@@ -573,19 +576,23 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     }
                 }
                 qPrevious = Quaternion(aaCurrent);
+
+                //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
-            Quaternion qPrevious;
+            Quaternion qCurrent, qPrevious;
             AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
-                aaCurrent = AxisAngle(Quaternion(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
-                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
-                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
-                                                 node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]));
+                qCurrent = Quaternion(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
+                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]);
+                aaCurrent = AxisAngle(qCurrent);
+
                 if(n > 0){
                     aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
@@ -597,6 +604,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     }
                 }
                 qPrevious = Quaternion(aaCurrent);
+
+                //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
         }
@@ -673,6 +682,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             //Compressed orientation
             ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart];
             Orientation CtrlOrient(DecompressQuaternion(ByteBlock4.ui));
+            //sReturn << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetQuaternion().fW);
             sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle);
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
@@ -683,6 +693,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             double fQZ = node.Head.ControllerData[ctrl->nDataStart + 2];
             double fQW = node.Head.ControllerData[ctrl->nDataStart + 3];
             CtrlOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
+            //sReturn << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetQuaternion().fW);
             sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle);
         }
         else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
