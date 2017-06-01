@@ -371,7 +371,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             while(n < NODE->Head.ChildrenArray.nCount){
                 NODE->Head.Children[n].nOffset = ReadInt(&nPosData, 6);
                 NODE->Head.Children[n].nAnimation = NODE->nAnimation;
-                NODE->Head.Children[n].Head.nParentIndex = NODE->nAnimation < 0 ? NODE->Head.nNodeNumber : NODE->Head.nSuperodeNumber;
+                NODE->Head.Children[n].Head.nParentIndex = NODE->nAnimation < 0 ? NODE->Head.nNodeNumber : NODE->Head.nSupernodeNumber;
                 ParseNode(&NODE->Head.Children[n], nNodeCounter, vFromRoot, bMinimal);
                 NODE->Head.ChildIndices.push_back(NODE->Head.Children[n].Head.nNodeNumber);
                 n++;
