@@ -211,8 +211,36 @@ void MDL::DecompileModel(bool bMinimal){
         LinearizeGeometry(Data.MH.RootNode, Data.MH.ArrayOfNodes);
     }
     if(!bMinimal) std::cout<<"Geometry read.\n";
-    if(!bMinimal) std::cout<<"Done decompiling!\n";
+
+    /// Here we'll go around and fix all the animation node numbers to match the geometry nodes.
+    for(int n = 0; n < Data.MH.Animations.size(); n++){
+        for(int an = 0; an < Data.MH.Animations[n].ArrayOfNodes.size(); an++){
+            Node & anim_node = Data.MH.Animations[n].ArrayOfNodes.at(an);
+            for(int gn = 0; gn < Data.MH.ArrayOfNodes.size(); gn++){
+                Node & geom_node = Data.MH.ArrayOfNodes.at(gn);
+                if(anim_node.Head.nSupernodeNumber == geom_node.Head.nSupernodeNumber){
+                    anim_node.Head.nNodeNumber = geom_node.Head.nNodeNumber;
+                    /// We also need to correct it in all the controllers
+                    for(int nc = 0; nc < anim_node.Head.Controllers.size(); nc++){
+                        Controller & ctrl = anim_node.Head.Controllers.at(nc);
+                        ctrl.nNodeNumber = geom_node.Head.nNodeNumber;
+                    }
+                }
+                if(anim_node.Head.nParentIndex == geom_node.Head.nSupernodeNumber) anim_node.Head.nParentIndex = geom_node.Head.nNodeNumber;
+            }
+        }
+        /// Only now can we record the child indices
+        for(int an = 0; an < Data.MH.Animations[n].ArrayOfNodes.size(); an++){
+            Node & anim_node = Data.MH.Animations[n].ArrayOfNodes.at(an);
+            anim_node.Head.ChildIndices.clear();
+            for(int cn = 0; cn < anim_node.Head.Children.size(); cn++){
+                anim_node.Head.ChildIndices.push_back(anim_node.Head.Children.at(cn).Head.nNodeNumber);
+            }
+        }
+    }
+
     if(bDetermineSmoothing && Mdx && !bMinimal) DetermineSmoothing();
+    if(!bMinimal) std::cout<<"Done decompiling!\n";
 }
 
 void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
@@ -343,7 +371,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             while(n < NODE->Head.ChildrenArray.nCount){
                 NODE->Head.Children[n].nOffset = ReadInt(&nPosData, 6);
                 NODE->Head.Children[n].nAnimation = NODE->nAnimation;
-                NODE->Head.Children[n].Head.nParentIndex = NODE->Head.nNodeNumber;
+                NODE->Head.Children[n].Head.nParentIndex = NODE->nAnimation < 0 ? NODE->Head.nNodeNumber : NODE->Head.nSuperodeNumber;
                 ParseNode(&NODE->Head.Children[n], nNodeCounter, vFromRoot, bMinimal);
                 NODE->Head.ChildIndices.push_back(NODE->Head.Children[n].Head.nNodeNumber);
                 n++;

@@ -71,13 +71,12 @@ std::unique_ptr<FileHeader> & MDL::GetFileData(){
 }
 
 std::string MDL::MakeUniqueName(int nNodeNumber){
+    if(!FH) return "UNIQUE_NAME_FAILED";
     std::vector<Name> & Names = FH->MH.Names;
     std::string sReturn = Names.at(nNodeNumber).sName.c_str();
-    if(FH){
-        std::vector<Node> & Nodes = FH->MH.ArrayOfNodes;
-        if(Nodes.size() > nNodeNumber){
-            if(Nodes.at(nNodeNumber).Head.nType & NODE_HAS_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
-        }
+    std::vector<Node> & Nodes = FH->MH.ArrayOfNodes;
+    if(Nodes.size() > nNodeNumber){
+        if(Nodes.at(nNodeNumber).Head.nType & NODE_HAS_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
     }
     for(int n = 0; n < nNodeNumber; n++){
         if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNodeNumber);

@@ -411,14 +411,14 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
                 else sPrint << "unknown";
                 sPrint << ")";
-            sPrint << "\r\n" << "Node Number:      "<<node->Head.nNodeNumber;
-            sPrint << "\r\n" << "Supernode Number: "<<node->Head.nSupernodeNumber;
+            sPrint << "\r\n" << "Name: "<<node->Head.nNodeNumber;
+            sPrint << "\r\n" << "Node: "<<node->Head.nSupernodeNumber;
             sPrint << "\r\n";
-            sPrint << "\r\n" << "Offset:           "<<node->nOffset;
+            sPrint << "\r\n" << "Offset to Node:   "<<node->nOffset;
             sPrint << "\r\n" << "Offset to Root:   "<<node->Head.nOffsetToRoot;
             sPrint << "\r\n" << "Offset to Parent: "<<node->Head.nOffsetToParent;
-            sPrint << "\r\n";
             if(node->nAnimation == -1){
+                sPrint << "\r\n";
                 sPrint << "\r\n" << "Position:";
                 sPrint << "\r\n" << "  x: "<<PrepareFloat(node->Head.vPos.fX);
                 sPrint << "\r\n" << "  y: "<<PrepareFloat(node->Head.vPos.fY);

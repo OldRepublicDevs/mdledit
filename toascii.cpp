@@ -144,54 +144,40 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
-            sReturn << "\n    endnode";
         }
         sReturn << "\ndoneanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
         sReturn << "\n    node dummy ";
-        sReturn << MakeUniqueName(node->Head.nNodeNumber);//FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
-        sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        sReturn << MakeUniqueName(node->Head.nNodeNumber);
+        sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
             }
         }
+        sReturn << "\n    endnode";
     }
     else if(nDataType == CONVERT_HEADER){
         Node * node = (Node*) Data;
         sReturn << "\nnode ";
-        if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb ";
-        else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh ";
-        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << (!bSkinToTrimesh ? "skin " : "trimesh ");
-        else if(node->Head.nType & NODE_HAS_SABER) sReturn << (!bLightsaberToTrimesh ? "lightsaber " : "trimesh ");
-        else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh ";
-        else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter ";
-        else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light ";
-        else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy ";
-        sReturn << MakeUniqueName(node->Head.nNodeNumber);//FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
-        sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL"); //FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
-        //sReturn << FH->MH.Names[node->Head.nNodeNumber].sName.c_str();
-        //sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? FH->MH.Names[node->Head.nParentIndex].sName.c_str() : "NULL");
+        if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb";
+        else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh";
+        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << (!bSkinToTrimesh ? "skin" : "trimesh");
+        else if(node->Head.nType & NODE_HAS_SABER) sReturn << (!bLightsaberToTrimesh ? "lightsaber" : "trimesh");
+        else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh";
+        else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter";
+        else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light";
+        else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy";
+        sReturn << " ";
+        sReturn << MakeUniqueName(node->Head.nNodeNumber);
+        sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
-            /*if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_POSITION){
-                sReturn << string_format("\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX), PrepareFloat(node->Head.Pos.fY), PrepareFloat(node->Head.Pos.fZ));
-                if(node->Head.Controllers[0].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                    sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ), PrepareFloat(node->Head.Orient.GetQuaternion().fW));
-                }
-            }
-            else if(node->Head.Controllers[1].nControllerType != CONTROLLER_HEADER_ORIENTATION){
-                sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ), PrepareFloat(node->Head.Orient.GetQuaternion().fW));
-            }*/
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers[n]));
             }
-        }/*
-        else{
-            sReturn << string_format("\n  position %s %s %s", PrepareFloat(node->Head.Pos.fX), PrepareFloat(node->Head.Pos.fY), PrepareFloat(node->Head.Pos.fZ));
-            sReturn << string_format("\n  orientation %s %s %s %s", PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fX), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fY), PrepareFloat(node->Head.Orient.GetQuaternion().vAxis.fZ), PrepareFloat(node->Head.Orient.GetQuaternion().fW));
-        }*/
+        }
     }
     else if(nDataType == CONVERT_LIGHT){
         Node * node = (Node*) Data;
@@ -552,21 +538,22 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node & geonode = GetNodeByNameIndex(ctrl->nNodeNumber);
         Location loc = geonode.GetLocation();
         Node & node = GetNodeByNameIndex(ctrl->nNodeNumber, ctrl->nAnimation);
-        sReturn<<"\n      "<<ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
-        if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn<<"bezier";
-        sReturn<<"key";
+        sReturn << "\n      " << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
+        if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn << "bezier";
+        sReturn << "key";
         double PI = 3.14159;
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
             Quaternion qCurrent, qPrevious;
             AxisAngle aaCurrent, aaDiff;
+            //std::cout<< "Printing compressed orientation keys. Timekey: "<<ctrl->nTimekeyStart<<", Datakey: "<<ctrl->nDataStart<<", Values: "<<ctrl->nValueCount<<"\n";
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
                 ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
                 qCurrent = DecompressQuaternion(ByteBlock4.ui);
                 aaCurrent = AxisAngle(qCurrent);
                 if(n > 0){
-                    aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
                     if(abs(aaDiff.fAngle) - PI > 0.0001){
                         //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
@@ -575,7 +562,21 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                         //std::cout<<"to "<<aaCurrent.Print()<<".\n";
                     }
                 }
-                qPrevious = Quaternion(aaCurrent);
+                /*
+                if(n > 0){
+                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
+                    //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
+                    int znj = 0;
+                    while(abs(aaDiff.fAngle) > PI && znj < 10){
+                        //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
+                        aaCurrent.fAngle = pow(-1.0, (double) znj) * (double) (znj+1) * 2.0 * PI + aaCurrent.fAngle;
+                        znj++;
+                        aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                        //std::cout<<"to "<<aaCurrent.Print()<<".\n";
+                    }
+                }*/
+                qCurrent = Quaternion(aaCurrent);
+                qPrevious = qCurrent;
 
                 //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
@@ -592,9 +593,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                                       node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
                                       node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]);
                 aaCurrent = AxisAngle(qCurrent);
-
                 if(n > 0){
-                    aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
                     if(abs(aaDiff.fAngle) - PI > 0.0001){
                         //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
@@ -603,7 +603,21 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                         //std::cout<<"to "<<aaCurrent.Print()<<".\n";
                     }
                 }
-                qPrevious = Quaternion(aaCurrent);
+                /*
+                if(n > 0){
+                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
+                    //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
+                    int znj = 0;
+                    while(abs(aaDiff.fAngle) > PI && znj < 10){
+                        //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
+                        aaCurrent.fAngle = pow(-1.0, (double) znj) * (double) (znj+1) * 2.0 * PI + aaCurrent.fAngle;
+                        znj++;
+                        aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
+                        //std::cout<<"to "<<aaCurrent.Print()<<".\n";
+                    }
+                }*/
+                qCurrent = Quaternion(aaCurrent);
+                qPrevious = qCurrent;
 
                 //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
