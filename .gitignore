@@ -98,3 +98,7 @@ obj/Release/geometry.o
 obj/Debug/fileprocessing.o
 
 obj/Release/fileprocessing.o
+
+obj/Debug/fileprocessing.o
+
+obj/Release/fileprocessing.o
