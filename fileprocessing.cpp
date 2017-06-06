@@ -263,6 +263,12 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
             //If everything checks out, we may begin reading
             bool bAscii = false;
+            file.seekg(0, std::ios::end);
+            std::streampos filelength = file.tellg();
+            if(filelength < 10){
+                std::cout<<"File too short. Aborting.\n";
+                return false;
+            }
             file.seekg(0,std::ios::beg);
             char cBinary [4];
             file.read(cBinary, 4);
@@ -294,7 +300,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 //Open and process .pwk if it exists
                 std::string cPwk = sFileNoExt + ".pwk";
                 if(PathFileExists(cPwk.c_str())){
-                    file.open(cPwk);
+                    file.open(cPwk, std::ifstream::binary);
                     if(!file.is_open()){
                         std::cout<<"File creation/opening failed (pwk). Aborting.\n";
                     }

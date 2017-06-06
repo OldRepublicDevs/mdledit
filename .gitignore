@@ -94,3 +94,7 @@ obj/Debug/geometry.o
 geometry.cpp
 
 obj/Release/geometry.o
+
+obj/Debug/fileprocessing.o
+
+obj/Release/fileprocessing.o

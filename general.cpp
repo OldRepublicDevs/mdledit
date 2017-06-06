@@ -334,6 +334,7 @@ std::string PrepareFloat(double fFloat){
     std::stringstream ssReturn;
     ssReturn.precision(6);
     ssReturn.setf(std::ios::showpoint);
+    if(!std::isfinite(fFloat)) fFloat = 0.0;
     ssReturn << RoundDec(fFloat, 8);
     return TruncateDec(ssReturn.str());
 }

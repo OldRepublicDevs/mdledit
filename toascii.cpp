@@ -56,6 +56,7 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
 }
 
 void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data){
+    //std::cout << "Converting to ascii, data type: "<<nDataType<<"\n";
     std::stringstream sTimestamp;
     SYSTEMTIME st;
     GetLocalTime(&st);
@@ -117,7 +118,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         if(bWriteAnimations){
             for(int n = 0; n < mh->Animations.size(); n++){
-                ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations[n]);
+                ConvertToAscii(CONVERT_ANIMATION, sReturn, (void*) &mh->Animations.at(n));
             }
         }
 
@@ -151,10 +152,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node * node = (Node*) Data;
         sReturn << "\n    node dummy ";
         sReturn << MakeUniqueName(node->Head.nNodeNumber);
+        //std::cout << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << "\n";
         sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
-                ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers[n]));
+                ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers.at(n)));
             }
         }
         sReturn << "\n    endnode";
@@ -175,7 +177,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
-                ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers[n]));
+                ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers.at(n)));
             }
         }
     }
@@ -191,19 +193,19 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  flareradius " << PrepareFloat(node->Light.fFlareRadius); //NWmax reads this as an int
         sReturn << "\n  texturenames " << node->Light.FlareTextureNames.size();
         for(int n = 0; n < node->Light.FlareTextureNames.size(); n++){
-            sReturn<<"\n    "<<node->Light.FlareTextureNames[n].sName;
+            sReturn<<"\n    "<<node->Light.FlareTextureNames.at(n).sName;
         }
         sReturn << "\n  flaresizes " << node->Light.FlareSizes.size();
         for(int n = 0; n < node->Light.FlareSizes.size(); n++){
-            sReturn<<"\n    "<<node->Light.FlareSizes[n];
+            sReturn<<"\n    "<<node->Light.FlareSizes.at(n);
         }
         sReturn << "\n  flarepositions " << node->Light.FlarePositions.size();
         for(int n = 0; n < node->Light.FlarePositions.size(); n++){
-            sReturn<<"\n    "<<node->Light.FlarePositions[n];
+            sReturn<<"\n    "<<node->Light.FlarePositions.at(n);
         }
         sReturn << "\n  flarecolorshifts " << node->Light.FlareColorShifts.size();
         for(int n = 0; n < node->Light.FlareColorShifts.size(); n++){
-            sReturn<<"\n    "<<node->Light.FlareColorShifts[n].fR<<" "<<node->Light.FlareColorShifts[n].fG<<" "<<node->Light.FlareColorShifts[n].fB;
+            sReturn<<"\n    "<<node->Light.FlareColorShifts.at(n).fR<<" "<<node->Light.FlareColorShifts.at(n).fG<<" "<<node->Light.FlareColorShifts.at(n).fB;
         }
     }
     else if(nDataType == CONVERT_EMITTER){
@@ -273,71 +275,71 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(!Mdx) sReturn << "\n    "<<PrepareFloat(node->Mesh.Vertices[n].fX)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fY)<<" "<<PrepareFloat(node->Mesh.Vertices[n].fZ);
-            else sReturn << "\n    "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fX)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fY)<<" "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vVertex.fZ);
+            if(!Mdx) sReturn << "\n    "<<PrepareFloat(node->Mesh.Vertices.at(n).fX)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).fY)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).fZ);
+            else sReturn << "\n    "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fX)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fY)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fZ);
         }
         sReturn << "\n  faces " << node->Mesh.Faces.size();
         for(int n = 0; n < node->Mesh.Faces.size(); n++){
             sReturn << "\n    ";
-            sReturn << node->Mesh.Faces[n].nIndexVertex[0];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-            sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
-            sReturn << "  " << node->Mesh.Faces[n].nSmoothingGroup;
+            sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+            sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+            sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
+            sReturn << "  " << node->Mesh.Faces.at(n).nSmoothingGroup;
             if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                sReturn << "  " << node->Mesh.Faces[n].nIndexVertex[0];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+                sReturn << "  " << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
             else sReturn << "  0 0 0";
-            sReturn << "  " << node->Mesh.Faces[n].nMaterialID;
+            sReturn << "  " << node->Mesh.Faces.at(n).nMaterialID;
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
             sReturn << "\n  tverts "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n   " << PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fX);
-                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV1.fY);
+                sReturn << "\n   " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fY);
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
             sReturn << "\n  texindices1 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
-                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+                sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
             sReturn << "\n  tverts1 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fX);
-                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV2.fY);
+                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fX);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fY);
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
             sReturn << "\n  texindices2 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
-                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+                sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
             sReturn << "\n  tverts2 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fX);
-                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV3.fY);
+                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fX);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fY);
             }
         }
         if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
             sReturn << "\n  texindices3 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
-                sReturn << node->Mesh.Faces[n].nIndexVertex[0];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[1];
-                sReturn << " " << node->Mesh.Faces[n].nIndexVertex[2];
+                sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
             sReturn << "\n  tverts3 "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fX);
-                sReturn << " "<<PrepareFloat(node->Mesh.Vertices[n].MDXData.vUV4.fY);
+                sReturn << "\n    "<< PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV4.fX);
+                sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV4.fY);
             }
         }
     }
@@ -348,16 +350,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   ";
                 int i = 0;
-                int nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
+                int nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
                 //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndices.size()<<"\n";
                 while(nBoneNumber != -1 && i < 4){
                     //std::cout<<"Reading bone number "<<nBoneNumber;
                     //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str()<<".\n";
                     int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
-                    //sReturn << " "<<FH->MH.Names.at(nNodeNumber).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
-                    sReturn << " "<<MakeUniqueName(nNodeNumber)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue[i]);
+                    //sReturn << " "<<FH->MH.Names.at(nNodeNumber).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
+                    sReturn << " "<<MakeUniqueName(nNodeNumber)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
                     i++;
-                    nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex[i]);
+                    if(i < 4) nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
                 }
                 if(i == 0){
                     sReturn << " root 1.0";
@@ -372,7 +374,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  period " << PrepareFloat(node->Dangly.fPeriod);
         sReturn << "\n  constraints " << node->Dangly.Constraints.size();
         for(int n = 0; n < node->Dangly.Constraints.size(); n++){
-            sReturn << "\n    "<<PrepareFloat(node->Dangly.Constraints[n]);
+            sReturn << "\n    "<<PrepareFloat(node->Dangly.Constraints.at(n));
         }
     }
     else if(nDataType == CONVERT_AABB){
@@ -535,9 +537,26 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0
     else if(nDataType == CONVERT_CONTROLLER_KEYED){
         Controller * ctrl = (Controller*) Data;
+        ModelHeader & data = FH->MH;
+        //std::cout << "Keyed controller: " << ctrl->nControllerType << "\n";
         Node & geonode = GetNodeByNameIndex(ctrl->nNodeNumber);
+        //std::cout << "Geonode does not crash\n";
         Location loc = geonode.GetLocation();
-        Node & node = GetNodeByNameIndex(ctrl->nNodeNumber, ctrl->nAnimation);
+        Node * tempNode = nullptr;
+        if(ctrl->nAnimation >= 0){
+            Animation & anim = data.Animations.at(ctrl->nAnimation);
+            for(int an = 0; an < anim.ArrayOfNodes.size() && tempNode == nullptr; an++){
+                Node & animNode = anim.ArrayOfNodes.at(an);
+                if(ctrl->nNodeNumber == animNode.Head.nNodeNumber){
+                    for(int ac = 0; ac < animNode.Head.Controllers.size() && tempNode == nullptr; ac++){
+                        if(&animNode.Head.Controllers.at(ac) == ctrl) tempNode = &animNode;
+                    }
+                }
+            }
+        }
+        Node & node = *tempNode;
+        //std::cout << "Node does not crash\n";
+
         sReturn << "\n      " << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
         if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn << "bezier";
         sReturn << "key";
@@ -548,14 +567,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             AxisAngle aaCurrent, aaDiff;
             //std::cout<< "Printing compressed orientation keys. Timekey: "<<ctrl->nTimekeyStart<<", Datakey: "<<ctrl->nDataStart<<", Values: "<<ctrl->nValueCount<<"\n";
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
-                ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart + n];
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
+                ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
                 qCurrent = DecompressQuaternion(ByteBlock4.ui);
                 aaCurrent = AxisAngle(qCurrent);
+                /*
                 if(n > 0){
                     aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
                     if(abs(aaDiff.fAngle) - PI > 0.0001){
+                        std::cout << "Correcting orientation on node '"<<FH->MH.Names.at(ctrl->nNodeNumber).sName.c_str()<<"' in animation '"<<FH->MH.Animations.at(ctrl->nAnimation).sName.c_str()<<"'.\n";
                         //std::cout<<"Changing "<<aaCurrent.Print()<<"... ";
                         if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
                         else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
@@ -574,9 +595,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                         aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
                         //std::cout<<"to "<<aaCurrent.Print()<<".\n";
                     }
-                }*/
+                }
                 qCurrent = Quaternion(aaCurrent);
                 qPrevious = qCurrent;
+                */
 
                 //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
@@ -584,15 +606,17 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
+            //std::cout<< "Printing uncompressed orientation keys. Timekey: "<<ctrl->nTimekeyStart<<", Datakey: "<<ctrl->nDataStart<<", Values: "<<ctrl->nValueCount<<"\n";
             Quaternion qCurrent, qPrevious;
             AxisAngle aaCurrent, aaDiff;
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
-                qCurrent = Quaternion(node.Head.ControllerData[ctrl->nDataStart + n*4 + 0],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 1],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 2],
-                                      node.Head.ControllerData[ctrl->nDataStart + n*4 + 3]);
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
+                qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
+                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
+                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
+                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 3));
                 aaCurrent = AxisAngle(qCurrent);
+                /*
                 if(n > 0){
                     aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
                     //std::cout<<"Theta is "<<aaDiff.fAngle<<".\n";
@@ -615,37 +639,39 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                         aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
                         //std::cout<<"to "<<aaCurrent.Print()<<".\n";
                     }
-                }*/
+                }
                 qCurrent = Quaternion(aaCurrent);
                 qPrevious = qCurrent;
+                */
 
                 //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+                //std::cout << "Done printing key " << n << "\n";
             }
         }
         /// positionbezierkey
         else if(ctrl->nColumnCount > 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " <<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n]);
-                sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*9 + (0)]);
-                sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*9 + (1)]);
-                sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*9 + (2)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (3)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (4)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (5)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (6)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (7)]);
-                sReturn << " " << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*9 + (8)]);
+                sReturn << "\n        " <<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
+                sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
+                sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
+                sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
+                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
             }
         }
         /// regular bezierkey
         else if(ctrl->nColumnCount > 16 && !bBezierToLinear){
             //bezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
                 for(int i = 0; i < (ctrl->nColumnCount - 16) * 3; i++){
-                    sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*((ctrl->nColumnCount - 16) * 3) + i]);
+                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount - 16) * 3) + i));
                     if(i < (ctrl->nColumnCount - 16) * 3 - 1) sReturn << " ";
                 }
             }
@@ -654,12 +680,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //normal position
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
-                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + 0]);
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
+                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
                 sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + 1]);
+                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
                 sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + 2]);
+                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 2));
             }
 
         }
@@ -667,9 +693,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
             //default parser
             for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData[ctrl->nTimekeyStart + n])<<" ";
+                sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
                 for(int i = 0; i < ctrl->nColumnCount; i++){
-                    sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + n*ctrl->nColumnCount + i]);
+                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
                     if(i < ctrl->nColumnCount - 1) sReturn << " ";
                 }
             }
@@ -678,8 +704,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNodeNumber].sName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names.at(ctrl->nNodeNumber).sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
         sReturn << "\n      endlist";
@@ -694,7 +720,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn<<"\n  "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
-            ByteBlock4.f = node.Head.ControllerData[ctrl->nDataStart];
+            ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart);
             Orientation CtrlOrient(DecompressQuaternion(ByteBlock4.ui));
             //sReturn << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetQuaternion().fW);
             sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle);
@@ -702,10 +728,10 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Uncompressed orientation
             Orientation CtrlOrient;
-            double fQX = node.Head.ControllerData[ctrl->nDataStart + 0];
-            double fQY = node.Head.ControllerData[ctrl->nDataStart + 1];
-            double fQZ = node.Head.ControllerData[ctrl->nDataStart + 2];
-            double fQW = node.Head.ControllerData[ctrl->nDataStart + 3];
+            double fQX = node.Head.ControllerData.at(ctrl->nDataStart + 0);
+            double fQY = node.Head.ControllerData.at(ctrl->nDataStart + 1);
+            double fQZ = node.Head.ControllerData.at(ctrl->nDataStart + 2);
+            double fQW = node.Head.ControllerData.at(ctrl->nDataStart + 3);
             CtrlOrient.SetQuaternion(fQX, fQY, fQZ, fQW);
             //sReturn << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetQuaternion().fW);
             sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle);
@@ -713,7 +739,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
             //default parser
             for(int i = 0; i < ctrl->nColumnCount; i++){
-                sReturn << PrepareFloat(node.Head.ControllerData[ctrl->nDataStart + i]);
+                sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + i));
                 if(i < ctrl->nColumnCount - 1) sReturn << " ";
             }
 
@@ -721,8 +747,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else{
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH->MH.Animations[ctrl->nAnimation].sName;
-            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names[ctrl->nNodeNumber].sName<<" ("<<sLocation.c_str()<<")!\n";
+            else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
+            std::cout<<"Controller data error for "<<ReturnControllerName(ctrl->nControllerType, node.Head.nType)<<" in "<<FH->MH.Names.at(ctrl->nNodeNumber).sName<<" ("<<sLocation.c_str()<<")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }
@@ -743,18 +769,18 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         sReturn << "\n  verts " << data.verts.size();
         for(int n = 0; n < data.verts.size(); n++){
-            sReturn << "\n    "<<PrepareFloat(data.verts[n].fX)<<" "<<PrepareFloat(data.verts[n].fY)<<" "<<PrepareFloat(data.verts[n].fZ);
+            sReturn << "\n    "<<PrepareFloat(data.verts.at(n).fX)<<" "<<PrepareFloat(data.verts.at(n).fY)<<" "<<PrepareFloat(data.verts.at(n).fZ);
         }
 
         sReturn << "\n  faces " << data.faces.size();
         for(int n = 0; n < data.faces.size(); n++){
             sReturn << "\n    ";
-            sReturn << data.faces[n].nIndexVertex[0];
-            sReturn << " " << data.faces[n].nIndexVertex[1];
-            sReturn << " " << data.faces[n].nIndexVertex[2];
+            sReturn << data.faces.at(n).nIndexVertex.at(0);
+            sReturn << " " << data.faces.at(n).nIndexVertex.at(1);
+            sReturn << " " << data.faces.at(n).nIndexVertex.at(2);
             sReturn << "  1";
             sReturn << "  0 0 0";
-            sReturn << "  " << data.faces[n].nMaterialID;
+            sReturn << "  " << data.faces.at(n).nMaterialID;
         }
 
         int nRoomLinkSize = 0;

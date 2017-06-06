@@ -826,6 +826,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
                     bFound = true;
                     Face face;
+                    //std::cout << "Reading walk face.\n";
 
                     //Currently we read the regular NWMax version with only a single set of tvert indices
                     if(ReadInt(nConvert)) face.nIndexVertex[0] = nConvert;
@@ -842,6 +843,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     else bFound = false;
 
                     if(bFound){
+                        //std::cout << "Added walk face to faces.\n";
                         DATA->faces.push_back(std::move(face));
                     }
                     else bError = true;
@@ -885,6 +887,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     }
                     else{
                         sNodeName = sID;
+                        //std::cout << "Reading "<< sNodeName <<".\n";
 						if(bPwk){
 							DATA = Mdl.Pwk->GetData().get();
                             TempVerts = &TempVerts0;
@@ -909,16 +912,18 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     SkipLine();
                 }
                 /// Next we have the DATA LISTS
-                else if(sID == "verts" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg_") != std::string::npos)){
+                else if(sID == "verts" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    //std::cout << "Reading verts.\n";
                     bVerts = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else nDataMax = -1;
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "faces" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg_") != std::string::npos)){
+                else if(sID == "faces" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    //std::cout << "Reading faces.\n";
                     bFaces = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
                     else nDataMax = -1;
@@ -965,6 +970,9 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     }
                     else SkipLine();
                 }
+                else if(sID == "parent") SkipLine();
+                else if(sID == "orientation") SkipLine();
+                else if(sID == "bitmap") SkipLine();
                 else if(sID == "filedependancy") SkipLine();
                 else if(sID == "specular") SkipLine();
                 else if(sID == "wirecolor") SkipLine();
@@ -974,13 +982,13 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                 else if(sID == "tilefade") SkipLine();
                 else if(sID == "center") SkipLine();
                 else{
-                    //std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
+                    std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
                     SkipLine();
                 }
             }
         }
     }
-    std::cout<<"Done reading dwk ascii, checking for errors...\n";
+    std::cout<<"Done reading walkmesh ascii, checking for errors...\n";
     if(bError){
         Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
         return false;
