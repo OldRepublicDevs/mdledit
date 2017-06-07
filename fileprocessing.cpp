@@ -15,6 +15,30 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
 DWORD WINAPI ThreadMassAscii(LPVOID lpParam);
 DWORD WINAPI ThreadMassBinary(LPVOID lpParam);
 
+void ReportGetOpenFileNameError(){
+    //std::cout<<"GetOpenFileName() failed. :( \n";
+    unsigned int nError = CommDlgExtendedError();
+    if(nError == CDERR_DIALOGFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_DIALOGFAILURE\n";
+    else if(nError == CDERR_FINDRESFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_FINDRESFAILURE\n";
+    else if(nError == CDERR_INITIALIZATION) std::cout << "GetOpenFileName() failed. Error: CDERR_INITIALIZATION\n";
+    else if(nError == CDERR_LOADRESFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_LOADRESFAILURE\n";
+    else if(nError == CDERR_LOADSTRFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_LOADSTRFAILURE\n";
+    else if(nError == CDERR_LOCKRESFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_LOCKRESFAILURE\n";
+    else if(nError == CDERR_MEMALLOCFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_MEMALLOCFAILURE\n";
+    else if(nError == CDERR_MEMLOCKFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_MEMLOCKFAILURE\n";
+    else if(nError == CDERR_NOHINSTANCE) std::cout << "GetOpenFileName() failed. Error: CDERR_NOHINSTANCE\n";
+    else if(nError == CDERR_NOHOOK) std::cout << "GetOpenFileName() failed. Error: CDERR_NOHOOK\n";
+    else if(nError == CDERR_NOTEMPLATE) std::cout << "GetOpenFileName() failed. Error: CDERR_NOTEMPLATE\n";
+    else if(nError == CDERR_STRUCTSIZE) std::cout << "GetOpenFileName() failed. Error: CDERR_STRUCTSIZE\n";
+    else if(nError == FNERR_BUFFERTOOSMALL){
+        std::cout << "GetOpenFileName() failed. Error: FNERR_BUFFERTOOSMALL\n";
+        Error("Too many files selected. Try dividing your files into smaller groups and process them separately.");
+    }
+    else if(nError == FNERR_INVALIDFILENAME) std::cout << "GetOpenFileName() failed. Error: FNERR_INVALIDFILENAME\n";
+    else if(nError == FNERR_SUBCLASSFAILURE) std::cout << "GetOpenFileName() failed. Error: FNERR_SUBCLASSFAILURE\n";
+    //else std::cout << "Error: unknown\n";
+}
+
 bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     OPENFILENAME ofn;
     HANDLE hFile;
@@ -22,6 +46,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     DWORD dwBytesWritten = 0;
     std::string cExt;
     bool bReturn = false;
+    const unsigned int MAX_PATH_MASS = 40000;
 
     cFile.resize(MAX_PATH);
     if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";
@@ -108,7 +133,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
 
             bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";
+        else ReportGetOpenFileNameError();
     }
     else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
@@ -238,7 +263,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             }
 
             bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";
+        else ReportGetOpenFileNameError();
     }
     else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
@@ -573,21 +598,31 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     bReturn = false;
                 }
             }        }
-        else std::cout<<"Selecting file failed. :( \n";    }
+        else ReportGetOpenFileNameError();    }
     else if(nID == IDM_MASS_TO_ASCII){
-        int nOffsetToFirst = 0;        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
+        std::string sMassFiles (MAX_PATH_MASS, 0);
+        int nOffsetToFirst = 0;        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &sMassFiles.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH_MASS;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;        if(GetOpenFileName(&ofn)){
-            lpStrFiles = &cFile[0] + ofn.nFileOffset;
+            lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
+            cFile = sMassFiles.c_str();
+            if(ofn.nFileExtension == 0) cFile += "\\";
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 1);
-            bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";    }
+            bReturn = true;
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
+            else std::cout << "\nConverted file: "<< cFile <<"\n";        }
+        else ReportGetOpenFileNameError();    }
     else if(nID == IDM_MASS_TO_BIN){
-        int nOffsetToFirst = 0;        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
+        std::string sMassFiles (MAX_PATH_MASS, 0);
+        int nOffsetToFirst = 0;        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &sMassFiles.front();        ofn.nMaxFile = MAX_PATH_MASS;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;        if(GetOpenFileName(&ofn)){
-            lpStrFiles = &cFile[0] + ofn.nFileOffset;
+            lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
+            cFile = sMassFiles.c_str();
+            if(ofn.nFileExtension == 0) cFile += "\\";
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 2);
-            bReturn = true;        }
-        else std::cout<<"Selecting file failed. :( \n";    }
+            bReturn = true;
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
+            else std::cout << "\nConverted file: "<< cFile <<"\n";        }
+        else ReportGetOpenFileNameError();    }
     return bReturn;
 }
 
@@ -676,6 +711,7 @@ void ProgressSize(int nMin, int nMax){
 }
 void ProgressPos(int nPos){
     SendMessage(hProgress, PBM_SETPOS, (WPARAM) nPos, (LPARAM) NULL);
+    UpdateWindow(hProgress);
 }
 
 DWORD WINAPI ThreadReprocess(LPVOID lpParam){
@@ -1081,6 +1117,7 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
 
         nCounter++;
         SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
+        UpdateWindow(hProgressMass);
     }
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
@@ -1098,6 +1135,8 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
 
     int nCounter = 0;
     while(*lpStrFiles != 0){
+        //ProgressSize(0, 1);
+        ProgressPos(0);
         std::string sCurrentFile = lpStrFiles;
         lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
 

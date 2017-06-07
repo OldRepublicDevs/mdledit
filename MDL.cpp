@@ -403,7 +403,7 @@ void MDL::CreatePatches(){
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
-        //Currently, this takes all meshes, including skins, danglymeshes, walkmeshes and sabers
+        //Currently, this takes all meshes, including skins, danglymeshes and walkmeshes
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
             Node & node = Data.MH.ArrayOfNodes.at(n);
             Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
@@ -473,8 +473,9 @@ void MDL::CreatePatches(){
     for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
         //For every vector of linked faces, create a vector of patches
         std::vector<LinkedFace> & LinkedFaceVector = Data.MH.LinkedFacesPointers.at(v);
-        Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
-        std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
+        //Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
+        //std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
+        std::vector<Patch> PatchVector;
 
         for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
             if(!LinkedFaceVector.at(lf).bAssignedToPatch){
@@ -485,6 +486,10 @@ void MDL::CreatePatches(){
                 patchhead.bAssignedToPatch = true;
                 newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNodeNumber).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
                 newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
+
+                Node & node = Data.MH.ArrayOfNodes.at(newpatch.nNodeNumber);
+                Vertex & vert = node.Mesh.Vertices.at(newpatch.nVertex);
+                vert.nLinkedFacesIndex = Data.MH.PatchArrayPointers.size(); // Update reference to new vector that is about to be created
 
                 for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
                     if(!LinkedFaceVector.at(plf).bAssignedToPatch){
@@ -505,6 +510,7 @@ void MDL::CreatePatches(){
                 PatchVector.push_back(std::move(newpatch));
             }
         }
+        if(PatchVector.size() > 0) Data.MH.PatchArrayPointers.push_back(std::move(PatchVector));
     }
     Data.MH.LinkedFacesPointers.resize(0);
     Data.MH.LinkedFacesPointers.shrink_to_fit();

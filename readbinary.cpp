@@ -1547,12 +1547,14 @@ void MDL::DetermineSmoothing(){
     }
 
     if(bGoodEnough){
+        //std::cout << "Good enough\n";
         Report("Calculating smoothing groups...");
         /// Here we finally apply the smoothing groups to the faces in a principled way.
         std::vector<bool> DoneGroups(Data.MH.PatchArrayPointers.size(), false);
         for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
             ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DoneGroups);
         }
+        //std::cout << "Consolidated\n";
         /// And finally finally, we merge the numbers for every face and get rid of the patch array.
         for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
             for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
@@ -1567,6 +1569,7 @@ void MDL::DetermineSmoothing(){
                 }
             }
         }
+        //std::cout << "Done with good enough\n";
     }
     else Error("The vector recalculations were off by too much to be able to determine the smoothing groups. Try decompiling with different vertex normal calculation settings.");
 
@@ -1609,6 +1612,7 @@ void MDL::DetermineSmoothing(){
 
 void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups){
     FileHeader & Data = *FH;
+    //std::cout << "Consolidate start\n";
     /** Alternative algorithm
     1. Go through all of the patches in the patch group.
     2. If number is not single, skip it. Else if there is no assigned number for the patch
@@ -1631,6 +1635,7 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
                     if(!(nBitflag & pown(2, n))) *patch.SmoothingGroupNumbers.front() = pown(2, n);
                 }
             }
+            //std::cout << "For every face\n";
             for(int f = 0; f < patch.FaceIndices.size(); f++){
                 Node & node = Data.MH.ArrayOfNodes.at(patch.nNodeNumber);
                 Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
@@ -1662,8 +1667,10 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
                     face.bProcessedSG = true;
                 }
             }
+            //std::cout << "Done for every face\n";
         }
     }
+    //std::cout << "Consolidate done patch\n";
     DoneGroups.at(nPatchGroup) = true;
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
         Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
