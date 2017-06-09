@@ -42,7 +42,9 @@ Vector operator*(Vector v, const double & f);
 Vector operator/(Vector v, const double & f);
 Vector operator*(const double & f, Vector v);
 double operator*(const Vector & v, const Vector & v2); //dot product
+double dot(const Vector & v, const Vector & v2); //dot product
 Vector operator/(Vector v, const Vector & v2); //cross product
+Vector cross(Vector v, const Vector & v2); //cross product
 Vector operator+(Vector v, const Vector & v2);
 Vector operator-(Vector v, const Vector & v2);
 double Angle(const Vector & v, const Vector & v2);

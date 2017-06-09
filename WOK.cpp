@@ -731,7 +731,7 @@ void MDL::BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, 
         Vector Edge3 = v3 - v2;
 
         //This is for face normal
-        face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
+        face.vNormal = cross(Edge1, Edge2); //Cross product, unnormalized
         face.vNormal.Normalize();
 
         //This is for the distance.

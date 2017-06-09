@@ -350,18 +350,26 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   ";
                 int i = 0;
-                int nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                int nBoneNumber; // = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
                 //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndices.size()<<"\n";
-                while(nBoneNumber != -1 && i < 4){
-                    //std::cout<<"Reading bone number "<<nBoneNumber;
-                    //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str()<<".\n";
-                    int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
-                    //sReturn << " "<<FH->MH.Names.at(nNodeNumber).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
-                    sReturn << " "<<MakeUniqueName(nNodeNumber)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
+                bool bDependentVert = false;
+                while(i < 4){
+                    nBoneNumber = (signed int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                    //std::cout<<"Reading bone number "<<nBoneNumber<<"\n";
+                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
+                        int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
+                        //std::cout<<"Reading bone number "<<nBoneNumber;
+                        //std::cout<<", representing bone "<<FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str()<<".\n";
+                        //sReturn << " "<<FH->MH.Names.at(nNodeNumber).sName.c_str()<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
+                        if(nNodeNumber > -1 && nNodeNumber < FH->MH.ArrayOfNodes.size()){
+                            if(!bDependentVert) bDependentVert = true;
+                            sReturn << " "<<MakeUniqueName(nNodeNumber)<<" "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
+                        }
+                    }
                     i++;
-                    if(i < 4) nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                    //if(i < 4) nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
                 }
-                if(i == 0){
+                if(!bDependentVert){
                     sReturn << " root 1.0";
                 }
             }

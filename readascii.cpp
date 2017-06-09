@@ -2376,7 +2376,7 @@ void MDL::AsciiPostProcess(){
                 Vector EUV3 = v3UV - v2UV;
 
                 //This is for face normal
-                    face.vNormal = Edge1 / Edge2; //Cross product, unnormalized
+                    face.vNormal = cross(Edge1, Edge2); //Cross product, unnormalized
                     face.vNormal.Normalize();
                 //This is for the distance.
                     face.fDistance = - (face.vNormal.fX * v1.fX +

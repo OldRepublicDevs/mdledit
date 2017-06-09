@@ -61,6 +61,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
             cFile = sFileNoExt + std::string(".mdl");
 
+            //Convert the data and put it into a string
+            std::string sAsciiExport;
+            Model.ExportAscii(sAsciiExport);
+
             //Create file
             std::ofstream file(cFile, std::fstream::out);
 
@@ -68,10 +72,6 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 std::cout<<"File creation failed. Aborting.\n";
                 return false;
             }
-
-            //Convert the data and put it into a string
-            std::string sAsciiExport;
-            Model.ExportAscii(sAsciiExport);
 
             //Write and close file
             file<<sAsciiExport;
@@ -84,10 +84,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Pwk){
                 std::string cPwk = sFileNoExt + ".pwk";
 
-                file.open(cPwk, std::fstream::out);
-
                 sAsciiExport.clear();
                 Model.ExportPwkAscii(sAsciiExport);
+
+                file.open(cPwk, std::fstream::out);
 
                 //Write and close file
                 file<<sAsciiExport;
@@ -101,10 +101,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Dwk0 || Model.Dwk1 || Model.Dwk2){
                 std::string cDwk = sFileNoExt + ".dwk";
 
-                file.open(cDwk, std::fstream::out);
-
                 sAsciiExport.clear();
                 Model.ExportDwkAscii(sAsciiExport);
+
+                file.open(cDwk, std::fstream::out);
 
                 //Write and close file
                 file<<sAsciiExport;
@@ -118,10 +118,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Wok && Model.bExportWok){
                 std::string cWok = sFileNoExt + ".wok";
 
-                file.open(cWok, std::fstream::out);
-
                 sAsciiExport.clear();
                 Model.ExportWokAscii(sAsciiExport);
+
+                file.open(cWok, std::fstream::out);
 
                 //Write and close file
                 file<<sAsciiExport;
@@ -147,6 +147,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
             cFile = sFileNoExt + std::string(".mdl");
 
+            //Put data into a string
+            std::string sBinaryExport;
+            Model.Export(sBinaryExport);
+
             //Create file
             std::ofstream file(cFile, std::ios::binary | std::fstream::out);
             //std::ofstream file(cFile);
@@ -156,10 +160,6 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 return false;
             }
 
-            //Put data into a string
-            std::string sBinaryExport;
-            Model.Export(sBinaryExport);
-
             //Write and close file
             file<<sBinaryExport;
             file.close();
@@ -168,10 +168,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Mdx){
                 std::string cMdx = sFileNoExt + ".mdx";
 
-                file.open(cMdx, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Mdx->Export(sBinaryExport);
+
+                file.open(cMdx, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -185,10 +185,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Wok){
                 std::string cWok = sFileNoExt + ".wok";
 
-                file.open(cWok, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Wok->Export(sBinaryExport);
+
+                file.open(cWok, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -202,10 +202,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Pwk){
                 std::string cPwk = sFileNoExt + ".pwk";
 
-                file.open(cPwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Pwk->Export(sBinaryExport);
+
+                file.open(cPwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -219,10 +219,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Dwk0){
                 std::string cDwk = sFileNoExt + "0.dwk";
 
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Dwk0->Export(sBinaryExport);
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -234,10 +234,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Dwk1){
                 std::string cDwk = sFileNoExt + "1.dwk";
 
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Dwk1->Export(sBinaryExport);
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -249,10 +249,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             if(Model.Dwk2){
                 std::string cDwk = sFileNoExt + "2.dwk";
 
-                file.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 Model.Dwk2->Export(sBinaryExport);
+
+                file.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 file<<sBinaryExport;
@@ -1041,6 +1041,11 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
             sFileNoExt += "-mdledit-ascii";
             sCurrentFile = sFileNoExt + std::string(".mdl");
 
+            //Convert the data and put it into a string
+            //std::cout<<"Converting to ascii.\n";
+            std::string sAsciiExport;
+            tempModel.ExportAscii(sAsciiExport);
+
             //Create file
             std::ofstream fileout(sCurrentFile, std::fstream::out);
 
@@ -1048,11 +1053,6 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
                 std::cout<<"File creation failed. Aborting.\n";
                 continue;
             }
-
-            //Convert the data and put it into a string
-            //std::cout<<"Converting to ascii.\n";
-            std::string sAsciiExport;
-            tempModel.ExportAscii(sAsciiExport);
 
             //Write and close file
             //std::cout<<"Writing ascii.\n";
@@ -1067,10 +1067,10 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
             if(tempModel.Pwk){
                 std::string cPwk = sFileNoExt + ".pwk";
 
-                fileout.open(cPwk, std::fstream::out);
-
                 sAsciiExport.clear();
                 tempModel.ExportPwkAscii(sAsciiExport);
+
+                fileout.open(cPwk, std::fstream::out);
 
                 //Write and close file
                 fileout<<sAsciiExport;
@@ -1084,10 +1084,10 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
             if(tempModel.Dwk0 || tempModel.Dwk1 || tempModel.Dwk2){
                 std::string cDwk = sFileNoExt + ".dwk";
 
-                fileout.open(cDwk, std::fstream::out);
-
                 sAsciiExport.clear();
                 tempModel.ExportDwkAscii(sAsciiExport);
+
+                fileout.open(cDwk, std::fstream::out);
 
                 //Write and close file
                 fileout<<sAsciiExport;
@@ -1101,10 +1101,10 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
             if(tempModel.Wok && tempModel.bExportWok){
                 std::string cWok = sFileNoExt + ".wok";
 
-                fileout.open(cWok, std::fstream::out);
-
                 sAsciiExport.clear();
                 tempModel.ExportWokAscii(sAsciiExport);
+
+                fileout.open(cWok, std::fstream::out);
 
                 //Write and close file
                 fileout<<sAsciiExport;
@@ -1259,6 +1259,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             sFileNoExt += "-mdledit-bin";
             sCurrentFile = sFileNoExt + std::string(".mdl");
 
+            //Put data into a string
+            std::string sBinaryExport;
+            tempModel.Export(sBinaryExport);
+
             //Create file
             std::ofstream fileout (sCurrentFile, std::ios::binary | std::fstream::out);
 
@@ -1266,10 +1270,6 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
                 std::cout<<"File creation failed. Aborting.\n";
                 continue;
             }
-
-            //Put data into a string
-            std::string sBinaryExport;
-            tempModel.Export(sBinaryExport);
 
             //Write and close file
             fileout<<sBinaryExport;
@@ -1279,10 +1279,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Mdx){
                 std::string cMdx = sFileNoExt + ".mdx";
 
-                fileout.open(cMdx, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Mdx->Export(sBinaryExport);
+
+                fileout.open(cMdx, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
@@ -1296,10 +1296,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Wok){
                 std::string cWok = sFileNoExt + ".wok";
 
-                fileout.open(cWok, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Wok->Export(sBinaryExport);
+
+                fileout.open(cWok, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
@@ -1313,10 +1313,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Pwk){
                 std::string cPwk = sFileNoExt + ".pwk";
 
-                fileout.open(cPwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Pwk->Export(sBinaryExport);
+
+                fileout.open(cPwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
@@ -1330,10 +1330,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Dwk0){
                 std::string cDwk = sFileNoExt + "0.dwk";
 
-                fileout.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Dwk0->Export(sBinaryExport);
+
+                fileout.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
@@ -1345,10 +1345,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Dwk1){
                 std::string cDwk = sFileNoExt + "1.dwk";
 
-                fileout.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Dwk1->Export(sBinaryExport);
+
+                fileout.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
@@ -1360,10 +1360,10 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
             if(tempModel.Dwk2){
                 std::string cDwk = sFileNoExt + "2.dwk";
 
-                fileout.open(cDwk, std::ios::binary | std::fstream::out);
-
                 sBinaryExport.clear();
                 tempModel.Dwk2->Export(sBinaryExport);
+
+                fileout.open(cDwk, std::ios::binary | std::fstream::out);
 
                 //Write and close file
                 fileout<<sBinaryExport;
