@@ -9,6 +9,7 @@ HANDLE hThread;
 HWND hProgress;
 HWND hProgressMass;
 char * lpStrFiles = nullptr;
+std::string sFolder;
 DWORD WINAPI ThreadReprocess(LPVOID lpParam);
 DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
@@ -606,6 +607,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
+            sFolder = cFile;
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 1);
             bReturn = true;
             if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
@@ -618,6 +620,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
+            sFolder = cFile;
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 2);
             bReturn = true;
             if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
@@ -807,7 +810,12 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
 
     int nCounter = 0;
     while(*lpStrFiles != 0){
-        std::string sCurrentFile = lpStrFiles;
+        std::string sCurrentFile = std::string();
+        if(sFolder.back() == '\\'){
+            sCurrentFile += sFolder;
+            sCurrentFile += lpStrFiles;
+        }
+        else sCurrentFile += sFolder;
         lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
 
         std::string sFileNoExt = sCurrentFile.c_str();
@@ -1028,6 +1036,7 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
                 }
             }
 
+            tempModel.SetFilePath(sCurrentFile);
             tempModel.DecompileModel();
             if(tempModel.Wok){
                 tempModel.Wok->ProcessBWM();
@@ -1137,7 +1146,13 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
     while(*lpStrFiles != 0){
         //ProgressSize(0, 1);
         ProgressPos(0);
-        std::string sCurrentFile = lpStrFiles;
+        //std::string sCurrentFile = lpStrFiles;
+        std::string sCurrentFile = std::string();
+        if(sFolder.back() == '\\'){
+            sCurrentFile += sFolder;
+            sCurrentFile += lpStrFiles;
+        }
+        else sCurrentFile += sFolder;
         lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
 
         std::string sFileNoExt = sCurrentFile.c_str();
@@ -1147,6 +1162,7 @@ DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
         SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
 
         //Create file
+        std::cout << "Creating file: " << sCurrentFile << "\n";
         std::ifstream file(sCurrentFile, std::ios::binary);
 
         if(!file.is_open()){

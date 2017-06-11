@@ -517,49 +517,56 @@ bool ASCII::Read(MDL & Mdl){
                     while(bFound && z < 4){
                         //Get first name
                         bFound = ReadUntilText(sID, false, true);
-                        //if we found a name, loop through the name array to find our name index
-                        for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size() && bFound; nNodeNumber++){
-                            //check if there is a match
-                            if(FH->MH.Names[nNodeNumber].sName == sID){
-                                //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
-                                //Check if we already have this name indexed in the skin
-                                bPresent = false;
-                                for(nBoneIndex = 0; nBoneIndex < nWeightIndices.size() && !bPresent; ){
-                                    if(nWeightIndices[nBoneIndex] == nNodeNumber){
-                                        bPresent = true;
+                        std::string sCheck (sID);
+                        std::transform(sCheck.begin(), sCheck.end(), sCheck.begin(), ::tolower);
+                        if(sCheck == "root"){
+                            if(!ReadFloat(fConvert)) bError = true;
+                        }
+                        else{
+                            //if we found a name, loop through the name array to find our name index
+                            for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size() && bFound; nNodeNumber++){
+                                //check if there is a match
+                                if(FH->MH.Names[nNodeNumber].sName == sID){
+                                    //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
+                                    //Check if we already have this name indexed in the skin
+                                    bPresent = false;
+                                    for(nBoneIndex = 0; nBoneIndex < nWeightIndices.size() && !bPresent; ){
+                                        if(nWeightIndices[nBoneIndex] == nNodeNumber){
+                                            bPresent = true;
+                                        }
+                                        else nBoneIndex++;
                                     }
-                                    else nBoneIndex++;
-                                }
-                                if(!bPresent){
-                                    //This is a new name index, so we need to add it to the skin's index list
-                                    nWeightIndices.push_back(nNodeNumber);
-                                    nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
+                                    if(!bPresent){
+                                        //This is a new name index, so we need to add it to the skin's index list
+                                        nWeightIndices.push_back(nNodeNumber);
+                                        nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
 
-                                    //We also add it to the bonemap.
-                                    node.Skin.Bones[nNodeNumber].fBonemap = (double) nBoneIndex;
+                                        //We also add it to the bonemap.
+                                        node.Skin.Bones[nNodeNumber].fBonemap = (double) nBoneIndex;
 
-                                    //We can just add it into the mdl's bone index list as well, what the heck
-                                    if(nBoneIndex < 18){
-                                        node.Skin.nBoneIndices[nBoneIndex] = nNodeNumber;
+                                        //We can just add it into the mdl's bone index list as well, what the heck
+                                        if(nBoneIndex < 18){
+                                            node.Skin.nBoneIndices[nBoneIndex] = nNodeNumber;
+                                        }
+                                        else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
                                     }
-                                    else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
-                                }
-                                //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
-                                weight.fWeightIndex[z] = (double) nBoneIndex;
+                                    //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
+                                    weight.fWeightIndex[z] = (double) nBoneIndex;
 
-                                //Since we found the name, we don't need to keep looping anymore
-                                nNodeNumber = FH->MH.Names.size();
+                                    //Since we found the name, we don't need to keep looping anymore
+                                    nNodeNumber = FH->MH.Names.size();
+                                }
                             }
-                        }
-                        if(nNodeNumber == FH->MH.Names.size() && bFound){
-                            //we failed to find the name in the name array. This data is broken.
-                            std::cout<<"Reading weights data: failed to find name in name array! Name: "<<sID<<".\n";
-                            bFound = false;
-                            bError = true;
-                        }
-                        else if(bFound){
-                            //We found the name in the name array. We are therefore ready to read the value as well.
-                            if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
+                            if(nNodeNumber == FH->MH.Names.size() && bFound){
+                                //we failed to find the name in the name array. This data is broken.
+                                std::cout<<"Reading weights data: failed to find name in name array! Name: "<<sID<<".\n";
+                                bFound = false;
+                                bError = true;
+                            }
+                            else if(bFound){
+                                //We found the name in the name array. We are therefore ready to read the value as well.
+                                if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
+                            }
                         }
                         z++;
                     }
