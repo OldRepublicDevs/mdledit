@@ -40,6 +40,8 @@
 #define IDM_HELP            130
 #define IDM_MASS_TO_ASCII   131
 #define IDM_MASS_TO_BIN     132
+#define IDM_PLATFORM_PC     133
+#define IDM_PLATFORM_XBOX   134
 
 //GUI controls
 #define IDC_MAIN_EDIT    201

@@ -25,14 +25,8 @@ bool MDL::Compile(){
     WriteInt(0xFFFFFFFF, 1);
 
     //GeoHeader
-    if(bK2){
-        Data->MH.GH.nFunctionPointer0 = K2_FUNCTION_POINTER_0;
-        Data->MH.GH.nFunctionPointer1 = K2_FUNCTION_POINTER_1;
-    }
-    else{
-        Data->MH.GH.nFunctionPointer0 = K1_FUNCTION_POINTER_0;
-        Data->MH.GH.nFunctionPointer1 = K1_FUNCTION_POINTER_1;
-    }
+    Data->MH.GH.nFunctionPointer0 = FunctionPointer1(FN_PTR_MODEL);
+    Data->MH.GH.nFunctionPointer1 = FunctionPointer2(FN_PTR_MODEL);
     WriteInt(Data->MH.GH.nFunctionPointer0, 9);
     WriteInt(Data->MH.GH.nFunctionPointer1, 9);
     Data->MH.GH.sName.resize(32);
@@ -128,14 +122,8 @@ bool MDL::Compile(){
         //This is where we fill EVERYTHING about the animation
         Animation & anim = Data->MH.Animations[c];
         WriteIntToPH(nPosition - 12, pnOffsetsToAnimation[c], Data->MH.Animations[c].nOffset);
-        if(bK2){
-            anim.nFunctionPointer0 = 4284816;
-            anim.nFunctionPointer1 = 4522928;
-        }
-        else{
-            anim.nFunctionPointer0 = 4273392;
-            anim.nFunctionPointer1 = 4451552;
-        }
+        anim.nFunctionPointer0 = FunctionPointer1(FN_PTR_ANIM);
+        anim.nFunctionPointer1 = FunctionPointer2(FN_PTR_ANIM);
         WriteInt(anim.nFunctionPointer0, 9);
         WriteInt(anim.nFunctionPointer1, 9);
         anim.sName.resize(32);
@@ -288,7 +276,7 @@ void MDL::WriteNodes(Node & node){
     //Here comes all the subheader bullshit.
     /// LIGHT HEADER
     int PHnOffsetToUnknownLightArray, PHnOffsetToFlareSizes, PHnOffsetToFlarePositions, PHnOffsetToFlareTextureNames, PHnOffsetToFlareColorShifts;
-    if(node.Head.nType & NODE_HAS_LIGHT){
+    if(node.Head.nType & NODE_LIGHT){
         WriteFloat(node.Light.fFlareRadius, 2);
         //PHnOffsetToUnknownLightArray = nPosition;
         WriteInt(0, 8);
@@ -321,7 +309,7 @@ void MDL::WriteNodes(Node & node){
     }
 
     /// EMITTER HEADER
-    if(node.Head.nType & NODE_HAS_EMITTER){
+    if(node.Head.nType & NODE_EMITTER){
         WriteFloat(node.Emitter.fDeadSpace, 2);
         WriteFloat(node.Emitter.fBlastRadius, 2);
         WriteFloat(node.Emitter.fBlastLength, 2);
@@ -356,27 +344,28 @@ void MDL::WriteNodes(Node & node){
         WriteInt(node.Emitter.nFlags, 10);
     }
 
+    /// REFERENCE HEADER
+    if(node.Head.nType & NODE_REFERENCE){
+        node.Reference.sRefModel.resize(32);
+        WriteString(node.Reference.sRefModel, 3);
+        WriteInt(node.Reference.nReattachable, 4);
+    }
+
     /// MESH HEADER
     int PHnOffsetToFaces, PHnOffsetToIndexCount, PHnOffsetToIndexLocation, PHnOffsetToInvertedCounter, PHnOffsetIntoMdx, PHnOffsetToVertArray;
-    if(node.Head.nType & NODE_HAS_MESH){
+    if(node.Head.nType & NODE_MESH){
         //Write function pointers
-        if(node.Head.nType & NODE_HAS_DANGLY){
-            if(bK2) node.Mesh.nFunctionPointer0 = 4216864;
-            else node.Mesh.nFunctionPointer0 = 4216640;
-            if(bK2) node.Mesh.nFunctionPointer1 = 4216848;
-            else node.Mesh.nFunctionPointer1 = 4216624;
+        if(node.Head.nType & NODE_DANGLY){
+            node.Mesh.nFunctionPointer0 = FunctionPointer1(FN_PTR_DANGLY);
+            node.Mesh.nFunctionPointer1 = FunctionPointer2(FN_PTR_DANGLY);
         }
-        else if(node.Head.nType & NODE_HAS_SKIN){
-            if(bK2) node.Mesh.nFunctionPointer0 = 4216816;
-            else node.Mesh.nFunctionPointer0 = 4216592;
-            if(bK2) node.Mesh.nFunctionPointer1 = 4216832;
-            else node.Mesh.nFunctionPointer1 = 4216608;
+        else if(node.Head.nType & NODE_SKIN){
+            node.Mesh.nFunctionPointer0 = FunctionPointer1(FN_PTR_SKIN);
+            node.Mesh.nFunctionPointer1 = FunctionPointer2(FN_PTR_SKIN);
         }
         else{
-            if(bK2) node.Mesh.nFunctionPointer0 = 4216880;
-            else node.Mesh.nFunctionPointer0 = 4216656;
-            if(bK2) node.Mesh.nFunctionPointer1 = 4216896;
-            else node.Mesh.nFunctionPointer1 = 4216672;
+            node.Mesh.nFunctionPointer0 = FunctionPointer1(FN_PTR_MESH);
+            node.Mesh.nFunctionPointer1 = FunctionPointer2(FN_PTR_MESH);
         }
         WriteInt(node.Mesh.nFunctionPointer0, 9);
         WriteInt(node.Mesh.nFunctionPointer1, 9);
@@ -458,7 +447,8 @@ void MDL::WriteNodes(Node & node){
         else node.Mesh.nOffsetToVerticesInMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
             node.Mesh.nOffsetToNormalsInMDX = nMDXsize;
-            nMDXsize += 12;
+            if(bXbox) nMDXsize += 4;
+            else nMDXsize += 12;
         }
         else node.Mesh.nOffsetToNormalsInMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
@@ -483,38 +473,42 @@ void MDL::WriteNodes(Node & node){
         else node.Mesh.nOffsetToUV4sInMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
             node.Mesh.nOffsetToTangentSpaceInMDX = nMDXsize;
-            nMDXsize += 36;
+            if(bXbox) nMDXsize += 12;
+            else nMDXsize += 36;
         }
         else node.Mesh.nOffsetToTangentSpaceInMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
             node.Mesh.nOffsetToTangentSpace2InMDX = nMDXsize;
-            nMDXsize += 36;
+            if(bXbox) nMDXsize += 12;
+            else nMDXsize += 36;
         }
         else node.Mesh.nOffsetToTangentSpace2InMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
             node.Mesh.nOffsetToTangentSpace3InMDX = nMDXsize;
-            nMDXsize += 36;
+            if(bXbox) nMDXsize += 12;
+            else nMDXsize += 36;
         }
         else node.Mesh.nOffsetToTangentSpace3InMDX = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
             node.Mesh.nOffsetToTangentSpace4InMDX = nMDXsize;
-            nMDXsize += 36;
+            if(bXbox) nMDXsize += 12;
+            else nMDXsize += 36;
         }
         else node.Mesh.nOffsetToTangentSpace4InMDX = -1;
-        if(node.Head.nType & NODE_HAS_SKIN){
+        if(node.Head.nType & NODE_SKIN){
             node.Skin.nOffsetToWeightValuesInMDX = nMDXsize;
             nMDXsize += 16;
             node.Skin.nOffsetToBoneIndexInMDX = nMDXsize;
             nMDXsize += 16;
         }
         node.Mesh.nMdxDataSize = nMDXsize;
-        node.Mesh.nOffsetToUnknownInMDX = -1;
+        node.Mesh.nOffsetToColorInMDX = -1;
 
         WriteInt(node.Mesh.nMdxDataSize, 1);
         WriteInt(node.Mesh.nMdxDataBitmap, 4);
         WriteInt(node.Mesh.nOffsetToVerticesInMDX, 6);
         WriteInt(node.Mesh.nOffsetToNormalsInMDX, 6);
-        WriteInt(node.Mesh.nOffsetToUnknownInMDX, 6);
+        WriteInt(node.Mesh.nOffsetToColorInMDX, 6);
         WriteInt(node.Mesh.nOffsetToUVsInMDX, 6);
         WriteInt(node.Mesh.nOffsetToUV2sInMDX, 6);
         WriteInt(node.Mesh.nOffsetToUV3sInMDX, 6);
@@ -550,13 +544,15 @@ void MDL::WriteNodes(Node & node){
 
         PHnOffsetIntoMdx = nPosition;
         WriteInt(0xFFFFFFFF, 6);
-        PHnOffsetToVertArray = nPosition;
-        WriteInt(0xFFFFFFFF, 6);
+        if(!bXbox){
+            PHnOffsetToVertArray = nPosition;
+            WriteInt(0xFFFFFFFF, 6);
+        }
     }
 
     /// SKIN HEADER
     int PHnOffsetToBonemap, PHnOffsetToQBones, PHnOffsetToTBones, PHnOffsetToArray8;
-    if(node.Head.nType & NODE_HAS_SKIN){
+    if(node.Head.nType & NODE_SKIN){
         WriteInt(0, 8); //Unknown int32
         WriteInt(0, 8); //Unknown int32
         WriteInt(0, 8); //Unknown int32
@@ -584,7 +580,7 @@ void MDL::WriteNodes(Node & node){
 
     /// DANGLY HEADER
     int PHnOffsetToConstraints, PHnOffsetToData2;
-    if(node.Head.nType & NODE_HAS_DANGLY){
+    if(node.Head.nType & NODE_DANGLY){
         PHnOffsetToConstraints = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Dangly.Constraints.size(), 1);
@@ -599,14 +595,14 @@ void MDL::WriteNodes(Node & node){
 
     /// AABB HEADER
     int PHnOffsetToAabb;
-    if(node.Head.nType & NODE_HAS_AABB){
+    if(node.Head.nType & NODE_AABB){
         PHnOffsetToAabb = nPosition;
         WriteInt(0xFFFFFFFF, 6);
     }
 
     /// SABER HEADER
     int PHnOffsetToSaberVerts, PHnOffsetToSaberUVs, PHnOffsetToSaberNormals;
-    if(node.Head.nType & NODE_HAS_SABER){
+    if(node.Head.nType & NODE_SABER){
         PHnOffsetToSaberVerts = nPosition;
         WriteInt(0xFFFFFFFF, 6);
         PHnOffsetToSaberNormals = nPosition;
@@ -619,7 +615,7 @@ void MDL::WriteNodes(Node & node){
 
     //now comes all the data in reversed order
     /// SABER DATA
-    if(node.Head.nType & NODE_HAS_SABER){
+    if(node.Head.nType & NODE_SABER){
         WriteIntToPH(nPosition - 12, PHnOffsetToSaberVerts, node.Saber.nOffsetToSaberVerts);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
             node.Saber.SaberData[d].nOffsetVertex = nPosition;
@@ -644,13 +640,13 @@ void MDL::WriteNodes(Node & node){
     }
 
     /// AABB DATA
-    if(node.Head.nType & NODE_HAS_AABB){
+    if(node.Head.nType & NODE_AABB){
         WriteIntToPH(nPosition - 12, PHnOffsetToAabb, node.Walkmesh.nOffsetToAabb);
         WriteAabb(node.Walkmesh.RootAabb);
     }
 
     /// DANGLY DATA
-    if(node.Head.nType & NODE_HAS_DANGLY){
+    if(node.Head.nType & NODE_DANGLY){
         node.Dangly.ConstraintArray.ResetToSize(node.Dangly.Constraints.size());
         if(node.Dangly.Constraints.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToConstraints, node.Dangly.ConstraintArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToConstraints, node.Dangly.ConstraintArray.nOffset);
@@ -666,12 +662,13 @@ void MDL::WriteNodes(Node & node){
     }
 
     /// SKIN DATA
-    if(node.Head.nType & NODE_HAS_SKIN){
+    if(node.Head.nType & NODE_SKIN){
         node.Skin.nNumberOfBonemap = node.Skin.Bones.size();
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToBonemap, node.Skin.nOffsetToBonemap);
         else WriteIntToPH(0, PHnOffsetToBonemap, node.Skin.nOffsetToBonemap);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteFloat(node.Skin.Bones.at(d).fBonemap, 2);
+            if(bXbox) WriteInt(node.Skin.Bones.at(d).nBonemap, 5, 2);
+            else WriteFloat( (double) node.Skin.Bones.at(d).nBonemap, 2);
         }
         node.Skin.QBoneArray.ResetToSize(node.Skin.Bones.size());
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToQBones, node.Skin.QBoneArray.nOffset);
@@ -694,13 +691,13 @@ void MDL::WriteNodes(Node & node){
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         else WriteIntToPH(0, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteInt(0, 9); //This array is not in use, might as well fill it with zeros
+            WriteInt(0, 11); //This array is not in use, might as well fill it with zeros
         }
     }
 
     /// MDX DATA
 
-    if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
+    if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
         WriteIntToPH(Mdx->nPosition, PHnOffsetIntoMdx, node.Mesh.nOffsetIntoMdx);
         for(int d = 0; d < node.Mesh.nNumberOfVerts; d++){
             Vertex & vert = node.Mesh.Vertices.at(d);
@@ -710,9 +707,12 @@ void MDL::WriteNodes(Node & node){
                 Mdx->WriteFloat(vert.MDXData.vVertex.fZ, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-                Mdx->WriteFloat(vert.MDXData.vNormal.fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vNormal.fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vNormal.fZ, 2);
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fZ, 2);
+                }
+                else Mdx->WriteInt(CompressVector(vert.MDXData.vNormal), 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
                 Mdx->WriteFloat(vert.MDXData.vUV1.fX, 2);
@@ -731,65 +731,101 @@ void MDL::WriteNodes(Node & node){
                 Mdx->WriteFloat(vert.MDXData.vUV4.fY, 2);
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-                Mdx->WriteFloat(vert.MDXData.vTangent1[0].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[0].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[0].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[1].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[1].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[1].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[2].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[2].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent1[2].fZ, 2);
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[2]), 2);
+                }
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-                Mdx->WriteFloat(vert.MDXData.vTangent2[0].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[0].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[0].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[1].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[1].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[1].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[2].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[2].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent2[2].fZ, 2);
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[2]), 2);
+                }
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-                Mdx->WriteFloat(vert.MDXData.vTangent3[0].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[0].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[0].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[1].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[1].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[1].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[2].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[2].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent3[2].fZ, 2);
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[2]), 2);
+                }
             }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-                Mdx->WriteFloat(vert.MDXData.vTangent4[0].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[0].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[0].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[1].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[1].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[1].fZ, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[2].fX, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[2].fY, 2);
-                Mdx->WriteFloat(vert.MDXData.vTangent4[2].fZ, 2);
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[2]), 2);
+                }
             }
-            if(node.Head.nType & NODE_HAS_SKIN){
+            if(node.Head.nType & NODE_SKIN){
                 Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[0], 2);
                 Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[1], 2);
                 Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[2], 2);
                 Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[3], 2);
-                Mdx->WriteFloat(vert.MDXData.Weights.fWeightIndex[0], 2);
-                Mdx->WriteFloat(vert.MDXData.Weights.fWeightIndex[1], 2);
-                Mdx->WriteFloat(vert.MDXData.Weights.fWeightIndex[2], 2);
-                Mdx->WriteFloat(vert.MDXData.Weights.fWeightIndex[3], 2);
+                if(bXbox){
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[0], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[1], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[2], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[3], 5, 2);
+                }
+                else{
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[0], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[1], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[2], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[3], 2);
+                }
             }
         }
 
         /// Also write the extra empty vert data
         node.Mesh.MDXData.nNodeNumber = node.Head.nNodeNumber;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-            if(node.Head.nType & NODE_HAS_SKIN) node.Mesh.MDXData.vVertex.Set(1000000.0, 1000000.0, 1000000.0);
+            if(node.Head.nType & NODE_SKIN) node.Mesh.MDXData.vVertex.Set(1000000.0, 1000000.0, 1000000.0);
             else node.Mesh.MDXData.vVertex.Set(10000000.0, 10000000.0, 10000000.0);
             Mdx->WriteFloat(node.Mesh.MDXData.vVertex.fX, 8);
             Mdx->WriteFloat(node.Mesh.MDXData.vVertex.fY, 8);
@@ -877,28 +913,36 @@ void MDL::WriteNodes(Node & node){
             Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fY, 8);
             Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fZ, 8);
         }
-        if(node.Head.nType & NODE_HAS_SKIN){
+        if(node.Head.nType & NODE_SKIN){
             node.Mesh.MDXData.Weights.fWeightValue[0] = 1.0;
             node.Mesh.MDXData.Weights.fWeightValue[1] = 0.0;
             node.Mesh.MDXData.Weights.fWeightValue[2] = 0.0;
             node.Mesh.MDXData.Weights.fWeightValue[3] = 0.0;
-            node.Mesh.MDXData.Weights.fWeightIndex[0] = 0.0;
-            node.Mesh.MDXData.Weights.fWeightIndex[1] = 0.0;
-            node.Mesh.MDXData.Weights.fWeightIndex[2] = 0.0;
-            node.Mesh.MDXData.Weights.fWeightIndex[3] = 0.0;
+            node.Mesh.MDXData.Weights.nWeightIndex[0] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[1] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[2] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[3] = 0;
             Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[0], 8);
             Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[1], 8);
             Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[2], 8);
             Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[3], 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[0], 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[1], 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[2], 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightIndex[3], 8);
+            if(bXbox){
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[0], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[1], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[2], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[3], 8, 2);
+            }
+            else{
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[0], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[1], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[2], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[3], 8);
+            }
         }
     }
 
     /// MESH DATA
-    if(node.Head.nType & NODE_HAS_MESH){
+    if(node.Head.nType & NODE_MESH){
         node.Mesh.FaceArray.ResetToSize(node.Mesh.Faces.size());
         if(node.Mesh.Faces.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFaces, node.Mesh.FaceArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToFaces, node.Mesh.FaceArray.nOffset);
@@ -916,7 +960,7 @@ void MDL::WriteNodes(Node & node){
             WriteInt(face.nIndexVertex[1], 5, 2);
             WriteInt(face.nIndexVertex[2], 5, 2);
         }
-        if(node.Head.nType & NODE_HAS_SABER){
+        if(node.Head.nType & NODE_SABER){
             node.Mesh.IndexCounterArray.ResetToSize(0);
             WriteIntToPH(0, PHnOffsetToIndexCount, node.Mesh.IndexCounterArray.nOffset);
             WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
@@ -936,11 +980,13 @@ void MDL::WriteNodes(Node & node){
             WriteIntToPH(nPosition - 12, PHnOffsetToIndexCount, node.Mesh.IndexCounterArray.nOffset);
             node.Mesh.nVertIndicesCount = node.Mesh.Faces.size() * 3;
             WriteInt(node.Mesh.nVertIndicesCount, 1);
-            WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
-            for(int d = 0; d < node.Mesh.Vertices.size(); d++){
-                WriteFloat(node.Mesh.Vertices.at(d).fX, 2);
-                WriteFloat(node.Mesh.Vertices.at(d).fY, 2);
-                WriteFloat(node.Mesh.Vertices.at(d).fZ, 2);
+            if(!bXbox){
+                WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
+                for(int d = 0; d < node.Mesh.Vertices.size(); d++){
+                    WriteFloat(node.Mesh.Vertices.at(d).fX, 2);
+                    WriteFloat(node.Mesh.Vertices.at(d).fY, 2);
+                    WriteFloat(node.Mesh.Vertices.at(d).fZ, 2);
+                }
             }
             node.Mesh.IndexLocationArray.ResetToSize(1);
             WriteIntToPH(nPosition - 12, PHnOffsetToIndexLocation, node.Mesh.IndexLocationArray.nOffset);
@@ -959,7 +1005,7 @@ void MDL::WriteNodes(Node & node){
     }
 
     /// LIGHT DATA
-    if(node.Head.nType & NODE_HAS_LIGHT){
+    if(node.Head.nType & NODE_LIGHT){
         //WriteIntToPH(nPosition - 12, PHnOffsetToUnknownLightArray, node.Light.UnknownArray.nOffset);
         node.Light.FlareTextureNameArray.ResetToSize(node.Light.FlareTextureNames.size());
         if(node.Light.FlareTextureNames.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFlareTextureNames, node.Light.FlareTextureNameArray.nOffset);

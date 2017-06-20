@@ -9,7 +9,6 @@
     MDL::ExportDwkAscii()
     MDL::ExportWokAscii()
     RecursiveAabb() //Helper
-    PrepareFloat() //Helper
     MDL::ConvertToAscii()
 /**/
 
@@ -68,51 +67,21 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
         sReturn << "# MDLedit from KOTOR binary source " << sTimestamp.str();
-        sReturn << "\n# model " << mh->GH.sName.c_str();
+        sReturn << "\n# MODEL ASCII";
         sReturn << "\nnewmodel " << mh->GH.sName.c_str();
         sReturn << "\nsetsupermodel " << mh->GH.sName.c_str()<<" "<< mh->cSupermodelName.c_str();
         sReturn << "\nclassification " << ReturnClassificationName(mh->nClassification).c_str();
         sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale);
-        sReturn << "\n\nbeginmodelgeom " << mh->GH.sName.c_str();
+        sReturn << "\n";
+        sReturn << "\n# GEOM ASCII";
+        sReturn << "\nbeginmodelgeom " << mh->GH.sName.c_str();
         if(!mh->vLytPosition.Null())
             sReturn << "\n  layoutposition " << PrepareFloat(mh->vLytPosition.fX)<<" "<<PrepareFloat(mh->vLytPosition.fY)<<" "<<PrepareFloat(mh->vLytPosition.fZ);
-        sReturn << "\n  bmin " << PrepareFloat(mh->vBBmin.fX)<<" "<<PrepareFloat(mh->vBBmin.fY)<<" "<<PrepareFloat(mh->vBBmin.fZ);
-        sReturn << "\n  bmax " << PrepareFloat(mh->vBBmax.fX)<<" "<<PrepareFloat(mh->vBBmax.fY)<<" "<<PrepareFloat(mh->vBBmax.fZ);
-        sReturn << "\n  radius " << PrepareFloat(mh->fRadius);
+        sReturn     << "\n  bmin " << PrepareFloat(mh->vBBmin.fX)<<" "<<PrepareFloat(mh->vBBmin.fY)<<" "<<PrepareFloat(mh->vBBmin.fZ);
+        sReturn     << "\n  bmax " << PrepareFloat(mh->vBBmax.fX)<<" "<<PrepareFloat(mh->vBBmax.fY)<<" "<<PrepareFloat(mh->vBBmax.fZ);
+        sReturn     << "\n  radius " << PrepareFloat(mh->fRadius);
         for(int n = 0; n < mh->ArrayOfNodes.size(); n++){
-            Node & node = mh->ArrayOfNodes.at(n);
-            if(node.Head.nType & NODE_HAS_HEADER){
-                ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
-            }
-            else{
-                //std::cout<<"Writing ASCII WARNING: Headerless (ghost?) node! Offset: "<<node.nOffset<<"\n";
-                sReturn << "\nname " << mh->Names.at(n).sName;
-            }
-            if(node.Head.nType & NODE_HAS_AABB){
-                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-                ConvertToAscii(CONVERT_AABB, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_SABER){
-                ConvertToAscii(CONVERT_SABER, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_DANGLY){
-                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-                ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_SKIN && !bSkinToTrimesh){
-                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-                ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_MESH){
-                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_EMITTER){
-                ConvertToAscii(CONVERT_EMITTER, sReturn, (void*) &node);
-            }
-            else if(node.Head.nType & NODE_HAS_LIGHT){
-                ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
-            }
-            if(node.Head.nType != 0) sReturn << "\nendnode";
+            ConvertToAscii(CONVERT_NODE, sReturn, (void*) &n);
         }
         sReturn << "\nendmodelgeom "<<mh->GH.sName.c_str()<<"\n";
 
@@ -161,17 +130,61 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         sReturn << "\n    endnode";
     }
+    else if(nDataType == CONVERT_NODE){
+        if(!FH) return;
+        ModelHeader * mh = &FH->MH;
+        int n = *((int*) Data);
+        Node & node = mh->ArrayOfNodes.at(n);
+
+        if(node.Head.nType & NODE_HEADER){
+            ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
+        }
+        else{
+            //std::cout<<"Writing ASCII WARNING: Headerless (ghost?) node! Offset: "<<node.nOffset<<"\n";
+            sReturn << "\nname " << mh->Names.at(n).sName;
+        }
+        if(node.Head.nType & NODE_AABB){
+            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+            ConvertToAscii(CONVERT_AABB, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_SABER){
+            ConvertToAscii(CONVERT_SABER, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_DANGLY){
+            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+            ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_SKIN && !bSkinToTrimesh){
+            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+            ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_MESH){
+            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_REFERENCE){
+            ConvertToAscii(CONVERT_REFERENCE, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_EMITTER){
+            ConvertToAscii(CONVERT_EMITTER, sReturn, (void*) &node);
+        }
+        else if(node.Head.nType & NODE_LIGHT){
+            ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
+        }
+        if(node.Head.nType != 0) sReturn << "\nendnode";
+    }
     else if(nDataType == CONVERT_HEADER){
         Node * node = (Node*) Data;
         sReturn << "\nnode ";
-        if(node->Head.nType & NODE_HAS_AABB) sReturn << "aabb";
-        else if(node->Head.nType & NODE_HAS_DANGLY) sReturn << "danglymesh";
-        else if(node->Head.nType & NODE_HAS_SKIN) sReturn << (!bSkinToTrimesh ? "skin" : "trimesh");
-        else if(node->Head.nType & NODE_HAS_SABER) sReturn << (!bLightsaberToTrimesh ? "lightsaber" : "trimesh");
-        else if(node->Head.nType & NODE_HAS_MESH) sReturn << "trimesh";
-        else if(node->Head.nType & NODE_HAS_EMITTER) sReturn << "emitter";
-        else if(node->Head.nType & NODE_HAS_LIGHT) sReturn << "light";
-        else if(node->Head.nType & NODE_HAS_HEADER) sReturn << "dummy";
+        if(     node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_AABB)) sReturn << "aabb";
+        else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_DANGLY)) sReturn << "danglymesh";
+        else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SKIN)) sReturn << (!bSkinToTrimesh ? "skin" : "trimesh");
+        else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SABER)) sReturn << (!bLightsaberToTrimesh ? "lightsaber" : "trimesh");
+        else if(node->Head.nType == (NODE_HEADER | NODE_MESH)) sReturn << "trimesh";
+        else if(node->Head.nType == (NODE_HEADER | NODE_REFERENCE)) sReturn << "reference";
+        else if(node->Head.nType == (NODE_HEADER | NODE_EMITTER)) sReturn << "emitter";
+        else if(node->Head.nType == (NODE_HEADER | NODE_LIGHT)) sReturn << "light";
+        else if(node->Head.nType == (NODE_HEADER)) sReturn << "dummy";
+        else sReturn << "dummy"; /// A catch-all
         sReturn << " ";
         sReturn << MakeUniqueName(node->Head.nNodeNumber);
         sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
@@ -243,6 +256,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  inherit_part " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
         sReturn << "\n  depth_texture " << (node->Emitter.nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
         sReturn << "\n  renderorder " << (node->Emitter.nFlags & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
+    }
+    else if(nDataType == CONVERT_REFERENCE){
+        Node * node = (Node*) Data;
+        sReturn << "\n  refModel " << node->Reference.sRefModel.c_str();
+        sReturn << "\n  reattachable " << node->Reference.nReattachable;
     }
     else if(nDataType == CONVERT_MESH){
         Node * node = (Node*) Data;
@@ -350,11 +368,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   ";
                 int i = 0;
-                int nBoneNumber; // = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                signed short nBoneNumber; // = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
                 //std::cout<<"Bone name index array size: "<<node->Skin.BoneNameIndices.size()<<"\n";
                 bool bDependentVert = false;
                 while(i < 4){
-                    nBoneNumber = (signed int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                    nBoneNumber = node->Mesh.Vertices.at(n).MDXData.Weights.nWeightIndex.at(i);
                     //std::cout<<"Reading bone number "<<nBoneNumber<<"\n";
                     if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
                         int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
@@ -387,8 +405,12 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_AABB){
         Node * node = (Node*) Data;
+
+        /// Write out aabb tree
         sReturn << "\n  aabb";
         RecursiveAabb(&node->Walkmesh.RootAabb, sReturn);
+
+        /// Write out room links
         if(Wok){
             if(Wok->GetData()){
                 BWMHeader & data = *Wok->GetData();

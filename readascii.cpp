@@ -542,7 +542,7 @@ bool ASCII::Read(MDL & Mdl){
                                         nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
 
                                         //We also add it to the bonemap.
-                                        node.Skin.Bones[nNodeNumber].fBonemap = (double) nBoneIndex;
+                                        node.Skin.Bones[nNodeNumber].nBonemap = nBoneIndex;
 
                                         //We can just add it into the mdl's bone index list as well, what the heck
                                         if(nBoneIndex < 18){
@@ -551,7 +551,7 @@ bool ASCII::Read(MDL & Mdl){
                                         else Warning("Warning! A skin has more than 18 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
                                     }
                                     //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
-                                    weight.fWeightIndex[z] = (double) nBoneIndex;
+                                    weight.nWeightIndex[z] = nBoneIndex;
 
                                     //Since we found the name, we don't need to keep looping anymore
                                     nNodeNumber = FH->MH.Names.size();
@@ -755,14 +755,15 @@ bool ASCII::Read(MDL & Mdl){
                     if(!bFound){
                         std::cout<<"ReadUntilText() ERROR: a node is without any other specification.\n";
                     }
-                    if(sID == "dummy") nType = NODE_HAS_HEADER;
-                    else if(sID == "light") nType = NODE_HAS_HEADER | NODE_HAS_LIGHT;
-                    else if(sID == "emitter") nType = NODE_HAS_HEADER | NODE_HAS_EMITTER;
-                    else if(sID == "trimesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH;
-                    else if(sID == "skin") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SKIN;
-                    else if(sID == "danglymesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_DANGLY;
-                    else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
-                    else if(sID == "lightsaber") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_SABER;
+                    if(sID == "dummy") nType = NODE_HEADER;
+                    else if(sID == "light") nType = NODE_HEADER | NODE_LIGHT;
+                    else if(sID == "emitter") nType = NODE_HEADER | NODE_EMITTER;
+                    else if(sID == "reference") nType = NODE_HEADER | NODE_REFERENCE;
+                    else if(sID == "trimesh") nType = NODE_HEADER | NODE_MESH;
+                    else if(sID == "skin") nType = NODE_HEADER | NODE_MESH | NODE_SKIN;
+                    else if(sID == "danglymesh") nType = NODE_HEADER | NODE_MESH | NODE_DANGLY;
+                    else if(sID == "aabb") nType = NODE_HEADER | NODE_MESH | NODE_AABB;
+                    else if(sID == "lightsaber") nType = NODE_HEADER | NODE_MESH | NODE_SABER;
                     else if(bFound){
                         std::cout<<"ReadUntilText() has found some text (type?) that we cannot interpret: "<<sID<<"\n";
                         bError = true;
@@ -783,14 +784,14 @@ bool ASCII::Read(MDL & Mdl){
                     node.nAnimation = nAnimation;
 
                     //Initialize node <-- This is now mostly taken care of in the struct definitions, so no need for anything but the default values here.
-                    if(nType & NODE_HAS_HEADER){
+                    if(nType & NODE_HEADER){
                         node.Head.vPos.Set(0.0, 0.0, 0.0);
                         node.Head.oOrient.SetQuaternion(0.0, 0.0, 0.0, 1.0);
                     }
-                    if(nType & NODE_HAS_EMITTER){
+                    if(nType & NODE_EMITTER){
                         node.Emitter.cDepthTextureName = "NULL";
                     }
-                    if(nType & NODE_HAS_MESH){
+                    if(nType & NODE_MESH){
                         node.Mesh.nSaberUnknown1 = 3;
                         node.Mesh.nMdxDataBitmap = MDX_FLAG_VERTEX | MDX_FLAG_HAS_NORMAL;
                     }
@@ -811,7 +812,7 @@ bool ASCII::Read(MDL & Mdl){
                     else bError;
                     SkipLine();
                 }
-                else if(sID == "parent" && nNode & NODE_HAS_HEADER){
+                else if(sID == "parent" && nNode & NODE_HEADER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFound = ReadUntilText(sID, false);
                     if(bGeometry){
@@ -859,128 +860,128 @@ bool ASCII::Read(MDL & Mdl){
                 }
                 /// Now come the various node fields
                 /// For LIGHT
-                else if(sID == "lightpriority" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "lightpriority" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nLightPriority = nConvert;
                     SkipLine();
                 }
-                else if(sID == "shadow" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "shadow" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nShadow = nConvert;
                     SkipLine();
                 }
-                else if(sID == "affectdynamic" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "affectdynamic" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nAffectDynamic = nConvert;
                     SkipLine();
                 }
-                else if(sID == "ndynamictype" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "ndynamictype" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nDynamicType = nConvert;
                     SkipLine();
                 }
-                else if(sID == "ambientonly" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "ambientonly" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nAmbientOnly = nConvert;
                     SkipLine();
                 }
-                else if(sID == "fadinglight" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "fadinglight" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nFadingLight = nConvert;
                     SkipLine();
                 }
-                else if((sID == "lensflares" || sID == "flare") && nNode & NODE_HAS_LIGHT){
+                else if((sID == "lensflares" || sID == "flare") && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Light.nFlare = nConvert;
                     SkipLine();
                 }
-                else if(sID == "flareradius" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "flareradius" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Light.fFlareRadius = fConvert;
                     SkipLine();
                 }
                 /// For EMITTER
-                else if(sID == "deadspace" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "deadspace" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fDeadSpace = fConvert;
                     SkipLine();
                 }
-                else if(sID == "blastlength" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "blastlength" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fBlastLength = fConvert;
                     SkipLine();
                 }
-                else if(sID == "blastradius" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "blastradius" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fBlastRadius = fConvert;
                     SkipLine();
                 }
-                else if(sID == "numbranches" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "numbranches" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nBranchCount = nConvert;
                     SkipLine();
                 }
-                else if(sID == "controlptsmoothing" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "controlptsmoothing" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Emitter.fControlPointSmoothing = fConvert;
                     SkipLine();
                 }
-                else if(sID == "xgrid" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "xgrid" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nxGrid = nConvert;
                     SkipLine();
                 }
-                else if(sID == "ygrid" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "ygrid" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nyGrid = nConvert;
                     SkipLine();
                 }
-                else if(sID == "spawntype" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "spawntype" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nSpawnType = nConvert;
                     SkipLine();
                 }
-                else if(sID == "twosidedtex" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "twosidedtex" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nTwosidedTex = nConvert;
                     SkipLine();
                 }
-                else if(sID == "loop" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "loop" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nLoop = nConvert;
                     SkipLine();
                 }
-                else if(sID == "emitter_unknown_1" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "emitter_unknown_1" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nUnknown1 = nConvert;
                     SkipLine();
                 }
-                else if(sID == "m_bframeblending" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "m_bframeblending" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nFrameBlending = nConvert;
                     SkipLine();
                 }
-                else if(sID == "m_sdepthtexturename" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "m_sdepthtexturename" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -993,13 +994,13 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "emitter_unknown_2" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "emitter_unknown_2" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Emitter.nUnknown2 = nConvert;
                     SkipLine();
                 }
-                else if(sID == "update" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "update" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1012,7 +1013,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "render" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "render" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1025,7 +1026,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "blend" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "blend" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1038,7 +1039,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "texture" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "texture" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1054,7 +1055,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "chunkname" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "chunkname" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1068,7 +1069,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "p2p" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "p2p" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1076,7 +1077,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "p2p_sel" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "p2p_sel" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1084,7 +1085,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "affectedbywind" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "affectedbywind" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1092,7 +1093,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "m_istinted" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "m_istinted" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1100,7 +1101,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "bounce" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "bounce" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1108,7 +1109,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "random" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "random" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1116,7 +1117,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "inherit" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "inherit" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1124,7 +1125,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "inheritvel" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "inheritvel" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1132,7 +1133,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "inherit_local" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "inherit_local" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1140,7 +1141,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "splat" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "splat" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1148,7 +1149,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "inherit_part" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "inherit_part" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1156,7 +1157,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "depth_texture" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "depth_texture" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1164,7 +1165,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "renderorder" && nNode & NODE_HAS_EMITTER){
+                else if(sID == "renderorder" && nNode & NODE_EMITTER){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1172,8 +1173,31 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
+                /// For REFERENCE
+                else if(sID == "refmodel" && nNode & NODE_REFERENCE){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    bFound = ReadUntilText(sID, false);
+                    if(bFound){
+                        if(sID.size() > 32){
+                            Error("Reference model name larger than the limit, 32 characters! Will truncate and continue.");
+                            sID.resize(32);
+                        }
+                        else if(sID.size() > 16){
+                            Warning("Reference model name larger than 16 characters! This may cause problems in the game.");
+                        }
+                        node.Reference.sRefModel = sID;
+                    }
+                    SkipLine();
+                }
+                else if(sID == "reattachable" && nNode & NODE_REFERENCE){
+                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
+                    if(ReadInt(nConvert)) node.Reference.nReattachable = nConvert;
+                    SkipLine();
+                }
                 /// For MESH
-                else if(sID == "bitmap" && nNode & NODE_HAS_MESH){
+                else if(sID == "bitmap" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1190,7 +1214,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "bitmap2" && nNode & NODE_HAS_MESH){
+                else if(sID == "bitmap2" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1207,7 +1231,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "texture0" && nNode & NODE_HAS_MESH){
+                else if(sID == "texture0" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1221,7 +1245,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "texture1" && nNode & NODE_HAS_MESH){
+                else if(sID == "texture1" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1235,7 +1259,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "lightmap" && nNode & NODE_HAS_MESH){
+                else if(sID == "lightmap" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     bFound = ReadUntilText(sID, false);
@@ -1254,7 +1278,7 @@ bool ASCII::Read(MDL & Mdl){
                     }
                     SkipLine();
                 }
-                else if(sID == "diffuse" && nNode & NODE_HAS_MESH){
+                else if(sID == "diffuse" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fDiffuse.fR = fConvert;
@@ -1265,7 +1289,7 @@ bool ASCII::Read(MDL & Mdl){
                     else bError = true;
                     SkipLine();
                 }
-                else if(sID == "ambient" && nNode & NODE_HAS_MESH){
+                else if(sID == "ambient" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fAmbient.fR = fConvert;
@@ -1276,7 +1300,7 @@ bool ASCII::Read(MDL & Mdl){
                     else bError = true;
                     SkipLine();
                 }
-                else if(sID == "tangentspace" && nNode & NODE_HAS_MESH){
+                else if(sID == "tangentspace" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)){
@@ -1290,123 +1314,123 @@ bool ASCII::Read(MDL & Mdl){
                     if(bFound) sBumpmapped.push_back(sID);
                     SkipLine();
                 }
-                else if(sID == "lightmapped" && nNode & NODE_HAS_MESH){
+                else if(sID == "lightmapped" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nHasLightmap = nConvert;
                     SkipLine();
                 }
-                else if(sID == "rotatetexture" && nNode & NODE_HAS_MESH){
+                else if(sID == "rotatetexture" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nRotateTexture = nConvert;
                     SkipLine();
                 }
-                else if(sID == "m_blsbackgroundgeometry" && nNode & NODE_HAS_MESH){
+                else if(sID == "m_blsbackgroundgeometry" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nBackgroundGeometry = nConvert;
                     SkipLine();
                 }
-                else if(sID == "dirt_enabled" && nNode & NODE_HAS_MESH){
+                else if(sID == "dirt_enabled" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nDirtEnabled = nConvert;
                     SkipLine();
                 }
-                else if(sID == "dirt_texture" && nNode & NODE_HAS_MESH){
+                else if(sID == "dirt_texture" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nDirtTexture = nConvert;
                     SkipLine();
                 }
-                else if(sID == "dirt_worldspace" && nNode & NODE_HAS_MESH){
+                else if(sID == "dirt_worldspace" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nDirtCoordSpace = nConvert;
                     SkipLine();
                 }
-                else if(sID == "hologram_donotdraw" && nNode & NODE_HAS_MESH){
+                else if(sID == "hologram_donotdraw" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nHideInHolograms = nConvert;
                     SkipLine();
                 }
-                else if(sID == "beaming" && nNode & NODE_HAS_MESH){
+                else if(sID == "beaming" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nBeaming = nConvert;
                     SkipLine();
                 }
-                else if(sID == "render" && nNode & NODE_HAS_MESH){
+                else if(sID == "render" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nRender = nConvert;
                     SkipLine();
                 }
-                else if(sID == "shadow" && nNode & NODE_HAS_MESH){
+                else if(sID == "shadow" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nShadow = nConvert;
                     SkipLine();
                 }
-                else if(sID == "transparencyhint" && nNode & NODE_HAS_MESH){
+                else if(sID == "transparencyhint" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nTransparencyHint = nConvert;
                     SkipLine();
                 }
-                else if(sID == "animateuv" && nNode & NODE_HAS_MESH){
+                else if(sID == "animateuv" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadInt(nConvert)) node.Mesh.nAnimateUV = nConvert;
                     SkipLine();
                 }
-                else if(sID == "uvdirectionx" && nNode & NODE_HAS_MESH){
+                else if(sID == "uvdirectionx" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVDirectionX = fConvert;
                     SkipLine();
                 }
-                else if(sID == "uvdirectiony" && nNode & NODE_HAS_MESH){
+                else if(sID == "uvdirectiony" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVDirectionY = fConvert;
                     SkipLine();
                 }
-                else if(sID == "uvjitter" && nNode & NODE_HAS_MESH){
+                else if(sID == "uvjitter" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVJitter = fConvert;
                     SkipLine();
                 }
-                else if(sID == "uvjitterspeed" && nNode & NODE_HAS_MESH){
+                else if(sID == "uvjitterspeed" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Mesh.fUVJitterSpeed = fConvert;
                     SkipLine();
                 }
                 /// For DANGLY
-                else if(sID == "displacement" && nNode & NODE_HAS_DANGLY){
+                else if(sID == "displacement" && nNode & NODE_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fDisplacement = fConvert;
                     SkipLine();
                 }
-                else if(sID == "tightness" && nNode & NODE_HAS_DANGLY){
+                else if(sID == "tightness" && nNode & NODE_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fTightness = fConvert;
                     SkipLine();
                 }
-                else if(sID == "period" && nNode & NODE_HAS_DANGLY){
+                else if(sID == "period" && nNode & NODE_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                     if(ReadFloat(fConvert)) node.Dangly.fPeriod = fConvert;
                     SkipLine();
                 }
                 /// Next we have the DATA LISTS
-                else if(sID == "verts" && nNode & NODE_HAS_MESH){
+                else if(sID == "verts" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bVerts = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1414,7 +1438,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "faces" && nNode & NODE_HAS_MESH){
+                else if(sID == "faces" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFaces = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1422,7 +1446,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "tverts" && nNode & NODE_HAS_MESH){
+                else if(sID == "tverts" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTverts = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1432,7 +1456,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "texindices1" && nNode & NODE_HAS_MESH){
+                else if(sID == "texindices1" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTexIndices1 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1442,7 +1466,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "lightmaptverts" && nNode & NODE_HAS_MESH || sID == "tverts1" && nNode & NODE_HAS_MESH){
+                else if(sID == "lightmaptverts" && nNode & NODE_MESH || sID == "tverts1" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTverts1 = true;
                     if(sID == "lightmaptverts") bMagnusll = true;
@@ -1453,7 +1477,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "texindices2" && nNode & NODE_HAS_MESH){
+                else if(sID == "texindices2" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTexIndices2 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1463,7 +1487,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "tverts2" && nNode & NODE_HAS_MESH){
+                else if(sID == "tverts2" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTverts2 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1473,7 +1497,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "texindices3" && nNode & NODE_HAS_MESH){
+                else if(sID == "texindices3" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTexIndices3 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1483,7 +1507,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "tverts3" && nNode & NODE_HAS_MESH){
+                else if(sID == "tverts3" && nNode & NODE_MESH){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTverts3 = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1493,7 +1517,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "weights" && nNode & NODE_HAS_SKIN){
+                else if(sID == "weights" && nNode & NODE_SKIN){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bWeights = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1503,7 +1527,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "aabb" && nNode & NODE_HAS_AABB){
+                else if(sID == "aabb" && nNode & NODE_AABB){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bAabb = true;
                     Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
@@ -1513,7 +1537,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ReadFloat(fConvert)) nPosition = nSavePos; //The data starts in this line, revert position
                     else SkipLine(); //if not, then data starts next line, so it is okay to skip
                 }
-                else if(sID == "roomlinks" && nNode & NODE_HAS_AABB){
+                else if(sID == "roomlinks" && nNode & NODE_AABB){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bRoomLinks = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1521,7 +1545,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "constraints" && nNode & NODE_HAS_DANGLY){
+                else if(sID == "constraints" && nNode & NODE_DANGLY){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bConstraints = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1529,7 +1553,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "texturenames" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "texturenames" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bTextureNames = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1537,7 +1561,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "flaresizes" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "flaresizes" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFlareSizes = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1545,7 +1569,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "flarepositions" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "flarepositions" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFlarePositions = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1553,7 +1577,7 @@ bool ASCII::Read(MDL & Mdl){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "flarecolorshifts" && nNode & NODE_HAS_LIGHT){
+                else if(sID == "flarecolorshifts" && nNode & NODE_LIGHT){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     bFlareColorShifts = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -1579,7 +1603,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
-                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_HAS_MESH){
+                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_MESH){
                         //For non-emitter and non-light controllers
                         ctrl.nPadding[0] = 50;
                         ctrl.nPadding[1] = 18;
@@ -1692,7 +1716,7 @@ bool ASCII::Read(MDL & Mdl){
                     if(ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType == CONTROLLER_HEADER_SCALING ||
-                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_HAS_MESH){
+                       Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType % NODE_MESH){
                         //For non-emitter and non-light controllers
                         ctrl.nPadding[0] = 50;
                         ctrl.nPadding[1] = 18;
@@ -1820,7 +1844,7 @@ bool ASCII::Read(MDL & Mdl){
                         ctrl.nPadding[1] = 18;
                         ctrl.nPadding[2] = 0;
                     }
-                    else if(Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_LIGHT){
+                    else if(Mdl.GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_LIGHT){
                         ctrl.nPadding[0] = -5;
                         ctrl.nPadding[1] = 54;
                         ctrl.nPadding[2] = 0;
@@ -2039,7 +2063,7 @@ bool ASCII::Read(MDL & Mdl){
         for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
             //std::cout<<"Checking node\n";
             Node & node = Data.MH.ArrayOfNodes.at(n);
-            if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB) && !(node.Head.nType & NODE_HAS_SABER)){
+            if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB) && !(node.Head.nType & NODE_SABER)){
                 if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
                     if(sBumpmapped.at(s) == node.Mesh.cTexture1.c_str()){
                         node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_HAS_TANGENT1;
@@ -2072,7 +2096,7 @@ void MDL::GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector v
     node.Head.ChildIndices.resize(0); //Reset child array
     node.Head.ChildIndices.reserve(ArrayOfNodes.size());
 
-    if(node.Head.nType & NODE_HAS_MESH){
+    if(node.Head.nType & NODE_MESH){
         /// Let's do the transformations/translations here. First orientation, then translation.
         Location loc = node.GetLocation();
         vFromRoot.Rotate(loc.oOrientation.GetQuaternion());
@@ -2147,19 +2171,11 @@ void MDL::AsciiPostProcess(){
         if(sNode.find("__dpl") != std::string::npos){
             sNode.resize(sNode.find("__dpl"));
         }
-        /*
-        for(int i = 0; i < 4 && sNode.length() > 5 + i; i++){
-            if(safesubstr(sNode, sNode.length() - 5 - i, 5) == "__dpl"){
-                    sNode = safesubstr(sNode, 0, sNode.length() - 5 - i);
-                    i = 6;
-            }
-        }
-        */
     }
 
     /// PART 1 ///
     /// Gather all the children (the indices!!!)
-    /// This part means going from every node only specifying its parent to everyone node also specifying its children
+    /// This part means going from every node only specifying its parent to every node also specifying its children
     // 1. Gather children for animations
     for(int i = 0; i < Data.MH.Animations.size(); i++){
         Animation & anim = Data.MH.Animations[i];
@@ -2212,8 +2228,7 @@ void MDL::AsciiPostProcess(){
     Report("Interpreting ascii data...");
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
-        if(node.Head.nType & NODE_HAS_SABER){
-
+        if(node.Head.nType & NODE_SABER){
             /// Saber interpretation goes here.
             if((node.Mesh.TempVerts.size() == 16 && node.Mesh.TempTverts.size() == 16) ||
                 (node.Mesh.TempVerts.size() == 176 && node.Mesh.TempTverts.size() == 176)){
@@ -2273,11 +2288,11 @@ void MDL::AsciiPostProcess(){
             }
             else{
                 std::cout<<"Warning! Requirements for saber mesh not met! Converting to trimesh...\n";
-                node.Head.nType = NODE_HAS_HEADER | NODE_HAS_MESH;
+                node.Head.nType = NODE_HEADER | NODE_MESH;
             }
         }
 
-        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_SABER)){
+        if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
             std::vector<Vector> vectorarray;
             vectorarray.reserve(node.Mesh.Faces.size()*3);
             node.Mesh.fTotalArea = 0.0;
@@ -2307,12 +2322,12 @@ void MDL::AsciiPostProcess(){
 
                             vert.MDXData.vVertex = node.Mesh.TempVerts.at(face.nIndexVertex[i]);
 
-                            if(node.Head.nType & NODE_HAS_DANGLY){
+                            if(node.Head.nType & NODE_DANGLY){
                                 node.Dangly.Data2.push_back(node.Mesh.TempVerts.at(face.nIndexVertex[i]));
                                 node.Dangly.Constraints.push_back(node.Dangly.TempConstraints.at(face.nIndexVertex[i]));
                             }
 
-                            if(node.Head.nType & NODE_HAS_SKIN){
+                            if(node.Head.nType & NODE_SKIN){
                                 vert.MDXData.Weights = node.Skin.TempWeights.at(face.nIndexVertex[i]);
                             }
                         }
@@ -2382,62 +2397,61 @@ void MDL::AsciiPostProcess(){
                 Vector EUV2 = v3UV - v1UV;
                 Vector EUV3 = v3UV - v2UV;
 
-                //This is for face normal
-                    face.vNormal = cross(Edge1, Edge2); //Cross product, unnormalized
-                    face.vNormal.Normalize();
-                //This is for the distance.
-                    face.fDistance = - (face.vNormal.fX * v1.fX +
-                                        face.vNormal.fY * v1.fY +
-                                        face.vNormal.fZ * v1.fZ);
-                //Area calculation
-                    face.fArea = HeronFormulaEdge(Edge1, Edge2, Edge3);
-                    face.fAreaUV = HeronFormulaEdge(EUV1, EUV2, EUV3);
-                    node.Mesh.fTotalArea += face.fArea;
-                //Tangent space vectors
-                    //Now comes the calculation. Will be using edges 1 and 2
-                    double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
-                    //This is division, need to check for 0
-                    if(r != 0){
-                        r = 1.0 / r;
-                    }
-                    else{
-                        /**
-                        It can be 0 in several ways.
-                        1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
-                        2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
-                        3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
-                        4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
-                        /**/
-                        //ndix UR's magic factor
-                        r = 2406.6388;
-                    }
-                    face.vTangent = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
-                    face.vBitangent = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
-                    face.vTangent.Normalize();
-                    face.vBitangent.Normalize();
-                    if(face.vTangent.Null()){
-                        face.vTangent = Vector(1.0, 0.0, 0.0);
-                    }
-                    if(face.vBitangent.Null()){
-                        face.vBitangent = Vector(1.0, 0.0, 0.0);
-                    }
-                    //Handedness
-                    Vector vCross = (face.vNormal / face.vTangent);
-                    double fDot = vCross * face.vBitangent;
-                    if(fDot > 0.0000000001){
-                        face.vTangent *= -1.0;
-                    }
-                    //Now check if we need to invert  T and B. But first we need a UV normal
-                    Vector vNormalUV = EUV1 / EUV2; //cross product
-                    if(vNormalUV.fZ < 0.0){
-                        face.vTangent *= -1.0;
-                        face.vBitangent *= -1.0;
-                    }
+                /// This is for the face normal
+                face.vNormal = cross(Edge1, Edge2); //Cross product, unnormalized
+                face.vNormal.Normalize();
 
-                //Face Bounding Box calculation for AABB tree
-                if(node.Head.nType & NODE_HAS_AABB){
+                /// This is for the distance.
+                face.fDistance = - (face.vNormal.fX * v1.fX +
+                                    face.vNormal.fY * v1.fY +
+                                    face.vNormal.fZ * v1.fZ);
+
+                /// Area calculation
+                face.fArea = HeronFormulaEdge(Edge1, Edge2, Edge3);
+                face.fAreaUV = HeronFormulaEdge(EUV1, EUV2, EUV3);
+                node.Mesh.fTotalArea += face.fArea;
+
+                /// Tangent space vectors
+                //Now comes the calculation. Will be using edges 1 and 2
+                double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
+                //This is division, need to check for 0
+                if(r != 0){
+                    r = 1.0 / r;
+                }
+                else{
+                    /**
+                    It can be 0 in several ways.
+                    1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
+                    2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
+                    3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
+                    4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
+                    /**/
+                    //ndix UR's magic factor
+                    r = 2406.6388;
+                }
+                face.vTangent = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
+                face.vBitangent = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
+                face.vTangent.Normalize();
+                face.vBitangent.Normalize();
+                if(face.vTangent.Null()) face.vTangent = Vector(1.0, 0.0, 0.0);
+                if(face.vBitangent.Null()) face.vBitangent = Vector(1.0, 0.0, 0.0);
+
+                //Handedness
+                Vector vCross = cross(face.vNormal, face.vTangent);
+                double fDot = dot(vCross, face.vBitangent);
+                if(fDot > 0.0000000001) face.vTangent *= -1.0;
+
+                //Now check if we need to invert  T and B. But first we need a UV normal
+                Vector vNormalUV = cross(EUV1, EUV2); //cross product
+                if(vNormalUV.fZ < 0.0){
+                    face.vTangent *= -1.0;
+                    face.vBitangent *= -1.0;
+                }
+
+                /// Face Bounding Box calculation for AABB tree
+                if(node.Head.nType & NODE_AABB){
                     face.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
-                    face.vBBmin = Vector(10000.0, 10000.0, 10000.0);
+                    face.vBBmin = Vector( 10000.0,  10000.0,  10000.0);
                     face.vCentroid = Vector(0.0, 0.0, 0.0);
                     for(int i = 0; i < 3; i++){
                         face.vBBmax.fX = std::max(face.vBBmax.fX, node.Mesh.Vertices.at(face.nIndexVertex[i]).fX);
@@ -2466,6 +2480,7 @@ void MDL::AsciiPostProcess(){
                 node.Mesh.vAverage += vectorarray.at(v);
             }
             node.Mesh.vAverage /= (double) vectorarray.size();
+
             /// Now find the radius as well!
             node.Mesh.fRadius = 0.0;
             for(int v = 0; v < vectorarray.size(); v++){
@@ -2546,8 +2561,8 @@ void MDL::AsciiPostProcess(){
             node.Skin.TempWeights.shrink_to_fit();
         }
 
-        if(node.Head.nType & NODE_HAS_MESH &&
-           !(node.Head.nType & NODE_HAS_SABER) &&
+        if(node.Head.nType & NODE_MESH &&
+           !(node.Head.nType & NODE_SABER) &&
            Data.MH.Names.at(node.Head.nNodeNumber).sName.substr(0, 6) == "2081__" &&
            (node.Mesh.Faces.size() == 12  /*|| node.Mesh.Faces.size() == 24*/) &&
            node.Mesh.Vertices.size() == 16 )
@@ -2708,13 +2723,13 @@ void MDL::AsciiPostProcess(){
                     }
 
                     /// Convert trimesh to lightsaber here
-                    node.Head.nType = node.Head.nType | NODE_HAS_SABER;
+                    node.Head.nType = node.Head.nType | NODE_SABER;
                     Data.MH.Names.at(node.Head.nNodeNumber).sName = Data.MH.Names.at(node.Head.nNodeNumber).sName.substr(6);
                 }
             }
         }
 
-        if(node.Head.nType & NODE_HAS_SABER){
+        if(node.Head.nType & NODE_SABER){
             std::array<std::array<int, 3>, 12> FaceIndices = {{{0,4,5},{1,0,5},{1,5,2},
                                                               {2,5,6},{3,2,6},{3,6,7},
                                                               {88+4,88+0,88+5},{88+0,88+1,88+5},{88+5,88+1,88+2},
@@ -2726,12 +2741,6 @@ void MDL::AsciiPostProcess(){
                                             node.Saber.SaberData.at(FaceIndices[v][1]).vVertex,
                                             node.Saber.SaberData.at(FaceIndices[v][2]).vVertex);
             }
-            /*
-            std::cout<<"Printing saber face normals:\n";
-            for(int v = 0; v < 12; v++){
-                std::cout<<vFaceNormals[v].Print()<<"\n";
-            }
-            */
 
             std::array<double, 12> fFaceAreas;
             for(int v = 0; v < 12; v++){
@@ -2771,23 +2780,13 @@ void MDL::AsciiPostProcess(){
                 }
                 vCurrent.Normalize();
             }
-            /*
-            std::cout<<"Printing saber vert normals:\n";
-            for(int v = 0; v < 8; v++){
-                std::cout<<vVertNormals[v].Print()<<"\n";
-            }
-            */
             for(int v = 0; v < node.Saber.SaberData.size(); v++){
-                if(v < node.Saber.SaberData.size()/2){
-                    node.Saber.SaberData.at(v).vNormal = vVertNormals.at(v%4);
-                }
-                else{
-                    node.Saber.SaberData.at(v).vNormal = vVertNormals.at(4 + v%4);
-                }
+                if(v < node.Saber.SaberData.size()/2) node.Saber.SaberData.at(v).vNormal = vVertNormals.at(v%4);
+                else node.Saber.SaberData.at(v).vNormal = vVertNormals.at(4 + v%4);
             }
         }
 
-        if(node.Head.nType & NODE_HAS_AABB){
+        if(node.Head.nType & NODE_AABB){
             if(Wok) Warning("Found an aabb node, but Wok already exists! Skipping this node...");
             else{
                 Wok.reset(new WOK());
@@ -2805,20 +2804,22 @@ void MDL::AsciiPostProcess(){
                 file<<"\r\n\r\nAABB\r\n";
                 file<<file2.str();
 
-                std::string sDir = sFullPath;
-                sDir.reserve(MAX_PATH);
-                PathRemoveFileSpec(&sDir[0]);
-                sDir.resize(strlen(sDir.c_str()));
-                sDir += "\\debug_aabb.txt";
-                std::cout<<"Will write aabb debug to: "<<sDir.c_str()<<"\n";
-                std::ofstream filewrite(sDir.c_str());
+                if(bDebug){
+                    std::string sDir = sFullPath;
+                    sDir.reserve(MAX_PATH);
+                    PathRemoveFileSpec(&sDir[0]);
+                    sDir.resize(strlen(sDir.c_str()));
+                    sDir += "\\debug_aabb.txt";
+                    std::cout<<"Will write aabb debug to: "<<sDir.c_str()<<"\n";
+                    std::ofstream filewrite(sDir.c_str());
 
-                if(!filewrite.is_open()){
-                    std::cout<<"'debug_aabb.txt' does not exist. No debug will be written.\n";
-                }
-                else{
-                    filewrite << file.str();
-                    filewrite.close();
+                    if(!filewrite.is_open()){
+                        std::cout<<"'debug_aabb.txt' does not exist. No debug will be written.\n";
+                    }
+                    else{
+                        filewrite << file.str();
+                        filewrite.close();
+                    }
                 }
             }
         }
@@ -2833,7 +2834,7 @@ void MDL::AsciiPostProcess(){
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
 
-        if(node.Head.nType & NODE_HAS_SABER){
+        if(node.Head.nType & NODE_SABER){
             //inverted counter
             nMeshCounter++;
             int Quo = nMeshCounter/100;
@@ -2844,14 +2845,14 @@ void MDL::AsciiPostProcess(){
             Mod = nMeshCounter%100;
             node.Saber.nInvCount2 = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
         }
-        else if(node.Head.nType & NODE_HAS_MESH){
+        else if(node.Head.nType & NODE_MESH){
             //inverted counter
             nMeshCounter++;
             int Quo = nMeshCounter/100;
             int Mod = nMeshCounter%100;
             node.Mesh.nMeshInvertedCounter = pown(2, Quo)*100-nMeshCounter + (Mod ? Quo*100 : 0) + (Quo ? 0 : -1);
 
-            if(node.Head.nType & NODE_HAS_SKIN){
+            if(node.Head.nType & NODE_SKIN){
                 //First, declare our empty location as a starting point
                 Vector vPos;
                 Quaternion qOrient;
@@ -2880,6 +2881,32 @@ void MDL::AsciiPostProcess(){
                 //We now have a location loc, going from our current node to the root.
                 //Now we need to add to that a similar kind of path of every node in the model
 
+                Vector vBase = vPos; //Make copy
+                Quaternion qBase = qOrient; //Make copy
+
+                nIndex = node.Head.nNodeNumber;
+                std::vector<int> Indices;
+                //The price we have to pay for not going recursive
+                while(nIndex != -1){
+                    Indices.push_back(nIndex);
+                    nIndex = GetNodeByNameIndex(nIndex).Head.nParentIndex;
+                }
+                /// Now we go from the parent and add all the positions.
+                for(int a = Indices.size() - 1; a >= 0; a--){
+                    Node & curnode2 = GetNodeByNameIndex(Indices.at(a));
+                    Location locNode = curnode2.GetLocation();
+                    vCurPosition = locNode.vPosition;
+                    qCurOrientation = locNode.oOrientation.GetQuaternion();
+                    vCurPosition.Rotate(qBase); //Note: rotating with the Base rotation!
+                    vBase += vCurPosition;
+                    qBase *= qCurOrientation;
+                }
+
+                //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
+                vBase *= -1.0;
+                qBase = qBase.reverse();
+                vBase.Rotate(qBase);
+
                 //Loop through all the nodes, and do a similar operation to get the path for every node, then adding it to loc
                 for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
                     Vector vRecord = vPos; //Make copy
@@ -2887,7 +2914,7 @@ void MDL::AsciiPostProcess(){
                     Node & curnode = FH->MH.ArrayOfNodes.at(n);
 
                     nIndex = curnode.Head.nNodeNumber;
-                    std::vector<int> Indices;
+                    Indices.clear();
                     //The price we have to pay for not going recursive
                     while(nIndex != -1){
                         Indices.push_back(nIndex);
@@ -2903,6 +2930,9 @@ void MDL::AsciiPostProcess(){
                         vRecord += vCurPosition;
                         qRecord *= qCurOrientation;
                     }
+
+                    /// This code should fix the t-bone problems. Solution by ndix UR.
+                    vRecord += vBase;
 
                     //Oops! Forgot the last part in MDLOps, need to rotate the vector again.
                     vRecord *= -1.0;

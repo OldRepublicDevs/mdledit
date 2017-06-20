@@ -210,6 +210,7 @@ class Edits{
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) cString3);
         }
     }
+    void UpdateStatusPositionBwm(const std::string & sType);
     void UpdateStatusPositionMdx();
     void UpdateStatusPositionModel();
     void PrintValues(bool bCheck = true);

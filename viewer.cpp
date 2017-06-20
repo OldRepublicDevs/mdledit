@@ -10,7 +10,7 @@ void OpenGeoViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
     //Still I should make sure I'm only running stuff on appropriate nodes
     if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
         Node* node = (Node*) lParam;
-        if(node->Head.nType & NODE_HAS_MESH){
+        if(node->Head.nType & NODE_MESH){
             //Now we're ready to create the GeoView
             GeoViews.push_back(GeoView());
             GeoViews.back().SetData(*node);
@@ -64,28 +64,28 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         sPrint<<"";
         //sPrint = "";
         Mdl.ConvertToAscii(CONVERT_HEADER, sPrint, (void*) lParam);
-        if(node->Head.nType & NODE_HAS_AABB){
+        if(node->Head.nType & NODE_AABB){
             Mdl.ConvertToAscii(CONVERT_MESH, sPrint, (void*) lParam);
             Mdl.ConvertToAscii(CONVERT_AABB, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_SABER){
+        else if(node->Head.nType & NODE_SABER){
             Mdl.ConvertToAscii(CONVERT_SABER, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_DANGLY){
+        else if(node->Head.nType & NODE_DANGLY){
             Mdl.ConvertToAscii(CONVERT_MESH, sPrint, (void*) lParam);
             Mdl.ConvertToAscii(CONVERT_DANGLY, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_SKIN){
+        else if(node->Head.nType & NODE_SKIN){
             Mdl.ConvertToAscii(CONVERT_MESH, sPrint, (void*) lParam);
             Mdl.ConvertToAscii(CONVERT_SKIN, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_MESH){
+        else if(node->Head.nType & NODE_MESH){
             Mdl.ConvertToAscii(CONVERT_MESH, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_EMITTER){
+        else if(node->Head.nType & NODE_EMITTER){
             Mdl.ConvertToAscii(CONVERT_EMITTER, sPrint, (void*) lParam);
         }
-        else if(node->Head.nType & NODE_HAS_LIGHT){
+        else if(node->Head.nType & NODE_LIGHT){
             Mdl.ConvertToAscii(CONVERT_LIGHT, sPrint, (void*) lParam);
         }
         Mdl.ConvertToAscii(CONVERT_ENDNODE, sPrint, (void*) lParam);

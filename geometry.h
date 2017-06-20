@@ -34,7 +34,7 @@ struct Vector{
     bool Compare(const Vector & v1, double fDiff = 0.00001);
     bool Null(double fDiff = 0.0);
     void Set(const double & f1, const double & f2, const double & f3);
-    std::string Print();
+    std::string Print() const;
     void print(const std::string & sMsg);
 };
 Vector operator*(Vector v, const Matrix22 & m);
@@ -51,6 +51,8 @@ double Angle(const Vector & v, const Vector & v2);
 double HeronFormulaVert(const Vector & v1, const Vector & v2, const Vector & v3);
 double HeronFormulaEdge(const Vector & e1, const Vector & e2, const Vector & e3);
 Vector Rotate(const Vector & v, const Quaternion & q);
+Vector DecompressVector(unsigned int nCompressed);
+unsigned int CompressVector(const Vector & v);
 
 struct Quaternion{
     Vector vAxis;

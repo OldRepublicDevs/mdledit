@@ -872,9 +872,9 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     if(!bFound){
                         std::cout<<"ReadUntilText() ERROR: a node is without any other specification.\n";
                     }
-                    if(sID == "dummy") nType = NODE_HAS_HEADER;
-                    else if(sID == "trimesh") nType = NODE_HAS_HEADER | NODE_HAS_MESH;
-                    else if(sID == "aabb") nType = NODE_HAS_HEADER | NODE_HAS_MESH | NODE_HAS_AABB;
+                    if(sID == "dummy") nType = NODE_HEADER;
+                    else if(sID == "trimesh") nType = NODE_HEADER | NODE_MESH;
+                    else if(sID == "aabb") nType = NODE_HEADER | NODE_MESH | NODE_AABB;
                     else if(bFound){
                         std::cout<<"ReadUntilText() has found some text (type?) that we do not support: "<<sID<<"\n";
                         bError = true;
@@ -912,7 +912,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     SkipLine();
                 }
                 /// Next we have the DATA LISTS
-                else if(sID == "verts" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
+                else if(sID == "verts" && nNode & NODE_MESH && (sNodeName.find("_wg") != std::string::npos)){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     //std::cout << "Reading verts.\n";
                     bVerts = true;
@@ -921,7 +921,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     nDataCounter = 0;
                     SkipLine();
                 }
-                else if(sID == "faces" && nNode & NODE_HAS_MESH && (sNodeName.find("_wg") != std::string::npos)){
+                else if(sID == "faces" && nNode & NODE_MESH && (sNodeName.find("_wg") != std::string::npos)){
                     if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                     //std::cout << "Reading faces.\n";
                     bFaces = true;

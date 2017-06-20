@@ -199,13 +199,18 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
             std::string sGet(255, '\0');
             SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
-            if((sGet.front() != 0) && (nArea == 0 || Edit->sSelected == "WOK" || Edit->sSelected == "PWK" || Edit->sSelected == "DWK")){
+            if((sGet.front() != 0) && (nArea == 0)){
                 SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) nullptr);
             }
 
             if(bThreshold){
                 if(nArea > 0 && Edit->sSelected == "MDL") Edit->UpdateStatusPositionModel();
                 else if(nArea > 0 && Edit->sSelected == "MDX") Edit->UpdateStatusPositionMdx();
+                else if(nArea > 0 && Edit->sSelected == "WOK") Edit->UpdateStatusPositionBwm(Edit->sSelected);
+                else if(nArea > 0 && Edit->sSelected == "PWK") Edit->UpdateStatusPositionBwm(Edit->sSelected);
+                else if(nArea > 0 && Edit->sSelected == "DWK 0") Edit->UpdateStatusPositionBwm(Edit->sSelected);
+                else if(nArea > 0 && Edit->sSelected == "DWK 1") Edit->UpdateStatusPositionBwm(Edit->sSelected);
+                else if(nArea > 0 && Edit->sSelected == "DWK 2") Edit->UpdateStatusPositionBwm(Edit->sSelected);
 
                 if(bDrag){
                     Edit->DetermineSelection();
@@ -655,13 +660,13 @@ void Edits::UpdateStatusPositionMdx(){
     //NodeRecursionMdx(&Model.GetNodeByNameIndex(0), NODE, nPos;
     for(int b = 0; b < FH.MH.ArrayOfNodes.size(); b++){
         Node & node = FH.MH.ArrayOfNodes[b];
-        if(node.Head.nType & NODE_HAS_MESH &&
+        if(node.Head.nType & NODE_MESH &&
            node.Mesh.nMdxDataSize > 0 &&
            (nPos >= node.Mesh.nOffsetIntoMdx &&  nPos < (node.Mesh.nOffsetIntoMdx + (node.Mesh.nNumberOfVerts+1) * node.Mesh.nMdxDataSize))){
                NODE = &node;
            }
     }
-    if(nPos >= Model.GetBuffer().size()){
+    if(nPos >= Model.Mdx->GetBuffer().size()){
         //nothing
     }
     else if(NODE != nullptr){
@@ -673,6 +678,91 @@ void Edits::UpdateStatusPositionMdx(){
     }
     else{
         ssPrint<<"MDX > Unknown";
+    }
+
+    //Change text
+    std::string sGet ((size_t) 255, '\0');
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    if(std::string(sGet.c_str()) != ssPrint.str()){
+        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
+    }
+}
+
+void Edits::UpdateStatusPositionBwm(const std::string & sType){
+    if(!Model.GetFileData()) return;
+    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for " << sType << ".\n";
+    std::stringstream ssPrint;
+    BWMHeader * ptr_bwm = nullptr;
+    if(sType == "WOK") ptr_bwm = Model.Wok->GetData().get();
+    else if(sType == "PWK") ptr_bwm = Model.Pwk->GetData().get();
+    else if(sType == "DWK 0") ptr_bwm = Model.Dwk0->GetData().get();
+    else if(sType == "DWK 1") ptr_bwm = Model.Dwk1->GetData().get();
+    else if(sType == "DWK 2") ptr_bwm = Model.Dwk2->GetData().get();
+    else return;
+    BWMHeader & Bwm = *ptr_bwm;
+    int nPos = ptHover.y * 16 + (ptHover.x) / 3;
+    int nMin;
+
+    //Find position
+    if(sType == "WOK" && nPos >= Model.Wok->GetBuffer().size() ||
+       sType == "PWK" && nPos >= Model.Pwk->GetBuffer().size() ||
+       sType == "DWK 0" && nPos >= Model.Dwk0->GetBuffer().size() ||
+       sType == "DWK 1" && nPos >= Model.Dwk1->GetBuffer().size() ||
+       sType == "DWK 2" && nPos >= Model.Dwk2->GetBuffer().size() )
+    {
+        //nothing
+    }
+    else if(nPos < 136){
+        //We are in Header
+        ssPrint<< sType << " > Header";
+    }
+    else if(nPos < Bwm.nOffsetToVerts + Bwm.nNumberOfVerts * 12){
+        //We are in Header
+        nMin = Bwm.nOffsetToVerts;
+        ssPrint<< sType << " > Vertices > Vertex " << (nPos - nMin)/12;
+    }
+    else if(nPos < Bwm.nOffsetToIndices + Bwm.nNumberOfFaces * 12){
+        //We are in Header
+        nMin = Bwm.nOffsetToIndices;
+        ssPrint<< sType << " > Vertex Indices > Face " << (nPos - nMin)/12 << " > Index " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
+    }
+    else if(nPos < Bwm.nOffsetToMaterials + Bwm.nNumberOfFaces * 4){
+        //We are in Header
+        nMin = Bwm.nOffsetToMaterials;
+        ssPrint<< sType << " > Materials > Material " << (nPos - nMin)/4;
+    }
+    else if(nPos < Bwm.nOffsetToNormals + Bwm.nNumberOfFaces * 12){
+        //We are in Header
+        nMin = Bwm.nOffsetToNormals;
+        ssPrint<< sType << " > Face Normals > Normal " << (nPos - nMin)/12;
+    }
+    else if(nPos < Bwm.nOffsetToDistances + Bwm.nNumberOfFaces * 4){
+        //We are in Header
+        nMin = Bwm.nOffsetToDistances;
+        ssPrint<< sType << " > Plane Distances > Distance " << (nPos - nMin)/4;
+    }
+    else if(nPos < Bwm.nOffsetToAabb + Bwm.nNumberOfAabb * 44){
+        //We are in Header
+        nMin = Bwm.nOffsetToAabb;
+        ssPrint<< sType << " > Aabbs > Aabb " << (nPos - nMin)/44;
+    }
+    else if(nPos < Bwm.nOffsetToAdjacentFaces + Bwm.nNumberOfAdjacentFaces * 12){
+        //We are in Header
+        nMin = Bwm.nOffsetToAdjacentFaces;
+        ssPrint<< sType << " > Adjacent Faces > Face " << (nPos - nMin)/12 << " > Edge " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
+    }
+    else if(nPos < Bwm.nOffsetToEdges + Bwm.nNumberOfEdges * 8){
+        //We are in Header
+        nMin = Bwm.nOffsetToEdges;
+        ssPrint<< sType << " > Edges > Edge " << (nPos - nMin)/8;
+    }
+    else if(nPos < Bwm.nOffsetToPerimeters + Bwm.nNumberOfPerimeters * 4){
+        //We are in Header
+        nMin = Bwm.nOffsetToPerimeters;
+        ssPrint<< sType << " > Perimeters > Perimeter " << (nPos - nMin)/4;
+    }
+    else{
+        ssPrint<< sType << " > Unknown";
     }
 
     //Change text
@@ -827,76 +917,91 @@ void Edits::UpdateStatusPositionModel(){
             if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
                 int nHeaderSize = 12;
                 bool bFound = false;
-                if(nType & NODE_HAS_HEADER && !bFound){
+                if(nType & NODE_HEADER && !bFound){
                     nHeaderSize += NODE_SIZE_HEADER;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Basic";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_LIGHT && !bFound){
+                if(nType & NODE_LIGHT && !bFound){
                     nHeaderSize += NODE_SIZE_LIGHT;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Light";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_EMITTER && !bFound){
+                if(nType & NODE_EMITTER && !bFound){
                     nHeaderSize += NODE_SIZE_EMITTER;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Emitter";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_MESH && !bFound){
+                if(nType & NODE_REFERENCE && !bFound){
+                    nHeaderSize += NODE_SIZE_REFERENCE;
+                    if(nPos < NODE->nOffset + nHeaderSize){
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Reference";
+                        bFound = true;
+                    }
+                }
+                if(nType & NODE_MESH && !bFound){
                     nHeaderSize += NODE_SIZE_MESH;
+                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Mesh";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_SKIN && !bFound){
+                if(nType & NODE_SKIN && !bFound){
                     nHeaderSize += NODE_SIZE_SKIN;
+                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Skin";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_DANGLY && !bFound){
+                if(nType & NODE_DANGLY && !bFound){
                     nHeaderSize += NODE_SIZE_DANGLY;
+                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Danglymesh";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_AABB && !bFound){
+                if(nType & NODE_AABB && !bFound){
                     nHeaderSize += NODE_SIZE_AABB;
+                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Walkmesh";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_SABER && !bFound){
+                if(nType & NODE_SABER && !bFound){
                     nHeaderSize += NODE_SIZE_SABER;
+                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Saber";
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_HEADER && !bFound){
+                if(nType & NODE_HEADER && !bFound){
                     if(nPos >= NODE->Head.ChildrenArray.nOffset + 12){
                         nMin = NODE->Head.ChildrenArray.nOffset + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Child Array > Pointer "<<(nPos - nMin)/4;
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_LIGHT && !bFound){
+                if(nType & NODE_LIGHT && !bFound){
                     /// MISSING, ADD LIGHT DATA
                 }
-                if(nType & NODE_HAS_EMITTER && !bFound){
+                if(nType & NODE_EMITTER && !bFound){
                     //Emitters have no data
                 }
-                if(nType & NODE_HAS_MESH && !bFound){
+                if(nType & NODE_REFERENCE && !bFound){
+                    //References have no data
+                }
+                if(nType & NODE_MESH && !bFound){
                     if(nPos >= NODE->Mesh.nVertIndicesLocation + 12 && NODE->Mesh.IndexLocationArray.nCount > 0){
                         nMin = NODE->Mesh.nVertIndicesLocation + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Indices > Face "<<(nPos - nMin)/6;
@@ -910,7 +1015,7 @@ void Edits::UpdateStatusPositionModel(){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Pointer to Vert Indices";
                         bFound = true;
                     }
-                    else if(nPos >= NODE->Mesh.nOffsetToVertArray + 12){
+                    else if(!Model.bXbox && nPos >= NODE->Mesh.nOffsetToVertArray + 12){
                         nMin = NODE->Mesh.nOffsetToVertArray + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Coordinates > Vert "<<(nPos - nMin)/12;
                         bFound = true;
@@ -925,7 +1030,7 @@ void Edits::UpdateStatusPositionModel(){
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_SKIN && !bFound){
+                if(nType & NODE_SKIN && !bFound){
                     if(nPos >= NODE->Skin.Array8Array.nOffset + 12){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Array8 (unused)";
                         bFound = true;
@@ -942,11 +1047,11 @@ void Edits::UpdateStatusPositionModel(){
                     }
                     else if(nPos >= NODE->Skin.nOffsetToBonemap + 12){
                         nMin = NODE->Skin.nOffsetToBonemap + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Bonemap > "<<FH.MH.Names.at((nPos - nMin)/4).sName.c_str();
+                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Bonemap > "<<FH.MH.Names.at(Model.bXbox ? (nPos - nMin)/2 : (nPos - nMin)/4).sName.c_str();
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_DANGLY && !bFound){
+                if(nType & NODE_DANGLY && !bFound){
                     if(nPos >= NODE->Dangly.nOffsetToData2 + 12){
                         nMin = NODE->Dangly.nOffsetToData2 + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Danglymesh > Data2 > Vertex "<<(nPos - nMin)/12;
@@ -958,14 +1063,14 @@ void Edits::UpdateStatusPositionModel(){
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_AABB && !bFound){
+                if(nType & NODE_AABB && !bFound){
                     if(nPos >= NODE->Walkmesh.nOffsetToAabb + 12){
                         nMin = NODE->Walkmesh.nOffsetToAabb + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Walkmesh > AABB Tree > Aabb "<<(nPos - nMin)/40;
                         bFound = true;
                     }
                 }
-                if(nType & NODE_HAS_SABER && !bFound){
+                if(nType & NODE_SABER && !bFound){
                     if(nPos >= NODE->Saber.nOffsetToSaberUVs + 12){
                         nMin = NODE->Saber.nOffsetToSaberUVs + 12;
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data2 > Member "<<(nPos - nMin)/8;

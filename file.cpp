@@ -101,7 +101,10 @@ void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
     int n = 0;
     //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
     while(n < nLength && n < sBuffer.size()){
-        if(bKnown[nOffset + n] != 0) std::cout<<"MarkBytes(): Warning! Data already interpreted as "<<bKnown[nOffset + n]<<" at offset "<<nOffset + n<<" in "<<GetName()<<"!\n";
+        if(bKnown[nOffset + n] != 0){
+            std::cout<<"MarkBytes(): Warning! Data already interpreted as "<<bKnown[nOffset + n]<<" at offset "<<nOffset + n<<" in "<<GetName()<<"!\n";
+            throw mdlexception("! MDLedit exception: Interpreting already interpreted data. !");
+        }
         bKnown[nOffset + n] = nClass;
         n++;
     }

@@ -12,6 +12,7 @@
 #include <memory> //for std::unique_ptr
 #include <string> //for std::string
 #include <sstream> //for std::stringstream
+#include <exception> //for std::exception
 #include "resource.h"
 
 #define ME_TABS_OFFSET_Y_TOP        22
@@ -87,6 +88,19 @@ std::string PrepareFloat(double fFloat);
 struct MenuLineAdder{
     HMENU hMenu;
     int nIndex;
+};
+
+class mdlexception: public std::exception {
+    std::string sException;
+    virtual const char* what() const throw() {
+        return sException.c_str();
+    }
+  public:
+    mdlexception() {}
+    mdlexception(const std::string & sNew): sException(sNew) {}
+    void SetText(const std::string & sNew){
+        sException = sNew;
+    }
 };
 
 char * operator&(std::string & sStr);

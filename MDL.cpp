@@ -25,6 +25,86 @@ int MDL::GetNameIndex(std::string sName){
     return -1;
 }
 
+unsigned int GetFunctionPointer(unsigned int FN_PTR, int n, bool bXbox, bool bK2){
+    if(bXbox){
+        if(bK2){
+            if(n == 1){
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_XBOX_K2_MODEL_1;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_XBOX_K2_ANIM_1;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_XBOX_K2_MESH_1;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_XBOX_K2_SKIN_1;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_XBOX_K2_DANGLY_1;
+            }
+            else{
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_XBOX_K2_MODEL_2;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_XBOX_K2_ANIM_2;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_XBOX_K2_MESH_2;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_XBOX_K2_SKIN_2;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_XBOX_K2_DANGLY_2;
+            }
+        }
+        else{
+            if(n == 1){
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_XBOX_K1_MODEL_1;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_XBOX_K1_ANIM_1;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_XBOX_K1_MESH_1;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_XBOX_K1_SKIN_1;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_XBOX_K1_DANGLY_1;
+            }
+            else{
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_XBOX_K1_MODEL_2;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_XBOX_K1_ANIM_2;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_XBOX_K1_MESH_2;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_XBOX_K1_SKIN_2;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_XBOX_K1_DANGLY_2;
+            }
+        }
+    }
+    else{
+        if(bK2){
+            if(n == 1){
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_PC_K2_MODEL_1;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_PC_K2_ANIM_1;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_PC_K2_MESH_1;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_PC_K2_SKIN_1;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_PC_K2_DANGLY_1;
+            }
+            else{
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_PC_K2_MODEL_2;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_PC_K2_ANIM_2;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_PC_K2_MESH_2;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_PC_K2_SKIN_2;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_PC_K2_DANGLY_2;
+            }
+        }
+        else{
+            if(n == 1){
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_PC_K1_MODEL_1;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_PC_K1_ANIM_1;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_PC_K1_MESH_1;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_PC_K1_SKIN_1;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_PC_K1_DANGLY_1;
+            }
+            else{
+                if(FN_PTR == FN_PTR_MODEL) return FN_PTR_PC_K1_MODEL_2;
+                else if(FN_PTR == FN_PTR_ANIM) return FN_PTR_PC_K1_ANIM_2;
+                else if(FN_PTR == FN_PTR_MESH) return FN_PTR_PC_K1_MESH_2;
+                else if(FN_PTR == FN_PTR_SKIN) return FN_PTR_PC_K1_SKIN_2;
+                else if(FN_PTR == FN_PTR_DANGLY) return FN_PTR_PC_K1_DANGLY_2;
+            }
+        }
+    }
+    return 0;
+}
+
+unsigned int MDL::FunctionPointer1(unsigned int FN_PTR){
+    GetFunctionPointer(FN_PTR, 1, bXbox, bK2);
+}
+
+unsigned int MDL::FunctionPointer2(unsigned int FN_PTR){
+    GetFunctionPointer(FN_PTR, 2, bXbox, bK2);
+}
+
 void MDL::GetLytPositionFromWok(){
     if(!Wok) return;
     if(!FH) return;
@@ -35,7 +115,7 @@ void MDL::GetLytPositionFromWok(){
     int nSearchMaterial = data.faces.front().nMaterialID;
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
-        if(node.Head.nType & NODE_HAS_AABB){
+        if(node.Head.nType & NODE_AABB){
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
                 if(face.nMaterialID == nSearchMaterial){
@@ -76,7 +156,7 @@ std::string MDL::MakeUniqueName(int nNodeNumber){
     std::string sReturn = Names.at(nNodeNumber).sName.c_str();
     std::vector<Node> & Nodes = FH->MH.ArrayOfNodes;
     if(Nodes.size() > nNodeNumber){
-        if(Nodes.at(nNodeNumber).Head.nType & NODE_HAS_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
+        if(Nodes.at(nNodeNumber).Head.nType & NODE_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
     }
     for(int n = 0; n < nNodeNumber; n++){
         if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNodeNumber);
@@ -296,7 +376,7 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         if(bOpen){
             file.seekg(12);
             file.read(ByteBlock4.bytes, 4);
-            if(!(ByteBlock4.ui == K2_FUNCTION_POINTER_0 && curmdl.bK2) && !(ByteBlock4.ui == K1_FUNCTION_POINTER_0 && !curmdl.bK2)){
+            if(!((ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K2_MODEL_1) && curmdl.bK2) && !((ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K1_MODEL_1) && !curmdl.bK2)){
                 bOpen = false;
                 bWrongGame = true;
             }
@@ -359,7 +439,7 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
             file.seekg(12);
             file.read(ByteBlock4.bytes, 4);
             //if(ByteBlock4.ui != curmdl.GetFileData()->MH.GH.nFunctionPointer0){
-            if(!(ByteBlock4.ui == K2_FUNCTION_POINTER_0 && curmdl.bK2) && !(ByteBlock4.ui == K1_FUNCTION_POINTER_0 && !curmdl.bK2)){
+            if(!(ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 && curmdl.bK2) && !(ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 && !curmdl.bK2)){
                 bOpen = false;
                 bWrongGame = true;
             }
@@ -404,7 +484,7 @@ void MDL::CreatePatches(){
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         //std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
         //Currently, this takes all meshes, including skins, danglymeshes and walkmeshes
-        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_HAS_SABER)){
+        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
             Node & node = Data.MH.ArrayOfNodes.at(n);
             Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
@@ -427,7 +507,7 @@ void MDL::CreatePatches(){
                     //We've already gone through the nodes up to n and linked any vertices, so we can skip those
                     for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
 
-                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_HAS_MESH && !(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_HAS_SABER)){
+                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_SABER)){
                             Node & node2 = Data.MH.ArrayOfNodes.at(n2);
 
                             //Loop through all the faces in the mesh and look for matching vertices - theoretically there is no way to optimize this part
@@ -613,6 +693,19 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
         if(NodeArray.at(b).Head.nType == 0){
             //Ghost node
         }
+        else if(!(NodeArray.at(b).Head.nType == NODE_HEADER ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_LIGHT ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_EMITTER ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_REFERENCE ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_SKIN ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_DANGLY ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_AABB ||
+                  NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_SABER ) )
+        {
+            ssReturn<<"\r\n     - Unknown node type: " << NodeArray.at(b).Head.nType << "!";
+            bMasterUpdate = true;
+        }
         else{
             bool bUpdate = false;
             std::stringstream ssAdd;
@@ -620,7 +713,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
             if(nAnimation == -1) sCont = "geometry";
             else sCont = FH->MH.Animations.at(nAnimation).sName.c_str();
             ssAdd<<"\r\n - "<<FH->MH.Names.at(NodeArray.at(b).Head.nNodeNumber).sName<<" ("<<sCont<<")";
-            if(NodeArray.at(b).Head.nType & NODE_HAS_HEADER){
+            if(NodeArray.at(b).Head.nType & NODE_HEADER){
                 if(NodeArray.at(b).Head.nPadding1 != 0){
                     ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
                     bUpdate = true;
@@ -684,7 +777,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
-                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_MESH) && ctrl.nAnimation != -1 &&
+                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_MESH) && ctrl.nAnimation != -1 &&
                              (ctrl.nPadding[0] == 50 &&
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
@@ -693,8 +786,8 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
                     /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
-                    else if( (GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_EMITTER ||
-                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_HAS_MESH) &&
+                    else if( (GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_EMITTER ||
+                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_MESH) &&
                               ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                     else{
                         //ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
@@ -702,7 +795,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     }
                 }
             }
-            if(NodeArray.at(b).Head.nType & NODE_HAS_LIGHT){
+            if(NodeArray.at(b).Head.nType & NODE_LIGHT){
                 if(NodeArray.at(b).Light.UnknownArray.nCount != 0){
                     ssAdd<<"\r\n     - Light: Unknown array not empty!";
                     bUpdate = true;
@@ -724,7 +817,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     bUpdate = true;
                 }
             }
-            if(NodeArray.at(b).Head.nType & NODE_HAS_EMITTER){
+            if(NodeArray.at(b).Head.nType & NODE_EMITTER){
                 /*
                 if(NodeArray.at(b).Emitter.nUnknown1 != 0){
                     ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
@@ -732,7 +825,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 }
                 */
             }
-            if(NodeArray.at(b).Head.nType & NODE_HAS_MESH){
+            if(NodeArray.at(b).Head.nType & NODE_MESH){
                 if(NodeArray.at(b).Mesh.nUnknown3[0] != -1 || NodeArray.at(b).Mesh.nUnknown3[1] != -1 || NodeArray.at(b).Mesh.nUnknown3[2] != 0){
                     ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
                     bUpdate = true;
@@ -754,7 +847,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     bUpdate = true;
                 }
             }
-            if(NodeArray.at(b).Head.nType & NODE_HAS_SKIN){
+            if(NodeArray.at(b).Head.nType & NODE_SKIN){
                 if(!NodeArray.at(b).Skin.UnknownArray.empty()){
                     ssAdd<<"\r\n     - Skin: Unknown empty array has some nonzero value!";
                     bUpdate = true;
@@ -772,7 +865,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     bUpdate = true;
                 }
             }
-            if(NodeArray.at(b).Head.nType & NODE_HAS_DANGLY){
+            if(NodeArray.at(b).Head.nType & NODE_DANGLY){
                 if(NodeArray.at(b).Dangly.ConstraintArray.GetDoCountsDiffer()){
                     ssAdd<<"\r\n     - Dangly: ConstraintArray counts differ!";
                     bUpdate = true;
@@ -873,7 +966,7 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_HEADER_SCALING:             return "scale";
     }
 
-    if(nType & NODE_HAS_LIGHT){
+    if(nType & NODE_LIGHT){
         switch(nController){
         case CONTROLLER_LIGHT_COLOR:                return "color";
         case CONTROLLER_LIGHT_RADIUS:               return "radius";
@@ -882,7 +975,7 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_LIGHT_MULTIPLIER:           return "multiplier";
         }
     }
-    else if(nType & NODE_HAS_EMITTER){
+    else if(nType & NODE_EMITTER){
         switch(nController){
         case CONTROLLER_EMITTER_ALPHAEND:           return "alphaEnd";
         case CONTROLLER_EMITTER_ALPHASTART:         return "alphaStart";

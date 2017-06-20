@@ -25,6 +25,22 @@ bool AppendTab(HWND hTabControl, std::string sName){
     return (TabCtrl_InsertItem(hTabControl, nTabs, &tcAdd) != -1);
 }
 
+void FixHead(){
+    MENUITEMINFO mii;
+    mii.cbSize = sizeof(MENUITEMINFO);
+    mii.fMask = MIIM_STATE;
+    GetMenuItemInfo(GetSubMenu(GetMenu(hFrame), 1), IDM_LINK_HEAD, false, &mii);
+    bool bLinkHead = mii.fState & MFS_CHECKED;
+    if(bLinkHead){
+        if(Model.LinkHead(bLinkHead)){
+            Edit1.UpdateEdit();
+            HTREEITEM hSel = TreeView_GetSelection(hTree);
+            if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
+        }
+        else std::cout<<"neck_g was not found!\n";
+    }
+}
+
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
 
@@ -199,8 +215,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
             mii.fState = MFS_UNCHECKED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
             mii.fState = MFS_CHECKED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
             mii.fState = MFS_GRAYED;
             SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
         }
@@ -336,6 +354,12 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         if(!Model.bK2) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                        if(Model.bXbox) mii.fState = MFS_UNCHECKED;
+                        else mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
+                        if(!Model.bXbox) mii.fState = MFS_UNCHECKED;
+                        else mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
                         if(!Model.empty()) mii.fState = MFS_ENABLED;
                         else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
@@ -380,46 +404,80 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_GAME_K1:
                 {
                     if(Model.bK2){
+                        Model.bK2 = false;
                         if(Model.GetFileData()){
-                            Model.bK2 = false;
                             Model.Compile();
+                            FixHead();
                             Edit1.LoadData();
                         }
-                        else{
-                            Model.bK2 = false;
-                        }
-                        if(!Model.bK2){
-                            MENUITEMINFO mii;
-                            mii.cbSize = sizeof(MENUITEMINFO);
-                            mii.fMask = MIIM_STATE;
-                            mii.fState = MFS_CHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
-                            mii.fState = MFS_UNCHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
-                        }
+
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
                     }
                 }
                 break;
                 case IDM_GAME_K2:
                 {
                     if(!Model.bK2){
+                        Model.bK2 = true;
                         if(Model.GetFileData()){
-                            Model.bK2 = true;
                             Model.Compile();
+                            FixHead();
                             Edit1.LoadData();
                         }
-                        else{
-                            Model.bK2 = true;
+
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                    }
+                }
+                break;
+                case IDM_PLATFORM_PC:
+                {
+                    if(Model.bXbox){
+                        Model.bXbox = false;
+                        if(Model.GetFileData()){
+                            Model.Compile();
+                            FixHead();
+                            Edit1.LoadData();
                         }
-                        if(Model.bK2){
-                            MENUITEMINFO mii;
-                            mii.cbSize = sizeof(MENUITEMINFO);
-                            mii.fMask = MIIM_STATE;
-                            mii.fState = MFS_UNCHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
-                            mii.fState = MFS_CHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
+                    }
+                }
+                break;
+                case IDM_PLATFORM_XBOX:
+                {
+                    if(!Model.bXbox){
+                        Model.bXbox = true;
+                        if(Model.GetFileData()){
+                            Model.Compile();
+                            FixHead();
+                            Edit1.LoadData();
                         }
+
+                        MENUITEMINFO mii;
+                        mii.cbSize = sizeof(MENUITEMINFO);
+                        mii.fMask = MIIM_STATE;
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
                     }
                 }
                 break;
@@ -442,6 +500,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         //TreeView_DeleteAllItems(hTree);
                         //DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 3);
                         Model.Compile();
+                        FixHead();
                     }
                     Edit1.UpdateEdit();
                     HTREEITEM hSel = TreeView_GetSelection(hTree);
@@ -453,11 +512,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     MENUITEMINFO mii;
                     mii.cbSize = sizeof(MENUITEMINFO);
                     mii.fMask = MIIM_STATE;
-                    GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_VIEW_HEX, false, &mii);
+                    GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 4), IDM_VIEW_HEX, false, &mii);
                     bShowHex = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
                     if(bShowHex) mii.fState = MFS_CHECKED;
                     else mii.fState = MFS_UNCHECKED;
-                    SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_VIEW_HEX, false, &mii);
+                    SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 4), IDM_VIEW_HEX, false, &mii);
                     Edit1.ShowHideEdit();
                     if(bShowHex){
                         ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), true);

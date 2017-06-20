@@ -58,7 +58,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
                         //std::cout<<"Checking node\n";
                         Node & node = Data.MH.ArrayOfNodes.at(n);
-                        if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB) && !(node.Head.nType & NODE_HAS_SABER)){
+                        if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB) && !(node.Head.nType & NODE_SABER)){
                             if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
                                 find.psz = &node.Mesh.cTexture1;
                                 if(ListView_FindItem(hList1, -1, &find) == -1){
@@ -126,7 +126,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                 ListView_GetItemText(hControl, ia->iItem, 0, &sOldTex, 33);
                                 for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
                                     Node & node = Data.MH.ArrayOfNodes.at(n);
-                                    if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB)){
+                                    if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB)){
                                         if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture1.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1))){
                                             //std::cout<<"Found difference. ("<<Data.MH.Names.at(node.Head.nNodeNumber).sName<<")\n";
                                             bChange = true;
@@ -181,7 +181,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                 if(sNewTex.size() > 16) MessageBox(hwnd, "Texture name is longer than 16 characters. This may or my not cause problems in the game.", "Warning", MB_ICONWARNING | MB_OK);
                                 for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
                                     Node & node = Data.MH.ArrayOfNodes.at(n);
-                                    if(node.Head.nType & NODE_HAS_MESH && !(node.Head.nType & NODE_HAS_AABB)){
+                                    if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB)){
                                         if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(node.Mesh.cTexture1.c_str()) == std::string(sOldTex.c_str())) Mdl->UpdateTexture(node, sNewTex, 1);
                                         else if(nID == IDC_TEXTURE_LISTVIEW2 && std::string(node.Mesh.cTexture2.c_str()) == std::string(sOldTex.c_str())) Mdl->UpdateTexture(node, sNewTex, 2);
                                         else if(nID == IDC_TEXTURE_LISTVIEW3 && std::string(node.Mesh.cTexture3.c_str()) == std::string(sOldTex.c_str())) Mdl->UpdateTexture(node, sNewTex, 3);

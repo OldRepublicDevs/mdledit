@@ -761,7 +761,7 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
         //char * cExt2 = PathFindExtension(sWok.c_str());
         //sprintf(cExt2, ".wok");
         Model.Wok->SetFilePath(sWok);
-        std::cout<< "About to build wok tree.\n";
+        std::cout << "About to build wok tree.\n";
         BuildTree(*Model.Wok);
     }
     std::cout<<"Data loaded!\n";
@@ -770,7 +770,16 @@ DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
 }
 
 DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
-    Model.DecompileModel();
+    try{
+        Model.DecompileModel();
+    }
+    catch(const std::exception & e){
+        std::cout << "Model decompilation failed with the following exception:\n" << e.what() << "\n";
+    }
+    catch(...){
+        std::cout << "Model decompilation failed with an unknown exception.\n";
+    }
+
     Report("Processing walkmesh...");
     if(Model.Wok){
         Model.Wok->ProcessBWM();

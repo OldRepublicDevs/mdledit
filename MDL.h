@@ -12,24 +12,70 @@
 #define CONVERT_HEADER                   3
 #define CONVERT_LIGHT                    4
 #define CONVERT_EMITTER                  5
-#define CONVERT_MESH                     6
-#define CONVERT_SKIN                     7
-#define CONVERT_DANGLY                   8
-#define CONVERT_AABB                     9
-#define CONVERT_SABER                    10
-#define CONVERT_ENDNODE                  11
-#define CONVERT_ANIMATION                12
-#define CONVERT_ANIMATION_NODE           13
-#define CONVERT_MODEL_GEO                14
-#define CONVERT_MODEL                    15
-#define CONVERT_WOK                      16
-#define CONVERT_PWK                      17
-#define CONVERT_DWK                      18
+#define CONVERT_REFERENCE                6
+#define CONVERT_MESH                     7
+#define CONVERT_SKIN                     8
+#define CONVERT_DANGLY                   9
+#define CONVERT_AABB                     10
+#define CONVERT_SABER                    11
+#define CONVERT_NODE                     12
+#define CONVERT_ANIMATION                13
+#define CONVERT_ANIMATION_NODE           14
+#define CONVERT_MODEL_GEO                15
+#define CONVERT_MODEL                    16
+#define CONVERT_WOK                      17
+#define CONVERT_PWK                      18
+#define CONVERT_DWK                      19
 
-#define K1_FUNCTION_POINTER_0 4273776
-#define K1_FUNCTION_POINTER_1 4216096
-#define K2_FUNCTION_POINTER_0 4285200
-#define K2_FUNCTION_POINTER_1 4216320
+#define FN_PTR_MODEL    1
+#define FN_PTR_ANIM     2
+#define FN_PTR_MESH     3
+#define FN_PTR_SKIN     4
+#define FN_PTR_DANGLY   5
+
+#define FN_PTR_PC_K1_MODEL_1    4273776
+#define FN_PTR_PC_K1_MODEL_2    4216096
+#define FN_PTR_PC_K1_ANIM_1     4273392
+#define FN_PTR_PC_K1_ANIM_2     4451552
+#define FN_PTR_PC_K1_MESH_1     4216656
+#define FN_PTR_PC_K1_MESH_2     4216672
+#define FN_PTR_PC_K1_SKIN_1     4216592
+#define FN_PTR_PC_K1_SKIN_2     4216592
+#define FN_PTR_PC_K1_DANGLY_1   4216640
+#define FN_PTR_PC_K1_DANGLY_2   4216624
+
+#define FN_PTR_PC_K2_MODEL_1    4285200
+#define FN_PTR_PC_K2_MODEL_2    4216320
+#define FN_PTR_PC_K2_ANIM_1     4284816
+#define FN_PTR_PC_K2_ANIM_2     4522928
+#define FN_PTR_PC_K2_MESH_1     4216880
+#define FN_PTR_PC_K2_MESH_2     4216896
+#define FN_PTR_PC_K2_SKIN_1     4216816
+#define FN_PTR_PC_K2_SKIN_2     4216608
+#define FN_PTR_PC_K2_DANGLY_1   4216864
+#define FN_PTR_PC_K2_DANGLY_2   4216848
+
+#define FN_PTR_XBOX_K1_MODEL_1  4254992
+#define FN_PTR_XBOX_K1_MODEL_2  4255008
+#define FN_PTR_XBOX_K1_ANIM_1   4253536
+#define FN_PTR_XBOX_K1_ANIM_2   4573360
+#define FN_PTR_XBOX_K1_MESH_1   4267376
+#define FN_PTR_XBOX_K1_MESH_2   4264048
+#define FN_PTR_XBOX_K1_SKIN_1   4264032
+#define FN_PTR_XBOX_K1_SKIN_2   4264048
+#define FN_PTR_XBOX_K1_DANGLY_1 4266736
+#define FN_PTR_XBOX_K1_DANGLY_2 4266720
+
+#define FN_PTR_XBOX_K2_MODEL_1  4285872
+#define FN_PTR_XBOX_K2_MODEL_2  4216016
+#define FN_PTR_XBOX_K2_ANIM_1   4285488
+#define FN_PTR_XBOX_K2_ANIM_2   4523088
+#define FN_PTR_XBOX_K2_MESH_1   4216576
+#define FN_PTR_XBOX_K2_MESH_2   4216592
+#define FN_PTR_XBOX_K2_SKIN_1   4216512
+#define FN_PTR_XBOX_K2_SKIN_2   4216528
+#define FN_PTR_XBOX_K2_DANGLY_1 4216560
+#define FN_PTR_XBOX_K2_DANGLY_2 4216544
 
 #define CLASS_OTHER           0x00
 #define CLASS_EFFECT          0x01
@@ -41,28 +87,28 @@
 #define CLASS_FLYER           0x40
 //#define CLASS_80            0x80
 
-#define NODE_HAS_HEADER       0x0001
-#define NODE_HAS_LIGHT        0x0002
-#define NODE_HAS_EMITTER      0x0004
-//#define NODE_HAS_CAMERA     0x0008
-//#define NODE_HAS_REFERENCE  0x0010
-#define NODE_HAS_MESH         0x0020
-#define NODE_HAS_SKIN         0x0040
-//#define NODE_HAS_ANIM       0x0080
-#define NODE_HAS_DANGLY       0x0100
-#define NODE_HAS_AABB         0x0200
-//#define NODE_HAS_400        0x0400
-#define NODE_HAS_SABER        0x0800
-//#define NODE_HAS_GOB        0x1000
-//#define NODE_HAS_COLLISION  0x2000
-//#define NODE_HAS_SPHERE     0x4000
-//#define NODE_HAS_CAPSULE    0x8000
+#define NODE_HEADER       0x0001
+#define NODE_LIGHT        0x0002
+#define NODE_EMITTER      0x0004
+//#define NODE_CAMERA     0x0008
+#define NODE_REFERENCE    0x0010
+#define NODE_MESH         0x0020
+#define NODE_SKIN         0x0040
+//#define NODE_ANIM       0x0080
+#define NODE_DANGLY       0x0100
+#define NODE_AABB         0x0200
+//#define NODE_400        0x0400
+#define NODE_SABER        0x0800
+//#define NODE_GOB        0x1000
+//#define NODE_COLLISION  0x2000
+//#define NODE_SPHERE     0x4000
+//#define NODE_CAPSULE    0x8000
 
 #define NODE_SIZE_HEADER      80
 #define NODE_SIZE_LIGHT       92
 #define NODE_SIZE_EMITTER     224
 //#define NODE_SIZE_CAMERA    0
-//#define NODE_SIZE_REFERENCE 0
+#define NODE_SIZE_REFERENCE   36
 #define NODE_SIZE_MESH        340
 #define NODE_SIZE_SKIN        100
 //#define NODE_SIZE_ANIM      0
@@ -337,7 +383,7 @@ struct Name{
 
 struct Weight{
     std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
-    std::array<double, 4> fWeightIndex = {-1.0, -1.0, -1.0, -1.0};
+    std::array<signed short, 4> nWeightIndex = {-1, -1, -1, -1};
 };
 
 struct VertexData{
@@ -454,14 +500,14 @@ struct Color{
 };
 
 struct Bone{
-    double fBonemap = -1.0;
+    signed short nBonemap = -1;
     Orientation QBone;
     Vector TBone;
 };
 
 /**** NODE ELEMENTS ****/
 
-// if NODE_HAS_HEADER
+// if NODE_HEADER
 struct Header{
     //Binary members
     unsigned short nType = 0;
@@ -485,7 +531,7 @@ struct Header{
     Vector vFromRoot;
 };
 
-// if NODE_HAS_LIGHT
+// if NODE_LIGHT
 struct LightHeader{
     //Binary members
     double fFlareRadius = 0.0;
@@ -509,7 +555,7 @@ struct LightHeader{
     std::vector<double> FlareSizes;
 };
 
-// if NODE_HAS_EMITTER
+// if NODE_EMITTER
 struct EmitterHeader{
     /***
     ndix UR's emitter
@@ -558,7 +604,14 @@ struct EmitterHeader{
     unsigned int nFlags = 0; //unsure
 };
 
-// if NODE_HAS_MESH
+// if NODE_REFERENCE
+struct ReferenceHeader{
+    //Binary members
+    std::string sRefModel; //32B
+    unsigned int nReattachable = 0;
+};
+
+// if NODE_MESH
 struct MeshHeader{
     //Binary members
     unsigned int nFunctionPointer0 = 0;
@@ -613,7 +666,7 @@ struct MeshHeader{
     unsigned int nMdxDataBitmap = 0;
     int nOffsetToVerticesInMDX = -1;
     int nOffsetToNormalsInMDX = -1;
-    int nOffsetToUnknownInMDX = -1; //never present
+    int nOffsetToColorInMDX = -1; //never present
     int nOffsetToUVsInMDX = -1;
     int nOffsetToUV2sInMDX = -1;
     int nOffsetToUV3sInMDX = -1; //never present
@@ -641,9 +694,9 @@ struct MeshHeader{
     double fTotalArea = 0.0; //not exported
     unsigned int nPadding = 0;
     unsigned int nOffsetIntoMdx = 0;
-    unsigned int nOffsetToVertArray = 0;
+    unsigned int nOffsetToVertArray = 0; //PC only
 
-    /*** ndix UR's knowleadge
+    /*** ndix UR's knowledge
     # item offset size (bytes) data type notes
     73 Dirt Enabled 314 1 ubyte K2ONLY
     74 Padding? 315 1 ubyte K2ONLY
@@ -680,7 +733,7 @@ struct MeshHeader{
     }
 };
 
-// if NODE_HAS_SKIN
+// if NODE_SKIN
 struct SkinHeader{
     ArrayHead UnknownArray; //Always 0
     int nOffsetToWeightValuesInMDX = -1;
@@ -697,7 +750,7 @@ struct SkinHeader{
     std::vector<Weight> TempWeights;
 };
 
-// if NODE_HAS_DANGLY
+// if NODE_DANGLY
 struct DanglymeshHeader{
     //Binary members
     ArrayHead ConstraintArray;
@@ -712,7 +765,7 @@ struct DanglymeshHeader{
     std::vector<Vector> Data2;
 };
 
-// if NODE_HAS_AABB
+// if NODE_AABB
 struct WalkmeshHeader{
     //Binary members
     unsigned int nOffsetToAabb = 0;
@@ -722,7 +775,7 @@ struct WalkmeshHeader{
     Aabb RootAabb;
 };
 
-// if NODE_HAS_SABER
+// if NODE_SABER
 struct SaberHeader{
     //Binary members
     unsigned int nOffsetToSaberVerts = 0;
@@ -743,6 +796,7 @@ struct Node{
     Header Head;
     LightHeader Light;
     EmitterHeader Emitter;
+    ReferenceHeader Reference;
     MeshHeader Mesh;
     SkinHeader Skin;
     DanglymeshHeader Dangly;
@@ -805,7 +859,7 @@ struct ModelHeader{
     ArrayHead AnimationArray;
 
     unsigned int nSupermodelReference = 0;
-    /*Pointer to supermodel?
+    /* Pointer to supermodel?
     Always present when there is a supermodel
     but very variable, models sharing a supermodel
     do not share this value.
@@ -931,6 +985,8 @@ class MDL: public BinaryFile{
 
     //Getters
     const std::string GetName(){ return sClassName; }
+    unsigned int FunctionPointer1(unsigned int FN_PTR);
+    unsigned int FunctionPointer2(unsigned int FN_PTR);
 
     //Reporters
     void Report(std::string);
@@ -959,6 +1015,7 @@ class MDL: public BinaryFile{
 
     //Options
     bool bK2 = true;
+    bool bXbox = false;
     bool bDebug = false;
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;

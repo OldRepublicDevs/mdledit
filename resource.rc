@@ -95,6 +95,11 @@ BEGIN
         MENUITEM "&K1", IDM_GAME_K1
         MENUITEM "&K2", IDM_GAME_K2
         END
+    POPUP " &Platform "
+        BEGIN
+        MENUITEM "&PC", IDM_PLATFORM_PC
+        MENUITEM "&XBOX", IDM_PLATFORM_XBOX
+        END
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode", IDM_VIEW_HEX

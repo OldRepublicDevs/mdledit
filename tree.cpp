@@ -95,7 +95,7 @@ void AppendAabb(Aabb * AABB, HTREEITEM TopLevel, int & nCount){
 }
 
 HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names, MDL & Mdl){
-        if(node.Head.nType & NODE_HAS_LIGHT){
+        if(node.Head.nType & NODE_LIGHT){
             HTREEITEM Light = Append("Light", (LPARAM) &node.Light, Prev);
             HTREEITEM LensFlares = Append("Lens Flares", (LPARAM) &node.Light, Light);
             int nMaxSize = std::max(node.Light.FlareSizes.size(),
@@ -105,10 +105,10 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
             for(int n = 0; n < nMaxSize; n++)
                 Append("Lens Flare " + std::to_string(n), (LPARAM) &node.Light, LensFlares);
         }
-        if(node.Head.nType & NODE_HAS_EMITTER){
+        if(node.Head.nType & NODE_EMITTER){
             HTREEITEM Emitter = Append("Emitter", (LPARAM) &node.Emitter, Prev);
         }
-        if(node.Head.nType & NODE_HAS_MESH){
+        if(node.Head.nType & NODE_MESH){
             HTREEITEM Mesh = Append("Mesh", (LPARAM) &node.Mesh, Prev);
             HTREEITEM Vertices = Append("Vertices", (LPARAM) &node.Mesh, Mesh);
             if(node.Mesh.Vertices.size() > 0){
@@ -125,7 +125,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
                 }
             }
         }
-        if(node.Head.nType & NODE_HAS_SKIN){
+        if(node.Head.nType & NODE_SKIN){
             char cBone [255];
             HTREEITEM Skin = Append("Skin", (LPARAM) &node.Skin, Prev);
             HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
@@ -136,17 +136,17 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
                 }
             }
         }
-        if(node.Head.nType & NODE_HAS_DANGLY){
+        if(node.Head.nType & NODE_DANGLY){
             HTREEITEM Danglymesh = Append("Danglymesh", (LPARAM) &node.Dangly, Prev);
             for(int i = 0; i < node.Dangly.Constraints.size(); i++)
                 Append("Dangly Vertex " + std::to_string(i), (LPARAM) &(node.Dangly), Danglymesh);
         }
-        if(node.Head.nType & NODE_HAS_AABB){
+        if(node.Head.nType & NODE_AABB){
             HTREEITEM Walkmesh = Append("Aabb", (LPARAM) &node.Walkmesh, Prev);
             int nCounter = 0;
             if(node.Walkmesh.nOffsetToAabb > 0) AppendAabb(&(node.Walkmesh.RootAabb), Walkmesh, nCounter);
         }
-        if(node.Head.nType & NODE_HAS_SABER){
+        if(node.Head.nType & NODE_SABER){
             HTREEITEM Saber = Append("Lightsaber", (LPARAM) &node.Saber, Prev);
             if(node.Saber.SaberData.size() > 0){
                 for(int i = 0; i < node.Saber.SaberData.size(); i++){
@@ -214,14 +214,15 @@ void BuildTree(MDL & Mdl){
         Node & node = Data.MH.ArrayOfNodes[a];
         if(node.Head.nType != 0){
             std::string sType;
-            if(node.Head.nType & NODE_HAS_SABER) sType = "(saber) ";
-            else if(node.Head.nType & NODE_HAS_AABB) sType = "(aabb) ";
-            else if(node.Head.nType & NODE_HAS_DANGLY) sType = "(dangly) ";
-            else if(node.Head.nType & NODE_HAS_SKIN) sType = "(skin) ";
-            else if(node.Head.nType & NODE_HAS_MESH) sType = "(mesh) ";
-            else if(node.Head.nType & NODE_HAS_EMITTER) sType = "(emitter) ";
-            else if(node.Head.nType & NODE_HAS_LIGHT) sType = "(light) ";
-            else if(node.Head.nType & NODE_HAS_HEADER) sType = "(basic) ";
+            if(     node.Head.nType == (NODE_HEADER | NODE_MESH | NODE_SABER)) sType = "(saber) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_MESH | NODE_AABB)) sType = "(aabb) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_MESH | NODE_DANGLY)) sType = "(dangly) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_MESH | NODE_SKIN)) sType = "(skin) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_MESH)) sType = "(mesh) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_REFERENCE)) sType = "(reference) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_EMITTER)) sType = "(emitter) ";
+            else if(node.Head.nType == (NODE_HEADER | NODE_LIGHT)) sType = "(light) ";
+            else if(node.Head.nType == NODE_HEADER) sType = "(basic) ";
             else sType = "(unknown) ";
             CurrentNode = Append(sType + Data.MH.Names[node.Head.nNodeNumber].sName, (LPARAM) &node, Nodes);
 
@@ -401,14 +402,15 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             //std::cout<<"Current name in problematic position: "<<cItem.at(0).c_str()<<"\n";
             sPrint << "== " << Data.MH.Names[node->Head.nNodeNumber].sName.c_str() << " ==";
             sPrint << "\r\n" << "Type: " << node->Head.nType<<" (";
-                if(node->Head.nType & NODE_HAS_DANGLY) sPrint << "dangly";
-                else if(node->Head.nType & NODE_HAS_SKIN) sPrint << "skin";
-                else if(node->Head.nType & NODE_HAS_SABER) sPrint << "saber";
-                else if(node->Head.nType & NODE_HAS_AABB) sPrint << "aabb";
-                else if(node->Head.nType & NODE_HAS_MESH) sPrint << "mesh";
-                else if(node->Head.nType & NODE_HAS_EMITTER) sPrint << "emitter";
-                else if(node->Head.nType & NODE_HAS_LIGHT) sPrint << "light";
-                else if(node->Head.nType & NODE_HAS_HEADER) sPrint << "basic";
+                if(     node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_DANGLY)) sPrint << "dangly";
+                else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SKIN)) sPrint << "skin";
+                else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SABER)) sPrint << "saber";
+                else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_AABB)) sPrint << "aabb";
+                else if(node->Head.nType == (NODE_HEADER | NODE_MESH)) sPrint << "mesh";
+                else if(node->Head.nType == (NODE_HEADER | NODE_REFERENCE)) sPrint << "reference";
+                else if(node->Head.nType == (NODE_HEADER | NODE_EMITTER)) sPrint << "emitter";
+                else if(node->Head.nType == (NODE_HEADER | NODE_LIGHT)) sPrint << "light";
+                else if(node->Head.nType == (NODE_HEADER)) sPrint << "basic";
                 else sPrint << "unknown";
                 sPrint << ")";
             sPrint << "\r\n" << "Name: "<<node->Head.nNodeNumber;
@@ -657,7 +659,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "  UV2:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_UV2 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToUV2sInMDX<<")";
             sPrint << "\r\n" << "  UV3:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_UV3 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToUV3sInMDX<<")";
             sPrint << "\r\n" << "  UV4:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_UV4 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToUV4sInMDX<<")";
-            sPrint << "\r\n" << "  Colors:   "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_COLOR ? 1 : 0)<<" (Offset "<<mesh->nOffsetToUnknownInMDX<<")";
+            sPrint << "\r\n" << "  Colors:   "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_COLOR ? 1 : 0)<<" (Offset "<<mesh->nOffsetToColorInMDX<<")";
             sPrint << "\r\n" << "  Tangent1: "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToTangentSpaceInMDX<<")";
             sPrint << "\r\n" << "  Tangent2: "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToTangentSpace2InMDX<<")";
             sPrint << "\r\n" << "  Tangent3: "<<(mesh->nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToTangentSpace3InMDX<<")";
@@ -737,15 +739,15 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY);
                 sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ);
             }
-            if(node.Head.nType & NODE_HAS_SKIN){
+            if(node.Head.nType & NODE_SKIN){
                 sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0]);
                 sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1]);
                 sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2]);
                 sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3]);
-                sPrint << "\r\n" << "Weight Index: " << PrepareFloat(mdx->Weights.fWeightIndex[0]);
-                sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[1]);
-                sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[2]);
-                sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[3]);
+                sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0];
+                sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1];
+                sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2];
+                sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[3];
             }
         }
         else if(cItem.at(1) == "Vertices"){
@@ -757,7 +759,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
             VertexData * mdx = &vert->MDXData;
             Node & node = Model.GetNodeByNameIndex(mdx->nNodeNumber);
-            if(!(node.Head.nType & NODE_HAS_SABER)){
+            if(!(node.Head.nType & NODE_SABER)){
                 if(node.Mesh.nMdxDataSize > 0 && Model.Mdx){
                     sPrint << "\r\n";
                     sPrint << "\r\n" << "-- MDX Data --";
@@ -831,15 +833,15 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                         sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY);
                         sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ);
                     }
-                    if(node.Head.nType & NODE_HAS_SKIN){
+                    if(node.Head.nType & NODE_SKIN){
                         sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0]);
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1]);
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2]);
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3]);
-                        sPrint << "\r\n" << "Weight Index: " << PrepareFloat(mdx->Weights.fWeightIndex[0]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[1]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[2]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightIndex[3]);
+                        sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0];
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1];
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2];
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[3];
                     }
                 }
             }
@@ -919,7 +921,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         else if(cItem.at(1) == "Bones"){
             Bone * bone = (Bone * ) lParam;
             sPrint << "== " << cItem.at(0).c_str() << " ==";
-            sPrint << "\r\n" << "Bonemap: "<<PrepareFloat(bone->fBonemap);
+            sPrint << "\r\n" << "Bonemap: " << bone->nBonemap;
             sPrint << "\r\n" << "TBone: "<<PrepareFloat(bone->TBone.fX);
             sPrint << "\r\n" << "       "<<PrepareFloat(bone->TBone.fY);
             sPrint << "\r\n" << "       "<<PrepareFloat(bone->TBone.fZ);
