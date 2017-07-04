@@ -1,4 +1,7 @@
 #include "general.h"
+#include <limits>
+
+double PI = 3.14159;
 
 int pown(int base, int exp){
     int result = 1;
@@ -257,11 +260,11 @@ void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount){
         n++;
     }
 }
-
+/*
 char * operator&(std::string & sStr){
     if(sStr.length() > 0) return &sStr.at(0);
     else return nullptr;
-}
+}*/
 
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     int nx = ptLine1.x;
@@ -330,11 +333,22 @@ std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen){
     return sParam.substr(nStart, nLen);
 }
 
-std::string PrepareFloat(double fFloat){
+std::string PrepareFloat(double fFloat, bool bFiniteOnly){
     std::stringstream ssReturn;
     ssReturn.precision(6);
     ssReturn.setf(std::ios::showpoint);
-    if(!std::isfinite(fFloat)) fFloat = 0.0;
+    if(!std::isfinite(fFloat)){
+        if(bFiniteOnly) return "0.0";
+        else return std::to_string(fFloat);
+    }
     ssReturn << RoundDec(fFloat, 8);
     return TruncateDec(ssReturn.str());
+}
+
+unsigned int stou(std::string const & str, size_t * idx, int base){
+    unsigned long result = std::stoul(str, idx, base);
+    if(result > std::numeric_limits<unsigned>::max()) {
+        throw std::out_of_range("stou");
+    }
+    return result;
 }

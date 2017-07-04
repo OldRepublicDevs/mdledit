@@ -79,8 +79,16 @@ class BinaryFile: public File{
     void WriteString(std::string sString, int nKnown);
     void WriteByte(char cByte, int nKnown);
     void WriteIntToPH(int nInt, int nPH, unsigned int & nContainer); //PH is placeholder
+    void WriteAtOffset4(int nInt, unsigned int nOffset);
+    void WriteAtOffset2(short nShort, unsigned int nOffset);
+    void WriteAtOffset1(char nChar, unsigned int nOffset);
+    void WriteAtOffset(float fFloat, unsigned int nOffset);
+    void WriteAtOffset(const std::string & sString, unsigned int nOffset);
 
   public:
+    //Friends
+    friend class EditorDlgWindow;
+
     //Getters
     std::vector<int> & GetKnownData(){ return bKnown; }
 
@@ -100,9 +108,10 @@ class BinaryFile: public File{
 
 class TextFile: public File{
   protected:
-    bool ReadFloat(double & fNew, bool bPrint = false);
-    bool ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint = false);
-    bool ReadInt(int & nNew, bool bPrint = false);
+    bool ReadFloat(double & fNew, std::string * sGet = nullptr, bool bPrint = false);
+    //bool ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint = false);
+    bool ReadInt(int & nNew, std::string * sGet = nullptr, bool bPrint = false);
+    bool ReadUInt(unsigned int & nNew, std::string * sGet = nullptr, bool bPrint = false);
     bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
     void SkipLine();
     bool EmptyRow();

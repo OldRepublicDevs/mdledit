@@ -52,7 +52,7 @@ class Edits{
             TCITEM tcitem;
             tcitem.mask = TCIF_TEXT;
             std::string sName(255, '\0');
-            tcitem.pszText = &sName;
+            tcitem.pszText = &sName.front();
             tcitem.cchTextMax = 255;
             TabCtrl_GetItem(hTabs, nSel, &tcitem);
             sSelected = sName.c_str();

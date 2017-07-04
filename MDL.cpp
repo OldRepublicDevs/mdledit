@@ -476,9 +476,75 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
 void MDL::CreatePatches(){
     FileHeader & Data = *FH;
 
-    //SendMessage(hProgress, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, Data.MH.ArrayOfNodes.size()));
     ProgressSize(0, Data.MH.ArrayOfNodes.size());
-    //SendMessage(hProgress, PBM_SETSTEP, (WPARAM) 1, (LPARAM) NULL);
+    Report("Building Patch array... (this may take a while)");
+    std::cout<<"Building Patch array... (this may take a while)\n";
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        /// Currently, this takes all meshes, including skins, danglymeshes and walkmeshes, with render on or off
+        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
+            Node & node = Data.MH.ArrayOfNodes.at(n);
+
+            /// Record vert and tvert sizes
+            Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
+
+            /// For every vertex of every mesh
+            for(int v = 0; v < node.Mesh.Vertices.size(); v++){
+                /// Proceed only if this vertex hasn't been processed yet
+                if(node.Mesh.Vertices.at(v).nLinkedFacesIndex == -1){
+                    Vertex & vert = node.Mesh.Vertices.at(v);
+                    Vector & vCoords = vert.vFromRoot;
+
+                    /// Create new vector
+                    std::vector<Patch> CurrentPatchGroup;
+
+                    /// We've already gone through the nodes up to n and linked any vertices, so we can skip those
+                    for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
+                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_SABER)){
+                            Node & node2 = Data.MH.ArrayOfNodes.at(n2);
+
+                            /// Loop through all the verts in the mesh and look for matching vertices - theoretically there is no way to optimize this part
+                            for(int v2 = v; v2 < node2.Mesh.Vertices.size(); v2++){
+                                /// Check if vertices are equal (enough)
+                                Vector & vCoords2 = node2.Mesh.Vertices.at(v2).vFromRoot;
+                                if(vCoords.Compare(vCoords2)){
+                                    /// Update reference to new vector
+                                    node2.Mesh.Vertices.at(v2).nLinkedFacesIndex = Data.MH.PatchArrayPointers.size();
+
+                                    /// Build patch and add it to the group
+                                    Patch OtherPatch;
+                                    OtherPatch.nNodeNumber = n2;
+                                    OtherPatch.nVertex = v2;
+                                    for(int f = 0; f < node2.Mesh.Faces.size(); f++){
+                                        Face & face = node2.Mesh.Faces.at(f);
+
+                                        /// We are now checking the three vert indices
+                                        for(int i = 0; i < 3; i++){
+                                            if(face.nIndexVertex.at(i) == v2){
+                                                OtherPatch.FaceIndices.push_back(f);
+                                                OtherPatch.nSmoothingGroups = OtherPatch.nSmoothingGroups | face.nSmoothingGroup;
+                                            }
+                                        }
+                                    }
+                                    CurrentPatchGroup.push_back(std::move(OtherPatch));
+                                }
+                            }
+                        }
+                    }
+
+                    /// Record group
+                    Data.MH.PatchArrayPointers.push_back(std::move(CurrentPatchGroup));
+                }
+            }
+            ProgressPos(n);
+        }
+    }
+    ProgressPos(Data.MH.ArrayOfNodes.size());
+    std::cout<<"Done creating patches!\n";
+    /*
     Report("Building LinkedFaces array... (this may take a while)");
     std::cout<<"Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
@@ -487,10 +553,10 @@ void MDL::CreatePatches(){
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
             Node & node = Data.MH.ArrayOfNodes.at(n);
             Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
 
             for(int v = 0; v < node.Mesh.Vertices.size(); v++){
                 //For every vertex of every mesh
@@ -537,17 +603,10 @@ void MDL::CreatePatches(){
                 }
             }
             ProgressPos(n);
-            //SendMessage(hProgress, PBM_SETPOS, (WPARAM) n, (LPARAM) NULL);
         }
     }
     std::cout<<"Done building LinkedFaces array!\n";
     ProgressPos(Data.MH.ArrayOfNodes.size());
-    //SendMessage(hProgress, PBM_SETPOS, (WPARAM) Data.MH.ArrayOfNodes.size(), (LPARAM) NULL);
-    /*
-    for(int dbg = 0; dbg < Data.MH.LinkedFacesPointers.size(); dbg++){
-        if(Data.MH.LinkedFacesPointers.at(dbg).size() == 0) Warning("A linked face group is empty. This is gonna cause a crash in a bit...");
-    }
-    */
     std::cout<<"Creating patches... \n";
     Report("Building patches...");
     for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
@@ -595,6 +654,7 @@ void MDL::CreatePatches(){
     Data.MH.LinkedFacesPointers.resize(0);
     Data.MH.LinkedFacesPointers.shrink_to_fit();
     std::cout<<"Done creating patches! LinkedFace array deleted!\n";
+    */
 }
 
 //This function together with the next one, checks the currently loaded data in MDL for any special properties
@@ -636,7 +696,7 @@ void MDL::CheckPeculiarities(){
         ssReturn<<"\r\n - AnimationArray counts differ!";
         bUpdate = true;
     }
-    if(Data.MH.nUnknown2 != 0){
+    if(Data.MH.nPadding != 0){
         ssReturn<<"\r\n - Unknown int32 after the Root Head Node Offset in the MH has a value!";
         bUpdate = true;
     }
@@ -685,6 +745,33 @@ void MDL::CheckPeculiarities(){
         return;
     }
     MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
+}
+
+unsigned MDL::GetHeaderOffset(const Node & node, unsigned short nHeader){
+    unsigned nReturn = 0;
+
+    if(nHeader == NODE_HEADER) return nReturn;
+    else if(node.Head.nType & NODE_HEADER) nReturn += NODE_SIZE_HEADER;
+    if(nHeader == NODE_LIGHT) return nReturn;
+    else if(node.Head.nType & NODE_LIGHT) nReturn += NODE_SIZE_LIGHT;
+    if(nHeader == NODE_EMITTER) return nReturn;
+    else if(node.Head.nType & NODE_EMITTER) nReturn += NODE_SIZE_EMITTER;
+    if(nHeader == NODE_REFERENCE) return nReturn;
+    else if(node.Head.nType & NODE_REFERENCE) nReturn += NODE_SIZE_REFERENCE;
+    if(nHeader == NODE_MESH) return nReturn;
+    else if(node.Head.nType & NODE_MESH){
+        nReturn += NODE_SIZE_MESH;
+        if(bXbox) nReturn -= 4;
+        if(!bK2) nReturn -= 8;
+    }
+    if(nHeader == NODE_SKIN) return nReturn;
+    else if(node.Head.nType & NODE_SKIN) nReturn += NODE_SIZE_SKIN;
+    if(nHeader == NODE_DANGLY) return nReturn;
+    else if(node.Head.nType & NODE_DANGLY) nReturn += NODE_SIZE_DANGLY;
+    if(nHeader == NODE_AABB) return nReturn;
+    else if(node.Head.nType & NODE_AABB) nReturn += NODE_SIZE_AABB;
+    if(nHeader == NODE_SABER) return nReturn;
+    else if(node.Head.nType & NODE_SABER) nReturn += NODE_SIZE_SABER;
 }
 
 bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, int nAnimation){

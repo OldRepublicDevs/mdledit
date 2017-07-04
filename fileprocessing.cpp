@@ -50,7 +50,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     const unsigned int MAX_PATH_MASS = 40000;
 
     cFile.resize(MAX_PATH);
-    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";
+    if(nID == IDM_ASCII_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
@@ -136,7 +136,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else ReportGetOpenFileNameError();
     }
-    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";
+    else if(nID == IDM_BIN_SAVE){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
@@ -266,7 +266,8 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             bReturn = true;        }
         else ReportGetOpenFileNameError();
     }
-    else if(nID == IDM_MDL_OPEN){        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile; //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
+    else if(nID == IDM_MDL_OPEN){
+        std::cout << "Default file: " << cFile << "\n";        ZeroMemory(&ofn, sizeof(ofn));        ofn.lStructSize = sizeof(ofn);        ofn.hwndOwner = hwnd;        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH;        ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";
         ofn.lpstrDefExt = "mdl";        ofn.nFilterIndex = 1;        ofn.lpstrFileTitle = NULL;        ofn.nMaxFileTitle = 0;        ofn.lpstrInitialDir = NULL;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
 
             //First figure out if we're opening a .mdl.
@@ -608,9 +609,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
             sFolder = cFile;
+            if(ofn.nFileExtension == 0) cFile += std::string(lpStrFiles);
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 1);
             bReturn = true;
-            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< sFolder <<"\n";
             else std::cout << "\nConverted file: "<< cFile <<"\n";        }
         else ReportGetOpenFileNameError();    }
     else if(nID == IDM_MASS_TO_BIN){
@@ -621,9 +623,10 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
             sFolder = cFile;
+            if(ofn.nFileExtension == 0) cFile += std::string(lpStrFiles);
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 2);
             bReturn = true;
-            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< cFile <<"\n";
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< sFolder <<"\n";
             else std::cout << "\nConverted file: "<< cFile <<"\n";        }
         else ReportGetOpenFileNameError();    }
     return bReturn;
@@ -775,6 +778,7 @@ DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
     }
     catch(const std::exception & e){
         std::cout << "Model decompilation failed with the following exception:\n" << e.what() << "\n";
+        throw e;
     }
     catch(...){
         std::cout << "Model decompilation failed with an unknown exception.\n";
@@ -816,6 +820,10 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
     }
 
     SendMessage(hProgressMass, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, nMax));
+
+    /// Define lists of model names that have some property.
+    std::array<std::vector<std::string>, 32> HasEmitterFlag;
+    std::vector<std::string> HasDepthTexture, HasRenderOrder, HasFrameBlending;
 
     int nCounter = 0;
     while(*lpStrFiles != 0){
@@ -1056,80 +1064,98 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
             if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
             if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
 
-            sFileNoExt += "-mdledit-ascii";
-            sCurrentFile = sFileNoExt + std::string(".mdl");
+            if(Model.bDebug){
+                /// Decompilation should now be done. Here we will perform our tests.
+                ModelHeader & Data = tempModel.GetFileData()->MH;
+                for(int nNode = 0; nNode < Data.ArrayOfNodes.size(); nNode++){
+                    Node & node = Data.ArrayOfNodes.at(nNode);
+                    if(!(node.Head.nType & NODE_EMITTER)) continue;
 
-            //Convert the data and put it into a string
-            //std::cout<<"Converting to ascii.\n";
-            std::string sAsciiExport;
-            tempModel.ExportAscii(sAsciiExport);
-
-            //Create file
-            std::ofstream fileout(sCurrentFile, std::fstream::out);
-
-            if(!fileout.is_open()){
-                std::cout<<"File creation failed. Aborting.\n";
-                continue;
+                    for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
+                        if(node.Emitter.nFlags & pown(2, ef)) HasEmitterFlag.at(ef).push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str());
+                    }
+                    if(node.Emitter.nFrameBlending != 0) HasFrameBlending.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Emitter.nFrameBlending) + std::string(")"));
+                    if(node.Emitter.cDepthTextureName.c_str() != std::string("NULL") &&
+                       node.Emitter.cDepthTextureName.c_str() != std::string("") ) HasDepthTexture.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + node.Emitter.cDepthTextureName.c_str() + std::string(")"));
+                    if(node.Emitter.nRenderOrder != 0) HasRenderOrder.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string(node.Emitter.nRenderOrder) + std::string(")"));
+                }
             }
+            else{
+                sFileNoExt += "-mdledit-ascii";
+                sCurrentFile = sFileNoExt + std::string(".mdl");
 
-            //Write and close file
-            //std::cout<<"Writing ascii.\n";
-            fileout<<sAsciiExport;
-            fileout.close();
+                //Convert the data and put it into a string
+                //std::cout<<"Converting to ascii.\n";
+                std::string sAsciiExport;
+                tempModel.ExportAscii(sAsciiExport);
 
-            //std::cout<<"Cleanup.\n";
-            sAsciiExport.clear();
-            sAsciiExport.shrink_to_fit();
+                //Create file
+                std::ofstream fileout(sCurrentFile, std::fstream::out);
 
-            //Save Pwk
-            if(tempModel.Pwk){
-                std::string cPwk = sFileNoExt + ".pwk";
-
-                sAsciiExport.clear();
-                tempModel.ExportPwkAscii(sAsciiExport);
-
-                fileout.open(cPwk, std::fstream::out);
+                if(!fileout.is_open()){
+                    std::cout<<"File creation failed. Aborting.\n";
+                    continue;
+                }
 
                 //Write and close file
+                //std::cout<<"Writing ascii.\n";
                 fileout<<sAsciiExport;
                 fileout.close();
 
+                //std::cout<<"Cleanup.\n";
                 sAsciiExport.clear();
                 sAsciiExport.shrink_to_fit();
-            }
 
-            //Save Dwk
-            if(tempModel.Dwk0 || tempModel.Dwk1 || tempModel.Dwk2){
-                std::string cDwk = sFileNoExt + ".dwk";
+                //Save Pwk
+                if(tempModel.Pwk){
+                    std::string cPwk = sFileNoExt + ".pwk";
 
-                sAsciiExport.clear();
-                tempModel.ExportDwkAscii(sAsciiExport);
+                    sAsciiExport.clear();
+                    tempModel.ExportPwkAscii(sAsciiExport);
 
-                fileout.open(cDwk, std::fstream::out);
+                    fileout.open(cPwk, std::fstream::out);
 
-                //Write and close file
-                fileout<<sAsciiExport;
-                fileout.close();
+                    //Write and close file
+                    fileout<<sAsciiExport;
+                    fileout.close();
 
-                sAsciiExport.clear();
-                sAsciiExport.shrink_to_fit();
-            }
+                    sAsciiExport.clear();
+                    sAsciiExport.shrink_to_fit();
+                }
 
-            //Save Wok
-            if(tempModel.Wok && tempModel.bExportWok){
-                std::string cWok = sFileNoExt + ".wok";
+                //Save Dwk
+                if(tempModel.Dwk0 || tempModel.Dwk1 || tempModel.Dwk2){
+                    std::string cDwk = sFileNoExt + ".dwk";
 
-                sAsciiExport.clear();
-                tempModel.ExportWokAscii(sAsciiExport);
+                    sAsciiExport.clear();
+                    tempModel.ExportDwkAscii(sAsciiExport);
 
-                fileout.open(cWok, std::fstream::out);
+                    fileout.open(cDwk, std::fstream::out);
 
-                //Write and close file
-                fileout<<sAsciiExport;
-                fileout.close();
+                    //Write and close file
+                    fileout<<sAsciiExport;
+                    fileout.close();
 
-                sAsciiExport.clear();
-                sAsciiExport.shrink_to_fit();
+                    sAsciiExport.clear();
+                    sAsciiExport.shrink_to_fit();
+                }
+
+                //Save Wok
+                if(tempModel.Wok && tempModel.bExportWok){
+                    std::string cWok = sFileNoExt + ".wok";
+
+                    sAsciiExport.clear();
+                    tempModel.ExportWokAscii(sAsciiExport);
+
+                    fileout.open(cWok, std::fstream::out);
+
+                    //Write and close file
+                    fileout<<sAsciiExport;
+                    fileout.close();
+
+                    sAsciiExport.clear();
+                    sAsciiExport.shrink_to_fit();
+                }
             }
         }
 
@@ -1137,6 +1163,28 @@ DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
         SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
         UpdateWindow(hProgressMass);
     }
+
+    if(Model.bDebug){
+        /// Now, let's report our emitter findings.
+        if(sFolder.back() == '\\'){
+            std::ofstream emitterfile(sFolder + "emitter_stats.txt", std::fstream::out);
+
+            emitterfile << "EMITTER STATS\n\n";
+            for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
+                emitterfile << "Emitter flag " << ef << ":\n";
+                for(int n = 0; n < HasEmitterFlag.at(ef).size(); n++) emitterfile << "    " << HasEmitterFlag.at(ef).at(n) << "\n";
+            }
+            emitterfile << "Frame Blending:\n";
+            for(int n = 0; n < HasFrameBlending.size(); n++) emitterfile << "    " << HasFrameBlending.at(n) << "\n";
+            emitterfile << "Depth Texture:\n";
+            for(int n = 0; n < HasDepthTexture.size(); n++) emitterfile << "    " << HasDepthTexture.at(n) << "\n";
+            emitterfile << "Render Order:\n";
+            for(int n = 0; n < HasRenderOrder.size(); n++) emitterfile << "    " << HasRenderOrder.at(n) << "\n";
+
+            emitterfile.close();
+        }
+    }
+
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
 }

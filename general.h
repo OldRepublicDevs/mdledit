@@ -62,6 +62,7 @@ extern HWND hTree;
 extern HWND hTabs;
 extern HWND hProgress;
 extern HWND hDisplayEdit;
+extern double PI;
 extern bool bShowHex;
 char DecToHexDigit(int nDec);
 void CharsToHex(char * cOutput, std::vector<char> & cInput, int nOffset, int nNumber);
@@ -83,7 +84,8 @@ void AAToQuaternion(double * fAA, double * fQuaternion);
 double RoundDec(double fNumber, int nDecPlaces);
 double RoundDec(float fNumber, int nDecPlaces);
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset);
-std::string PrepareFloat(double fFloat);
+std::string PrepareFloat(double fFloat, bool bFiniteOnly = true);
+unsigned int stou(std::string const & str, size_t * idx = 0, int base = 10);
 
 struct MenuLineAdder{
     HMENU hMenu;
@@ -103,7 +105,7 @@ class mdlexception: public std::exception {
     }
 };
 
-char * operator&(std::string & sStr);
+//char * operator&(std::string & sStr);
 std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = std::string::npos);
 
 #endif // GENERAL_H_INCLUDED

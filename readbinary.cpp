@@ -72,7 +72,7 @@ void MDL::DecompileModel(bool bMinimal){
     MarkBytes(nPos, 1, 10);
     Data.MH.nUnknown1[0] = sBuffer[nPos];
     nPos++;
-    MarkBytes(nPos, 2, 7);
+    MarkBytes(nPos, 2, 10);
     Data.MH.nUnknown1[1] = sBuffer[nPos];
     nPos++;
     Data.MH.nUnknown1[2] = sBuffer[nPos];
@@ -97,7 +97,7 @@ void MDL::DecompileModel(bool bMinimal){
     ReadString(Data.MH.cSupermodelName, &nPos, 3, 32);
 
     Data.MH.nOffsetToHeadRootNode = ReadInt(&nPos, 6);
-    Data.MH.nUnknown2 = ReadInt(&nPos, 8);
+    Data.MH.nPadding = ReadInt(&nPos, 8);
     Data.MH.nMdxLength2 = ReadInt(&nPos, 1);
     Data.MH.nOffsetIntoMdx = ReadInt(&nPos, 8);
 
@@ -341,7 +341,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 MarkBytes(nPosData, 1, 7);
                 NODE->Head.Controllers[n].nColumnCount = sBuffer[nPosData];
                 nPosData += 1;
-                MarkBytes(nPosData, 3, 10);
+                MarkBytes(nPosData, 3, 11);
                 NODE->Head.Controllers[n].nPadding[0] = sBuffer[nPosData];
                 nPosData += 1;
                 NODE->Head.Controllers[n].nPadding[1] = sBuffer[nPosData];
@@ -471,10 +471,10 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
 
         NODE->Emitter.nTwosidedTex = ReadInt(&nPos, 4);
         NODE->Emitter.nLoop = ReadInt(&nPos, 4);
-        NODE->Emitter.nUnknown1 = ReadInt(&nPos, 10, 2);
+        NODE->Emitter.nRenderOrder = ReadInt(&nPos, 5, 2);
         NODE->Emitter.nFrameBlending = ReadInt(&nPos, 7, 1);
         ReadString(NODE->Emitter.cDepthTextureName, &nPos, 3, 32);
-        NODE->Emitter.nUnknown2 = ReadInt(&nPos, 10, 1);
+        NODE->Emitter.nPadding1 = ReadInt(&nPos, 11, 1);
         NODE->Emitter.nFlags = ReadInt(&nPos, 10);
     }
 
@@ -531,7 +531,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Mesh.nUnknown3[1] = ReadInt(&nPos, 8);
         NODE->Mesh.nUnknown3[2] = ReadInt(&nPos, 8);
 
-        MarkBytes(nPos, 8, 7);
+        MarkBytes(nPos, 8, 10);
         NODE->Mesh.nSaberUnknown1 = sBuffer[nPos];
         nPos++;
         NODE->Mesh.nSaberUnknown2 = sBuffer[nPos];
@@ -548,16 +548,6 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         nPos++;
         NODE->Mesh.nSaberUnknown8 = sBuffer[nPos];
         nPos++;
-        /*
-        This was to check out if maybe they represent orientation, but it's unlikely
-        ByteBlock4.bytes[0] = NODE->Mesh.nSaberUnknown1;
-        ByteBlock4.bytes[1] = NODE->Mesh.nSaberUnknown2;
-        ByteBlock4.bytes[2] = NODE->Mesh.nSaberUnknown3;
-        ByteBlock4.bytes[3] = NODE->Mesh.nSaberUnknown4;
-        Orientation oSaber;
-        oSaber.Decompress(ByteBlock4.ui);
-        std::cout<<"Saber orient ("<<ByteBlock4.ui<<"): x="<<oSaber.GetAxisAngle().vAxis.fX<<", y="<<oSaber.GetAxisAngle().vAxis.fY<<", z="<<oSaber.GetAxisAngle().vAxis.fZ<<", A="<<oSaber.GetAxisAngle().fAngle<<".\n";
-        */
 
         NODE->Mesh.nAnimateUV = ReadInt(&nPos, 4);
         NODE->Mesh.fUVDirectionX = ReadFloat(&nPos, 2);
@@ -568,17 +558,17 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Mesh.nMdxDataSize = ReadInt(&nPos, 1);
         NODE->Mesh.nMdxDataBitmap = ReadInt(&nPos, 4);
 
-        NODE->Mesh.nOffsetToVerticesInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToNormalsInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToColorInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToUVsInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToUV2sInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToUV3sInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToUV4sInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToTangentSpaceInMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToTangentSpace2InMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToTangentSpace3InMDX = ReadInt(&nPos, 6);
-        NODE->Mesh.nOffsetToTangentSpace4InMDX = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxVertex = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxNormal = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxColor = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxUV1 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxUV2 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxUV3 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxUV4 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxTangent1 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxTangent2 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxTangent3 = ReadInt(&nPos, 6);
+        NODE->Mesh.nOffsetToMdxTangent4 = ReadInt(&nPos, 6);
 
         NODE->Mesh.nNumberOfVerts = ReadInt(&nPos, 1, 2);
         NODE->Mesh.nTextureNumber = ReadInt(&nPos, 5, 2);
@@ -598,14 +588,13 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         nPos++;
 
         if(bK2) NODE->Mesh.nDirtEnabled = ReadInt(&nPos, 7, 1);
-        if(bK2) NODE->Mesh.nUnknown1 = ReadInt(&nPos, 10, 1);
+        if(bK2) NODE->Mesh.nPadding1 = ReadInt(&nPos, 11, 1);
         if(bK2) NODE->Mesh.nDirtTexture = ReadInt(&nPos, 5, 2);
         if(bK2) NODE->Mesh.nDirtCoordSpace = ReadInt(&nPos, 5, 2);
-
         if(bK2) NODE->Mesh.nHideInHolograms = ReadInt(&nPos, 7, 1);
-        if(bK2) NODE->Mesh.nUnknown2 = ReadInt(&nPos, 10, 1);
+        if(bK2) NODE->Mesh.nPadding2 = ReadInt(&nPos, 11, 1);
 
-        NODE->Mesh.nUnknown4 = ReadInt(&nPos, 10, 2);
+        NODE->Mesh.nPadding3 = ReadInt(&nPos, 11, 2);
 
         NODE->Mesh.fTotalArea = ReadFloat(&nPos, 2);
         NODE->Mesh.nPadding = ReadInt(&nPos, 8);
@@ -641,6 +630,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             unsigned int nPosData2;
             if(NODE->Mesh.IndexLocationArray.nCount > 0) nPosData2 = MDL_OFFSET + NODE->Mesh.nVertIndicesLocation;
             while(n < NODE->Mesh.FaceArray.nCount){
+                NODE->Mesh.Faces.at(n).nNodeNumber = NODE->Head.nNodeNumber;
+
                 NODE->Mesh.Faces[n].vNormal.fX = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Faces[n].vNormal.fY = ReadFloat(&nPosData, 2);
                 NODE->Mesh.Faces[n].vNormal.fZ = ReadFloat(&nPosData, 2);
@@ -701,8 +692,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Skin.UnknownArray.nOffset = ReadInt(&nPos, 8);
         NODE->Skin.UnknownArray.nCount = ReadInt(&nPos, 8);
         NODE->Skin.UnknownArray.nCount2 = ReadInt(&nPos, 8);
-        NODE->Skin.nOffsetToWeightValuesInMDX = ReadInt(&nPos, 6);
-        NODE->Skin.nOffsetToBoneIndexInMDX = ReadInt(&nPos, 6);
+        NODE->Skin.nOffsetToMdxWeightValues = ReadInt(&nPos, 6);
+        NODE->Skin.nOffsetToMdxBoneIndices = ReadInt(&nPos, 6);
 
         NODE->Skin.nOffsetToBonemap = ReadInt(&nPos, 6);
         NODE->Skin.nNumberOfBonemap = ReadInt(&nPos, 1);
@@ -735,6 +726,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             unsigned int nPosData3 = MDL_OFFSET + NODE->Skin.TBoneArray.nOffset;
             unsigned int nPosData4 = MDL_OFFSET + NODE->Skin.Array8Array.nOffset;
             while(n < NODE->Skin.nNumberOfBonemap){
+                NODE->Skin.Bones.at(n).nNodeNumber = NODE->Head.nNodeNumber;
                 if(bXbox) NODE->Skin.Bones[n].nBonemap = ReadInt(&nPosData, 5, 2);
                 else NODE->Skin.Bones[n].nBonemap = (short) ReadFloat(&nPosData, 2);
                 if(NODE->Skin.Bones[n].nBonemap != -1){
@@ -783,7 +775,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Mesh.Vertices[n].MDXData.nNodeNumber = NODE->Head.nNodeNumber;
                 if(NODE->Mesh.nMdxDataSize > 0 && Mdx){
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToVerticesInMDX;
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxVertex;
                         NODE->Mesh.Vertices[n].MDXData.vVertex.fX = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vVertex.fY = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vVertex.fZ = Mdx->ReadFloat(&nPosData2, 2);
@@ -798,8 +790,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                             NODE->Mesh.Vertices[n].vFromRoot += vFromRoot;
                         }
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToNormalsInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxNormal;
                         if(!bXbox){
                             NODE->Mesh.Vertices[n].MDXData.vNormal.fX = Mdx->ReadFloat(&nPosData2, 2);
                             NODE->Mesh.Vertices[n].MDXData.vNormal.fY = Mdx->ReadFloat(&nPosData2, 2);
@@ -809,28 +801,28 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                             NODE->Mesh.Vertices[n].MDXData.vNormal = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
                         }
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUVsInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV1;
                         NODE->Mesh.Vertices[n].MDXData.vUV1.fX = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vUV1.fY = Mdx->ReadFloat(&nPosData2, 2);
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV2sInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV2;
                         NODE->Mesh.Vertices[n].MDXData.vUV2.fX = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vUV2.fY = Mdx->ReadFloat(&nPosData2, 2);
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV3sInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV3;
                         NODE->Mesh.Vertices[n].MDXData.vUV3.fX = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vUV3.fY = Mdx->ReadFloat(&nPosData2, 2);
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV4sInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV4;
                         NODE->Mesh.Vertices[n].MDXData.vUV4.fX = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.vUV4.fY = Mdx->ReadFloat(&nPosData2, 2);
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpaceInMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent1;
                         for(int b = 0; b < 3; b++){
                             if(bXbox){
                                 NODE->Mesh.Vertices[n].MDXData.vTangent1[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
@@ -842,8 +834,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                             }
                         }
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace2InMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent2;
                         for(int b = 0; b < 3; b++){
                             if(bXbox){
                                 NODE->Mesh.Vertices[n].MDXData.vTangent2[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
@@ -855,8 +847,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                             }
                         }
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace3InMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent3;
                         for(int b = 0; b < 3; b++){
                             if(bXbox){
                                 NODE->Mesh.Vertices[n].MDXData.vTangent3[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
@@ -868,8 +860,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                             }
                         }
                     }
-                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace4InMDX;
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent4;
                         for(int b = 0; b < 3; b++){
                             if(bXbox){
                                 NODE->Mesh.Vertices[n].MDXData.vTangent4[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
@@ -882,12 +874,12 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         }
                     }
                     if(NODE->Head.nType & NODE_SKIN){
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToWeightValuesInMDX;
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxWeightValues;
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[0] = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[1] = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[2] = Mdx->ReadFloat(&nPosData2, 2);
                         NODE->Mesh.Vertices[n].MDXData.Weights.fWeightValue[3] = Mdx->ReadFloat(&nPosData2, 2);
-                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToBoneIndexInMDX;
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxBoneIndices;
                         if(bXbox){
                             NODE->Mesh.Vertices[n].MDXData.Weights.nWeightIndex[0] = Mdx->ReadInt(&nPosData2, 5, 2);
                             NODE->Mesh.Vertices[n].MDXData.Weights.nWeightIndex[1] = Mdx->ReadInt(&nPosData2, 5, 2);
@@ -914,13 +906,13 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             if(NODE->Mesh.nMdxDataSize > 0 && Mdx){
                 NODE->Mesh.MDXData.nNodeNumber = NODE->Head.nNodeNumber;
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToVerticesInMDX;
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxVertex;
                     NODE->Mesh.MDXData.vVertex.fX = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vVertex.fY = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vVertex.fZ = Mdx->ReadFloat(&nPosData2, 8);
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_NORMAL){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToNormalsInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxNormal;
                     if(!bXbox){
                         NODE->Mesh.MDXData.vNormal.fX = Mdx->ReadFloat(&nPosData2, 8);
                         NODE->Mesh.MDXData.vNormal.fY = Mdx->ReadFloat(&nPosData2, 8);
@@ -930,28 +922,28 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         NODE->Mesh.MDXData.vNormal = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
                     }
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUVsInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV1;
                     NODE->Mesh.MDXData.vUV1.fX = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vUV1.fY = Mdx->ReadFloat(&nPosData2, 8);
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV2sInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV2;
                     NODE->Mesh.MDXData.vUV2.fX = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vUV2.fY = Mdx->ReadFloat(&nPosData2, 8);
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV3sInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV3;
                     NODE->Mesh.MDXData.vUV3.fX = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vUV3.fY = Mdx->ReadFloat(&nPosData2, 8);
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToUV4sInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV4;
                     NODE->Mesh.MDXData.vUV4.fX = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.vUV4.fY = Mdx->ReadFloat(&nPosData2, 8);
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpaceInMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent1;
                     for(int b = 0; b < 3; b++){
                         if(bXbox){
                             NODE->Mesh.MDXData.vTangent1[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
@@ -963,8 +955,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         }
                     }
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace2InMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent2;
                     for(int b = 0; b < 3; b++){
                         if(bXbox){
                             NODE->Mesh.MDXData.vTangent2[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
@@ -976,8 +968,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         }
                     }
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace3InMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent3;
                     for(int b = 0; b < 3; b++){
                         if(bXbox){
                             NODE->Mesh.MDXData.vTangent3[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
@@ -989,8 +981,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         }
                     }
                 }
-                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4){
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToTangentSpace4InMDX;
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxTangent4;
                     for(int b = 0; b < 3; b++){
                         if(bXbox){
                             NODE->Mesh.MDXData.vTangent4[b] = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
@@ -1003,14 +995,14 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                     }
                 }
                 if(NODE->Head.nType & NODE_SKIN){
-                    //if(NODE->Skin.nOffsetToWeightValuesInMDX != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToWeightValuesInMDX;
+                    //if(NODE->Skin.nOffsetToMdxWeightValues != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxWeightValues;
                     NODE->Mesh.MDXData.Weights.fWeightValue[0] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[1] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[2] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[3] = Mdx->ReadFloat(&nPosData2, 8);
-                    //if(NODE->Skin.nOffsetToBoneIndexInMDX != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
-                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToBoneIndexInMDX;
+                    //if(NODE->Skin.nOffsetToMdxBoneIndices != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxBoneIndices;
                     if(bXbox){
                         NODE->Mesh.MDXData.Weights.nWeightIndex[0] = Mdx->ReadInt(&nPosData2, 8, 2);
                         NODE->Mesh.MDXData.Weights.nWeightIndex[1] = Mdx->ReadInt(&nPosData2, 8, 2);
@@ -1052,16 +1044,13 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         unsigned int nPosData2 = MDL_OFFSET + NODE->Saber.nOffsetToSaberUVs;
         unsigned int nPosData3 = MDL_OFFSET + NODE->Saber.nOffsetToSaberNormals;
         while(n < 176){
-            NODE->Saber.SaberData[n].nOffsetVertex = nPosData;
             NODE->Saber.SaberData[n].vVertex.fX = ReadFloat(&nPosData, 2);
             NODE->Saber.SaberData[n].vVertex.fY = ReadFloat(&nPosData, 2);
             NODE->Saber.SaberData[n].vVertex.fZ = ReadFloat(&nPosData, 2);
 
-            NODE->Saber.SaberData[n].nOffsetUV1 = nPosData2;
             NODE->Saber.SaberData[n].vUV1.fX = ReadFloat(&nPosData2, 2);
             NODE->Saber.SaberData[n].vUV1.fY = ReadFloat(&nPosData2, 2);
 
-            NODE->Saber.SaberData[n].nOffsetNormal = nPosData3;
             NODE->Saber.SaberData[n].vNormal.fX = ReadFloat(&nPosData3, 2);
             NODE->Saber.SaberData[n].vNormal.fY = ReadFloat(&nPosData3, 2);
             NODE->Saber.SaberData[n].vNormal.fZ = ReadFloat(&nPosData3, 2);
@@ -1225,6 +1214,7 @@ void MDL::DetermineSmoothing(){
     nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
         int nPatchCount = Data.MH.PatchArrayPointers.at(pg).size();
+        //std::cout << "Current patch count: " << nPatchCount << "\n";
         if(nPatchCount == 0) Warning("Warning, patch count is 0. This is likely gonna cause the program to crash right after this message!");
         int nFirstNameIndex = Data.MH.PatchArrayPointers.at(pg).front().nNodeNumber;
         int nFirstVertex = Data.MH.PatchArrayPointers.at(pg).front().nVertex;
@@ -1373,7 +1363,7 @@ void MDL::DetermineSmoothing(){
                     bFound = true;
                 }
 
-                if(!bFound){
+                if(!bFound && nPatchCount < 12){
                     bFound = FindNormal(0, nPatchCount, p, pg, vNormalBase, vNormal, patch.SmoothedPatches, file);
                 }
             }
@@ -1401,7 +1391,7 @@ void MDL::DetermineSmoothing(){
             else if(p+1 == nPatchCount) std::cout<<ssVN.str();
 
             //Do tangent space calculation
-            if(GetNodeByNameIndex(patch.nNodeNumber).Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 && bDebug){
+            if(GetNodeByNameIndex(patch.nNodeNumber).Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 && bDebug){
                 Vector vCheckT = vTangentBase;
                 Vector vCheckB = vBitangentBase;
                 Vector vCheckN = vTangentNormalBase;
@@ -1522,7 +1512,7 @@ void MDL::DetermineSmoothing(){
                         else if(bBadUV) file << " (bad UV)";
                         else file << " (incomplete)";
                     }
-                    else{
+                    else if(nPatchCount < 12){
                         std::vector<int> nDummyPatchVector;
                         int nFound = FindTangentSpace(0, nPatchCount, p, pg, vTangentBase, vBitangentBase, vTangentNormalBase, vTangent, vBitangent, vNormalTS, nDummyPatchVector, file);
 
@@ -1556,54 +1546,80 @@ void MDL::DetermineSmoothing(){
         //When we get here all the data in the patch group has been worked over.
         //Our patches should now contain the info about which patches they smooth to.
         //Now we need to generate smoothing group numbers
+
+        /// Make an array of smoothing group numbers for this patch group
         for(int n = 0; n < nPatchCount*(nPatchCount - 1)/2 + 1; n++){
             nSmoothingGroupNumbers.at(pg).push_back(0);
         }
 
-        int nSmoothingGroupCounter = 0;
+        /// Report
         file<<"Getting vertex smoothing groups.\n";
+
+        /// The number of smoothing group numbers used inside this patch group
+        int nSmoothingGroupCounter = 0;
+
+        /// For every patch
         for(int p = 0; p < nPatchCount; p++){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+
+            /// Report
             file<<"  Patch "<<p<<" smooths to "<< patch.SmoothedPatches.size()<<" patches...\n";
+
+            /// Get smoothing group numbers from the array of patches that this patch smooths to
             while(patch.SmoothedPatches.size() > 0){
-                //So now we have patch p smoothing over to the patch in the array.at(i)
-                //update them to include a common smoothing number, then elevate the counter
+                /// This is the SmoothedPatchesGroup, which will contain the indices of the patches that all
+                /// smooth between each other. This means that they can be assigned a common (single) smoothing group number.
                 std::vector<int> SmoothedPatchesGroup;
+
+                /// Get last smoothed patch
                 int p2 = patch.SmoothedPatches.back();
                 Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(p2);
-                //Add matching patches
+
+                /// Add the indices of both patches to the group
                 SmoothedPatchesGroup.push_back(p);
                 SmoothedPatchesGroup.push_back(p2);
-                //Add the index to the patches
+
+                /// Add the pointers to smoothing group integers, both get the same integer
                 patch.SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                 patch2.SmoothingGroupNumbers.push_back(&(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
-                //Delete from their SmoothedPatches
+
+                /// Delete both patches from each other's SmoothedPatches
+                patch.SmoothedPatches.pop_back();
                 for(int i2 = 0; i2 < patch2.SmoothedPatches.size(); i2++){
                     if(patch2.SmoothedPatches.at(i2) == p){
                         patch2.SmoothedPatches.erase(patch2.SmoothedPatches.begin() + i2);
-                        i2 = patch2.SmoothedPatches.size();
+                        break;
                     }
                 }
-                patch.SmoothedPatches.pop_back();
 
+                /// This function will go through all the patches in this patch group
+                /// It will look at the patches that are not yet in SmoothedPatchesGroup and for each one
+                /// it will check whether it smooths to all the patches currently in the smoothed patches group.
+                /// If it does, then the patch will be added to the group.
                 GenerateSmoothingNumber(SmoothedPatchesGroup, nSmoothingGroupNumbers.at(pg), nSmoothingGroupCounter, pg, file);
 
+                /// Report
                 file<<"  Added smoothing group "<<nSmoothingGroupCounter+1<<" for patches:";
                 for(int spg = 0; spg < SmoothedPatchesGroup.size(); spg++){
                     file<<" "<<SmoothedPatchesGroup.at(spg);
                 }
                 file<<"\n";
+
+                /// Elevate smoothing group counter
                 nSmoothingGroupCounter++;
             }
             patch.SmoothedPatches.clear();
             patch.SmoothedPatches.shrink_to_fit();
-            //Once we get here, we have checked (for patch p) all the patches we smooth over to and added their indices
-            //In case the patch doesn't smooth to any other patch, store an additional identity smoothing group for it
+
+            /// Once we get here, we have checked (for patch p) all the patches we smooth over to and added their indices
+            /// In case the patch doesn't smooth to any other patch, store an additional identity smoothing group for it
             if(patch.SmoothingGroupNumbers.size() == 0){
                 file<<"  Patch "<<p<<" in patch group has no smoothing group, setting it to "<<nSmoothingGroupCounter+1<<".\n";
                 patch.SmoothingGroupNumbers.push_back((unsigned long int*) &(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                 nSmoothingGroupCounter++;
             }
+
+            /// Report
             file<<"  (patch "<<p<<" now has "<<patch.SmoothingGroupNumbers.size()<<" smoothing groups)\n";
         }
     }
@@ -1636,36 +1652,39 @@ void MDL::DetermineSmoothing(){
         std::cout<<"  Without bad UVs: "<<nNumOfFoundTSN<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
     }
 
-    if(bGoodEnough){
-        //std::cout << "Good enough\n";
-        Report("Calculating smoothing groups...");
+    if(!bGoodEnough) Error("The vector recalculations were off by too much to be able to determine the smoothing groups. Try decompiling with different vertex normal calculation settings.");
+    else{
         /// Here we finally apply the smoothing groups to the faces in a principled way.
-        std::vector<bool> DoneGroups(Data.MH.PatchArrayPointers.size(), false);
+        Report("Calculating smoothing groups...");
+
+        /// This array will keep track of which patch groups we've processed already
+        std::vector<bool> DonePatches(Data.MH.PatchArrayPointers.size(), false);
+
+        /// Go through all the patch groups
+        //file << "\n\n== Consolidation ==";
         for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
-            ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DoneGroups);
+            ConsolidateSmoothingGroups(pg, nSmoothingGroupNumbers, DonePatches);
         }
-        //std::cout << "Consolidated\n";
-        /// And finally finally, we merge the numbers for every face and get rid of the patch array.
+
+        /// And finally finally, we merge the numbers for every face
         for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
             for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
                 Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
                 unsigned long int nExistingSG = 0;
                 for(int i = 0; i < patch.SmoothingGroupNumbers.size(); i++){
-                    nExistingSG = nExistingSG | *patch.SmoothingGroupNumbers.at(i);
+                    nExistingSG = (nExistingSG | *patch.SmoothingGroupNumbers.at(i));
                 }
                 patch.nSmoothingGroups = (unsigned int) nExistingSG;
                 for(int f = 0; f < patch.FaceIndices.size(); f++){
-                    GetNodeByNameIndex(patch.nNodeNumber).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup = nExistingSG;
+                    GetNodeByNameIndex(patch.nNodeNumber).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup =
+                        GetNodeByNameIndex(patch.nNodeNumber).Mesh.Faces.at(patch.FaceIndices.at(f)).nSmoothingGroup | nExistingSG;
                 }
             }
         }
-        //std::cout << "Done with good enough\n";
     }
-    else Error("The vector recalculations were off by too much to be able to determine the smoothing groups. Try decompiling with different vertex normal calculation settings.");
-
+    /// Get rid of the patch array.
     Data.MH.PatchArrayPointers.clear();
     Data.MH.PatchArrayPointers.shrink_to_fit();
-    /**/
 
     if(bDebug){
         std::string sDir = sFullPath;
@@ -1700,82 +1719,89 @@ void MDL::DetermineSmoothing(){
     std::cout<<"Done calculating smoothing groups!\n";
 }
 
+/** Algorithm
+  1. Go through all of the patches in the patch group.
+  2. If number is not single, skip it. Else if there is no assigned number for the patch
+     make the next number in sequence on the patch.
+  3. Go through all the faces and assign the same
+     number to all the other single corners, then mark the face as processed.
+  4. now we go through the processed faces and apply the same algorithm
+/**/
 void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups){
     FileHeader & Data = *FH;
-    //std::cout << "Consolidate start\n";
-    /** Alternative algorithm
-    1. Go through all of the patches in the patch group.
-    2. If number is not single, skip it. Else if there is no assigned number for the patch
-    make the next number in sequence on the patch.
-    3. Go through all the faces and assign the same
-    number to all the other single corners, then mark the face as processed.
-    4. now we go through the processed faces and apply the same algorithm
-    /**/
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
         Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
         if(patch.SmoothingGroupNumbers.size() == 1){
             if(*patch.SmoothingGroupNumbers.front() == 0){
                 unsigned long int nBitflag = 0;
-                //First get all the used numbers
+
+                /// First get all the used numbers
                 for(int num = 0; num < Numbers.at(nPatchGroup).size(); num++){
                     nBitflag = nBitflag | Numbers.at(nPatchGroup).at(num);
                 }
-                //Now find the first unused one and use it.
+
+                /// Now find the first unused one and use it.
                 for(int n = 0; *patch.SmoothingGroupNumbers.front() == 0; n++){
                     if(!(nBitflag & pown(2, n))) *patch.SmoothingGroupNumbers.front() = pown(2, n);
                 }
             }
-            //std::cout << "For every face\n";
+
             for(int f = 0; f < patch.FaceIndices.size(); f++){
                 Node & node = Data.MH.ArrayOfNodes.at(patch.nNodeNumber);
                 Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
-                //Skip if processed
-                if(!face.bProcessedSG){
-                    //Okay, we've got one corner, now we need to check the other two corners if they're single
-                    for(int v = 0; v < 3; v++){
-                        if(face.nIndexVertex[v] != patch.nVertex){ //Don't process yourself
-                            Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
-                            //We get every vert's patch group
-                            std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
-                            bool bFound = false;
-                            int p2 = 0;
-                            while(!bFound){
-                                //Find the patch with the same vert index as stored with the face
-                                if(node.Head.nNodeNumber == PatchVector.at(p2).nNodeNumber && PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
-                                    bFound = true;
-                                }
-                                else p2++;
-                            }
-                            //We get the patch that contains the current vert
-                            Patch & vertpatch = PatchVector.at(p2);
-                            if(vertpatch.SmoothingGroupNumbers.size() == 1){
-                                //Finally, copy the number to a single corner
-                                *vertpatch.SmoothingGroupNumbers.front() = *patch.SmoothingGroupNumbers.front();
-                            }
+
+                /// Skip if processed
+                if(face.bProcessedSG) continue;
+
+                /// Okay, we've got one corner, now we need to check the other two corners if they're single
+                for(int v = 0; v < 3; v++){
+                    Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
+
+                    /// Don't process yourself
+                    if(face.nIndexVertex[v] == patch.nVertex) continue;
+
+                    /// We get every vert's patch group
+                    std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
+                    bool bFound = false;
+                    int p2 = 0;
+                    while(!bFound){
+                        /// Find the patch with the same vert index as stored with the face
+                        if(node.Head.nNodeNumber == PatchVector.at(p2).nNodeNumber && PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
+                            bFound = true;
                         }
+                        else p2++;
                     }
-                    face.bProcessedSG = true;
+                    /// We get the patch that contains the current vert
+                    Patch & vertpatch = PatchVector.at(p2);
+                    if(vertpatch.SmoothingGroupNumbers.size() == 1){
+                        /// Finally, copy the number to a single corner
+                        *vertpatch.SmoothingGroupNumbers.front() = *patch.SmoothingGroupNumbers.front();
+                    }
                 }
+                face.bProcessedSG = true;
             }
-            //std::cout << "Done for every face\n";
         }
     }
-    //std::cout << "Consolidate done patch\n";
+
     DoneGroups.at(nPatchGroup) = true;
+
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
         Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
         for(int f = 0; f < patch.FaceIndices.size(); f++){
             Node & node = Data.MH.ArrayOfNodes.at(patch.nNodeNumber);
             Face & face = node.Mesh.Faces.at(patch.FaceIndices.at(f));
-            if(face.bProcessedSG){
-                for(int v = 0; v < 3; v++){
-                    if(face.nIndexVertex[v] != patch.nVertex){ //Don't process yourself
-                        Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
 
-                        //AND NOW... DO RECURSION!!!
-                        if(!DoneGroups.at(vert.nLinkedFacesIndex)) ConsolidateSmoothingGroups(vert.nLinkedFacesIndex, Numbers, DoneGroups);
-                    }
-                }
+            /// Only processed faces
+            if(!face.bProcessedSG) continue;
+
+            for(int v = 0; v < 3; v++){
+                Vertex & vert = node.Mesh.Vertices.at(face.nIndexVertex[v]);
+
+                /// Don't process yourself
+                if(face.nIndexVertex[v] == patch.nVertex) continue;
+
+                /// AND NOW... DO RECURSION!!!
+                if(!DoneGroups.at(vert.nLinkedFacesIndex)) ConsolidateSmoothingGroups(vert.nLinkedFacesIndex, Numbers, DoneGroups);
             }
         }
     }
@@ -1783,55 +1809,49 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
 
 void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothedPatchesGroup, const std::vector<unsigned long int> & nSmoothingGroupNumbers, const int & nSmoothingGroupCounter, const int & pg, std::stringstream & file){
     FileHeader & Data = *FH;
-    bool bExists = false;
 
-    //file<<"...GenerateSmoothingNumber()...";
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
-        bExists = false;
-        //file<<"...Checking patch "<<p<<"...";
-        //Check if patch p already exists in the smoothed patches group, if so skip it
+        Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
+
+        /// Check if patch p already exists in the smoothed patches group, if so skip it
+        bool bExists = false;
         for(int sp = 0; sp < SmoothedPatchesGroup.size() && !bExists; sp++){
             if(SmoothedPatchesGroup.at(sp) == p){
                 bExists = true;
-                //file<<"...skipping patch "<<p<<"...";
             }
         }
-        if(!bExists){
-            Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
-            bool bFound = true;
-            //Go through the smoothed patches group; check that all patches in
-            //the smoothed patch group are linked in this patch's smoothed patches as well
-            for(int sp = 0; sp < SmoothedPatchesGroup.size() && bFound; sp++){
-                bFound = false;
-                //file<<"...looking for "<<SmoothedPatchesGroup.at(sp)<<"...";
-                //First make sure that you're not looking for me, maybe?
-                if(SmoothedPatchesGroup.at(sp) == p) bFound = true;
-                //Go through the current patche's smoothed patches
-                for(int i = 0; i < patch.SmoothedPatches.size() && !bFound; i++){
-                    //If the patch smooths over to a patch in the smoothed patches group
-                    if(patch.SmoothedPatches.at(i) == SmoothedPatchesGroup.at(sp)){
-                        bFound = true;
-                        //file<<"...found "<<SmoothedPatchesGroup.at(sp)<<"...";
-                    }
+        if(bExists) continue;
+
+        /// Go through the smoothed patches group; check that all patches in
+        /// the smoothed patch group are linked in this patch's smoothed patches as well
+        bool bFound = true;
+        for(int sp = 0; sp < SmoothedPatchesGroup.size() && bFound; sp++){
+            bFound = false;
+
+            /// Go through the current patch's smoothed patches
+            for(int i = 0; i < patch.SmoothedPatches.size() && !bFound; i++){
+                /// If this patch smooths over to the current patch in the smoothed patches group
+                if(patch.SmoothedPatches.at(i) == SmoothedPatchesGroup.at(sp)){
+                    bFound = true;
                 }
             }
-            if(bFound){
-                //Add the patch to the smoothed patches group
-                SmoothedPatchesGroup.push_back(p);
-                //file<<"...added "<<p<<"...";
-                //Add the same smoothing group number to the smoothing group numbers of the current patch.
-                patch.SmoothingGroupNumbers.push_back((long unsigned int*)&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
+        }
+        if(bFound){
+            /// Add the patch to the smoothed patches group
+            SmoothedPatchesGroup.push_back(p);
 
-                //Make sure we delete the smoothed patch numbers on everyone
-                for(int spg = 0; spg < SmoothedPatchesGroup.size(); spg++){
-                    Patch & spgpatch = Data.MH.PatchArrayPointers.at(pg).at(SmoothedPatchesGroup.at(spg));
-                    for(int sp = 0; sp < spgpatch.SmoothedPatches.size(); sp++){
-                        for(int spg2 = 0; spg2 < SmoothedPatchesGroup.size(); spg2++){
-                            if(spgpatch.SmoothedPatches.at(sp) == spg2){
-                                spgpatch.SmoothedPatches.erase(spgpatch.SmoothedPatches.begin() + sp);
-                                sp--;
-                                spg2 = SmoothedPatchesGroup.size();
-                            }
+            ///Add the same smoothing group number to the smoothing group numbers of the current patch.
+            patch.SmoothingGroupNumbers.push_back((long unsigned int*)&(nSmoothingGroupNumbers.at(nSmoothingGroupCounter)));
+
+            ///Make sure we delete the smoothed patch numbers on everyone
+            for(int spg = 0; spg < SmoothedPatchesGroup.size(); spg++){
+                Patch & spgpatch = Data.MH.PatchArrayPointers.at(pg).at(SmoothedPatchesGroup.at(spg));
+                for(int sp = 0; sp < spgpatch.SmoothedPatches.size(); sp++){
+                    for(int spg2 = 0; spg2 < SmoothedPatchesGroup.size(); spg2++){
+                        if(spgpatch.SmoothedPatches.at(sp) == spg2){
+                            spgpatch.SmoothedPatches.erase(spgpatch.SmoothedPatches.begin() + sp);
+                            sp--;
+                            break;
                         }
                     }
                 }

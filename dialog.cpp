@@ -117,14 +117,14 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
         Mdl.ConvertToAscii(CONVERT_ANIMATION, sPrint, (void*) lParam);
     }
     /// Anim Node ///
-    else if((cItem[1] == "Animated Nodes") || ((cItem[3] == "Animated Nodes") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
+    else if((cItem[2] == "Animations") || ((cItem[4] == "Animations") && ((cItem[1] == "Children") || (cItem[1] == "Parent")))){
         Node * node = (Node*) lParam;
 
         sName<<"animated node "<<Mdl.GetFileData()->MH.Names[node->Head.nNodeNumber].sName;
         Mdl.ConvertToAscii(CONVERT_ANIMATION_NODE, sPrint, (void*) lParam);
     }
     /// Geo Node ///
-    else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[3] == "Parent")))){
+    else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[1] == "Parent")))){
         Node * node = (Node*) lParam;
 
         sName<<"node "<<Mdl.GetFileData()->MH.Names[node->Head.nNodeNumber].sName;

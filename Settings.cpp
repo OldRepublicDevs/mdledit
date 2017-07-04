@@ -60,38 +60,38 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                         Node & node = Data.MH.ArrayOfNodes.at(n);
                         if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB) && !(node.Head.nType & NODE_SABER)){
                             if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
-                                find.psz = &node.Mesh.cTexture1;
+                                find.psz = &node.Mesh.cTexture1.front();
                                 if(ListView_FindItem(hList1, -1, &find) == -1){
-                                    item.pszText = &node.Mesh.cTexture1;
+                                    item.pszText = &node.Mesh.cTexture1.front();
                                     nCount1 = ListView_InsertItem(hList1, &item);
-                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1) ListView_SetCheckState(hList1, nCount1, true);
+                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1) ListView_SetCheckState(hList1, nCount1, true);
                                     nCount1++;
                                 }
                             }
                             if(node.Mesh.cTexture2.c_str() != std::string("") && node.Mesh.cTexture2.c_str() != std::string("NULL")){
-                                find.psz = &node.Mesh.cTexture2;
+                                find.psz = &node.Mesh.cTexture2.front();
                                 if(ListView_FindItem(hList2, -1, &find) == -1){
-                                    item.pszText = &node.Mesh.cTexture2;
+                                    item.pszText = &node.Mesh.cTexture2.front();
                                     nCount2 = ListView_InsertItem(hList2, &item);
-                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2) ListView_SetCheckState(hList2, nCount2, true);
+                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) ListView_SetCheckState(hList2, nCount2, true);
                                     nCount2++;
                                 }
                             }
                             if(node.Mesh.cTexture3.c_str() != std::string("") && node.Mesh.cTexture3.c_str() != std::string("NULL")){
-                                find.psz = &node.Mesh.cTexture3;
+                                find.psz = &node.Mesh.cTexture3.front();
                                 if(ListView_FindItem(hList3, -1, &find) == -1){
-                                    item.pszText = &node.Mesh.cTexture3;
+                                    item.pszText = &node.Mesh.cTexture3.front();
                                     nCount3 = ListView_InsertItem(hList3, &item);
-                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3) ListView_SetCheckState(hList3, nCount3, true);
+                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) ListView_SetCheckState(hList3, nCount3, true);
                                     nCount3++;
                                 }
                             }
                             if(node.Mesh.cTexture4.c_str() != std::string("") && node.Mesh.cTexture4.c_str() != std::string("NULL")){
-                                find.psz = &node.Mesh.cTexture4;
+                                find.psz = &node.Mesh.cTexture4.front();
                                 if(ListView_FindItem(hList4, -1, &find) == -1){
-                                    item.pszText = &node.Mesh.cTexture4;
+                                    item.pszText = &node.Mesh.cTexture4.front();
                                     nCount4 = ListView_InsertItem(hList4, &item);
-                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4) ListView_SetCheckState(hList4, nCount4, true);
+                                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) ListView_SetCheckState(hList4, nCount4, true);
                                     nCount4++;
                                 }
                             }
@@ -123,26 +123,26 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                 FileHeader & Data = *Mdl->GetFileData();
                                 std::string sOldTex;
                                 sOldTex.resize(33);
-                                ListView_GetItemText(hControl, ia->iItem, 0, &sOldTex, 33);
+                                ListView_GetItemText(hControl, ia->iItem, 0, &sOldTex.front(), 33);
                                 for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
                                     Node & node = Data.MH.ArrayOfNodes.at(n);
                                     if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB)){
-                                        if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture1.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1))){
+                                        if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture1.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1))){
                                             //std::cout<<"Found difference. ("<<Data.MH.Names.at(node.Head.nNodeNumber).sName<<")\n";
                                             bChange = true;
-                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_HAS_TANGENT1;
+                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_TANGENT1;
                                         }
-                                        else if(nID == IDC_TEXTURE_LISTVIEW2 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture2.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT2))){
+                                        else if(nID == IDC_TEXTURE_LISTVIEW2 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture2.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2))){
                                             bChange = true;
-                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_HAS_TANGENT2;
+                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_TANGENT2;
                                         }
-                                        else if(nID == IDC_TEXTURE_LISTVIEW3 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture3.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT3))){
+                                        else if(nID == IDC_TEXTURE_LISTVIEW3 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture3.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3))){
                                             bChange = true;
-                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_HAS_TANGENT3;
+                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_TANGENT3;
                                         }
-                                        else if(nID == IDC_TEXTURE_LISTVIEW4 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture4.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT4))){
+                                        else if(nID == IDC_TEXTURE_LISTVIEW4 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture4.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4))){
                                             bChange = true;
-                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_HAS_TANGENT4;
+                                            node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_TANGENT4;
                                         }
                                     }
                                 }
@@ -163,11 +163,11 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                             std::string sNewTex = info->item.pszText;
                             std::string sOldTex;
                             sOldTex.resize(33);
-                            ListView_GetItemText(hControl, info->item.iItem, 0, &sOldTex, 33);
+                            ListView_GetItemText(hControl, info->item.iItem, 0, &sOldTex.front(), 33);
 
                             LVFINDINFO find;
                             find.flags = LVFI_STRING;
-                            find.psz = &sNewTex;
+                            find.psz = &sNewTex.front();
                             bool bRemove = false;
                             bool bCancel = false;
                             if(ListView_FindItem(hControl, -1, &find) != -1){
@@ -189,7 +189,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                     }
                                 }
                                 if(bRemove) ListView_DeleteItem(hControl, info->item.iItem);
-                                else ListView_SetItemText(hControl, info->item.iItem, 0, &sNewTex);
+                                else ListView_SetItemText(hControl, info->item.iItem, 0, &sNewTex.front());
                             }
                         }
                     }

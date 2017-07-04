@@ -364,6 +364,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
                     }
+                    std::string sNewName = "MDLedit";
+                    if(bSuccess) sNewName += " (" + Model.GetFilename() + ")";
+                    SetWindowText(hwnd, sNewName.c_str());
                 }
                 break;
                 case IDM_BIN_SAVE:
@@ -691,13 +694,24 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     std::string FilenameDwk0 = (Model.Dwk0 ? Model.Dwk0->GetFilename() : "");
     std::string FilenameDwk1 = (Model.Dwk1 ? Model.Dwk1->GetFilename() : "");
     std::string FilenameDwk2 = (Model.Dwk2 ? Model.Dwk2->GetFilename() : "");
+    int nFile = -1;
     while(!bStop && !(cItem[0] == FilenameModel) && !(cItem[0] == FilenameWalkmesh) && !(cItem[0] == FilenamePwk) && !(cItem[0] == FilenameDwk0) && !(cItem[0] == FilenameDwk1) && !(cItem[0] == FilenameDwk2)){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
         tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
         cItem[n] = cGet;
-        if((cItem[n] == FilenameModel) || (cItem[n] == FilenameWalkmesh) || (cItem[n] == FilenamePwk) || (cItem[n] == FilenameDwk0) || (cItem[n] == FilenameDwk1) || (cItem[n] == FilenameDwk2)) bStop = true;
-        else n++;
+
+        if(cItem[n] == FilenameModel) nFile = 0;
+        else if(cItem[n] == FilenameWalkmesh) nFile = 1;
+        else if(cItem[n] == FilenamePwk) nFile = 2;
+        else if(cItem[n] == FilenameDwk0) nFile = 3;
+        else if(cItem[n] == FilenameDwk1) nFile = 4;
+        else if(cItem[n] == FilenameDwk2) nFile = 5;
+        else{
+            n++;
+            continue;
+        }
+        break;
     }
 
     //Perform desired action
@@ -710,13 +724,13 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
         SetWindowText(hDisplayEdit, sPrint.str().c_str());
     }
     else if(nAction == ACTION_ADD_MENU_LINES){
-        AddMenuLines(cItem, lParam, (MenuLineAdder*) Pointer);
+        AddMenuLines(cItem, lParam, (MenuLineAdder*) Pointer, nFile);
     }
     else if(nAction == ACTION_OPEN_VIEWER){
         OpenViewer(Model, cItem, lParam);
     }
     else if(nAction == ACTION_OPEN_EDITOR){
-        OpenEditorDlg(Model, cItem, lParam);
+        OpenEditorDlg(Model, cItem, lParam, nFile);
     }
 }
 

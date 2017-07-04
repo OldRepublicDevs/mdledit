@@ -109,11 +109,11 @@
 #define NODE_SIZE_EMITTER     224
 //#define NODE_SIZE_CAMERA    0
 #define NODE_SIZE_REFERENCE   36
-#define NODE_SIZE_MESH        340
+#define NODE_SIZE_MESH        340 // k1 has 8 less, xbox has 4 less
 #define NODE_SIZE_SKIN        100
 //#define NODE_SIZE_ANIM      0
 #define NODE_SIZE_DANGLY      28
-#define NODE_SIZE_AABB        1
+#define NODE_SIZE_AABB        4
 //#define NODE_SIZE_400       0
 #define NODE_SIZE_SABER       20
 
@@ -129,27 +129,27 @@
 #define EMITTER_FLAG_SPLAT              0x0200
 #define EMITTER_FLAG_INHERIT_PART       0x0400
 #define EMITTER_FLAG_DEPTH_TEXTURE      0x0800 //maybe, per ndix UR
-#define EMITTER_FLAG_RENDER_ORDER       0x1000 //maybe, per ndix UR
+#define EMITTER_FLAG_13                 0x1000
 //#define EMITTER_FLAG_2000             0x2000
 //#define EMITTER_FLAG_3000             0x4000
 //#define EMITTER_FLAG_4000             0x8000
 
-#define MDX_FLAG_VERTEX                0x0001
-#define MDX_FLAG_HAS_UV1               0x0002
-#define MDX_FLAG_HAS_UV2               0x0004
-#define MDX_FLAG_HAS_UV3               0x0008
-#define MDX_FLAG_HAS_UV4               0x0010
-#define MDX_FLAG_HAS_NORMAL            0x0020
-#define MDX_FLAG_HAS_COLOR             0x0040
-#define MDX_FLAG_HAS_TANGENT1          0x0080
-#define MDX_FLAG_HAS_TANGENT2 /*??*/   0x0100
-#define MDX_FLAG_HAS_TANGENT3 /*??*/   0x0200
-#define MDX_FLAG_HAS_TANGENT4 /*??*/   0x0400
-//#define MDX_FLAG_0800                0x0800
-//#define MDX_FLAG_1000                0x1000
-//#define MDX_FLAG_2000                0x2000
-//#define MDX_FLAG_3000                0x4000
-//#define MDX_FLAG_4000                0x8000
+#define MDX_FLAG_VERTEX                 0x0001
+#define MDX_FLAG_UV1                    0x0002
+#define MDX_FLAG_UV2                    0x0004
+#define MDX_FLAG_UV3                    0x0008
+#define MDX_FLAG_UV4                    0x0010
+#define MDX_FLAG_NORMAL                 0x0020
+#define MDX_FLAG_COLOR                  0x0040
+#define MDX_FLAG_TANGENT1               0x0080
+#define MDX_FLAG_TANGENT2 /*??*/        0x0100
+#define MDX_FLAG_TANGENT3 /*??*/        0x0200
+#define MDX_FLAG_TANGENT4 /*??*/        0x0400
+//#define MDX_FLAG_0800                 0x0800
+//#define MDX_FLAG_1000                 0x1000
+//#define MDX_FLAG_2000                 0x2000
+//#define MDX_FLAG_3000                 0x4000
+//#define MDX_FLAG_4000                 0x8000
 
 #define AABB_NO_CHILDREN    0x00
 #define AABB_POSITIVE_X     0x01
@@ -328,7 +328,7 @@ struct Face{
     bool bProcessedSG = false;
     std::array<short, 3> nEdgeTransitions = {-1, -1, -1};
     int nTextureCount = 0;
-    int nSmoothingGroup = 1;
+    int nSmoothingGroup = 0;
     double fArea = 0.0;
     double fAreaUV = 0.0;
     Vector vTangent;
@@ -337,6 +337,7 @@ struct Face{
     Vector vBBmax;
     Vector vCentroid;
     short nID = -1;
+    int nNodeNumber = -1;
 };
 
 
@@ -402,17 +403,6 @@ struct VertexData{
     Weight Weights;
 
     //Added members
-    int nOffsetVertex = 0;
-    int nOffsetNormal = 0;
-    int nOffsetUV1 = 0;
-    int nOffsetUV2 = 0;
-    int nOffsetUV3 = 0;
-    int nOffsetUV4 = 0;
-    int nOffsetColor = 0;
-    std::array<int, 3> nOffsetTangent1 = {0,0,0};
-    std::array<int, 3> nOffsetTangent2 = {0,0,0};
-    std::array<int, 3> nOffsetTangent3 = {0,0,0};
-    std::array<int, 3> nOffsetTangent4 = {0,0,0};
     int nNodeNumber = -1;
 
     VertexData(){}
@@ -441,26 +431,12 @@ struct ArrayHead{
     }
 };
 
-struct LinkedFace{
-    unsigned int nNodeNumber = -1; //This is the index of the mesh with our face
-    unsigned int nFace = -1; //This is the index of our face
-    unsigned int nVertex = -1; //This is the index of the matchin vertex of our face
-    bool bAssignedToPatch = false;
-
-    LinkedFace(){}
-    LinkedFace(const int & name, const int & face, const int & vert){
-        nNodeNumber = name;
-        nFace = face;
-        nVertex = vert;
-    }
-};
-
 struct Patch{
-    unsigned int nNodeNumber = -1; //This is the index of the mesh with our face
-    unsigned int nVertex = -1; //This is the index of the matchin vertex of our face
-    unsigned int nSmoothingGroups = 0;
-    std::vector<unsigned int> FaceIndices;
-    std::vector<int> SmoothedPatches;
+    unsigned int nNodeNumber = -1;          // This is the index of the mesh with our vert
+    unsigned int nVertex = -1;              // This is the index of the vert
+    std::vector<unsigned int> FaceIndices;  // The faces using this vert
+    unsigned int nSmoothingGroups = 0;      // The combined smoothing groups for the patch.
+    std::vector<int> SmoothedPatches;       // Other patches by num that this patch smooths to.
     std::vector<unsigned long int*> SmoothingGroupNumbers;
     bool bUniform = false;
 };
@@ -503,6 +479,7 @@ struct Bone{
     signed short nBonemap = -1;
     Orientation QBone;
     Vector TBone;
+    int nNodeNumber = -1;
 };
 
 /**** NODE ELEMENTS ****/
@@ -534,19 +511,19 @@ struct Header{
 // if NODE_LIGHT
 struct LightHeader{
     //Binary members
-    double fFlareRadius = 0.0;
-    ArrayHead UnknownArray;
-    ArrayHead FlareSizeArray;
-    ArrayHead FlarePositionArray;
-    ArrayHead FlareColorShiftArray;
-    ArrayHead FlareTextureNameArray;
-    int nLightPriority = 0;
-    int nAmbientOnly = 0;
-    int nDynamicType = 0;
-    int nAffectDynamic = 0;
-    int nShadow = 0;
-    int nFlare = 0;
-    int nFadingLight = 0;
+    double fFlareRadius = 0.0;          /// 0   4B float
+    ArrayHead UnknownArray;             /// 4  12B uint32 (x3)
+    ArrayHead FlareSizeArray;           /// 16 12B uint32 (x3)
+    ArrayHead FlarePositionArray;       /// 28 12B uint32 (x3)
+    ArrayHead FlareColorShiftArray;     /// 40 12B uint32 (x3)
+    ArrayHead FlareTextureNameArray;    /// 52 12B uint32 (x3)
+    int nLightPriority = 0;             /// 64  4B uint32
+    int nAmbientOnly = 0;               /// 68  4B uint32
+    int nDynamicType = 0;               /// 72  4B uint32
+    int nAffectDynamic = 0;             /// 76  4B uint32
+    int nShadow = 0;                    /// 80  4B uint32
+    int nFlare = 0;                     /// 84  4B uint32
+    int nFadingLight = 0;               /// 88  4B uint32
 
     //Added members
     std::vector<Name> FlareTextureNames;
@@ -555,75 +532,43 @@ struct LightHeader{
     std::vector<double> FlareSizes;
 };
 
-// if NODE_EMITTER
+/// NODE_EMITTER
 struct EmitterHeader{
-    /***
-    ndix UR's emitter
-    # item offset size (bytes) data type notes
-    1 Deadspace 0 4 float
-    2 Blast Radius 4 4 float
-    3 Blast Length 8 4 float
-    4 Number of Branches 12 4 uint32
-    5 Control Point Smoothing 16 4 float
-    6 X Grid 20 4 uint32
-    7 Y Grid 24 4 uint32
-    8 Spawn Type 28 4 uint32
-    9 Update 32 32 string Fountain, Single, Explosion, Lightning
-    10 Render 64 32 string Normal, Billboard_to_Local_Z, Billboard_to_World_Z, Aligned_to_World_Z, Aligned_to_Particle_Dir, Motion_Blur, Linked
-    11 Blend 96 32 string Normal, Lighten, PunchThrough, Punch-Through
-    12 Texture 128 32 string
-    13 Chunkname 160 16 string particle model?
-    14 Two Sided Texture 176 4 uint16
-    15 Loop 180 4 uint16
-    16 Render Order ??? 184 2 uint16 Flags?
-    17 Frame Blending 186 1 ubyte
-    18 Depth Texture Name 187 32 string
-    19 Padding ??? 219 1 ubyte
-    20 Flags ??? 220 4? uint32 Maybe this is 2 uint16? Just padding? Render order?
-    /***/
     //Binary Members
-    double fDeadSpace = 0.0;
-    double fBlastRadius = 0.0;
-    double fBlastLength = 0.0;
-    unsigned int nBranchCount = 0;
-    double fControlPointSmoothing = 0.0;
-    unsigned int nxGrid = 0;
-    unsigned int nyGrid = 0;
-    unsigned int nSpawnType = 0;
-    std::string cUpdate; //32B
-    std::string cRender; //32B
-    std::string cBlend; //32B
-    std::string cTexture; //32B
-    std::string cChunkName; //16B
-    unsigned int nTwosidedTex = 0;
-    unsigned int nLoop = 0;
-    unsigned short nUnknown1 = 0;
-    unsigned char nFrameBlending = 0;
-    std::string cDepthTextureName; //32B
-    unsigned char nUnknown2 = 0;
-    unsigned int nFlags = 0; //unsure
+    double fDeadSpace = 0.0;                /// 0    4B float
+    double fBlastRadius = 0.0;              /// 4    4B float
+    double fBlastLength = 0.0;              /// 8    4B float
+    unsigned int nBranchCount = 0;          /// 12   4B uint32
+    double fControlPointSmoothing = 0.0;    /// 16   4B float
+    unsigned int nxGrid = 0;                /// 20   4B uint32
+    unsigned int nyGrid = 0;                /// 24   4B uint32
+    unsigned int nSpawnType = 0;            /// 28   4B uint32
+    std::string cUpdate;                    /// 32  32B string ("Fountain", "Single", "Explosion", "Lightning")
+    std::string cRender;                    /// 64  32B string ("Normal", "Billboard_to_Local_Z", "Billboard_to_World_Z", "Aligned_to_World_Z", "Aligned_to_Particle_Dir", "Motion_Blur", "Linked")
+    std::string cBlend;                     /// 96  32B string ("Normal", "Lighten", "PunchThrough", "Punch-Through")
+    std::string cTexture;                   /// 128 32B string
+    std::string cChunkName;                 /// 160 16B string
+    unsigned int nTwosidedTex = 0;          /// 176  4B uint32
+    unsigned int nLoop = 0;                 /// 180  4B uint32
+    unsigned short nRenderOrder = 0;        /// 184  4B uint16 (0-8)
+    unsigned char nFrameBlending = 0;       /// 186  1B ubyte
+    std::string cDepthTextureName;          /// 187 32B string
+    unsigned char nPadding1 = 0;            /// 219  1B padding
+    unsigned int nFlags = 0;                /// 220  4B uint32 (flags)
 };
 
-// if NODE_REFERENCE
+/// NODE_REFERENCE
 struct ReferenceHeader{
     //Binary members
-    std::string sRefModel; //32B
-    unsigned int nReattachable = 0;
+    std::string sRefModel;                  /// 0  32B string
+    unsigned int nReattachable = 0;         /// 32  4B uint32
 };
 
-// if NODE_MESH
+/// NODE_MESH
 struct MeshHeader{
     //Binary members
     unsigned int nFunctionPointer0 = 0;
-        /* MagnusII:
-         * 4216656 K1, 4216592 K1 SkinMesh, 4216640 K1 DanglyMesh
-         * 4216880 K2, 4216816 K2 SkinMesh, 4216864 K2 DanglyMesh
-         */
     unsigned int nFunctionPointer1 = 0;
-        /* MagnusII:
-         * 4216672 K1, 4216608 K1 SkinMesh, 4216624 K1 DanglyMesh
-         * 4216896 K2, 4216832 K2 SkinMesh, 4216848 K2 DanglyMesh
-         */
     ArrayHead FaceArray;
     Vector vBBmin; //not exported
     Vector vBBmax; //not exported
@@ -634,8 +579,8 @@ struct MeshHeader{
     unsigned int nTransparencyHint = 0; // 0 (mostly), 1, 2, 3, 4, 5, 7, 8, 13
     std::string cTexture1;
     std::string cTexture2;
-    std::string cTexture3;   // Not supported by NWMax
-    std::string cTexture4;   // Not supported by NWMax
+    std::string cTexture3;   // Not supported by KotorMax
+    std::string cTexture4;   // Not supported by KotorMax
     ArrayHead IndexCounterArray;
     ArrayHead IndexLocationArray;
     ArrayHead MeshInvertedCounterArray;
@@ -664,17 +609,17 @@ struct MeshHeader{
 
     unsigned int nMdxDataSize = 0;
     unsigned int nMdxDataBitmap = 0;
-    int nOffsetToVerticesInMDX = -1;
-    int nOffsetToNormalsInMDX = -1;
-    int nOffsetToColorInMDX = -1; //never present
-    int nOffsetToUVsInMDX = -1;
-    int nOffsetToUV2sInMDX = -1;
-    int nOffsetToUV3sInMDX = -1; //never present
-    int nOffsetToUV4sInMDX = -1; //never present
-    int nOffsetToTangentSpaceInMDX  = -1;
-    int nOffsetToTangentSpace2InMDX  = -1; //never present
-    int nOffsetToTangentSpace3InMDX  = -1; //never present
-    int nOffsetToTangentSpace4InMDX  = -1; //never present
+    int nOffsetToMdxVertex = -1;
+    int nOffsetToMdxNormal = -1;
+    int nOffsetToMdxColor = -1; //never present
+    int nOffsetToMdxUV1 = -1;
+    int nOffsetToMdxUV2 = -1;
+    int nOffsetToMdxUV3 = -1; //never present
+    int nOffsetToMdxUV4 = -1; //never present
+    int nOffsetToMdxTangent1  = -1;
+    int nOffsetToMdxTangent2  = -1; //never present
+    int nOffsetToMdxTangent3  = -1; //never present
+    int nOffsetToMdxTangent4  = -1; //never present
 
     unsigned short nNumberOfVerts = 0;
     unsigned short nTextureNumber = 0;
@@ -685,12 +630,12 @@ struct MeshHeader{
     char nBeaming = 0;
     char nRender = 1;
     char nDirtEnabled = 0; //K2
-    char nUnknown1 = 0; //K2
+    char nPadding1 = 0; //K2
     short nDirtTexture = 1; //K2
     short nDirtCoordSpace = 1; //K2
     char nHideInHolograms = 0; //K2
-    char nUnknown2 = 0; //K2
-    short nUnknown4 = 0;
+    char nPadding2 = 0; //K2
+    short nPadding3 = 0;
     double fTotalArea = 0.0; //not exported
     unsigned int nPadding = 0;
     unsigned int nOffsetIntoMdx = 0;
@@ -733,17 +678,19 @@ struct MeshHeader{
     }
 };
 
-// if NODE_SKIN
+/// NODE_SKIN
 struct SkinHeader{
     ArrayHead UnknownArray; //Always 0
-    int nOffsetToWeightValuesInMDX = -1;
-    int nOffsetToBoneIndexInMDX = -1;
+    int nOffsetToMdxWeightValues = -1;
+    int nOffsetToMdxBoneIndices = -1;
     unsigned int nOffsetToBonemap = 0;
     unsigned int nNumberOfBonemap = 0;
     ArrayHead QBoneArray;
     ArrayHead TBoneArray;
     ArrayHead Array8Array; //empty, data irrelevant
-    std::array<short, 18> nBoneIndices = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    std::array<short, 16> nBoneIndices = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    short nPadding1 = 0;
+    short nPadding2 = 0;
 
     std::vector<Bone> Bones;
     std::vector<int> BoneNameIndices;
@@ -771,7 +718,6 @@ struct WalkmeshHeader{
     unsigned int nOffsetToAabb = 0;
 
     //Added members
-    std::vector<Aabb> ArrayOfAabb;
     Aabb RootAabb;
 };
 
@@ -790,7 +736,6 @@ struct SaberHeader{
 
 struct Node{
     unsigned int nOffset = 0;
-    //unsigned int nSize;
     int nAnimation = -1;
 
     Header Head;
@@ -827,7 +772,7 @@ struct Animation{
     double fLength = 0.0;
     double fTransition = 0.0;
     std::string sAnimRoot;
-    ArrayHead EventArray; //MDLOps: events
+    ArrayHead EventArray;
     unsigned int nPadding2 = 0; //Always 0
 
     //Added members
@@ -870,7 +815,7 @@ struct ModelHeader{
     double fScale = 0.0;
     std::string cSupermodelName;
     unsigned int nOffsetToHeadRootNode;
-    int nUnknown2 = 0; //Always 0
+    int nPadding = 0; //Always 0
     unsigned int nMdxLength2 = 0;
     unsigned int nOffsetIntoMdx = 0; //Always 0
     ArrayHead NameArray;
@@ -888,7 +833,7 @@ struct ModelHeader{
     std::vector<Animation> Animations;
     std::vector<Name> Names;
     std::vector<Node> ArrayOfNodes;
-    std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
+    //std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
     std::vector<std::vector<Patch>> PatchArrayPointers;
 };
 
@@ -919,7 +864,7 @@ struct BWMHeader{
     unsigned int nOffsetToDistances = 0;
     unsigned int nNumberOfAabb = 0;
     unsigned int nOffsetToAabb = 0;
-    unsigned int nUnknown2 = 0;
+    unsigned int nPadding = 0;
     unsigned int nNumberOfAdjacentFaces = 0;
     unsigned int nOffsetToAdjacentFaces = 0;
     unsigned int nNumberOfEdges= 0;
@@ -980,7 +925,7 @@ class MDL: public BinaryFile{
                            const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
                            const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
                            std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
-    void ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
+    void ConsolidateSmoothingGroups(int pg, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
     std::string MakeUniqueName(int nNodeNumber);
 
     //Getters
@@ -1035,6 +980,7 @@ class MDL: public BinaryFile{
     int GetNameIndex(std::string sName);
     void UpdateTexture(Node & node, const std::string & sNew, int nTex);
     void GetLytPositionFromWok();
+    unsigned GetHeaderOffset(const Node & node, unsigned short nHeader);
 
     //Loaders
     bool Compile();

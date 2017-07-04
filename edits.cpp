@@ -54,10 +54,9 @@ bool Edits::Run(HWND hParent, UINT nID){
 extern Edits Edit1;
 
 LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    Edits * Edit;
-    Edit = NULL;
+    Edits * Edit = nullptr;
     if(GetDlgCtrlID(hwnd) == IDC_MAIN_EDIT) Edit = &Edit1;
-    if(Edit == NULL){
+    if(Edit == nullptr){
         std::cout<<"MAJORMAJORMAJOR ERROR!! Running the EditsProc() for an unexisting Edit :S \n";
         return DefWindowProc (hwnd, message, wParam, lParam);
     }
@@ -197,10 +196,15 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 }
             }
 
-            std::string sGet(255, '\0');
-            SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
-            if((sGet.front() != 0) && (nArea == 0)){
-                SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) nullptr);
+            int nLength = HIWORD(SendMessage(hStatusBar, SB_GETTEXTLENGTH, 3, 0));
+            if(nLength > 0){
+                std::string sGet;
+                sGet.resize(nLength);
+                SendMessage(hStatusBar, SB_GETTEXT, 3, (LPARAM) sGet.c_str());
+                if(sGet.size() > 0 && sGet.at(0) != 0 && nArea == 0){
+                    sGet = "";
+                    SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) sGet.c_str());
+                }
             }
 
             if(bThreshold){
@@ -361,7 +365,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             int n = 0;
             n = Edit->yCurrentScroll / ME_EDIT_NEXT_ROW;
             int nMaxRowsInScreen = (Edit->rcClient.bottom) / ME_EDIT_NEXT_ROW + 2;
-            int nMax = n + nMaxRowsInScreen; //Edit->Model->GetHexRowCount();
+            int nMax = n + nMaxRowsInScreen;
             nMax = std::min(nMax, (int) Edit->sBuffer->size()/16 + 1);
             int nStrlen;
             char cIntPrint [255];
@@ -682,7 +686,7 @@ void Edits::UpdateStatusPositionMdx(){
 
     //Change text
     std::string sGet ((size_t) 255, '\0');
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
     if(std::string(sGet.c_str()) != ssPrint.str()){
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
     }
@@ -767,7 +771,7 @@ void Edits::UpdateStatusPositionBwm(const std::string & sType){
 
     //Change text
     std::string sGet ((size_t) 255, '\0');
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
     if(std::string(sGet.c_str()) != ssPrint.str()){
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
     }
@@ -948,6 +952,7 @@ void Edits::UpdateStatusPositionModel(){
                 if(nType & NODE_MESH && !bFound){
                     nHeaderSize += NODE_SIZE_MESH;
                     if(Model.bXbox) nHeaderSize -= 4;
+                    if(!Model.bK2) nHeaderSize -= 8;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Mesh";
                         bFound = true;
@@ -955,7 +960,6 @@ void Edits::UpdateStatusPositionModel(){
                 }
                 if(nType & NODE_SKIN && !bFound){
                     nHeaderSize += NODE_SIZE_SKIN;
-                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Skin";
                         bFound = true;
@@ -963,7 +967,6 @@ void Edits::UpdateStatusPositionModel(){
                 }
                 if(nType & NODE_DANGLY && !bFound){
                     nHeaderSize += NODE_SIZE_DANGLY;
-                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Danglymesh";
                         bFound = true;
@@ -971,7 +974,6 @@ void Edits::UpdateStatusPositionModel(){
                 }
                 if(nType & NODE_AABB && !bFound){
                     nHeaderSize += NODE_SIZE_AABB;
-                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Walkmesh";
                         bFound = true;
@@ -979,7 +981,6 @@ void Edits::UpdateStatusPositionModel(){
                 }
                 if(nType & NODE_SABER && !bFound){
                     nHeaderSize += NODE_SIZE_SABER;
-                    if(Model.bXbox) nHeaderSize -= 4;
                     if(nPos < NODE->nOffset + nHeaderSize){
                         ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Saber";
                         bFound = true;
@@ -1106,7 +1107,7 @@ void Edits::UpdateStatusPositionModel(){
     }
 
     std::string sGet ((size_t) 255, '\0');
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet);
+    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
     if(std::string(sGet.c_str()) != ssPrint.str()){
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
     }

@@ -102,7 +102,7 @@ void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
     //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
     while(n < nLength && n < sBuffer.size()){
         if(bKnown[nOffset + n] != 0){
-            std::cout<<"MarkBytes(): Warning! Data already interpreted as "<<bKnown[nOffset + n]<<" at offset "<<nOffset + n<<" in "<<GetName()<<"!\n";
+            std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown[nOffset + n] << " at offset " << nOffset + n << " in " << GetName() << "!\n";
             throw mdlexception("! MDLedit exception: Interpreting already interpreted data. !");
         }
         bKnown[nOffset + n] = nClass;
@@ -117,6 +117,33 @@ void BinaryFile::WriteIntToPH(int nInt, int nPH, unsigned int & nContainer){
         sBuffer[nPH+n] = (ByteBlock4.bytes[n]);
     }
     nContainer = nInt;
+}
+
+void BinaryFile::WriteAtOffset4(int nInt, unsigned int nOffset){
+    ByteBlock4.i = nInt;
+    for(int n = 0; n < 4; n++){
+        sBuffer[nOffset+n] = (ByteBlock4.bytes[n]);
+    }
+}
+void BinaryFile::WriteAtOffset2(short nShort, unsigned int nOffset){
+    ByteBlock2.i = nShort;
+    for(int n = 0; n < 2; n++){
+        sBuffer[nOffset+n] = (ByteBlock2.bytes[n]);
+    }
+}
+void BinaryFile::WriteAtOffset1(char nChar, unsigned int nOffset){
+    sBuffer[nOffset] = nChar;
+}
+void BinaryFile::WriteAtOffset(float fFloat, unsigned int nOffset){
+    ByteBlock4.f = fFloat;
+    for(int n = 0; n < 4; n++){
+        sBuffer[nOffset+n] = (ByteBlock4.bytes[n]);
+    }
+}
+void BinaryFile::WriteAtOffset(const std::string & sString, unsigned int nOffset){
+    for(int n = 0; n < sString.length(); n++){
+        sBuffer[nOffset+n] = sString.at(n);
+    }
 }
 
 void BinaryFile::WriteInt(int nInt, int nKnown, int nBytes){
@@ -180,12 +207,13 @@ void BinaryFile::WriteByte(char cByte, int nKnown){
     nPosition++;
 }
 
-bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
+bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
     std::string sCheck;
     //First skip all spaces
     if(sBuffer[nPosition] == '#' ||
        sBuffer[nPosition] == 0x0D ||
-       sBuffer[nPosition] == 0x0A)
+       sBuffer[nPosition] == 0x0A ||
+       sBuffer[nPosition] == 0x00)
     {
         if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
         return false;
@@ -194,7 +222,8 @@ bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
         nPosition++;
         if(sBuffer[nPosition] == '#' ||
            sBuffer[nPosition] == 0x0D ||
-           sBuffer[nPosition] == 0x0A)
+           sBuffer[nPosition] == 0x0A ||
+           sBuffer[nPosition] == 0x00)
         {
             if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
             return false;
@@ -203,53 +232,8 @@ bool TextFile::ReadFloat(double & fNew, std::string & sGetFloat, bool bPrint){
     while(sBuffer[nPosition] != 0x20 &&
             sBuffer[nPosition] != '#' &&
             sBuffer[nPosition] != 0x0D &&
-            sBuffer[nPosition] != 0x0A)
-    {
-        sCheck.push_back(sBuffer[nPosition]);
-        nPosition++;
-    }
-    if(sCheck.length() == 0) return false;
-
-    //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadFloat()2: Reading: "<<sCheck<<". ";
-
-    try{
-        fNew = std::stof(sCheck, (size_t*) NULL);
-        sGetFloat = sCheck;
-    }
-    catch(std::invalid_argument){
-        std::cout<<"TextFile::ReadFloat()2: There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
-        fNew = 0.0;
-        return false;
-    }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
-    return true;
-}
-
-bool TextFile::ReadFloat(double & fNew, bool bPrint){
-    std::string sCheck;
-    //First skip all spaces
-    if(sBuffer[nPosition] == '#' ||
-       sBuffer[nPosition] == 0x0D ||
-       sBuffer[nPosition] == 0x0A)
-    {
-        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
-        return false;
-    }
-    while(sBuffer[nPosition] == 0x20){
-        nPosition++;
-        if(sBuffer[nPosition] == '#' ||
-           sBuffer[nPosition] == 0x0D ||
-           sBuffer[nPosition] == 0x0A)
-        {
-            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
-            return false;
-        }
-    }
-    while(sBuffer[nPosition] != 0x20 &&
-            sBuffer[nPosition] != '#' &&
-            sBuffer[nPosition] != 0x0D &&
-            sBuffer[nPosition] != 0x0A)
+            sBuffer[nPosition] != 0x0A &&
+            sBuffer[nPosition] != 0x00)
     {
         sCheck.push_back(sBuffer[nPosition]);
         nPosition++;
@@ -259,29 +243,34 @@ bool TextFile::ReadFloat(double & fNew, bool bPrint){
     //Report
     if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadFloat(): Reading: "<<sCheck<<". ";
 
+    if(sGet != nullptr) *sGet = sCheck;
+
     try{
         fNew = std::stof(sCheck, (size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"TextFile::ReadFloat(): There was an error converting the string: "<<sCheck<<". Printing 0.0. \n";
-        fNew = 0.0;
-        return false;
+        std::cout<<"TextFile::ReadFloat(): There was an error converting the string: "<<sCheck<<". \n";
+        throw mdlexception("Could not convert '" + sCheck + "' to float.");
+    }
+    catch(std::out_of_range){
+        std::cout<<"TextFile::ReadFloat(): The float is out of range: "<<sCheck<<".\n";
+        throw mdlexception("The float " + sCheck + " is out of range.");
     }
     catch(...){
-        std::cout<<"TextFile::ReadFloat(): There was an unknown error converting the string: "<<sCheck<<". Printing 0.0. \n";
-        fNew = 0.0;
-        return false;
+        std::cout<<"TextFile::ReadFloat(): An unknown exception occurred while converting: "<<sCheck<<". \n";
+        throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to float.");
     }
     if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
     return true;
 }
 
-bool TextFile::ReadInt(int & nNew, bool bPrint){
+bool TextFile::ReadInt(int & nNew, std::string * sGet, bool bPrint){
     std::string sCheck;
     //First skip all spaces
     if(sBuffer[nPosition] == '#' ||
        sBuffer[nPosition] == 0x0D ||
-       sBuffer[nPosition] == 0x0A)
+       sBuffer[nPosition] == 0x0A ||
+       sBuffer[nPosition] == 0x00)
     {
         if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
         return false;
@@ -290,7 +279,8 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
         nPosition++;
         if(sBuffer[nPosition] == '#' ||
            sBuffer[nPosition] == 0x0D ||
-           sBuffer[nPosition] == 0x0A)
+           sBuffer[nPosition] == 0x0A ||
+           sBuffer[nPosition] == 0x00)
         {
             if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
             return false;
@@ -299,7 +289,8 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
     while(sBuffer[nPosition] != 0x20 &&
             sBuffer[nPosition] != '#' &&
             sBuffer[nPosition] != 0x0D &&
-            sBuffer[nPosition] != 0x0A)
+            sBuffer[nPosition] != 0x0A &&
+            sBuffer[nPosition] != 0x00)
     {
         sCheck.push_back(sBuffer[nPosition]);
         nPosition++;
@@ -309,13 +300,79 @@ bool TextFile::ReadInt(int & nNew, bool bPrint){
     //Report
     if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadInt(): Reading: "<<sCheck<<". ";
 
+    if(sGet != nullptr) *sGet = sCheck;
+
     try{
         nNew = stoi(sCheck,(size_t*) NULL);
     }
     catch(std::invalid_argument){
         std::cout<<"TextFile::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
-        nNew = 0xFFFFFFFF;
+        throw mdlexception("Could not convert '" + sCheck + "' to integer.");
+    }
+    catch(std::out_of_range){
+        std::cout<<"TextFile::ReadInt(): The integer is out of range: "<<sCheck<<".\n";
+        throw mdlexception("The integer " + sCheck + " is out of range.");
+    }
+    catch(...){
+        std::cout<<"TextFile::ReadInt(): An unknown exception occurred while converting: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to integer.");
+    }
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<nNew<<".\n";
+    return true;
+}
+
+bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
+    std::string sCheck;
+    //First skip all spaces
+    if(sBuffer[nPosition] == '#' ||
+       sBuffer[nPosition] == 0x0D ||
+       sBuffer[nPosition] == 0x0A ||
+       sBuffer[nPosition] == 0x00)
+    {
+        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
         return false;
+    }
+    while(sBuffer[nPosition] == 0x20){
+        nPosition++;
+        if(sBuffer[nPosition] == '#' ||
+           sBuffer[nPosition] == 0x0D ||
+           sBuffer[nPosition] == 0x0A ||
+           sBuffer[nPosition] == 0x00)
+        {
+            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
+            return false;
+        }
+    }
+    while(sBuffer[nPosition] != 0x20 &&
+            sBuffer[nPosition] != '#' &&
+            sBuffer[nPosition] != 0x0D &&
+            sBuffer[nPosition] != 0x0A &&
+            sBuffer[nPosition] != 0x00)
+    {
+        sCheck.push_back(sBuffer[nPosition]);
+        nPosition++;
+    }
+    if(sCheck.length() == 0) return false;
+
+    //Report
+    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadInt(): Reading: "<<sCheck<<". ";
+
+    if(sGet != nullptr) *sGet = sCheck;
+
+    try{
+        nNew = stou(sCheck,(size_t*) NULL);
+    }
+    catch(std::invalid_argument){
+        std::cout<<"TextFile::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        throw mdlexception("Could not convert '" + sCheck + "' to integer.");
+    }
+    catch(std::out_of_range){
+        std::cout<<"TextFile::ReadInt(): The integer is out of range: "<<sCheck<<".\n";
+        throw mdlexception("The integer " + sCheck + " is out of range.");
+    }
+    catch(...){
+        std::cout<<"TextFile::ReadInt(): An unknown exception occurred while converting: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to integer.");
     }
     if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<nNew<<".\n";
     return true;

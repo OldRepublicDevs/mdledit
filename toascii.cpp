@@ -100,13 +100,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  transtime " << PrepareFloat(anim->fTransition);
         sReturn << "\n  animroot " << anim->sAnimRoot.c_str();
         if(anim->Events.size() > 0){
-            /** old MDLOps list format
-            sReturn << "\n  eventlist";
-            for(int s = 0; s < anim->Events.size(); s++){
-                sReturn << "\n    " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
-            }
-            sReturn << "\n  endlist";
-            /**/
             for(int s = 0; s < anim->Events.size(); s++){
                 sReturn << "\n  event " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
             }
@@ -203,7 +196,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  shadow " << node->Light.nShadow;
         sReturn << "\n  flare " << node->Light.nFlare;
         sReturn << "\n  fadinglight " << node->Light.nFadingLight;
-        sReturn << "\n  flareradius " << PrepareFloat(node->Light.fFlareRadius); //NWmax reads this as an int
+        sReturn << "\n  flareradius " << PrepareFloat(node->Light.fFlareRadius);
         sReturn << "\n  texturenames " << node->Light.FlareTextureNames.size();
         for(int n = 0; n < node->Light.FlareTextureNames.size(); n++){
             sReturn<<"\n    "<<node->Light.FlareTextureNames.at(n).sName;
@@ -238,10 +231,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  chunkname " << node->Emitter.cChunkName.c_str();
         sReturn << "\n  twosidedtex " << node->Emitter.nTwosidedTex;
         sReturn << "\n  loop " << node->Emitter.nLoop;
-        sReturn << "\n  emitter_unknown_1 " << node->Emitter.nUnknown1;
+        sReturn << "\n  renderorder " << node->Emitter.nRenderOrder;
         sReturn << "\n  m_bFrameBlending " << (int) node->Emitter.nFrameBlending;
         sReturn << "\n  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
-        sReturn << "\n  emitter_unknown_2 " << (int) node->Emitter.nUnknown2;
 
         sReturn << "\n  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);
         sReturn << "\n  p2p_sel " << (node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0);
@@ -255,7 +247,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  splat " << (node->Emitter.nFlags & EMITTER_FLAG_SPLAT ? 1 : 0);
         sReturn << "\n  inherit_part " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
         sReturn << "\n  depth_texture " << (node->Emitter.nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
-        sReturn << "\n  renderorder " << (node->Emitter.nFlags & EMITTER_FLAG_RENDER_ORDER ? 1 : 0);
+        sReturn << "\n  emitterflag13 " << (node->Emitter.nFlags & EMITTER_FLAG_13 ? 1 : 0);
     }
     else if(nDataType == CONVERT_REFERENCE){
         Node * node = (Node*) Data;
@@ -266,8 +258,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node * node = (Node*) Data;
         sReturn << "\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) <<" "<< PrepareFloat(node->Mesh.fDiffuse.fB);
         sReturn << "\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) <<" "<< PrepareFloat(node->Mesh.fAmbient.fB);
-        //sReturn << "\n  specular 0.0 0.0 0.0";
-        //sReturn << "\n  wirecolor 1 1 1";
         sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
         sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
         sReturn << "\n  render " << (int) node->Mesh.nRender;
@@ -280,16 +270,23 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         sReturn << "\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\n  animateuv " << node->Mesh.nAnimateUV;
-        sReturn << "\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
-        sReturn << "\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY);
-        sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
-        sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
-        sReturn << "\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_TANGENT1 ? 1 : 0);
+        if(node->Mesh.nAnimateUV == 0){
+            sReturn << "\n  uvdirectionx 0.0";
+            sReturn << "\n  uvdirectiony 0.0";
+            sReturn << "\n  uvjitter 0.0";
+            sReturn << "\n  uvjitterspeed 0.0";
+        }
+        else{
+            sReturn << "\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
+            sReturn << "\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY);
+            sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
+            sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
+        }
+        sReturn << "\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0);
         if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n  bitmap " << node->Mesh.GetTexture(1);
         if(node->Mesh.cTexture2.c_str() != std::string()) sReturn << "\n  bitmap2 " << node->Mesh.GetTexture(2);
         if(node->Mesh.cTexture3.c_str() != std::string()) sReturn << "\n  texture0 " << node->Mesh.GetTexture(3);
         if(node->Mesh.cTexture4.c_str() != std::string()) sReturn << "\n  texture1 " << node->Mesh.GetTexture(4);
-        //if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2) sReturn << string_format("\n  lightmap %s", node->Mesh.GetTexture(2));
         sReturn << "\n  verts " << node->Mesh.Vertices.size();
         for(int n = 0; n < node->Mesh.Vertices.size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
@@ -302,8 +299,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
             sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
             sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
-            sReturn << "  " << node->Mesh.Faces.at(n).nSmoothingGroup;
-            if(node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+            sReturn << "  " << std::to_string((node->Mesh.Faces.at(n).nSmoothingGroup == 0) ? 1 : node->Mesh.Faces.at(n).nSmoothingGroup);
+            if(node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                 sReturn << "  " << node->Mesh.Faces.at(n).nIndexVertex.at(0);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
@@ -311,14 +308,14 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else sReturn << "  0 0 0";
             sReturn << "  " << node->Mesh.Faces.at(n).nMaterialID;
         }
-        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV1){
+        if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
             sReturn << "\n  tverts "<<node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
                 sReturn << "\n   " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fY);
             }
         }
-        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV2){
+        if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
             sReturn << "\n  texindices1 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
@@ -332,7 +329,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fY);
             }
         }
-        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV3){
+        if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
             sReturn << "\n  texindices2 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
@@ -346,7 +343,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn << " "<<PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fY);
             }
         }
-        if(!Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_HAS_UV4){
+        if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
             sReturn << "\n  texindices3 "<<node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
                 sReturn << "\n    ";
@@ -443,31 +440,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_SABER){
         Node * node = (Node*) Data;
-        /*
-        sReturn << "\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) <<" "<< PrepareFloat(node->Mesh.fDiffuse.fB);
-        sReturn << "\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) <<" "<< PrepareFloat(node->Mesh.fAmbient.fB);
-        sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
-        sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
-        sReturn << "\n  render " << (int) node->Mesh.nRender;
-        sReturn << "\n  beaming " << (int) node->Mesh.nBeaming;
-        sReturn << "\n  lightmapped " << (int) node->Mesh.nHasLightmap;
-        sReturn << "\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
-        sReturn << "\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
-        sReturn << "\n  dirt_texture " << node->Mesh.nDirtTexture;
-        sReturn << "\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
-        sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
-        sReturn << "\n  transparencyhint " << node->Mesh.nTransparencyHint;
-        sReturn << "\n  animateuv " << node->Mesh.nAnimateUV;
-        sReturn << "\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
-        sReturn << "\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY);
-        sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
-        sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
-        sReturn << "\n  tangentspace 0";
-        //sReturn << "\n  specular 0.0 0.0 0.0";
-        //sReturn << "\n  wirecolor 1 1 1";
-        */
         if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n  bitmap " << node->Mesh.GetTexture(1);
-        //if(node->Mesh.cTexture2.c_str() != std::string()) sReturn << "\n  bitmap2 " << node->Mesh.GetTexture(2);
 
         if(node->Saber.SaberData.size() == 176){
             Vector vDiff;
@@ -568,9 +541,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_CONTROLLER_KEYED){
         Controller * ctrl = (Controller*) Data;
         ModelHeader & data = FH->MH;
-        //std::cout << "Keyed controller: " << ctrl->nControllerType << "\n";
         Node & geonode = GetNodeByNameIndex(ctrl->nNodeNumber);
-        //std::cout << "Geonode does not crash\n";
         Location loc = geonode.GetLocation();
         Node * tempNode = nullptr;
         if(ctrl->nAnimation >= 0){
@@ -680,29 +651,30 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         /// positionbezierkey
-        else if(ctrl->nColumnCount > 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+        else if(ctrl->nColumnCount & 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
             //positionbezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn << "\n        " <<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
                 sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
                 sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
                 sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
+                sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
                 sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
                 sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
+                sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
                 sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
                 sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
             }
         }
         /// regular bezierkey
-        else if(ctrl->nColumnCount > 16 && !bBezierToLinear){
+        else if(ctrl->nColumnCount & 16 && !bBezierToLinear){
             //bezierkey
             for(int n = 0; n < ctrl->nValueCount; n++){
                 sReturn<<"\n        "<<PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n))<<" ";
-                for(int i = 0; i < (ctrl->nColumnCount - 16) * 3; i++){
-                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount - 16) * 3) + i));
-                    if(i < (ctrl->nColumnCount - 16) * 3 - 1) sReturn << " ";
+                for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
+                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount & 15) * 3) + i));
+                    if(i < (ctrl->nColumnCount & 15) * 3 - 1) sReturn << " ";
+                    if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sReturn << " ";
                 }
             }
         }
