@@ -101,7 +101,7 @@ bool Frame::Run(int nCmdShow){
 LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
     static RECT rcClient;
     //static char cFile[MAX_PATH];
-    static std::string sFile;
+    static std::string sFile = std::string(1, '\0');
     if(DEBUG_LEVEL > 500) std::cout<<"FrameProc(): "<<(int) message<<"\n";
     /* handle the messages */
 
@@ -332,6 +332,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_MASS_TO_ASCII:
                 case IDM_MASS_TO_BIN:
+                case IDM_MASS_ANALYZE:
                 {
                     FileEditor(hwnd, nID, sFile);
                 }
@@ -371,17 +372,33 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_BIN_SAVE:
                 {
+                    bool bSuccess = false;
                     int nReturn = IDOK;
                     if(Model.GetBuffer().empty()) nReturn = IDCANCEL;
-                    if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
+                    if(nReturn == IDOK) bSuccess = FileEditor(hwnd, nID, sFile);
+                    /*
+                    if(bSuccess){
+                        std::string sNewName = "MDLedit";
+                        sNewName += " (" + Model.GetFilename() + ")";
+                        SetWindowText(hwnd, sNewName.c_str());
+                    }
+                    */
                 }
                 break;
                 case IDM_ASCII_SAVE:
                 {
+                    bool bSuccess = false;
                     int nReturn = IDOK;
                     if(!Model.GetFileData()) nReturn = IDCANCEL;
-                    if(!Model.Mdx && nReturn == IDOK) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs and smoothing groups. Mesh geometry may also be affected.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
-                    if(nReturn == IDOK) FileEditor(hwnd, nID, sFile);
+                    if(!Model.Mdx && nReturn == IDOK) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs, smoothing groups and for xbox binaries also vert coords.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
+                    if(nReturn == IDOK) bSuccess = FileEditor(hwnd, nID, sFile);
+                    /*
+                    if(bSuccess){
+                        std::string sNewName = "MDLedit";
+                        sNewName += " (" + Model.GetFilename() + ")";
+                        SetWindowText(hwnd, sNewName.c_str());
+                    }
+                    */
                 }
                 break;
                 case IDM_LINK_HEAD:
@@ -668,6 +685,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
 }
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
+    if(DEBUG_LEVEL > 1000) std::cout << "Processing Tree Action!";
     std::vector<std::string> cItem(15);
     LPARAM lParam;
 

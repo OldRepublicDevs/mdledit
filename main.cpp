@@ -5,18 +5,12 @@
 #endif
 
 #include "frame.h"
-//#include <gdiplus.h>
 
 int WINAPI WinMain(HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
                      LPSTR lpszArgument,
                      int nCmdShow){
     MSG messages;            /* Here messages to the application are saved */
-    //Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-    //ULONG_PTR           gdiplusToken;
-
-    // Initialize GDI+.
-    //GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
 
     //Creation of window
     Frame *winMain = new Frame(hThisInstance);

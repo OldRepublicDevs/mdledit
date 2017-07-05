@@ -697,7 +697,7 @@ struct SkinHeader{
     std::vector<Weight> TempWeights;
 };
 
-// if NODE_DANGLY
+/// NODE_DANGLY
 struct DanglymeshHeader{
     //Binary members
     ArrayHead ConstraintArray;
@@ -799,6 +799,9 @@ struct GeometryHeader{
 struct ModelHeader{
     //Binary members
     unsigned char nClassification = 0;
+    unsigned char nSubclassification = 0;
+    unsigned char nUnknown = 0;
+    unsigned char nAffectedByFog = 1;
     std::array<unsigned char, 3> nUnknown1 = {0, 0, 1};
     unsigned int nChildModelCount = 0; //Always 0
     ArrayHead AnimationArray;

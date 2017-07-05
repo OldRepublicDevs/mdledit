@@ -22,8 +22,8 @@ void MDL::DecompileModel(bool bMinimal){
     unsigned int nPos = 0;
 
     FH.reset(new FileHeader());
-    if(!bMinimal) std::cout<<"Begin decompiling.\n";
-    Report("Decompiling header...");
+    if(!bMinimal) std::cout<<"Begin decompiling ";
+    Report("Decompiling...");
 
     FileHeader & Data = *FH;
 
@@ -31,7 +31,7 @@ void MDL::DecompileModel(bool bMinimal){
     Data.nZero = ReadInt(&nPos, 8);
     Data.nMdlLength = ReadInt(&nPos, 1);
     Data.nMdxLength = ReadInt(&nPos, 1);
-    if(!bMinimal) std::cout<<"File header read.\n";
+    //if(!bMinimal) std::cout<<"File header read.\n";
 
     Data.MH.GH.nFunctionPointer0 = ReadInt(&nPos, 9);
     Data.MH.GH.nFunctionPointer1 = ReadInt(&nPos, 9);
@@ -43,6 +43,7 @@ void MDL::DecompileModel(bool bMinimal){
     else bK2 = false, bXbox = true;
 
     ReadString(Data.MH.GH.sName, &nPos, 3, 32);
+    if(!bMinimal) std::cout << Data.MH.GH.sName.c_str() << ".\n";
     Data.MH.GH.nOffsetToRootNode = ReadInt(&nPos, 6);
     Data.MH.GH.nTotalNumberOfNodes = ReadInt(&nPos, 1);
 
@@ -64,18 +65,19 @@ void MDL::DecompileModel(bool bMinimal){
     nPos++;
     Data.MH.GH.nPadding[2] = sBuffer[nPos];
     nPos++;
-    if(!bMinimal) std::cout<<"Geometry header read.\n";
+    //if(!bMinimal) std::cout<<"Geometry header read.\n";
 
     MarkBytes(nPos, 1, 7);
     Data.MH.nClassification = sBuffer[nPos];
     nPos++;
     MarkBytes(nPos, 1, 10);
-    Data.MH.nUnknown1[0] = sBuffer[nPos];
+    Data.MH.nSubclassification = sBuffer[nPos];
     nPos++;
-    MarkBytes(nPos, 2, 10);
-    Data.MH.nUnknown1[1] = sBuffer[nPos];
+    MarkBytes(nPos, 1, 8);
+    Data.MH.nUnknown = sBuffer[nPos];
     nPos++;
-    Data.MH.nUnknown1[2] = sBuffer[nPos];
+    MarkBytes(nPos, 1, 7);
+    Data.MH.nAffectedByFog = sBuffer[nPos];
     nPos++;
 
     Data.MH.nChildModelCount = ReadInt(&nPos, 8);
@@ -104,7 +106,7 @@ void MDL::DecompileModel(bool bMinimal){
     Data.MH.NameArray.nOffset = ReadInt(&nPos, 6);
     Data.MH.NameArray.nCount = ReadInt(&nPos, 1);
     Data.MH.NameArray.nCount2 = ReadInt(&nPos, 1);
-    if(!bMinimal) std::cout<<"Model header read.\n";
+    //if(!bMinimal) std::cout<<"Model header read.\n";
 
     //The header is fully done!
     //Now we're equipped to disassemble the rest
@@ -120,7 +122,7 @@ void MDL::DecompileModel(bool bMinimal){
             n++;
         }
     }
-    if(!bMinimal) std::cout<<"Name array read.\n";
+    //if(!bMinimal) std::cout<<"Name array read.\n";
 
     Report("Decompiling animations...");
     //Next, animations. Skip them if we're reading minimally
@@ -197,7 +199,7 @@ void MDL::DecompileModel(bool bMinimal){
             n++;
         }
     }
-    if(!bMinimal) std::cout<<"Animation array read.\n";
+    //if(!bMinimal) std::cout<<"Animation array read.\n";
     Report("Decompiling geometry...");
     if(Data.MH.Names.size() > 0){
         Data.MH.RootNode.nOffset = Data.MH.GH.nOffsetToRootNode;
@@ -212,7 +214,7 @@ void MDL::DecompileModel(bool bMinimal){
         Data.MH.ArrayOfNodes.resize(Data.MH.Names.size());
         LinearizeGeometry(Data.MH.RootNode, Data.MH.ArrayOfNodes);
     }
-    if(!bMinimal) std::cout<<"Geometry read.\n";
+    //if(!bMinimal) std::cout<<"Geometry read.\n";
 
     /// Here we'll go around and fix all the animation node numbers to match the geometry nodes.
     for(int n = 0; n < Data.MH.Animations.size(); n++){
@@ -527,11 +529,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Mesh.MeshInvertedCounterArray.nCount = ReadInt(&nPos, 1);
         NODE->Mesh.MeshInvertedCounterArray.nCount2 = ReadInt(&nPos, 1);
 
-        NODE->Mesh.nUnknown3[0] = ReadInt(&nPos, 8);
+        NODE->Mesh.nUnknown3[0] = ReadInt(&nPos, 11);
         NODE->Mesh.nUnknown3[1] = ReadInt(&nPos, 8);
         NODE->Mesh.nUnknown3[2] = ReadInt(&nPos, 8);
 
-        MarkBytes(nPos, 8, 10);
+        MarkBytes(nPos, 8, 11);
         NODE->Mesh.nSaberUnknown1 = sBuffer[nPos];
         nPos++;
         NODE->Mesh.nSaberUnknown2 = sBuffer[nPos];
@@ -710,11 +712,13 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Skin.Array8Array.nCount = ReadInt(&nPos, 1);
         NODE->Skin.Array8Array.nCount2 = ReadInt(&nPos, 1);
 
-        for(int n = 0; n < 18; n++){
+        for(int n = 0; n < 16; n++){
             NODE->Skin.nBoneIndices[n] = ReadInt(&nPos, 5, 2);
         }
+        NODE->Skin.nPadding1 = ReadInt(&nPos, 11, 2);
+        NODE->Skin.nPadding2 = ReadInt(&nPos, 11, 2);
 
-        if(NODE->Skin.nNumberOfBonemap != FH->MH.Names.size() || NODE->Skin.nNumberOfBonemap != NODE->Skin.QBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.TBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.Array8Array.nCount){
+        if(NODE->Skin.nNumberOfBonemap != NODE->Skin.QBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.TBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.Array8Array.nCount){
             Error("Unexpected Error! The bone numbers do not match up for " + FH->MH.Names.at(NODE->Head.nNodeNumber).sName + "! I will try to load the data anyway. ");
         }
         if(NODE->Skin.nNumberOfBonemap > 0){

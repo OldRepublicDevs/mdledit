@@ -715,6 +715,11 @@ bool ASCII::Read(MDL & Mdl){
                         }
                         SkipLine();
                     }
+                    else if(sID == "ignorefog"){
+                        if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                        if(ReadInt(nConvert)) FH->MH.nAffectedByFog = nConvert ? 0 : 1;
+                        SkipLine();
+                    }
                     else if(sID == "setanimationscale"){
                         if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
                         if(ReadFloat(fConvert)) FH->MH.fScale = fConvert;
@@ -725,7 +730,7 @@ bool ASCII::Read(MDL & Mdl){
                         bGeometry = true;
                         SkipLine();
                     }
-                    else if(sID == "layoutposition" || sID == "lytposition" && bGeometry && nNode == 0){
+                    else if(sID == "layoutposition" && bGeometry && nNode == 0){
                         if(ReadFloat(fConvert)) FH->MH.vLytPosition.fX = fConvert;
                         else throw mdlexception("Error reading layoutposition.");
                         if(ReadFloat(fConvert)) FH->MH.vLytPosition.fY = fConvert;

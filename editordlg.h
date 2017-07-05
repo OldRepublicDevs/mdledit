@@ -43,7 +43,7 @@ public:
         MdlPtr = &Model;
     }
     std::vector<TokenDatum> TokenData;
-    void GetTokenData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, std::stringstream & ssName, int nFile);
+    bool GetTokenData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, std::stringstream & ssName, int nFile);
 };
 
 #define EDITOR_DLG_VERTEX          1

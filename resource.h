@@ -42,6 +42,7 @@
 #define IDM_MASS_TO_BIN     132
 #define IDM_PLATFORM_PC     133
 #define IDM_PLATFORM_XBOX   134
+#define IDM_MASS_ANALYZE    135
 
 //GUI controls
 #define IDC_MAIN_EDIT    201

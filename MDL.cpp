@@ -657,6 +657,33 @@ void MDL::CreatePatches(){
     */
 }
 
+unsigned MDL::GetHeaderOffset(const Node & node, unsigned short nHeader){
+    unsigned nReturn = 0;
+
+    if(nHeader == NODE_HEADER) return nReturn;
+    else if(node.Head.nType & NODE_HEADER) nReturn += NODE_SIZE_HEADER;
+    if(nHeader == NODE_LIGHT) return nReturn;
+    else if(node.Head.nType & NODE_LIGHT) nReturn += NODE_SIZE_LIGHT;
+    if(nHeader == NODE_EMITTER) return nReturn;
+    else if(node.Head.nType & NODE_EMITTER) nReturn += NODE_SIZE_EMITTER;
+    if(nHeader == NODE_REFERENCE) return nReturn;
+    else if(node.Head.nType & NODE_REFERENCE) nReturn += NODE_SIZE_REFERENCE;
+    if(nHeader == NODE_MESH) return nReturn;
+    else if(node.Head.nType & NODE_MESH){
+        nReturn += NODE_SIZE_MESH;
+        if(bXbox) nReturn -= 4;
+        if(!bK2) nReturn -= 8;
+    }
+    if(nHeader == NODE_SKIN) return nReturn;
+    else if(node.Head.nType & NODE_SKIN) nReturn += NODE_SIZE_SKIN;
+    if(nHeader == NODE_DANGLY) return nReturn;
+    else if(node.Head.nType & NODE_DANGLY) nReturn += NODE_SIZE_DANGLY;
+    if(nHeader == NODE_AABB) return nReturn;
+    else if(node.Head.nType & NODE_AABB) nReturn += NODE_SIZE_AABB;
+    if(nHeader == NODE_SABER) return nReturn;
+    else if(node.Head.nType & NODE_SABER) nReturn += NODE_SIZE_SABER;
+}
+
 //This function together with the next one, checks the currently loaded data in MDL for any special properties
 void MDL::CheckPeculiarities(){
     FileHeader & Data = *FH;
@@ -680,12 +707,8 @@ void MDL::CheckPeculiarities(){
         ssReturn<<"\r\n - Header ModelType different than 2!";
         bUpdate = true;
     }
-    if(Data.MH.nUnknown1[1] != 0){
+    if(Data.MH.nUnknown != 0){
         ssReturn<<"\r\n - Second classification padding number different than 0!";
-        bUpdate = true;
-    }
-    if(Data.MH.nUnknown1[2] != 1){
-        ssReturn<<"\r\n - Third classification padding number different than 1!";
         bUpdate = true;
     }
     if(Data.MH.nChildModelCount != 0){
@@ -745,33 +768,6 @@ void MDL::CheckPeculiarities(){
         return;
     }
     MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
-}
-
-unsigned MDL::GetHeaderOffset(const Node & node, unsigned short nHeader){
-    unsigned nReturn = 0;
-
-    if(nHeader == NODE_HEADER) return nReturn;
-    else if(node.Head.nType & NODE_HEADER) nReturn += NODE_SIZE_HEADER;
-    if(nHeader == NODE_LIGHT) return nReturn;
-    else if(node.Head.nType & NODE_LIGHT) nReturn += NODE_SIZE_LIGHT;
-    if(nHeader == NODE_EMITTER) return nReturn;
-    else if(node.Head.nType & NODE_EMITTER) nReturn += NODE_SIZE_EMITTER;
-    if(nHeader == NODE_REFERENCE) return nReturn;
-    else if(node.Head.nType & NODE_REFERENCE) nReturn += NODE_SIZE_REFERENCE;
-    if(nHeader == NODE_MESH) return nReturn;
-    else if(node.Head.nType & NODE_MESH){
-        nReturn += NODE_SIZE_MESH;
-        if(bXbox) nReturn -= 4;
-        if(!bK2) nReturn -= 8;
-    }
-    if(nHeader == NODE_SKIN) return nReturn;
-    else if(node.Head.nType & NODE_SKIN) nReturn += NODE_SIZE_SKIN;
-    if(nHeader == NODE_DANGLY) return nReturn;
-    else if(node.Head.nType & NODE_DANGLY) nReturn += NODE_SIZE_DANGLY;
-    if(nHeader == NODE_AABB) return nReturn;
-    else if(node.Head.nType & NODE_AABB) nReturn += NODE_SIZE_AABB;
-    if(nHeader == NODE_SABER) return nReturn;
-    else if(node.Head.nType & NODE_SABER) nReturn += NODE_SIZE_SABER;
 }
 
 bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, int nAnimation){
@@ -913,7 +909,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                 */
             }
             if(NodeArray.at(b).Head.nType & NODE_MESH){
-                if(NodeArray.at(b).Mesh.nUnknown3[0] != -1 || NodeArray.at(b).Mesh.nUnknown3[1] != -1 || NodeArray.at(b).Mesh.nUnknown3[2] != 0){
+                if(NodeArray.at(b).Mesh.nUnknown3[1] != -1 || NodeArray.at(b).Mesh.nUnknown3[2] != 0){
                     ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
                     bUpdate = true;
                 }

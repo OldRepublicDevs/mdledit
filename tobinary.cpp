@@ -55,9 +55,9 @@ bool MDL::Compile(){
 
     //Model header
     WriteByte(Data->MH.nClassification, 7); //Classification
-    WriteByte(Data->MH.nUnknown1[0], 10); //Unknown
-    WriteByte(Data->MH.nUnknown1[1], 7);
-    WriteByte(Data->MH.nUnknown1[2], 7);
+    WriteByte(Data->MH.nSubclassification, 10); //Unknown
+    WriteByte(Data->MH.nUnknown, 8);
+    WriteByte(Data->MH.nAffectedByFog, 7);
 
     WriteInt(0, 8); //Child model count
 
@@ -417,18 +417,18 @@ void MDL::WriteNodes(Node & node){
         WriteInt(1, 1);
 
         //Write unknown -1 -1 0
-        WriteInt(-1, 8);
+        WriteInt(-1, 1);
         WriteInt(-1, 8);
         WriteInt(0, 8);
 
-        WriteByte(node.Mesh.nSaberUnknown1, 10);
-        WriteByte(node.Mesh.nSaberUnknown2, 10);
-        WriteByte(node.Mesh.nSaberUnknown3, 10);
-        WriteByte(node.Mesh.nSaberUnknown4, 10);
-        WriteByte(node.Mesh.nSaberUnknown5, 10);
-        WriteByte(node.Mesh.nSaberUnknown6, 10);
-        WriteByte(node.Mesh.nSaberUnknown7, 10);
-        WriteByte(node.Mesh.nSaberUnknown8, 10);
+        WriteByte(node.Mesh.nSaberUnknown1, 11);
+        WriteByte(node.Mesh.nSaberUnknown2, 11);
+        WriteByte(node.Mesh.nSaberUnknown3, 11);
+        WriteByte(node.Mesh.nSaberUnknown4, 11);
+        WriteByte(node.Mesh.nSaberUnknown5, 11);
+        WriteByte(node.Mesh.nSaberUnknown6, 11);
+        WriteByte(node.Mesh.nSaberUnknown7, 11);
+        WriteByte(node.Mesh.nSaberUnknown8, 11);
 
         //animated UV stuff
         WriteInt(node.Mesh.nAnimateUV, 4);
@@ -501,6 +501,7 @@ void MDL::WriteNodes(Node & node){
             node.Skin.nOffsetToMdxBoneIndices = nMDXsize;
             nMDXsize += 16;
         }
+        if(node.Mesh.Vertices.size() == 0) nMDXsize = -1;
         node.Mesh.nMdxDataSize = nMDXsize;
         node.Mesh.nOffsetToMdxColor = -1;
 

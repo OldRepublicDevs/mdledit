@@ -125,7 +125,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
         }
         if(node.Head.nType & NODE_MESH){
             HTREEITEM Mesh = Append("Mesh", (LPARAM) &node, Prev);
-            HTREEITEM Vertices = Append("Vertices", (LPARAM) &node.Mesh, Mesh);
+            HTREEITEM Vertices = Append("Vertices", (LPARAM) &node, Mesh);
             if(node.Mesh.Vertices.size() > 0){
                 for(int n = 0; n < node.Mesh.Vertices.size(); n++)
                     Append("Vertex " + std::to_string(n), (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
@@ -290,6 +290,7 @@ void BuildTree(BWM & Bwm){
 extern MDL Model;
 
 void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPrint, LPARAM lParam){
+    if(DEBUG_LEVEL > 1000) std::cout << "Updating Display!";
     bool bMdl = false, bWok = false, bPwk = false, bDwk0 = false, bDwk1 = false, bDwk2 = false;
     for(int j = 0; !bMdl && !bWok && !bPwk && !bDwk0 && !bDwk1 && !bDwk2; j++){
         if(cItem.at(j) == Model.GetFilename()) bMdl = true;
@@ -323,9 +324,9 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Supermodel: " << Data.MH.cSupermodelName.c_str();
             //sPrint << "\r\n" << " Supermodel Reference: "<<Data.MH.nSupermodelReference;
             sPrint << "\r\n" << "Classification: " << (short) Data.MH.nClassification << " (" << ReturnClassificationName(Data.MH.nClassification).c_str() << ")";
-            sPrint << "\r\n" << "Unknown1: " << (short) Data.MH.nUnknown1[0];
-            sPrint << "\r\n" << "Unknown2: " << (short) Data.MH.nUnknown1[1];
-            sPrint << "\r\n" << "Unknown3: " << (short) Data.MH.nUnknown1[2];
+            sPrint << "\r\n" << "Unknown1: " << (short) Data.MH.nSubclassification;
+            sPrint << "\r\n" << "Unknown2: " << (short) Data.MH.nUnknown;
+            sPrint << "\r\n" << "Affected By Fog: " << (short) Data.MH.nAffectedByFog;
 
             sPrint << "\r\n";
             sPrint << "\r\n" << "Bounding Box Min: " << PrepareFloat(Data.MH.vBBmin.fX);
@@ -749,7 +750,8 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Function Pointer 1: " << mesh->nFunctionPointer1;
         }
         else if(cItem.at(0) == "Vertices"){
-            MeshHeader * mesh = (MeshHeader * ) lParam;
+            Node & node = * (Node * ) lParam;
+            MeshHeader * mesh = &node.Mesh;
             sPrint <<           "== Vertices ==";
             sPrint << "\r\n" << "Offset: " << mesh->nOffsetToVertArray;
             sPrint << "\r\n" << "Count:  " << mesh->nNumberOfVerts;
@@ -774,7 +776,6 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 sPrint << "\r\n";
                 sPrint << "\r\n" << "-- Extra MDX Data --";
                 VertexData * mdx = &mesh->MDXData;
-                Node & node = Model.GetNodeByNameIndex(mdx->nNodeNumber);
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                     sPrint << "\r\n" << "Vertex: " << PrepareFloat(mdx->vVertex.fX);
                     sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fY);

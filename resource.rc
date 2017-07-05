@@ -80,6 +80,7 @@ BEGIN
             BEGIN
             MENUITEM "&To Binary ...", IDM_MASS_TO_BIN
             MENUITEM "&To ASCII ...", IDM_MASS_TO_ASCII
+            //MENUITEM "&Analyze ...", IDM_MASS_ANALYZE
             END
         MENUITEM SEPARATOR
         MENUITEM "E&xit", IDM_FILE_EXIT

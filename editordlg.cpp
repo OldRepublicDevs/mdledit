@@ -111,7 +111,7 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                             }
                             SendMessage(hFrame, WM_COMMAND, MAKEWPARAM(IDD_EDITOR_DLG, IDP_DISPLAY_UPDATE), (LPARAM) hwnd);
                         }
-                        else Error("An unknown error occurred! Could not save data!");
+                        //else Error("An unknown error occurred! Could not save data!");
                     }
                 }
                 break;
@@ -140,12 +140,12 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
     return 0;
 }
 
-void EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, LPARAM lParam, std::stringstream & ssName, int nFile){
+bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, LPARAM lParam, std::stringstream & ssName, int nFile){
     ModelHeader & Data = mdl.GetFileData()->MH;
     if(nFile > 0){
         /// This is a walkmesh file, abort
         ssName << "Error";
-        return;
+        return false;
     }
     ssName << "Editing " << Data.GH.sName.c_str() << " > ";
 
@@ -157,9 +157,9 @@ void EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         TokenData.push_back(TokenDatum("supermodel", "string", "MDL", (void*) &MH.cSupermodelName, 148));
         TokenData.back().nMaxString = 32;
         TokenData.push_back(TokenDatum("classification", "unsigned char", "MDL", (void*) &MH.nClassification, 92));
-        TokenData.push_back(TokenDatum("unknown1", "unsigned char", "MDL", (void*) &MH.nUnknown1.at(0), 93));
-        TokenData.push_back(TokenDatum("unknown2", "unsigned char", "MDL", (void*) &MH.nUnknown1.at(1), 94));
-        TokenData.push_back(TokenDatum("unknown3", "unsigned char", "MDL", (void*) &MH.nUnknown1.at(2), 95));
+        TokenData.push_back(TokenDatum("unknown1", "unsigned char", "MDL", (void*) &MH.nSubclassification, 93));
+        TokenData.push_back(TokenDatum("unknown2", "unsigned char", "MDL", (void*) &MH.nUnknown, 94));
+        TokenData.push_back(TokenDatum("affectedByFog", "unsigned char", "MDL", (void*) &MH.nAffectedByFog, 95));
         TokenData.push_back(TokenDatum("animation_scale", "double", "MDL", (void*) &MH.fScale, 144));
         TokenData.push_back(TokenDatum("bmin_x", "double", "MDL", (void*) &MH.vBBmin.fX, 116));
         TokenData.push_back(TokenDatum("bmin_y", "double", "MDL", (void*) &MH.vBBmin.fY, 120));
@@ -587,7 +587,7 @@ void EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
 
         if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION && ctrl.nColumnCount % 15 == 2){
             Error("Compressed quaternion values not supported yet!");
-            return;
+            return false;
         }
 
         std::string sCtrlName = ReturnControllerName(ctrl.nControllerType, geonode.Head.nType);
@@ -637,6 +637,7 @@ void EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
             }
         }
     }
+    return true;
 }
 
 void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile){
@@ -657,7 +658,7 @@ void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int
     if(cItem[0] == "") return;
 
     EditorDlgWindow EDW;
-    EDW.GetTokenData(Mdl, cItem, lParam, sName, nFile);
+    if(!EDW.GetTokenData(Mdl, cItem, lParam, sName, nFile)) return;
 
     /// Write out window contents
     for(int t = 0; t < EDW.TokenData.size(); t++){

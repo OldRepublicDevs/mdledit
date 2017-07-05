@@ -71,6 +71,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\nnewmodel " << mh->GH.sName.c_str();
         sReturn << "\nsetsupermodel " << mh->GH.sName.c_str()<<" "<< mh->cSupermodelName.c_str();
         sReturn << "\nclassification " << ReturnClassificationName(mh->nClassification).c_str();
+        sReturn << "\nignorefog " << (mh->nAffectedByFog ? 0 : 1);
         sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale);
         sReturn << "\n";
         sReturn << "\n# GEOM ASCII";
