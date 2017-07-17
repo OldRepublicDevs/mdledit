@@ -9,6 +9,7 @@
 /**/
 
 bool MDL::Compile(){
+    Timer tCompile;
     nPosition = 0;
     sBuffer.resize(0);
     bKnown.resize(0);
@@ -68,7 +69,7 @@ bool MDL::Compile(){
     WriteInt(Data->MH.Animations.size(), 1);
 
     //Unknown supermodel int?
-    WriteInt(Data->MH.nPadding, 10);
+    WriteInt(Data->MH.nPadding, 11);
 
     //Floats
     WriteFloat(Data->MH.vBBmin.fX, 2);
@@ -187,6 +188,8 @@ bool MDL::Compile(){
     if(Dwk0) Dwk0->Compile();
     if(Dwk1) Dwk1->Compile();
     if(Dwk2) Dwk2->Compile();
+    std::cout << "Model compiled in " << tCompile.GetTime() << ".\n";
+    return true;
 }
 
 void MDL::WriteAabb(Aabb & aabb){
@@ -198,9 +201,9 @@ void MDL::WriteAabb(Aabb & aabb){
     WriteFloat(aabb.vBBmax.fY, 2);
     WriteFloat(aabb.vBBmax.fZ, 2);
     int PHnChild1 = nPosition;
-    WriteInt(0xFFFFFFFF, 6);
+    WriteInt(0, 6);
     int PHnChild2 = nPosition;
-    WriteInt(0xFFFFFFFF, 6);
+    WriteInt(0, 6);
     WriteInt(aabb.nID, 4);
     WriteInt(aabb.nProperty, 4);
     if(aabb.Child1.size() > 0){
@@ -238,7 +241,7 @@ void MDL::WriteNodes(Node & node){
         node.Head.nOffsetToParent = 0;
     }
     else{
-        //std::cout<<"Found parent "<<parent.Head.nNodeNumber<<". His offset is "<<parent.nOffset<<".\n";
+        //std::cout << "Found parent " << parent.Head.nNodeNumber << ". His offset is " << parent.nOffset << ".\n";
         WriteInt(GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset, 6);
         node.Head.nOffsetToParent = GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset;
     }
@@ -417,7 +420,7 @@ void MDL::WriteNodes(Node & node){
         WriteInt(1, 1);
 
         //Write unknown -1 -1 0
-        WriteInt(-1, 1);
+        WriteInt(-1, 11);
         WriteInt(-1, 8);
         WriteInt(0, 8);
 
@@ -451,6 +454,11 @@ void MDL::WriteNodes(Node & node){
             else nMDXsize += 12;
         }
         else node.Mesh.nOffsetToMdxNormal = -1;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+            node.Mesh.nOffsetToMdxColor = nMDXsize;
+            nMDXsize += 12;
+        }
+        else node.Mesh.nOffsetToMdxColor = -1;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
             node.Mesh.nOffsetToMdxUV1 = nMDXsize;
             nMDXsize += 8;
@@ -521,7 +529,7 @@ void MDL::WriteNodes(Node & node){
 
         node.Mesh.nNumberOfVerts = node.Mesh.Vertices.size();
         WriteInt(node.Mesh.nNumberOfVerts, 1, 2);
-        WriteInt(node.Mesh.nTextureNumber, 5, 2);
+        WriteInt(node.Mesh.nTextureNumber, 1, 2);
 
         WriteByte(node.Mesh.nHasLightmap, 7);
         WriteByte(node.Mesh.nRotateTexture, 7);
@@ -573,9 +581,11 @@ void MDL::WriteNodes(Node & node){
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Skin.Bones.size(), 1);
         WriteInt(node.Skin.Bones.size(), 1);
-        for(int a = 0; a < 18; a++){
+        for(int a = 0; a < 16; a++){
             WriteInt(node.Skin.nBoneIndices[a], 5, 2);
         }
+        WriteInt(node.Skin.nPadding1, 11, 2);
+        WriteInt(node.Skin.nPadding2, 11, 2);
     }
 
     /// DANGLY HEADER
@@ -711,6 +721,11 @@ void MDL::WriteNodes(Node & node){
                 }
                 else Mdx->WriteInt(CompressVector(vert.MDXData.vNormal), 2);
             }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                Mdx->WriteFloat(vert.MDXData.cColor.fR, 2);
+                Mdx->WriteFloat(vert.MDXData.cColor.fG, 2);
+                Mdx->WriteFloat(vert.MDXData.cColor.fB, 2);
+            }
             if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                 Mdx->WriteFloat(vert.MDXData.vUV1.fX, 2);
                 Mdx->WriteFloat(vert.MDXData.vUV1.fY, 2);
@@ -819,6 +834,9 @@ void MDL::WriteNodes(Node & node){
             }
         }
 
+        /// We first need to save the current position for the padding afterwards
+        unsigned nCurrentMdx = Mdx->nPosition;
+
         /// Also write the extra empty vert data
         node.Mesh.MDXData.nNodeNumber = node.Head.nNodeNumber;
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
@@ -833,6 +851,12 @@ void MDL::WriteNodes(Node & node){
             Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fX, 8);
             Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fY, 8);
             Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fZ, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+            node.Mesh.MDXData.cColor.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fR, 2);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fG, 2);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fB, 2);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
             node.Mesh.MDXData.vUV1.Set(0.0, 0.0, 0.0);
@@ -936,6 +960,9 @@ void MDL::WriteNodes(Node & node){
                 Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[3], 8);
             }
         }
+
+        /// Additionally, let us add back the padding stuff.
+        for(int n = 0; n < (node.Mesh.nMdxDataSize % 16 + nCurrentMdx % 16) % 16; n++) Mdx->WriteByte(0, 0);
     }
 
     /// MESH DATA
@@ -1041,7 +1068,7 @@ void MDL::WriteNodes(Node & node){
     /// DONE WITH SUBHEADERS
 
     //We get to the children array
-    node.Head.ChildrenArray.ResetToSize(node.Head.Children.size());
+    node.Head.ChildrenArray.ResetToSize(node.Head.ChildIndices.size());
     WriteIntToPH(nPosition - 12, PHnOffsetToChildren, node.Head.ChildrenArray.nOffset);
     std::vector<int> PHnOffsetToChild;
     for(int a = 0; a < node.Head.ChildIndices.size(); a++){

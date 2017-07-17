@@ -10,103 +10,152 @@ void BWM::ProcessBWM(){
 
     BWMHeader & Data = *Bwm;
 
-    //Mark version info
-    MarkBytes(nPos, 8, 3);
-    nPos+=8;
+    try{
+        /// Mark version info
+        MarkBytes(nPos, 8, 3);
+        nPos+=8;
 
-    Data.nType = ReadInt(&nPos, 4);
-    Data.vUse1 = ReadVector(&nPos, 2);
-    Data.vUse2 = ReadVector(&nPos, 2);
-    Data.vDwk1 = ReadVector(&nPos, 2);
-    Data.vDwk2 = ReadVector(&nPos, 2);
-    Data.vPosition = ReadVector(&nPos, 2);
+        Data.nType = ReadInt(&nPos, 4);
+        Data.vUse1 = ReadVector(&nPos, 2);
+        Data.vUse2 = ReadVector(&nPos, 2);
+        Data.vDwk1 = ReadVector(&nPos, 2);
+        Data.vDwk2 = ReadVector(&nPos, 2);
+        Data.vPosition = ReadVector(&nPos, 2);
 
-    //Skip to useful data
-    Data.nNumberOfVerts = ReadInt(&nPos, 1); //This is not equal in the wok and mdl
-    Data.nOffsetToVerts = ReadInt(&nPos, 6);
-    Data.nNumberOfFaces = ReadInt(&nPos, 1); // In my test model this equals the number in the mdl
-    Data.nOffsetToIndices = ReadInt(&nPos, 6);
-    Data.nOffsetToMaterials = ReadInt(&nPos, 6);
-    Data.nOffsetToNormals = ReadInt(&nPos, 6);
-    Data.nOffsetToDistances = ReadInt(&nPos, 6);
-    Data.nNumberOfAabb = ReadInt(&nPos, 1); // In my test model this equals the number of aabb in the mdl
-    Data.nOffsetToAabb = ReadInt(&nPos, 6);
-    Data.nPadding = ReadInt(&nPos, 10);
-    Data.nNumberOfAdjacentFaces = ReadInt(&nPos, 1);
-    Data.nOffsetToAdjacentFaces = ReadInt(&nPos, 6);
-    Data.nNumberOfEdges = ReadInt(&nPos, 1);
-    Data.nOffsetToEdges = ReadInt(&nPos, 6);
-    Data.nNumberOfPerimeters = ReadInt(&nPos, 1);
-    Data.nOffsetToPerimeters = ReadInt(&nPos, 6);
+        Data.nNumberOfVerts = ReadInt(&nPos, 1); /// This is not equal in the wok and mdl
+        Data.nOffsetToVerts = ReadInt(&nPos, 6);
+        Data.nNumberOfFaces = ReadInt(&nPos, 1); /// In my test model this equals the number in the mdl
+        Data.nOffsetToIndices = ReadInt(&nPos, 6);
+        Data.nOffsetToMaterials = ReadInt(&nPos, 6);
+        Data.nOffsetToNormals = ReadInt(&nPos, 6);
+        Data.nOffsetToDistances = ReadInt(&nPos, 6);
+        Data.nNumberOfAabb = ReadInt(&nPos, 1); /// In my test model this equals the number of aabb in the mdl
+        Data.nOffsetToAabb = ReadInt(&nPos, 6);
+        Data.nPadding = ReadInt(&nPos, 10);
+        Data.nNumberOfAdjacentFaces = ReadInt(&nPos, 1);
+        Data.nOffsetToAdjacentFaces = ReadInt(&nPos, 6);
+        Data.nNumberOfEdges = ReadInt(&nPos, 1);
+        Data.nOffsetToEdges = ReadInt(&nPos, 6);
+        Data.nNumberOfPerimeters = ReadInt(&nPos, 1);
+        Data.nOffsetToPerimeters = ReadInt(&nPos, 6);
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM header: ") + e.what());
+    }
 
-    Data.verts.resize(Data.nNumberOfVerts);
-    nPos = Data.nOffsetToVerts;
-    for(int n = 0; n < Data.nNumberOfVerts; n++){
-        //Collect verts
-        Data.verts.at(n).fX = ReadFloat(&nPos, 2);
-        Data.verts.at(n).fY = ReadFloat(&nPos, 2);
-        Data.verts.at(n).fZ = ReadFloat(&nPos, 2);
-    }
-    Data.faces.resize(Data.nNumberOfFaces);
-    nPos = Data.nOffsetToIndices;
-    for(int n = 0; n < Data.nNumberOfFaces; n++){
-        //Collect indices
-        Data.faces.at(n).nIndexVertex[0] = ReadInt(&nPos, 4);
-        Data.faces.at(n).nIndexVertex[1] = ReadInt(&nPos, 4);
-        Data.faces.at(n).nIndexVertex[2] = ReadInt(&nPos, 4);
-    }
-    nPos = Data.nOffsetToMaterials;
-    for(int n = 0; n < Data.nNumberOfFaces; n++){
-        //Collect materials
-        Data.faces.at(n).nMaterialID = ReadInt(&nPos, 4);
-    }
-    nPos = Data.nOffsetToNormals;
-    for(int n = 0; n < Data.nNumberOfFaces; n++){
-        //Collect normals
-        Data.faces.at(n).vNormal.fX = ReadFloat(&nPos, 2);
-        Data.faces.at(n).vNormal.fY = ReadFloat(&nPos, 2);
-        Data.faces.at(n).vNormal.fZ = ReadFloat(&nPos, 2);
-    }
-    nPos = Data.nOffsetToDistances;
-    for(int n = 0; n < Data.nNumberOfFaces; n++){
-        //Collect distances
-        Data.faces.at(n).fDistance = ReadFloat(&nPos, 2);
-    }
-    Data.aabb.resize(Data.nNumberOfAabb);
-    nPos = Data.nOffsetToAabb;
-    for(int n = 0; n < Data.nNumberOfAabb; n++){
-        //Collect aabb
-        Data.aabb.at(n).vBBmin.fX = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).vBBmin.fY = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).vBBmin.fZ = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).vBBmax.fX = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).vBBmax.fY = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).vBBmax.fZ = ReadFloat(&nPos, 2);
-        Data.aabb.at(n).nID = ReadInt(&nPos, 4);
-        Data.aabb.at(n).nExtra = ReadInt(&nPos, 4);
-        Data.aabb.at(n).nProperty = ReadInt(&nPos, 4);
-        Data.aabb.at(n).nChild1 = ReadInt(&nPos, 4);
-        Data.aabb.at(n).nChild2 = ReadInt(&nPos, 4);
-    }
-    nPos = Data.nOffsetToAdjacentFaces;
-    for(int n = 0; n < Data.nNumberOfAdjacentFaces; n++){
-        if(n < Data.faces.size()){
-            Data.faces.at(n).nAdjacentFaces[0] = ReadInt(&nPos, 4);
-            Data.faces.at(n).nAdjacentFaces[1] = ReadInt(&nPos, 4);
-            Data.faces.at(n).nAdjacentFaces[2] = ReadInt(&nPos, 4);
+    try{
+        Data.verts.resize(Data.nNumberOfVerts);
+        nPos = Data.nOffsetToVerts;
+        for(int n = 0; n < Data.nNumberOfVerts; n++){
+            //Collect verts
+            Data.verts.at(n).fX = ReadFloat(&nPos, 2);
+            Data.verts.at(n).fY = ReadFloat(&nPos, 2);
+            Data.verts.at(n).fZ = ReadFloat(&nPos, 2);
         }
-        else Error("More adjacent faces than faces!");
     }
-    Data.edges.resize(Data.nNumberOfEdges);
-    nPos = Data.nOffsetToEdges;
-    for(int n = 0; n < Data.nNumberOfEdges; n++){
-        Data.edges.at(n).nIndex = ReadInt(&nPos, 4);
-        Data.edges.at(n).nTransition = ReadInt(&nPos, 4);
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM vertex data: ") + e.what());
     }
-    Data.perimeters.resize(Data.nNumberOfPerimeters);
-    nPos = Data.nOffsetToPerimeters;
-    for(int n = 0; n < Data.nNumberOfPerimeters; n++){
-        Data.perimeters.at(n) = ReadInt(&nPos, 4);
+    try{
+        Data.faces.resize(Data.nNumberOfFaces);
+        nPos = Data.nOffsetToIndices;
+        for(int n = 0; n < Data.nNumberOfFaces; n++){
+            //Collect indices
+            Data.faces.at(n).nIndexVertex[0] = ReadInt(&nPos, 4);
+            Data.faces.at(n).nIndexVertex[1] = ReadInt(&nPos, 4);
+            Data.faces.at(n).nIndexVertex[2] = ReadInt(&nPos, 4);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM face data: ") + e.what());
+    }
+    try{
+        nPos = Data.nOffsetToMaterials;
+        for(int n = 0; n < Data.nNumberOfFaces; n++){
+            //Collect materials
+            Data.faces.at(n).nMaterialID = ReadInt(&nPos, 4);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM surface ID data: ") + e.what());
+    }
+    try{
+        nPos = Data.nOffsetToNormals;
+        for(int n = 0; n < Data.nNumberOfFaces; n++){
+            //Collect normals
+            Data.faces.at(n).vNormal.fX = ReadFloat(&nPos, 2);
+            Data.faces.at(n).vNormal.fY = ReadFloat(&nPos, 2);
+            Data.faces.at(n).vNormal.fZ = ReadFloat(&nPos, 2);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM face normal data: ") + e.what());
+    }
+    try{
+        nPos = Data.nOffsetToDistances;
+        for(int n = 0; n < Data.nNumberOfFaces; n++){
+            //Collect distances
+            Data.faces.at(n).fDistance = ReadFloat(&nPos, 2);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM plane distance data: ") + e.what());
+    }
+    try{
+        Data.aabb.resize(Data.nNumberOfAabb);
+        nPos = Data.nOffsetToAabb;
+        for(int n = 0; n < Data.nNumberOfAabb; n++){
+            //Collect aabb
+            Data.aabb.at(n).vBBmin.fX = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).vBBmin.fY = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).vBBmin.fZ = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).vBBmax.fX = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).vBBmax.fY = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).vBBmax.fZ = ReadFloat(&nPos, 2);
+            Data.aabb.at(n).nID = ReadInt(&nPos, 4);
+            Data.aabb.at(n).nExtra = ReadInt(&nPos, 4);
+            Data.aabb.at(n).nProperty = ReadInt(&nPos, 4);
+            Data.aabb.at(n).nChild1 = ReadInt(&nPos, 4);
+            Data.aabb.at(n).nChild2 = ReadInt(&nPos, 4);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM aabb data: ") + e.what());
+    }
+    try{
+        nPos = Data.nOffsetToAdjacentFaces;
+        for(int n = 0; n < Data.nNumberOfAdjacentFaces; n++){
+            if(n < Data.faces.size()){
+                Data.faces.at(n).nAdjacentFaces[0] = ReadInt(&nPos, 4);
+                Data.faces.at(n).nAdjacentFaces[1] = ReadInt(&nPos, 4);
+                Data.faces.at(n).nAdjacentFaces[2] = ReadInt(&nPos, 4);
+            }
+            else Error("More adjacent faces than faces!");
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM adjacent edge data: ") + e.what());
+    }
+    try{
+        Data.edges.resize(Data.nNumberOfEdges);
+        nPos = Data.nOffsetToEdges;
+        for(int n = 0; n < Data.nNumberOfEdges; n++){
+            Data.edges.at(n).nIndex = ReadInt(&nPos, 4);
+            Data.edges.at(n).nTransition = ReadInt(&nPos, 4);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM edge data: ") + e.what());
+    }
+    try{
+        Data.perimeters.resize(Data.nNumberOfPerimeters);
+        nPos = Data.nOffsetToPerimeters;
+        for(int n = 0; n < Data.nNumberOfPerimeters; n++){
+            Data.perimeters.at(n) = ReadInt(&nPos, 4);
+        }
+    }
+    catch(const std::exception & e){
+        throw mdlexception(std::string("Reading BWM perimeter data: ") + e.what());
     }
 }
 
@@ -114,7 +163,7 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
     GetData().reset(new BWMHeader);
     BWMHeader & Data = *GetData();
 
-    std::cout<< "Writing wok.\n";
+    std::cout << "Writing wok.\n";
     Data.nType = 1;
     Data.vPosition = node.Head.vPos;
 
@@ -190,27 +239,27 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
                     else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)) comparevertmatch = 2;
                     if(vertmatch != -1 && comparevertmatch != -1){
                         if(VertMatches.at(0) && VertMatches.at(1)){
-                            if(face.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f<<") for edge 0...\n";
+                            if(face.nAdjacentFaces[0] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 0...\n";
                             else face.nAdjacentFaces[0] = f2*3 + comparevertmatch;
                         }
                         else if(VertMatches.at(1) && VertMatches.at(2)){
-                            if(face.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f<<") for edge 1...\n";
+                            if(face.nAdjacentFaces[1] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 1...\n";
                             else face.nAdjacentFaces[1] = f2*3 + comparevertmatch;
                         }
                         else if(VertMatches.at(2) && VertMatches.at(0)){
-                            if(face.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f<<") for edge 2...\n";
+                            if(face.nAdjacentFaces[2] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 2...\n";
                             else face.nAdjacentFaces[2] = f2*3 + comparevertmatch;
                         }
                         if(VertMatchesCompare.at(0) && VertMatchesCompare.at(1)){
-                            if(compareface.nAdjacentFaces[0] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f2<<") for edge 0...\n";
+                            if(compareface.nAdjacentFaces[0] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 0...\n";
                             else compareface.nAdjacentFaces[0] = f*3 + vertmatch;
                         }
                         else if(VertMatchesCompare.at(1) && VertMatchesCompare.at(2)){
-                            if(compareface.nAdjacentFaces[1] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f2<<") for edge 1...\n";
+                            if(compareface.nAdjacentFaces[1] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 1...\n";
                             else compareface.nAdjacentFaces[1] = f*3 + vertmatch;
                         }
                         else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)){
-                            if(compareface.nAdjacentFaces[2] != -1) std::cout<<"Well, we found too many adjacent edges (to "<<f2<<") for edge 2...\n";
+                            if(compareface.nAdjacentFaces[2] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 2...\n";
                             else compareface.nAdjacentFaces[2] = f*3 + vertmatch;
                         }
                     }
@@ -231,12 +280,12 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
     for(int f = 0; f < Data.faces.size() && nFace == -1; f++){
         for(int i = 0; i < 3 && nEdge == -1; i++){
             if(Data.faces.at(f).nAdjacentFaces.at(i) == -1 && !Data.faces.at(f).bProcessed.at(i) && Data.faces.at(f).nMaterialID != 7){
-                //std::cout<<"Found starting point at face "<<f<<", edge "<<i<<".\n";
+                //std::cout << "Found starting point at face " << f << ", edge " << i << ".\n";
                 nFace = f;
                 nEdge = i;
                 nAdjacent = -1;
                 while(nFace != -1 && nEdge != -1){
-                    //std::cout<<"Looping through face "<<nFace<<" and edge "<<nEdge<<".\n";
+                    //std::cout << "Looping through face " << nFace << " and edge " << nEdge << ".\n";
                     nAdjacent = Data.faces.at(nFace).nAdjacentFaces.at(nEdge);
                     if(nAdjacent == -1){
                         if(!Data.faces.at(nFace).bProcessed.at(nEdge)){
@@ -259,7 +308,7 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
             }
         }
     }
-    //std::cout<<"Done with edge loops.\n";
+    //std::cout << "Done with edge loops.\n";
 
     for(int f = 0; f < Data.faces.size(); f++){
         Face & face = Data.faces.at(f);
@@ -380,10 +429,10 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         aabb.nProperty = 0;
         aabb.nChild1 = 0;
         aabb.nChild2 = 0;
-        if(file != nullptr) *file<<"Wrote leaf: "<<aabb.nID<<"\n";
+        if(file != nullptr) *file << "Wrote leaf: " << aabb.nID << "\n";
     }
     else{
-        if(file != nullptr) *file<<"Processing non-leaf, faces: "<<faces.size()<<"\n";
+        if(file != nullptr) *file << "Processing non-leaf, faces: " << faces.size() << "\n";
         aabb.nID = -1;
         aabb.vBBmax = Vector(-10000.0, -10000.0, -10000.0);
         aabb.vBBmin = Vector(10000.0, 10000.0, 10000.0);
@@ -413,7 +462,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         vAverage /= faces.size();
         vAverageBB /= faces.size();
         aabb.vBBmax += Vector(0.0001, 0.0001, 0.0001);
-        if(file != nullptr) *file<<"Bounding box: "<<aabb.vBBmin.fX<<", "<<aabb.vBBmin.fY<<", "<<aabb.vBBmin.fZ<<", "<<aabb.vBBmax.fX<<", "<<aabb.vBBmax.fY<<", "<<aabb.vBBmax.fZ<<"\n";
+        if(file != nullptr) *file << "Bounding box: " << aabb.vBBmin.fX << ", " << aabb.vBBmin.fY << ", " << aabb.vBBmin.fZ << ", " << aabb.vBBmax.fX << ", " << aabb.vBBmax.fY << ", " << aabb.vBBmax.fZ << "\n";
 
         std::vector<AxisSort> axispriority;
         axispriority.push_back(AxisSort("X", aabb.vBBmax.fX - aabb.vBBmin.fX));
@@ -421,7 +470,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         axispriority.push_back(AxisSort("Z", aabb.vBBmax.fZ - aabb.vBBmin.fZ));
         sort(axispriority.begin(), axispriority.end());
         std::reverse(axispriority.begin(), axispriority.end());
-        if(file != nullptr) *file<<"Priority List: "<<axispriority.at(0).sName<<": "<<axispriority.at(0).fSort<<", "<<axispriority.at(1).sName<<": "<<axispriority.at(1).fSort<<", "<<axispriority.at(2).sName<<": "<<axispriority.at(2).fSort<<"\n";
+        if(file != nullptr) *file << "Priority List: " << axispriority.at(0).sName << ": " << axispriority.at(0).fSort << ", " << axispriority.at(1).sName << ": " << axispriority.at(1).fSort << ", " << axispriority.at(2).sName << ": " << axispriority.at(2).fSort << "\n";
         int nCurrentPriority = 0;
         std::vector<double> vectorX;
         std::vector<double> vectorY;
@@ -438,7 +487,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         axispriority2.push_back(AxisSort2("Z", vectorZ.size()));
         sort(axispriority2.begin(), axispriority2.end());
         std::reverse(axispriority2.begin(), axispriority2.end());
-        if(file != nullptr) *file<<"Priority List 2: "<<axispriority2.at(0).sName<<": "<<axispriority2.at(0).nSize<<", "<<axispriority2.at(1).sName<<": "<<axispriority2.at(1).nSize<<", "<<axispriority2.at(2).sName<<": "<<axispriority2.at(2).nSize<<"\n";
+        if(file != nullptr) *file << "Priority List 2: " << axispriority2.at(0).sName << ": " << axispriority2.at(0).nSize << ", " << axispriority2.at(1).sName << ": " << axispriority2.at(1).nSize << ", " << axispriority2.at(2).sName << ": " << axispriority2.at(2).nSize << "\n";
         /*if(faces.size()%2 == 0){
             axispriority.at(0).sName = axispriority2.at(0).sName;
             axispriority.at(1).sName = axispriority2.at(1).sName;
@@ -452,7 +501,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         std::reverse(axispriority3.begin(), axispriority3.end());
         Vector vDeviance;
         Vector vDeviance2;
-        if(file != nullptr) *file<<"Priority List 3: "<<axispriority3.at(0).sName<<": "<<axispriority3.at(0).fSort<<", "<<axispriority3.at(1).sName<<": "<<axispriority3.at(1).fSort<<", "<<axispriority3.at(2).sName<<": "<<axispriority3.at(2).fSort<<"\n";
+        if(file != nullptr) *file << "Priority List 3: " << axispriority3.at(0).sName << ": " << axispriority3.at(0).fSort << ", " << axispriority3.at(1).sName << ": " << axispriority3.at(1).fSort << ", " << axispriority3.at(2).sName << ": " << axispriority3.at(2).fSort << "\n";
         for(int f = 0; f < faces.size(); f++){
             Face & face = *faces.at(f);
             vDeviance += face.vCentroid - vAverage;
@@ -467,14 +516,14 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         axispriority4.push_back(AxisSort("Y", vDeviance.fY));
         axispriority4.push_back(AxisSort("Z", vDeviance.fZ));
         sort(axispriority4.begin(), axispriority4.end());
-        if(file != nullptr) *file<<"Priority List 4: "<<axispriority4.at(0).sName<<": "<<axispriority4.at(0).fSort<<", "<<axispriority4.at(1).sName<<": "<<axispriority4.at(1).fSort<<", "<<axispriority4.at(2).sName<<": "<<axispriority4.at(2).fSort<<"\n";
+        if(file != nullptr) *file << "Priority List 4: " << axispriority4.at(0).sName << ": " << axispriority4.at(0).fSort << ", " << axispriority4.at(1).sName << ": " << axispriority4.at(1).fSort << ", " << axispriority4.at(2).sName << ": " << axispriority4.at(2).fSort << "\n";
 
         std::vector<AxisSort> axispriority5;
         axispriority5.push_back(AxisSort("X", vDeviance2.fX));
         axispriority5.push_back(AxisSort("Y", vDeviance2.fY));
         axispriority5.push_back(AxisSort("Z", vDeviance2.fZ));
         sort(axispriority5.begin(), axispriority5.end());
-        if(file != nullptr) *file<<"Priority List 5: "<<axispriority5.at(0).sName<<": "<<axispriority5.at(0).fSort<<", "<<axispriority5.at(1).sName<<": "<<axispriority5.at(1).fSort<<", "<<axispriority5.at(2).sName<<": "<<axispriority5.at(2).fSort<<"\n";
+        if(file != nullptr) *file << "Priority List 5: " << axispriority5.at(0).sName << ": " << axispriority5.at(0).fSort << ", " << axispriority5.at(1).sName << ": " << axispriority5.at(1).fSort << ", " << axispriority5.at(2).sName << ": " << axispriority5.at(2).fSort << "\n";
 
         //axispriority.at(0).sName = axispriority4.at(0).sName;
         //axispriority.at(1).sName = axispriority4.at(1).sName;
@@ -546,7 +595,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
                 //nNegative += (newfs.fMin < fMin + (fMax - fMin)/2)? -1 : 1;
                 //nNegative += (newfs.fMin < fAverage)? -1 : 1;
                 centroids.push_back(std::move(newfs));
-                //ssFaces<<"  "<<centroids.back().centroid<<" ("<<fMin<<" -> "<<fMax<<") - face "<<face.nID<<"\n";
+                //ssFaces << "  " << centroids.back().centroid << " (" << fMin << " -> " << fMax << ") - face " << face.nID << "\n";
             }
             //if(nNegative < 0) bNegative = true;
             //if(centroids.size() == 0) Error("Major error, centroid size 0!!");
@@ -567,11 +616,11 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
             else nIndex = centroids.size() / 2;
 
             if(file != nullptr){
-                *file << "Priority: "<<(bNegative? "-" : "+")<<axispriority.at(nCurrentPriority).sName<<"\n";
-                *file<<"Faces:\n";
+                *file << "Priority: " << (bNegative? "-" : "+") << axispriority.at(nCurrentPriority).sName << "\n";
+                *file << "Faces:\n";
                 for(int c = 0; c < centroids.size(); c++){
-                    ssFaces<<"  "<<centroids.at(c).centroid<<", "<<centroids.at(c).fMin + (centroids.at(c).fMax - centroids.at(c).fMin)/2.0;
-                    ssFaces<<" ("<<centroids.at(c).fMin<<" -> "<<centroids.at(c).fMax<<") - face "<<centroids.at(c).p_face->nID<<"\n";
+                    ssFaces << "  " << centroids.at(c).centroid << ", " << centroids.at(c).fMin + (centroids.at(c).fMax - centroids.at(c).fMin)/2.0;
+                    ssFaces << " (" << centroids.at(c).fMin << " -> " << centroids.at(c).fMax << ") - face " << centroids.at(c).p_face->nID << "\n";
                 }
                 *file << ssFaces.str();
             }
@@ -631,10 +680,10 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
             fMedian = (fMedian + centroids.at(nIndex).centroid) / 2;
         }
         if(file != nullptr){
-            *file<<"Median: "<<fMedian<<" (";
-            if(bEven) *file<<centroids.at(nIndex-1).p_face->nID<<", ";
-            *file<<centroids.at(nIndex).p_face->nID;
-            *file<<")\n";
+            *file << "Median: " << fMedian << " (";
+            if(bEven) *file << centroids.at(nIndex-1).p_face->nID << ", ";
+            *file << centroids.at(nIndex).p_face->nID;
+            *file << ")\n";
         }
 
         if(axispriority.at(nCurrentPriority).sName == "X" && !bNegative) aabb.nProperty = AABB_POSITIVE_X;
@@ -643,7 +692,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
         else if(axispriority.at(nCurrentPriority).sName == "Y" && bNegative) aabb.nProperty = AABB_NEGATIVE_Y;
         else if(axispriority.at(nCurrentPriority).sName == "Z" && !bNegative) aabb.nProperty = AABB_POSITIVE_Z;
         else if(axispriority.at(nCurrentPriority).sName == "Z" && bNegative) aabb.nProperty = AABB_NEGATIVE_Z;
-        aabb.nProperty = 0;
+        else aabb.nProperty = 0;
 
         for(int c = 0; c < centroids.size(); c++){
             if(c < nIndex) half1.push_back(centroids.at(c).p_face);
@@ -659,7 +708,7 @@ void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream 
             BuildAabb(aabb.Child2.front(), half2, file);
         }
         else{
-            if(file != nullptr) *file<<"ERROR: One of the halves is empty!\n";
+            if(file != nullptr) *file << "ERROR: One of the halves is empty!\n";
             Error("AABB tree: One of the halves is empty!");
         }
     }
@@ -808,7 +857,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
 
                 /// Read the data
                 if(bVerts && TempVerts != nullptr){
-                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading verts data "<<nDataCounter<<".\n";
+                    //if(DEBUG_LEVEL > 3) std::cout << "Reading verts data " << nDataCounter << ".\n";
                     bFound = true;
                     Vector vert;
                     if(ReadFloat(fConvert)) vert.fX = fConvert;
@@ -823,7 +872,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     else bError = true;
                 }
                 else if(bFaces){
-                    //if(DEBUG_LEVEL > 3) std::cout<<"Reading faces data"<<""<<".\n";
+                    //if(DEBUG_LEVEL > 3) std::cout << "Reading faces data" << "" << ".\n";
                     bFound = true;
                     Face face;
                     //std::cout << "Reading walk face.\n";
@@ -858,36 +907,36 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
         }
         //So no data. Find the next keyword then.
         else{
-            //std::cout<<"No data to read. Read keyword instead"<<""<<".\n";
+            //std::cout << "No data to read. Read keyword instead" << "" << ".\n";
             bFound = ReadUntilText(sID);
             if(!bFound) SkipLine(); //This will have already been done above, no need to look for it again
             else{
                 /// Common case for nodes
                 if(sID == "node" && nNode == 0){
-                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    if(DEBUG_LEVEL > 3) std::cout << "Reading " << sID << ".\n";
 
                     //Read type
                     int nType;
                     bFound = ReadUntilText(sID); //Get type
                     if(!bFound){
-                        std::cout<<"ReadUntilText() ERROR: a node is without any other specification.\n";
+                        std::cout << "ReadUntilText() ERROR: a node is without any other specification.\n";
                     }
                     if(sID == "dummy") nType = NODE_HEADER;
                     else if(sID == "trimesh") nType = NODE_HEADER | NODE_MESH;
                     else if(sID == "aabb") nType = NODE_HEADER | NODE_MESH | NODE_AABB;
                     else if(bFound){
-                        std::cout<<"ReadUntilText() has found some text (type?) that we do not support: "<<sID<<"\n";
+                        std::cout << "ReadUntilText() has found some text (type?) that we do not support: " << sID << "\n";
                         bError = true;
                     }
 
                     //Read name
                     bFound = ReadUntilText(sID, false); //Name
                     if(!bFound){
-                        std::cout<<"ReadUntilText() ERROR: a node is without a name.\n";
+                        std::cout << "ReadUntilText() ERROR: a node is without a name.\n";
                     }
                     else{
                         sNodeName = sID;
-                        //std::cout << "Reading "<< sNodeName <<".\n";
+                        //std::cout << "Reading " << sNodeName << ".\n";
 						if(bPwk){
 							DATA = Mdl.Pwk->GetData().get();
                             TempVerts = &TempVerts0;
@@ -913,7 +962,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                 }
                 /// Next we have the DATA LISTS
                 else if(sID == "verts" && nNode & NODE_MESH && (sNodeName.find("_wg") != std::string::npos)){
-                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    if(DEBUG_LEVEL > 3) std::cout << "Reading " << sID << ".\n";
                     //std::cout << "Reading verts.\n";
                     bVerts = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -922,7 +971,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     SkipLine();
                 }
                 else if(sID == "faces" && nNode & NODE_MESH && (sNodeName.find("_wg") != std::string::npos)){
-                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    if(DEBUG_LEVEL > 3) std::cout << "Reading " << sID << ".\n";
                     //std::cout << "Reading faces.\n";
                     bFaces = true;
                     if(ReadInt(nConvert)) nDataMax = nConvert;
@@ -931,7 +980,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                     SkipLine();
                 }
                 else if(sID == "position" && nNode && DATA != nullptr){
-                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    if(DEBUG_LEVEL > 3) std::cout << "Reading " << sID << ".\n";
                     double fX, fY, fZ;
                     if(ReadFloat(fConvert)) fX = fConvert;
                     else bError = true;
@@ -954,7 +1003,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                 }
                 /// General ending tokens
                 else if(sID == "endnode" && nNode > 0){
-                    if(DEBUG_LEVEL > 3) std::cout<<"Reading "<<sID<<".\n";
+                    if(DEBUG_LEVEL > 3) std::cout << "Reading " << sID << ".\n";
                     nNode = 0;
                     DATA = nullptr;
                     TempVerts = nullptr;
@@ -982,13 +1031,13 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
                 else if(sID == "tilefade") SkipLine();
                 else if(sID == "center") SkipLine();
                 else{
-                    std::cout<<"ReadUntilText() has found some text that we cannot interpret: "<<sID<<"\n";
+                    std::cout << "ReadUntilText() has found some text that we cannot interpret: " << sID << "\n";
                     SkipLine();
                 }
             }
         }
     }
-    std::cout<<"Done reading walkmesh ascii, checking for errors...\n";
+    std::cout << "Done reading walkmesh ascii, checking for errors...\n";
     if(bError){
         Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
         return false;

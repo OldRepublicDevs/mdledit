@@ -43,6 +43,8 @@
 #define IDM_PLATFORM_PC     133
 #define IDM_PLATFORM_XBOX   134
 #define IDM_MASS_ANALYZE    135
+#define IDM_BIN_COMPARE     136
+#define IDM_SHOW_DIFF       137
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -76,7 +78,7 @@
 #define IDPM_TV_EXPAND              302
 #define IDPM_TV_FOLD_CHILDREN       303
 #define IDPM_TV_EXPAND_CHILDREN     304
-#define IDPM_VIEW_ASCII   305
+#define IDPM_VIEW_ASCII             305
 #define IDPM_OPEN_GEO_VIEWER        306
 #define IDPM_OPEN_EDITOR            307
 
@@ -96,6 +98,7 @@
 #define DLG_ID_BEZIER_LINEAR    412
 #define DLG_ID_EXPORT_WOK       413
 #define DLG_PROGRESSMASS        414
+#define DLG_ID_DOT_ASCII        415
 
 #define IDDB_EDIT               500
 #define IDDB_SAVE               501

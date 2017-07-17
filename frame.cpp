@@ -14,7 +14,9 @@ HWND hStatusBar;
 HWND hDisplayEdit;
 HWND hTabs;
 MDL Model;
-bool bShowHex;
+bool bShowHex = false;
+bool bShowDiff = true;
+std::string sExePath;
 
 bool AppendTab(HWND hTabControl, std::string sName){
     int nTabs = TabCtrl_GetItemCount(hTabControl);
@@ -37,12 +39,18 @@ void FixHead(){
             HTREEITEM hSel = TreeView_GetSelection(hTree);
             if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
         }
-        else std::cout<<"neck_g was not found!\n";
+        else std::cout << "neck_g was not found!\n";
     }
 }
 
 Frame::Frame(HINSTANCE hInstanceCreate){
     hInstance = hInstanceCreate; // Save Instance handle
+
+    /// Save executable path
+    sExePath.resize(MAX_PATH + 1, 0);
+    GetModuleFileName(hInstance, &sExePath.front(), MAX_PATH + 1);
+    sExePath = sExePath.c_str();
+    std::cout << "Running " << sExePath << "\n";
 
     // #1 Basics
     WindowClass.cbSize = sizeof(WNDCLASSEX); // Must always be sizeof(WNDCLASSEX)
@@ -102,7 +110,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
     static RECT rcClient;
     //static char cFile[MAX_PATH];
     static std::string sFile = std::string(1, '\0');
-    if(DEBUG_LEVEL > 500) std::cout<<"FrameProc(): "<<(int) message<<"\n";
+    if(DEBUG_LEVEL > 500) std::cout << "FrameProc(): " << (int) message << "\n";
     /* handle the messages */
 
     static HWND hIntLabel;
@@ -205,22 +213,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             ShowWindow(hTabs, false);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
-                std::cout<<"Major error, creation of Edit1 window failed.\n";
+                std::cout << "Major error, creation of Edit1 window failed.\n";
             }
 
-            MENUITEMINFO mii;
-            mii.cbSize = sizeof(MENUITEMINFO);
-            mii.fMask = MIIM_STATE;
-            mii.fState = MFS_DISABLED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
-            mii.fState = MFS_UNCHECKED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
-            mii.fState = MFS_CHECKED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
-            mii.fState = MFS_GRAYED;
-            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
+            ManageIni(INI_READ);
         }
         break;
         case WM_NOTIFY:
@@ -245,7 +241,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         while(hSearch != NULL){
                             TreeView_GetItemRect(hTree, hSearch, &rcItem, true);
                             MapWindowPoints(hTree, HWND_DESKTOP, (LPPOINT) &rcItem, 2);
-                            //std::cout<<string_format("Point: (%i, %i), Rect: (%i, %i, %i, %i)\n", pt.x, pt.y, rcItem.left, rcItem.top, rcItem.right, rcItem.bottom);
+                            //std::cout << string_format("Point: (%i, %i), Rect: (%i, %i, %i, %i)\n", pt.x, pt.y, rcItem.left, rcItem.top, rcItem.right, rcItem.bottom);
                             if(PtInRect(&rcItem, pt)){
                                 hSel = hSearch;
                                 hSearch = NULL;
@@ -348,26 +344,57 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         if(!Model.NodeExists("neck_g")) mii.fState = MFS_DISABLED;
                         else if(bLinkHead) mii.fState = MFS_CHECKED;
                         else mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_LINK_HEAD, false, &mii);
                         if(Model.bK2) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_GAME_K1, false, &mii);
                         if(!Model.bK2) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_GAME_K2, false, &mii);
                         if(Model.bXbox) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_PLATFORM_PC, false, &mii);
                         if(!Model.bXbox) mii.fState = MFS_UNCHECKED;
                         else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_PLATFORM_XBOX, false, &mii);
                         if(!Model.empty()) mii.fState = MFS_ENABLED;
                         else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_BIN_COMPARE, false, &mii);
+                        GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+                        if(!Model.GetDifferenceData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                        else mii.fState = MFS_GRAYED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
                     }
                     std::string sNewName = "MDLedit";
-                    if(bSuccess) sNewName += " (" + Model.GetFilename() + ")";
+                    if(!Model.empty()) sNewName += " (" + Model.GetFilename() + ")";
                     SetWindowText(hwnd, sNewName.c_str());
+                }
+                break;
+                case IDM_BIN_COMPARE:
+                {
+                    bool bSuccess = FileEditor(hwnd, nID, sFile);
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+                    if(!Model.GetDifferenceData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                    else mii.fState = MFS_GRAYED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+                    Edit1.UpdateEdit();
+                }
+                break;
+                case IDM_SHOW_DIFF:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+                    bShowDiff = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                    if(bShowDiff) mii.fState = MFS_CHECKED;
+                    else mii.fState = MFS_UNCHECKED;
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+                    Edit1.UpdateEdit();
                 }
                 break;
                 case IDM_BIN_SAVE:
@@ -417,7 +444,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             HTREEITEM hSel = TreeView_GetSelection(hTree);
                             if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
                         }
-                        else std::cout<<"neck_g was not found!\n";
+                        else std::cout << "neck_g was not found!\n";
                     }
                 }
                 break;
@@ -516,9 +543,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_EDIT_TEXTURES:
                 {
                     if(2 == DialogBoxParam(NULL, MAKEINTRESOURCE(DLG_EDIT_TEXTURES), hwnd, TexturesProc, (LPARAM) &Model)){
-                        std::cout<<"Cause model reprocessing!\n";
-                        //TreeView_DeleteAllItems(hTree);
-                        //DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 3);
+                        std::cout << "Cause model reprocessing!\n";
                         Model.Compile();
                         FixHead();
                     }
@@ -776,4 +801,36 @@ INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             return FALSE;
     }
     return TRUE;
+}
+
+void ManageIni(IniConst Action){
+    std::string sIni = sExePath;
+    PathRemoveFileSpec(&sIni.front());
+    sIni = sIni.c_str();
+    sIni += "\\mdledit.ini";
+
+    if(PathFileExists(sIni.c_str())){
+        if(Action == INI_READ) std::cout << "Reading ";
+        if(Action == INI_WRITE) std::cout << "Writing ";
+        std::cout << "INI file: " << sIni << ".\n";
+        IniFile Ini;
+        Ini.AddIniOption("AreaWeighting", DT_bool, &Model.bSmoothAreaWeighting);
+        Ini.AddIniOption("AngleWeighting", DT_bool, &Model.bSmoothAngleWeighting);
+        Ini.AddIniOption("DetermineSmoothing", DT_bool, &Model.bDetermineSmoothing);
+        Ini.AddIniOption("WriteAnimations", DT_bool, &Model.bWriteAnimations);
+        Ini.AddIniOption("SkinToTrimesh", DT_bool, &Model.bSkinToTrimesh);
+        Ini.AddIniOption("LightsaberToTrimesh", DT_bool, &Model.bLightsaberToTrimesh);
+        Ini.AddIniOption("BezierToLinear", DT_bool, &Model.bBezierToLinear);
+        Ini.AddIniOption("ExportWOK", DT_bool, &Model.bExportWok);
+        Ini.AddIniOption("UseDotAscii", DT_bool, &bDotAsciiDefault);
+        try{
+            if(Action == INI_READ) Ini.ReadIni(sIni);
+            else if(Action == INI_WRITE) Ini.WriteIni(sIni);
+        }
+        catch(const std::exception & e){
+            std::cout << "A standard exception occurred while reading the INI file:\n" << e.what() << "\n";
+            return;
+        }
+    }
+    else std::cout << sIni << " not found.\n";
 }

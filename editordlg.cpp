@@ -37,10 +37,10 @@ EditorDlgWindow::EditorDlgWindow(){
 bool EditorDlgWindow::Run(){
     if(!bRegistered){
         if(!RegisterClassEx(&WindowClass)){
-            std::cout<<"Registering Window Class "<<WindowClass.lpszClassName<<" failed!\n";
+            std::cout << "Registering Window Class " << WindowClass.lpszClassName << " failed!\n";
             return false;
         }
-        std::cout<<"Class "<<WindowClass.lpszClassName<<" registered!\n";
+        std::cout << "Class " << WindowClass.lpszClassName << " registered!\n";
         bRegistered = true;
     }
     //HMENU *has* to be NULL!!!!! Otherwise the function fails to create the window!
@@ -107,7 +107,7 @@ LRESULT CALLBACK EditorDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                             ///Passed all the error checks, time to get to business
                             if(editdlg->SaveData()){
                                 SendMessage(hFrame, WM_COMMAND, MAKEWPARAM(IDD_EDITOR_DLG, IDP_DISPLAY_UPDATE), (LPARAM) hwnd);
-                                DestroyWindow(hwnd);
+                                //DestroyWindow(hwnd);
                             }
                             SendMessage(hFrame, WM_COMMAND, MAKEWPARAM(IDD_EDITOR_DLG, IDP_DISPLAY_UPDATE), (LPARAM) hwnd);
                         }
@@ -400,9 +400,9 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     TokenData.push_back(TokenDatum("mdx_uv4_y", "double", "MDX", (void*) &vert.MDXData.vUV4.fY, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxUV4 + 4));
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
-                    TokenData.push_back(TokenDatum("mdx_color_r", "double", "MDX", (void*) &vert.MDXData.vColor.fX, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 0));
-                    TokenData.push_back(TokenDatum("mdx_color_g", "double", "MDX", (void*) &vert.MDXData.vColor.fY, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 4));
-                    TokenData.push_back(TokenDatum("mdx_color_b", "double", "MDX", (void*) &vert.MDXData.vColor.fZ, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 8));
+                    TokenData.push_back(TokenDatum("mdx_color_r", "double", "MDX", (void*) &vert.MDXData.cColor.fR, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 0));
+                    TokenData.push_back(TokenDatum("mdx_color_g", "double", "MDX", (void*) &vert.MDXData.cColor.fG, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 4));
+                    TokenData.push_back(TokenDatum("mdx_color_b", "double", "MDX", (void*) &vert.MDXData.cColor.fB, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxColor + 8));
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
                     TokenData.push_back(TokenDatum("mdx_tangent1_tangent_x", "double", "MDX", (void*) &vert.MDXData.vTangent1.at(0).fX, node.Mesh.nOffsetIntoMdx + node.Mesh.nMdxDataSize * nNum + node.Mesh.nOffsetToMdxTangent1 + 0));

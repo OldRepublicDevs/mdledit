@@ -18,11 +18,13 @@
 void MDL::DecompileModel(bool bMinimal){
     if(sBuffer.empty()) return;
 
+    Timer tDecompile;
+
     int nNodeCounter;
     unsigned int nPos = 0;
 
     FH.reset(new FileHeader());
-    if(!bMinimal) std::cout<<"Begin decompiling ";
+    if(!bMinimal) std::cout << "Begin decompiling ";
     Report("Decompiling...");
 
     FileHeader & Data = *FH;
@@ -31,7 +33,7 @@ void MDL::DecompileModel(bool bMinimal){
     Data.nZero = ReadInt(&nPos, 8);
     Data.nMdlLength = ReadInt(&nPos, 1);
     Data.nMdxLength = ReadInt(&nPos, 1);
-    //if(!bMinimal) std::cout<<"File header read.\n";
+    //if(!bMinimal) std::cout << "File header read.\n";
 
     Data.MH.GH.nFunctionPointer0 = ReadInt(&nPos, 9);
     Data.MH.GH.nFunctionPointer1 = ReadInt(&nPos, 9);
@@ -40,7 +42,8 @@ void MDL::DecompileModel(bool bMinimal){
     if(Data.MH.GH.nFunctionPointer0 == FN_PTR_PC_K1_MODEL_1) bK2 = false, bXbox = false;
     else if(Data.MH.GH.nFunctionPointer0 == FN_PTR_PC_K2_MODEL_1) bK2 = true, bXbox = false;
     else if(Data.MH.GH.nFunctionPointer0 == FN_PTR_XBOX_K2_MODEL_1) bK2 = true, bXbox = true;
-    else bK2 = false, bXbox = true;
+    else if(Data.MH.GH.nFunctionPointer0 == FN_PTR_XBOX_K1_MODEL_1)  bK2 = false, bXbox = true;
+    else throw mdlexception("Cannot interpret model function pointer (" + std::to_string(Data.MH.GH.nFunctionPointer0) + "), so cannot determine game and platform.");
 
     ReadString(Data.MH.GH.sName, &nPos, 3, 32);
     if(!bMinimal) std::cout << Data.MH.GH.sName.c_str() << ".\n";
@@ -65,7 +68,7 @@ void MDL::DecompileModel(bool bMinimal){
     nPos++;
     Data.MH.GH.nPadding[2] = sBuffer[nPos];
     nPos++;
-    //if(!bMinimal) std::cout<<"Geometry header read.\n";
+    //if(!bMinimal) std::cout << "Geometry header read.\n";
 
     MarkBytes(nPos, 1, 7);
     Data.MH.nClassification = sBuffer[nPos];
@@ -85,7 +88,7 @@ void MDL::DecompileModel(bool bMinimal){
     Data.MH.AnimationArray.nOffset = ReadInt(&nPos, 6);
     Data.MH.AnimationArray.nCount = ReadInt(&nPos, 1);
     Data.MH.AnimationArray.nCount2 = ReadInt(&nPos, 1);
-    Data.MH.nSupermodelReference = ReadInt(&nPos, 10);
+    Data.MH.nSupermodelReference = ReadInt(&nPos, 11);
 
     Data.MH.vBBmin.fX = ReadFloat(&nPos, 2);
     Data.MH.vBBmin.fY = ReadFloat(&nPos, 2);
@@ -106,11 +109,12 @@ void MDL::DecompileModel(bool bMinimal){
     Data.MH.NameArray.nOffset = ReadInt(&nPos, 6);
     Data.MH.NameArray.nCount = ReadInt(&nPos, 1);
     Data.MH.NameArray.nCount2 = ReadInt(&nPos, 1);
-    //if(!bMinimal) std::cout<<"Model header read.\n";
+    //if(!bMinimal) std::cout << "Model header read.\n";
 
     //The header is fully done!
     //Now we're equipped to disassemble the rest
     //First index names array
+    //if(!bMinimal) std::cout << "Reading names.\n";
     if(Data.MH.NameArray.nCount > 0){
         Data.MH.Names.resize(Data.MH.NameArray.nCount);
         int n = 0;
@@ -122,9 +126,10 @@ void MDL::DecompileModel(bool bMinimal){
             n++;
         }
     }
-    //if(!bMinimal) std::cout<<"Name array read.\n";
+    //if(!bMinimal) std::cout << "Name array read.\n";
 
     Report("Decompiling animations...");
+    //if(!bMinimal) std::cout << "Reading animations.\n";
     //Next, animations. Skip them if we're reading minimally
     if(Data.MH.AnimationArray.nCount > 0 && !bMinimal){
         //Data.MH.Animations = new Animation [Data.MH.AnimationArray.nCount];
@@ -176,7 +181,7 @@ void MDL::DecompileModel(bool bMinimal){
                 Data.MH.Animations[n].Events.resize(Data.MH.Animations[n].EventArray.nCount);
                 int i = 0;
                 nPos = MDL_OFFSET + Data.MH.Animations[n].EventArray.nOffset;
-                //std::cout<<string_format("Offset to Animation Events is %i\n", Data.MH.Animations[n].EventArray.nOffset);
+                //std::cout << string_format("Offset to Animation Events is %i\n", Data.MH.Animations[n].EventArray.nOffset);
                 while(i < Data.MH.Animations[n].EventArray.nCount){
                     Data.MH.Animations[n].Events[i].fTime = ReadFloat(&nPos, 2);
                     ReadString(Data.MH.Animations[n].Events[i].sName, &nPos, 3, 32);
@@ -191,7 +196,7 @@ void MDL::DecompileModel(bool bMinimal){
             Vector vFromRoot;
             ParseNode(&(Data.MH.Animations[n].RootAnimationNode), &nNodeCounter, vFromRoot);
             //Data.MH.Animations[n].nNodeCount = nNodeCounter;
-            //std::cout<<string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfNames);
+            //std::cout << string_format("Node count for Animation %i: %i, compared to the number in the header, %i.\n", n, nNodeCounter, Data.MH.Animations[n].nNumberOfNames);
             Data.MH.Animations[n].ArrayOfNodes.clear();
             Data.MH.Animations[n].ArrayOfNodes.reserve(Data.MH.Names.size());
             LinearizeAnimations(Data.MH.Animations[n].RootAnimationNode, Data.MH.Animations[n].ArrayOfNodes);
@@ -199,22 +204,23 @@ void MDL::DecompileModel(bool bMinimal){
             n++;
         }
     }
-    //if(!bMinimal) std::cout<<"Animation array read.\n";
+    //if(!bMinimal) std::cout << "Animation array read.\n";
     Report("Decompiling geometry...");
+    //if(!bMinimal) std::cout << "Reading geometry.\n";
     if(Data.MH.Names.size() > 0){
         Data.MH.RootNode.nOffset = Data.MH.GH.nOffsetToRootNode;
         Data.MH.RootNode.nAnimation = -1;
-        //std::cout<<string_format("Offset to Root Node: %i\n", Data.MH.RootNode.nOffset);
+        //std::cout << string_format("Offset to Root Node: %i\n", Data.MH.RootNode.nOffset);
         nNodeCounter = 0;
         Vector vFromRoot;
         ParseNode(&(Data.MH.RootNode), &nNodeCounter, vFromRoot, bMinimal);
         Data.MH.nNodeCount = nNodeCounter;
-        //std::cout<<string_format("Node count for the Geometry: %i, compared to the number in the header, %i.\n", nNodeCounter, Data.MH.GH.nNumberOfNodes);
+        //std::cout << string_format("Node count for the Geometry: %i, compared to the number in the header, %i.\n", nNodeCounter, Data.MH.GH.nNumberOfNodes);
         //Data.MH.ArrayOfNodes.clear();
         Data.MH.ArrayOfNodes.resize(Data.MH.Names.size());
         LinearizeGeometry(Data.MH.RootNode, Data.MH.ArrayOfNodes);
     }
-    //if(!bMinimal) std::cout<<"Geometry read.\n";
+    //if(!bMinimal) std::cout << "Geometry read.\n";
 
     /// Here we'll go around and fix all the animation node numbers to match the geometry nodes.
     for(int n = 0; n < Data.MH.Animations.size(); n++){
@@ -243,8 +249,8 @@ void MDL::DecompileModel(bool bMinimal){
         }
     }
 
+    if(!bMinimal) std::cout << "Decompiled model in " << tDecompile.GetTime() << ".\n";
     if(bDetermineSmoothing && Mdx && !bMinimal) DetermineSmoothing();
-    if(!bMinimal) std::cout<<"Done decompiling!\n";
 }
 
 void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
@@ -255,6 +261,7 @@ void MDL::ParseAabb(Aabb * AABB, unsigned int nHighestOffset){
         nHighestOffset = 0xffffffff;
         return;
     }
+    if(AABB->nOffset == -1) throw mdlexception("An aabb node has offset -1.");
     unsigned int nPos = AABB->nOffset + MDL_OFFSET;
     AABB->vBBmin.fX = ReadFloat(&nPos, 2);
     AABB->vBBmin.fY = ReadFloat(&nPos, 2);
@@ -290,7 +297,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
     NODE->Head.nNodeNumber = ReadInt(&nPos, 5, 2);
     NODE->Head.nPadding1 = ReadInt(&nPos, 8, 2);
 
-    //By now, we can figure out how long the header is going to be and all that we're including in it.
+    //std::cout << "Reading node " << FH->MH.Names.at(NODE->Head.nNodeNumber).sName << ".\n";
 
     if(NODE->Head.nType & NODE_HEADER){
         NODE->Head.nOffsetToRoot = ReadInt(&nPos, 6);
@@ -325,7 +332,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
             while(n < NODE->Head.ControllerDataArray.nCount){
                 NODE->Head.ControllerData[n] = ReadFloat(&nPosData, 2);
                 n++;
-                //if(n == NODE->Head.ControllerDataArray.nCount) std::cout<<string_format("Just filled %i floats of Controller Data\n", n);
+                //if(n == NODE->Head.ControllerDataArray.nCount) std::cout << string_format("Just filled %i floats of Controller Data\n", n);
             }
         }
 
@@ -486,6 +493,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
     }
 
     if(NODE->Head.nType & NODE_MESH){
+    try{
         NODE->Mesh.nFunctionPointer0 = ReadInt(&nPos, 9);
         NODE->Mesh.nFunctionPointer1 = ReadInt(&nPos, 9);
 
@@ -573,7 +581,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Mesh.nOffsetToMdxTangent4 = ReadInt(&nPos, 6);
 
         NODE->Mesh.nNumberOfVerts = ReadInt(&nPos, 1, 2);
-        NODE->Mesh.nTextureNumber = ReadInt(&nPos, 5, 2);
+        NODE->Mesh.nTextureNumber = ReadInt(&nPos, 1, 2);
 
         MarkBytes(nPos, 6, 7);
         NODE->Mesh.nHasLightmap = sBuffer[nPos];
@@ -602,6 +610,10 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         NODE->Mesh.nPadding = ReadInt(&nPos, 8);
         NODE->Mesh.nOffsetIntoMdx = ReadInt(&nPos, 6);
         if(!bXbox) NODE->Mesh.nOffsetToVertArray = ReadInt(&nPos, 6);
+    }
+    catch(const std::exception & e){
+        throw mdlexception("In " + FH->MH.Names.at(NODE->Head.nNodeNumber).sName + ", reading trimesh header: " + e.what());
+    }
 
         if(NODE->Mesh.IndexCounterArray.nCount > 0){
             //I am assuming here that the pointer can only ever be a single one
@@ -650,7 +662,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Mesh.Faces[n].nIndexVertex[2] = ReadInt(&nPosData, 5, 2);
 
                 if(NODE->Mesh.IndexLocationArray.nCount > 0){
-                    //std::cout<<string_format("Reading VertIndices for face %i of %i, at position %i.\n", n, NODE->Mesh.FaceArray.nCount, nPosData2);
+                    //std::cout << string_format("Reading VertIndices for face %i of %i, at position %i.\n", n, NODE->Mesh.FaceArray.nCount, nPosData2);
                     NODE->Mesh.VertIndices[n].at(0) = ReadInt(&nPosData2, 5, 2);
                     NODE->Mesh.VertIndices[n].at(1) = ReadInt(&nPosData2, 5, 2);
                     NODE->Mesh.VertIndices[n].at(2) = ReadInt(&nPosData2, 5, 2);
@@ -778,6 +790,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
 
                 NODE->Mesh.Vertices[n].MDXData.nNodeNumber = NODE->Head.nNodeNumber;
                 if(NODE->Mesh.nMdxDataSize > 0 && Mdx){
+                try{
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxVertex;
                         NODE->Mesh.Vertices[n].MDXData.vVertex.fX = Mdx->ReadFloat(&nPosData2, 2);
@@ -804,6 +817,12 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         else{
                             NODE->Mesh.Vertices[n].MDXData.vNormal = DecompressVector(Mdx->ReadInt(&nPosData2, 2));
                         }
+                    }
+                    if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                        nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxColor;
+                        NODE->Mesh.Vertices[n].MDXData.cColor.fR = Mdx->ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.cColor.fG = Mdx->ReadFloat(&nPosData2, 2);
+                        NODE->Mesh.Vertices[n].MDXData.cColor.fB = Mdx->ReadFloat(&nPosData2, 2);
                     }
                     if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                         nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV1;
@@ -898,6 +917,11 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                         }
                     }
                 }
+                catch(const std::exception & e){
+                    std::cout << "Offset into MDX for " << FH->MH.Names.at(NODE->Head.nNodeNumber).sName << " is " << NODE->Mesh.nOffsetIntoMdx << "\n";
+                    throw mdlexception("Error reading MDX Data for '" + FH->MH.Names.at(NODE->Head.nNodeNumber).sName  + "': " + e.what());
+                }
+                }
                 n++;
             }
             //Read the floats after each data block
@@ -925,6 +949,12 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                     else{
                         NODE->Mesh.MDXData.vNormal = DecompressVector(Mdx->ReadInt(&nPosData2, 8));
                     }
+                }
+                if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                    nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxColor;
+                    NODE->Mesh.MDXData.cColor.fR = Mdx->ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.cColor.fG = Mdx->ReadFloat(&nPosData2, 8);
+                    NODE->Mesh.MDXData.cColor.fB = Mdx->ReadFloat(&nPosData2, 8);
                 }
                 if(NODE->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Mesh.nOffsetToMdxUV1;
@@ -999,13 +1029,13 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                     }
                 }
                 if(NODE->Head.nType & NODE_SKIN){
-                    //if(NODE->Skin.nOffsetToMdxWeightValues != 32) std::cout<<string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
+                    //if(NODE->Skin.nOffsetToMdxWeightValues != 32) std::cout << string_format("Warning! MDX Skin Data Pointer 1 in %s is not 32! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxWeightValues;
                     NODE->Mesh.MDXData.Weights.fWeightValue[0] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[1] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[2] = Mdx->ReadFloat(&nPosData2, 8);
                     NODE->Mesh.MDXData.Weights.fWeightValue[3] = Mdx->ReadFloat(&nPosData2, 8);
-                    //if(NODE->Skin.nOffsetToMdxBoneIndices != 48) std::cout<<string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
+                    //if(NODE->Skin.nOffsetToMdxBoneIndices != 48) std::cout << string_format("Warning! MDX Skin Data Pointer 2 in %s is not 48! I might be reading wrong!\n", FH->MH.Names[NODE->Head.nNodeNumber].sName.c_str());
                     nPosData2 = NODE->Mesh.nOffsetIntoMdx + n * NODE->Mesh.nMdxDataSize + NODE->Skin.nOffsetToMdxBoneIndices;
                     if(bXbox){
                         NODE->Mesh.MDXData.Weights.nWeightIndex[0] = Mdx->ReadInt(&nPosData2, 8, 2);
@@ -1025,13 +1055,18 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
     }
 
     if(NODE->Head.nType & NODE_AABB){
-        //std::cout<<string_format("Look for AABB at %i\n", nPos);
-        NODE->Walkmesh.nOffsetToAabb = ReadInt(&nPos, 6);
-        //std::cout<<string_format("Offset to AABB is %i\n", NODE->Walkmesh.nOffsetToAabb);
+        try{
+            //std::cout << string_format("Look for AABB at %i\n", nPos);
+            NODE->Walkmesh.nOffsetToAabb = ReadInt(&nPos, 6);
+            //std::cout << string_format("Offset to AABB is %i\n", NODE->Walkmesh.nOffsetToAabb);
 
-        if(NODE->Walkmesh.nOffsetToAabb > 0){
-            NODE->Walkmesh.RootAabb.nOffset = NODE->Walkmesh.nOffsetToAabb;
-            ParseAabb(&NODE->Walkmesh.RootAabb, 10);
+            if(NODE->Walkmesh.nOffsetToAabb > 0){
+                NODE->Walkmesh.RootAabb.nOffset = NODE->Walkmesh.nOffsetToAabb;
+                ParseAabb(&NODE->Walkmesh.RootAabb, 10);
+            }
+        }
+        catch(const std::exception & e){
+            throw mdlexception("In " + FH->MH.Names.at(NODE->Head.nNodeNumber).sName + ", reading aabb: " + e.what());
         }
     }
 
@@ -1127,7 +1162,7 @@ void MDL::DetermineSmoothing(){
                     //Handedness
                     Vector vCross = (face.vNormal / face.vTangent);
                     double fDot = vCross * face.vBitangent;
-                    //file<<Data.MH.ArrayOfNodes.at(n).GetName()<<" > face "<<f<<" > vNormal×vTangent="<<vCross.Print()<<", (vNormal×vTangent)*vBitangent="<<fDot<<", Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<"\n";
+                    //file<<Data.MH.ArrayOfNodes.at(n).GetName() << " > face " << f << " > vNormal×vTangent="<<vCross.Print() << ", (vNormal×vTangent)*vBitangent="<<fDot << ", Bitangent " << face.vBitangent.Print() << ", Tangent " << face.vTangent.Print() << "\n";
                     if(fDot > 0.0000000001){
                         face.vTangent *= -1.0;
                     }
@@ -1138,7 +1173,7 @@ void MDL::DetermineSmoothing(){
                         face.vBitangent *= -1.0;
                     }
                     //Vector vCross = face.vBitangent / face.vTangent;
-                    //file<<Data.MH.Names.at(Data.MH.ArrayOfNodes.at(n).Head.nNodeNumber).cName<<" > face "<<f<<" > Bitangent "<<face.vBitangent.Print()<<", Tangent "<<face.vTangent.Print()<<", Normal "<<face.vNormal.Print()<<", Bitangent × Tangent "<<vCross.Print()<<"\n";
+                    //file << Data.MH.Names.at(Data.MH.ArrayOfNodes.at(n).Head.nNodeNumber).cName << " > face " << f << " > Bitangent " << face.vBitangent.Print() << ", Tangent " << face.vTangent.Print() << ", Normal " << face.vNormal.Print() << ", Bitangent × Tangent "<<vCross.Print() << "\n";
                 }
 
                 face.nID = f;
@@ -1176,9 +1211,9 @@ void MDL::DetermineSmoothing(){
                 LinearizeAabb(RecalculationAabb, array1);
                 Aabb VanillaCopy = node.Walkmesh.RootAabb;
                 LinearizeAabb(VanillaCopy, array2);
-                if(array1.size() != array2.size()) fileaabb<<"ERROR! Aabb arrays have different sizes!";
+                if(array1.size() != array2.size()) fileaabb << "ERROR! Aabb arrays have different sizes!";
                 else{
-                    fileaabb<<"Vanilla vs New";
+                    fileaabb << "Vanilla vs New";
                     int nGood = 0;
                     int nTotal = 0;
                     std::stringstream ssTemp2;
@@ -1188,11 +1223,11 @@ void MDL::DetermineSmoothing(){
                             nTotal++;
                             if(bEq) nGood++;
                         }
-                        ssTemp2<< "\n (" << a << ") " <<array2.at(a).nID << " " << (bEq? "==" : "!=") << " " << array1.at(a).nID << (bEq? "" : " DIFFERENT!!");
+                        ssTemp2 << "\n (" << a << ") " << array2.at(a).nID << " " << (bEq? "==" : "!=") << " " << array1.at(a).nID << (bEq? "" : " DIFFERENT!!");
                     }
-                    fileaabb<<"\nCorrect: "<<nGood<<"/"<<(nTotal)<<" ("<<std::setprecision(4)<<((double) nGood / (double) nTotal * 100.0)<<"%)\n";
-                    fileaabb<<ssTemp2.str();
-                    fileaabb<<"\n\n\n"<<ssTemp.str();
+                    fileaabb << "\nCorrect: " << nGood << "/" << (nTotal) << " (" << std::setprecision(4) << ((double) nGood / (double) nTotal * 100.0) << "%)\n";
+                    fileaabb << ssTemp2.str();
+                    fileaabb << "\n\n\n" << ssTemp.str();
                 }
             }
         }
@@ -1213,7 +1248,9 @@ void MDL::DetermineSmoothing(){
     double fDiff = 0.00001;
     if(bXbox) fDiff = 0.01;
 
+    Timer tVectors;
     Report("Recalculating vectors...");
+    ProgressSize(0, Data.MH.PatchArrayPointers.size());
     std::vector<std::vector<unsigned long int>> nSmoothingGroupNumbers;
     nSmoothingGroupNumbers.resize(Data.MH.PatchArrayPointers.size());
     for(int pg = 0; pg < Data.MH.PatchArrayPointers.size(); pg++){
@@ -1242,9 +1279,9 @@ void MDL::DetermineSmoothing(){
         for(int nj = 0; nj < nPatchCount; nj++){
             if(Data.MH.PatchArrayPointers.at(pg).at(0).nNodeNumber != Data.MH.PatchArrayPointers.at(pg).at(nj).nNodeNumber) bCombined = true;
         }
-        file<<"\r\n"<<(bCombined?"Combined group ":"Group ")<<pg<<" "<<vCoords.Print()<<" - "<<nPatchCount<<" patches.\n";
+        file << "\r\n" << (bCombined?"Combined group ":"Group ") << pg << " " << vCoords.Print() << " - " << nPatchCount << " patches.\n";
         if(bSingleNormal){
-            file<<"     All normals equal. Expecting errors.\n";
+            file << "     All normals equal. Expecting errors.\n";
         }
 
         for(int p = 0; p < nPatchCount; p++){
@@ -1263,15 +1300,15 @@ void MDL::DetermineSmoothing(){
             patch.SmoothedPatches.reserve(nPatchCount);
             patch.SmoothedPatches.clear();
 
-            file<<"-> Patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<", faces";
-            for(int f = 0; f < patch.FaceIndices.size(); f++) file<<" "<<patch.FaceIndices.at(f);
-            file<<")";
+            file << "-> Patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ", faces";
+            for(int f = 0; f < patch.FaceIndices.size(); f++) file << " " << patch.FaceIndices.at(f);
+            file << ")";
             if(GetNodeByNameIndex(patch.nNodeNumber).Head.nType & NODE_DANGLY && GetNodeByNameIndex(patch.nNodeNumber).Dangly.Constraints.at(patch.nVertex) == 0.0){
-                file<<"\r\n     This is in a danglymesh and the constraint is 0, expecting errors.";
+                file << "\r\n     This is in a danglymesh and the constraint is 0, expecting errors.";
             }
 
             //First add this patch's face normals
-            double fTotalArea = 0.0;
+            bool bBadGeo = false;
             bool bBadUV = false;
             for(int f = 0; f < patch.FaceIndices.size(); f++){
                 Face & face = GetNodeByNameIndex(patch.nNodeNumber).Mesh.Faces.at(patch.FaceIndices.at(f));
@@ -1282,11 +1319,11 @@ void MDL::DetermineSmoothing(){
                 Vector Edge2 = v3 - v1;
                 Vector Edge3 = v3 - v2;
 
-                if(face.fAreaUV == 0.0) bBadUV = true;
+                if(face.fAreaUV <= 0.0) bBadUV = true;
+                if(face.fArea <= 0.0) bBadGeo = true;
 
-                fTotalArea +=  face.fArea;
                 Vector vAdd = face.vNormal;
-                if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                if(bSmoothAreaWeighting) vAdd *= face.fArea > 0.0 ? face.fArea : 0.0;
                 if(bSmoothAngleWeighting){
                     if(patch.nVertex == face.nIndexVertex[0]){
                         vAdd *= Angle(Edge1, Edge2);
@@ -1311,12 +1348,12 @@ void MDL::DetermineSmoothing(){
             //Create a boolean to track this
             bool bFound = false;
             bool bFoundTS = false;
-            file<<"\r\n    Looking for normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<")";
+            file << "\r\n    Looking for normal (" << vNormal.fX << ", " << vNormal.fY << ", " << vNormal.fZ << ")";
 
             if(patch.bUniform){
                 for(int op = 0; op < Data.MH.PatchArrayPointers.at(pg).size(); op++){
                     Patch & patch2 = Data.MH.PatchArrayPointers.at(pg).at(op);
-                    if(op!=p){
+                    if(op != p){
                         for(int f = 0; f < patch2.FaceIndices.size(); f++){
                             Face & face = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Faces.at(patch2.FaceIndices.at(f));
                             Vertex & v1 = GetNodeByNameIndex(patch2.nNodeNumber).Mesh.Vertices.at(face.nIndexVertex[0]);
@@ -1326,11 +1363,11 @@ void MDL::DetermineSmoothing(){
                             Vector Edge2 = v3 - v1;
                             Vector Edge3 = v3 - v2;
 
-                            if(face.fAreaUV == 0.0) bBadUV = true;
+                            if(face.fAreaUV <= 0.0) bBadUV = true;
+                            if(face.fArea <= 0.0) bBadGeo = true;
 
-                            fTotalArea +=  face.fArea;
                             Vector vAdd = face.vNormal;
-                            if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                            if(bSmoothAreaWeighting) vAdd *= face.fArea > 0.0 ? face.fArea : 0.0;
                             if(bSmoothAngleWeighting){
                                 if(patch.nVertex == face.nIndexVertex[0]){
                                     vAdd *= Angle(Edge1, Edge2);
@@ -1348,7 +1385,7 @@ void MDL::DetermineSmoothing(){
                 }
                 Vector vCheck = vNormalBase;
                 vCheck.Normalize();
-                file<<"\r\n    Comparing to uniform ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").";
+                file << "\r\n    Comparing to uniform (" << vCheck.fX << ", " << vCheck.fY << ", " << vCheck.fZ << ").";
 
                 if(vCheck.Compare(vNormal, fDiff)){
                     bFound = true;
@@ -1361,7 +1398,7 @@ void MDL::DetermineSmoothing(){
                 //First check if this patch's normal is enough
                 Vector vCheck = vNormalBase;
                 vCheck.Normalize();
-                file<<"\r\n    Comparing to base ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<").";
+                file << "\r\n    Comparing to base (" << vCheck.fX << ", " << vCheck.fY << ", " << vCheck.fZ << ").";
 
                 if(vCheck.Compare(vNormal, fDiff)){
                     bFound = true;
@@ -1374,25 +1411,25 @@ void MDL::DetermineSmoothing(){
 
             if(bFound){
                 nNumOfFoundNormals++;
-                file<<"\n:)    MATCH FOUND!\n";
+                file << "\n:)    MATCH FOUND!\n";
             }
             else if(GetNodeByNameIndex(patch.nNodeNumber).Head.nType & NODE_DANGLY && GetNodeByNameIndex(patch.nNodeNumber).Dangly.Constraints.at(patch.nVertex) == 0.0){
                 nFailedNormals++;
-                ssVN<<"No match for vertex normal in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<", constr. 0)\n";
-                file<<"\n:(    NO MATCH FOUND - CONSTRAINT 0!\n";
+                ssVN << "No match for vertex normal in group " << pg << ", patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ", constr. 0)\n";
+                file << "\n:(    NO MATCH FOUND - CONSTRAINT 0!\n";
             }
-            else if(fTotalArea == 0.0){
-                file<<"\n:/    BAD GEOMETRY - NO MATCH FOUND!\n";
+            else if(bBadGeo){
+                file << "\n:/    BAD GEOMETRY - NO MATCH FOUND!\n";
                 nBadGeo++;
-                ssVN<<"Bad geometry for vertex normal in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<")\n";
+                ssVN << "Bad geometry for vertex normal in group " << pg << ", patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ")\n";
             }
             else{
-                file<<"\n:(    NO MATCH FOUND!\n";
+                file << "\n:(    NO MATCH FOUND!\n";
                 nFailedNormals++;
-                ssVN<<"No match for vertex normal in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<")\n";
+                ssVN << "No match for vertex normal in group " << pg << ", patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ")\n";
             }
-            if(nFailedNormals == nPatchCount) std::cout<<"No matching vertex normals in "<<(bCombined?"combined ":"")<<"patch group "<<pg<<""<<(bCombined?"":" (")<<(bCombined?"":Data.MH.Names.at(patch.nNodeNumber).sName)<<(bCombined?"":")")<<".\n";
-            else if(p+1 == nPatchCount) std::cout<<ssVN.str();
+            //if(nFailedNormals == nPatchCount) std::cout << "No matching vertex normals in " << (bCombined?"combined ":"") << "patch group " << pg << "" << (bCombined?"":" (") << (bCombined?"":Data.MH.Names.at(patch.nNodeNumber).sName) << (bCombined?"":")") << ".\n";
+            //else if(p+1 == nPatchCount) std::cout << ssVN.str();
 
             //Do tangent space calculation
             if(GetNodeByNameIndex(patch.nNodeNumber).Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 && bDebug){
@@ -1406,27 +1443,27 @@ void MDL::DetermineSmoothing(){
                 //If we found a vertex normal, use those patches to calculate the tangent space vectors
                 if(bFound){
                     if(patch.SmoothedPatches.size() == 0){
-                        file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
-                        file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
-                        file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
-                        file<<"\n   Correct:";
+                        file << "   Comparing TS bitangent (" << vBitangent.fX << ", " << vBitangent.fY << ", " << vBitangent.fZ << ") to base (" << vCheckB.fX << ", " << vCheckB.fY << ", " << vCheckB.fZ << ").";
+                        file << "\n   Comparing TS tangent (" << vTangent.fX << ", " << vTangent.fY << ", " << vTangent.fZ << ") to base (" << vCheckT.fX << ", " << vCheckT.fY << ", " << vCheckT.fZ << ").";
+                        file << "\n   Comparing TS normal (" << vNormalTS.fX << ", " << vNormalTS.fY << ", " << vNormalTS.fZ << ") to base (" << vCheckN.fX << ", " << vCheckN.fY << ", " << vCheckN.fZ << ").";
+                        file << "\n   Correct:";
                         bool b1 = false;
                         if(vCheckB.Compare(vBitangent, fDiff)){
                             nNumOfFoundTSB++;
-                            file<<" bitangent";
+                            file << " bitangent";
                             b1 = true;
                         }
                         if(vCheckT.Compare(vTangent, fDiff)){
                             nNumOfFoundTST++;
-                            file<<" tangent";
+                            file << " tangent";
                             b1 = true;
                         }
                         if(vCheckN.Compare(vNormalTS, fDiff)){
                             nNumOfFoundTSN++;
-                            file<<" normal";
+                            file << " normal";
                             b1 = true;
                         }
-                        if(!b1) file<<" none";
+                        if(!b1) file << " none";
                         if(vCheckB.Compare(vBitangent, fDiff) && vCheckT.Compare(vTangent, fDiff) && vCheckN.Compare(vNormalTS, fDiff)){
                             nTangentPerfect++; //Increment this. This is when we have the vertex normal matching with tangent space vectors, the perfect match
                             bFoundTS = true;
@@ -1457,24 +1494,24 @@ void MDL::DetermineSmoothing(){
                         vCheckT2.Normalize();
                         vCheckB2.Normalize();
                         vCheckN2.Normalize();
-                        file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB2.fX<<", "<<vCheckB2.fY<<", "<<vCheckB2.fZ<<").";
-                        file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT2.fX<<", "<<vCheckT2.fY<<", "<<vCheckT2.fZ<<").";
-                        file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to proposed ("<<vCheckN2.fX<<", "<<vCheckN2.fY<<", "<<vCheckN2.fZ<<").";
+                        file << "   Comparing TS bitangent (" << vBitangent.fX << ", " << vBitangent.fY << ", " << vBitangent.fZ << ") to proposed (" << vCheckB2.fX << ", " << vCheckB2.fY << ", " << vCheckB2.fZ << ").";
+                        file << "\n   Comparing TS tangent (" << vTangent.fX << ", " << vTangent.fY << ", " << vTangent.fZ << ") to proposed (" << vCheckT2.fX << ", " << vCheckT2.fY << ", " << vCheckT2.fZ << ").";
+                        file << "\n   Comparing TS normal (" << vNormalTS.fX << ", " << vNormalTS.fY << ", " << vNormalTS.fZ << ") to proposed (" << vCheckN2.fX << ", " << vCheckN2.fY << ", " << vCheckN2.fZ << ").";
                         if(vCheckB2.Compare(vBitangent, fDiff) || vCheckT2.Compare(vTangent, fDiff) || vCheckN2.Compare(vNormalTS, fDiff)){
-                            file<<"\n   Correct:";
+                            file << "\n   Correct:";
                             if(vCheckB2.Compare(vBitangent, fDiff)){
                                 nNumOfFoundTSB++;
-                                file<<" bitangent";
+                                file << " bitangent";
                                 nFound = nFound | 1;
                             }
                             if(vCheckT2.Compare(vTangent, fDiff)){
                                 nNumOfFoundTST++;
-                                file<<" tangent";
+                                file << " tangent";
                                 nFound = nFound | 2;
                             }
                             if(vCheckN2.Compare(vNormalTS, fDiff)){
                                 nNumOfFoundTSN++;
-                                file<<" normal";
+                                file << " normal";
                                 nFound = nFound | 4;
                             }
                             if(bBadUV) file << " (bad UV)";
@@ -1490,28 +1527,28 @@ void MDL::DetermineSmoothing(){
                     }
                 }
                 else{
-                    file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to base ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
-                    file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to base ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
-                    file<<"\n   Comparing TS normal ("<<vNormalTS.fX<<", "<<vNormalTS.fY<<", "<<vNormalTS.fZ<<") to base ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
+                    file << "   Comparing TS bitangent (" << vBitangent.fX << ", " << vBitangent.fY << ", " << vBitangent.fZ << ") to base (" << vCheckB.fX << ", " << vCheckB.fY << ", " << vCheckB.fZ << ").";
+                    file << "\n   Comparing TS tangent (" << vTangent.fX << ", " << vTangent.fY << ", " << vTangent.fZ << ") to base (" << vCheckT.fX << ", " << vCheckT.fY << ", " << vCheckT.fZ << ").";
+                    file << "\n   Comparing TS normal (" << vNormalTS.fX << ", " << vNormalTS.fY << ", " << vNormalTS.fZ << ") to base (" << vCheckN.fX << ", " << vCheckN.fY << ", " << vCheckN.fZ << ").";
                     if(vCheckB.Compare(vBitangent, fDiff) || vCheckT.Compare(vTangent, fDiff) || vCheckN.Compare(vNormalTS, fDiff)){
-                        file<<"\n   Correct:";
+                        file << "\n   Correct:";
                         bool b1 = false;
                         if(vCheckB.Compare(vBitangent, fDiff)){
-                            file<<" bitangent";
+                            file << " bitangent";
                             nNumOfFoundTSB++;
                             b1 = true;
                         }
                         if(vCheckT.Compare(vTangent, fDiff)){
-                            file<<" tangent";
+                            file << " tangent";
                             nNumOfFoundTST++;
                             b1 = true;
                         }
                         if(vCheckN.Compare(vNormalTS, fDiff)){
-                            file<<" normal";
+                            file << " normal";
                             nNumOfFoundTSN++;
                             b1 = true;
                         }
-                        if(!b1) file<<" none";
+                        if(!b1) file << " none";
                         if(vCheckB.Compare(vBitangent, fDiff) && vCheckT.Compare(vTangent, fDiff) && vCheckN.Compare(vNormalTS, fDiff)) bFoundTS = true;
                         else if(bBadUV) file << " (bad UV)";
                         else file << " (incomplete)";
@@ -1533,23 +1570,23 @@ void MDL::DetermineSmoothing(){
                 if(bCombined) file << " (combined)";
 
                 if(bFoundTS){
-                    file<<"\n:)    MATCH FOUND!\n";
+                    file << "\n:)    MATCH FOUND!\n";
                     nNumOfFoundTS++;
                 }
                 else if(bBadUV){
-                    std::cout<<"Bad UV in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<")\n";
-                    file<<"\n:/    BAD UV!\n";
+                    //std::cout << "Bad UV in group " << pg << ", patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ")\n";
+                    file << "\n:/    BAD UV!\n";
                     nBadUV++;
                 }
                 else{
-                    std::cout<<"No match for tangent space in group "<<pg<<", patch "<<p<<"/"<<nPatchCount - 1<<" ("<<Data.MH.Names.at(patch.nNodeNumber).sName<<", vert "<<patch.nVertex<<")\n";
-                    file<<"\n:(    NO MATCH FOUND!\n";
+                    //std::cout << "No match for tangent space in group " << pg << ", patch " << p << "/" << nPatchCount - 1 << " (" << Data.MH.Names.at(patch.nNodeNumber).sName << ", vert " << patch.nVertex << ")\n";
+                    file << "\n:(    NO MATCH FOUND!\n";
                 }
             }
         }
-        //When we get here all the data in the patch group has been worked over.
-        //Our patches should now contain the info about which patches they smooth to.
-        //Now we need to generate smoothing group numbers
+        /// When we get here all the data in the patch group has been worked over.
+        /// Our patches should now contain the info about which patches they smooth to.
+        /// Now we need to generate smoothing group numbers
 
         /// Make an array of smoothing group numbers for this patch group
         for(int n = 0; n < nPatchCount*(nPatchCount - 1)/2 + 1; n++){
@@ -1557,7 +1594,7 @@ void MDL::DetermineSmoothing(){
         }
 
         /// Report
-        file<<"Getting vertex smoothing groups.\n";
+        file << "Getting vertex smoothing groups.\n";
 
         /// The number of smoothing group numbers used inside this patch group
         int nSmoothingGroupCounter = 0;
@@ -1567,7 +1604,7 @@ void MDL::DetermineSmoothing(){
             Patch & patch = Data.MH.PatchArrayPointers.at(pg).at(p);
 
             /// Report
-            file<<"  Patch "<<p<<" smooths to "<< patch.SmoothedPatches.size()<<" patches...\n";
+            file << "  Patch " << p << " smooths to " << patch.SmoothedPatches.size() << " patches...\n";
 
             /// Get smoothing group numbers from the array of patches that this patch smooths to
             while(patch.SmoothedPatches.size() > 0){
@@ -1603,11 +1640,11 @@ void MDL::DetermineSmoothing(){
                 GenerateSmoothingNumber(SmoothedPatchesGroup, nSmoothingGroupNumbers.at(pg), nSmoothingGroupCounter, pg, file);
 
                 /// Report
-                file<<"  Added smoothing group "<<nSmoothingGroupCounter+1<<" for patches:";
+                file << "  Added smoothing group " << nSmoothingGroupCounter+1 << " for patches:";
                 for(int spg = 0; spg < SmoothedPatchesGroup.size(); spg++){
-                    file<<" "<<SmoothedPatchesGroup.at(spg);
+                    file << " " << SmoothedPatchesGroup.at(spg);
                 }
-                file<<"\n";
+                file << "\n";
 
                 /// Elevate smoothing group counter
                 nSmoothingGroupCounter++;
@@ -1618,42 +1655,45 @@ void MDL::DetermineSmoothing(){
             /// Once we get here, we have checked (for patch p) all the patches we smooth over to and added their indices
             /// In case the patch doesn't smooth to any other patch, store an additional identity smoothing group for it
             if(patch.SmoothingGroupNumbers.size() == 0){
-                file<<"  Patch "<<p<<" in patch group has no smoothing group, setting it to "<<nSmoothingGroupCounter+1<<".\n";
+                file << "  Patch " << p << " in patch group has no smoothing group, setting it to " << nSmoothingGroupCounter+1 << ".\n";
                 patch.SmoothingGroupNumbers.push_back((unsigned long int*) &(nSmoothingGroupNumbers.at(pg).at(nSmoothingGroupCounter)));
                 nSmoothingGroupCounter++;
             }
 
             /// Report
-            file<<"  (patch "<<p<<" now has "<<patch.SmoothingGroupNumbers.size()<<" smoothing groups)\n";
+            file << "  (patch " << p << " now has " << patch.SmoothingGroupNumbers.size() << " smoothing groups)\n";
         }
+        ProgressPos(pg);
     }
+    ProgressPos(Data.MH.PatchArrayPointers.size());
+    std::cout << "Recalculated vectors in " << tVectors.GetTime() << ".\n";
     /**/
 
     //Report results
     double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
     double fPercentage2 = ((double)nNumOfFoundNormals / (double)(Data.MH.nTotalVertCount - nBadGeo)) * 100.0;
     bool bGoodEnough = (fPercentage2 > 80.0 || Data.MH.nTotalVertCount == 0);
-    std::cout<<"Found normals: "<<nNumOfFoundNormals<<"/"<<Data.MH.nTotalVertCount<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-    if(nNumOfFoundNormals < Data.MH.nTotalVertCount) std::cout<<"  Without bad geometry: "<<nNumOfFoundNormals<<"/"<<(Data.MH.nTotalVertCount - nBadGeo)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+    std::cout << "Found normals: " << nNumOfFoundNormals << "/" << Data.MH.nTotalVertCount << " (" << std::setprecision(4) << fPercentage << "%)\n";
+    if(nNumOfFoundNormals < Data.MH.nTotalVertCount) std::cout << "  Without bad geometry: " << nNumOfFoundNormals << "/" << (Data.MH.nTotalVertCount - nBadGeo) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
     if(bDebug && Data.MH.nTotalTangent1Count > 0){
         fPercentage = ((double)nNumOfFoundTS / (double)Data.MH.nTotalTangent1Count) * 100.0;
         fPercentage2 = ((double)nNumOfFoundTS / (double)(Data.MH.nTotalTangent1Count - nBadUV)) * 100.0;
-        std::cout<<"Found tangent spaces: "<<nNumOfFoundTS<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-        std::cout<<"  Without bad UVs: "<<nNumOfFoundTS<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+        std::cout << "Found tangent spaces: " << nNumOfFoundTS << "/" << Data.MH.nTotalTangent1Count << " (" << std::setprecision(4) << fPercentage << "%)\n";
+        std::cout << "  Without bad UVs: " << nNumOfFoundTS << "/" << (Data.MH.nTotalTangent1Count - nBadUV) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
         fPercentage2 = ((double)nTangentPerfect / (double)(Data.MH.nTotalTangent1Count)) * 100.0;
-        std::cout<<"  Perfect matches: "<<nTangentPerfect<<"/"<<(Data.MH.nTotalTangent1Count)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+        std::cout << "  Perfect matches: " << nTangentPerfect << "/" << (Data.MH.nTotalTangent1Count) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
         fPercentage = ((double)nNumOfFoundTSB / (double)Data.MH.nTotalTangent1Count) * 100.0;
         fPercentage2 = ((double)nNumOfFoundTSB / (double)(Data.MH.nTotalTangent1Count - nBadUV)) * 100.0;
-        std::cout<<"Found bitangents: "<<nNumOfFoundTSB<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-        std::cout<<"  Without bad UVs: "<<nNumOfFoundTSB<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+        std::cout << "  Found bitangents: " << nNumOfFoundTSB << "/" << Data.MH.nTotalTangent1Count << " (" << std::setprecision(4) << fPercentage << "%)\n";
+        std::cout << "    Without bad UVs: " << nNumOfFoundTSB << "/" << (Data.MH.nTotalTangent1Count - nBadUV) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
         fPercentage = ((double)nNumOfFoundTST / (double)Data.MH.nTotalTangent1Count) * 100.0;
         fPercentage2 = ((double)nNumOfFoundTST / (double)(Data.MH.nTotalTangent1Count - nBadUV)) * 100.0;
-        std::cout<<"Found tangents: "<<nNumOfFoundTST<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-        std::cout<<"  Without bad UVs: "<<nNumOfFoundTST<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+        std::cout << "  Found tangents: " << nNumOfFoundTST << "/" << Data.MH.nTotalTangent1Count << " (" << std::setprecision(4) << fPercentage << "%)\n";
+        std::cout << "    Without bad UVs: " << nNumOfFoundTST << "/" << (Data.MH.nTotalTangent1Count - nBadUV) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
         fPercentage = ((double)nNumOfFoundTSN / (double)Data.MH.nTotalTangent1Count) * 100.0;
         fPercentage2 = ((double)nNumOfFoundTSN / (double)(Data.MH.nTotalTangent1Count - nBadUV)) * 100.0;
-        std::cout<<"Found normals: "<<nNumOfFoundTSN<<"/"<<Data.MH.nTotalTangent1Count<<" ("<<std::setprecision(4)<<fPercentage<<"%)\n";
-        std::cout<<"  Without bad UVs: "<<nNumOfFoundTSN<<"/"<<(Data.MH.nTotalTangent1Count - nBadUV)<<" ("<<std::setprecision(4)<<fPercentage2<<"%)\n";
+        std::cout << "  Found normals: " << nNumOfFoundTSN << "/" << Data.MH.nTotalTangent1Count << " (" << std::setprecision(4) << fPercentage << "%)\n";
+        std::cout << "    Without bad UVs: " << nNumOfFoundTSN << "/" << (Data.MH.nTotalTangent1Count - nBadUV) << " (" << std::setprecision(4) << fPercentage2 << "%)\n";
     }
 
     if(!bGoodEnough) Error("The vector recalculations were off by too much to be able to determine the smoothing groups. Try decompiling with different vertex normal calculation settings.");
@@ -1698,13 +1738,13 @@ void MDL::DetermineSmoothing(){
         std::string sDir2 (sDir);
         sDir += "\\debug.txt";
         sDir2 += "\\debug_aabb_comp.txt";
-        std::cout<<"Writing smoothing debug: "<<sDir.c_str()<<"\n";
-        std::cout<<"Writing aabb debug: "<<sDir2.c_str()<<"\n";
+        std::cout << "Writing smoothing debug: " << sDir.c_str() << "\n";
+        std::cout << "Writing aabb debug: " << sDir2.c_str() << "\n";
         std::ofstream filewrite(sDir.c_str());
         std::ofstream filewrite2(sDir2.c_str());
 
         if(!filewrite.is_open()){
-            std::cout<<"'debug.txt' does not exist. No debug will be written.\n";
+            std::cout << "'debug.txt' does not exist. No debug will be written.\n";
         }
         else{
             filewrite << file.str();
@@ -1712,7 +1752,7 @@ void MDL::DetermineSmoothing(){
         }
 
         if(!filewrite2.is_open()){
-            std::cout<<"'debug_aabb_comp.txt' does not exist. No debug will be written.\n";
+            std::cout << "'debug_aabb_comp.txt' does not exist. No debug will be written.\n";
         }
         else{
             filewrite2 << fileaabb.str();
@@ -1720,7 +1760,7 @@ void MDL::DetermineSmoothing(){
         }
     }
 
-    std::cout<<"Done calculating smoothing groups!\n";
+    std::cout << "Done calculating smoothing groups!\n";
 }
 
 /** Algorithm
@@ -1873,7 +1913,7 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
             //First reset our normal
             Vector vWorking = vNormalBase;
             std::vector<int> OurSmoothedPatches = CurrentlySmoothedPatches;
-            //std::cout<<"Working ("<<vWorking.fX<<", "<<vWorking.fY<<", "<<vWorking.fZ<<").\n";
+            //std::cout << "Working (" << vWorking.fX << ", " << vWorking.fY << ", " << vWorking.fZ << ").\n";
 
             //Add the current patch
             for(int f = 0; f < ourpatch.FaceIndices.size(); f++){
@@ -1886,7 +1926,7 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
                 Vector Edge3 = v3 - v2;
 
                 Vector vAdd = face.vNormal;
-                if(bSmoothAreaWeighting) vAdd *= face.fArea;
+                if(bSmoothAreaWeighting) vAdd *= face.fArea > 0.0 ? face.fArea : 0.0;
                 if(bSmoothAngleWeighting){
                     if(ourpatch.nVertex == face.nIndexVertex[0]){
                         vAdd *= Angle(Edge1, Edge2);
@@ -1902,16 +1942,16 @@ bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurre
             }
             //We have just smoothed for patch nCount, add it to the list
             OurSmoothedPatches.push_back(nCount);
-            //std::cout<<"Working ("<<vWorking.fX<<", "<<vWorking.fY<<", "<<vWorking.fZ<<").\n";
+            //std::cout << "Working (" << vWorking.fX << ", " << vWorking.fY << ", " << vWorking.fZ << ").\n";
 
             //Check if this is it
             Vector vCheck = vWorking;
             vCheck.Normalize();
-            file<<"\n    Comparing to proposed ("<<vCheck.fX<<", "<<vCheck.fY<<", "<<vCheck.fZ<<"). Included patches:";
+            file << "\n    Comparing to proposed (" << vCheck.fX << ", " << vCheck.fY << ", " << vCheck.fZ << "). Included patches:";
             for(int g = 0; g < OurSmoothedPatches.size(); g++){
-                file<<" "<<OurSmoothedPatches.at(g);
+                file << " " << OurSmoothedPatches.at(g);
             }
-            //file<<"\n";
+            //file << "\n";
             double fDiff = 0.00001;
             if(bXbox) fDiff = 0.01;
             if(vCheck.Compare(vNormal, fDiff)){
@@ -1941,7 +1981,7 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
             Vector vWorkingB = vBitangentBase;
             Vector vWorkingN = vNormalBase;
             std::vector<int> OurSmoothedPatches = CurrentlySmoothedPatches;
-            //std::cout<<"Working ("<<vWorking.fX<<", "<<vWorking.fY<<", "<<vWorking.fZ<<").\n";
+            //std::cout << "Working (" << vWorking.fX << ", " << vWorking.fY << ", " << vWorking.fZ << ").\n";
 
             bool bBadUV = false;
             //Add the current patch
@@ -1956,7 +1996,7 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
             }
             //We have just smoothed for patch nCount, add it to the list
             OurSmoothedPatches.push_back(nCount);
-            //std::cout<<"Working ("<<vWorking.fX<<", "<<vWorking.fY<<", "<<vWorking.fZ<<").\n";
+            //std::cout << "Working (" << vWorking.fX << ", " << vWorking.fY << ", " << vWorking.fZ << ").\n";
 
             //Check if this is it
             Vector vCheckT = vWorkingT;
@@ -1965,29 +2005,29 @@ int MDL::FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & n
             vCheckT.Normalize();
             vCheckB.Normalize();
             vCheckN.Normalize();
-            file<<"   Comparing TS bitangent ("<<vBitangent.fX<<", "<<vBitangent.fY<<", "<<vBitangent.fZ<<") to proposed ("<<vCheckB.fX<<", "<<vCheckB.fY<<", "<<vCheckB.fZ<<").";
-            file<<"\n   Comparing TS tangent ("<<vTangent.fX<<", "<<vTangent.fY<<", "<<vTangent.fZ<<") to proposed ("<<vCheckT.fX<<", "<<vCheckT.fY<<", "<<vCheckT.fZ<<").";
-            file<<"\n   Comparing TS normal ("<<vNormal.fX<<", "<<vNormal.fY<<", "<<vNormal.fZ<<") to proposed ("<<vCheckN.fX<<", "<<vCheckN.fY<<", "<<vCheckN.fZ<<").";
-            file<<"\n   Included patches:";
+            file << "\n   Comparing TS bitangent (" << vBitangent.fX << ", " << vBitangent.fY << ", " << vBitangent.fZ << ") to proposed (" << vCheckB.fX << ", " << vCheckB.fY << ", " << vCheckB.fZ << ").";
+            file << "\n   Comparing TS tangent (" << vTangent.fX << ", " << vTangent.fY << ", " << vTangent.fZ << ") to proposed (" << vCheckT.fX << ", " << vCheckT.fY << ", " << vCheckT.fZ << ").";
+            file << "\n   Comparing TS normal (" << vNormal.fX << ", " << vNormal.fY << ", " << vNormal.fZ << ") to proposed (" << vCheckN.fX << ", " << vCheckN.fY << ", " << vCheckN.fZ << ").";
+            file << "\n   Included patches:";
             for(int g = 0; g < OurSmoothedPatches.size(); g++){
-                file<<" "<<OurSmoothedPatches.at(g);
+                file << " " << OurSmoothedPatches.at(g);
             }
-            //file<<"\n";
+            //file << "\n";
             double fDiff = 0.00001;
             if(bXbox) fDiff = 0.01;
             if(vCheckB.Compare(vBitangent, fDiff) || vCheckT.Compare(vTangent, fDiff) || vCheckN.Compare(vNormal, fDiff)){
-                file<<"\n   Correct:";
+                file << "\n   Correct:";
                 int nReturn = 0;
                 if(vCheckB.Compare(vBitangent, fDiff)){
-                    file<<" bitangent";
+                    file << " bitangent";
                     nReturn = nReturn | 1;
                 }
                 if(vCheckT.Compare(vTangent, fDiff)){
-                    file<<" tangent";
+                    file << " tangent";
                     nReturn = nReturn | 2;
                 }
                 if(vCheckN.Compare(vNormal, fDiff)){
-                    file<<" normal";
+                    file << " normal";
                     nReturn = nReturn | 4;
                 }
                 if(bBadUV) file << " (bad UV)";

@@ -1,6 +1,7 @@
 #include "general.h"
 #include "file.h"
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <Shlwapi.h>
 
@@ -15,9 +16,10 @@ void File::SetFilePath(std::string & sPath){
 }
 
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
-    //std::cout<<string_format("ReadInt() at position %i.\n", *nCurPos);
+    //std::cout << string_format("ReadInt() at position %i.\n", *nCurPos);
     if(*nCurPos+nBytes > sBuffer.size()){
-        std::cout<<"ReadInt(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.\n";
+        throw mdlexception("Attempting to read integer in " + GetName() + " at offset " + std::to_string(*nCurPos) + ", which would read past the buffer size (" + std::to_string(sBuffer.size()) + ").");
+        std::cout << "ReadInt(): Reading past buffer size in " << GetName() << ", aborting and returning -1.\n";
         return -1;
     }
     if(nBytes == 4){
@@ -28,7 +30,7 @@ int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
         }
         MarkBytes(*nCurPos, 4, nMarking);
         *nCurPos += 4;
-        //std::cout<<"ReadInt() return: "<<ByteBlock4.i<<"\n";
+        //std::cout << "ReadInt() return: " << ByteBlock4.i << "\n";
         return ByteBlock4.i;
     }
     else if(nBytes ==2){
@@ -51,9 +53,10 @@ int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
 }
 
 float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
-    //std::cout<<string_format("ReadFloat() at position %i.\n", *nCurPos);
+    //std::cout << string_format("ReadFloat() at position %i.\n", *nCurPos);
     if(*nCurPos+nBytes > sBuffer.size()){
-        std::cout<<"ReadFloat(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.0.\n";
+        throw mdlexception("Attempting to read float in " + GetName() + " at offset " + std::to_string(*nCurPos) + ", which would read past the buffer size (" + std::to_string(sBuffer.size()) + ").");
+        std::cout << "ReadFloat(): Reading past buffer size in " << GetName() << ", aborting and returning -1.0.\n";
         return -1.0;
     }
     int n = 0;
@@ -68,7 +71,8 @@ float BinaryFile::ReadFloat(unsigned int * nCurPos, int nMarking, int nBytes){
 
 Vector BinaryFile::ReadVector(unsigned int * nCurPos, int nMarking, int nBytes){
     if(*nCurPos+nBytes*3 > sBuffer.size()){
-        std::cout<<"ReadVector(): Reading past buffer size in "<<GetName()<<", aborting and returning -1.0.\n";
+        throw mdlexception("Attempting to read vector in " + GetName() + " at offset " + std::to_string(*nCurPos) + ", which would read past the buffer size (" + std::to_string(sBuffer.size()) + ").");
+        std::cout << "ReadVector(): Reading past buffer size in " << GetName() << ", aborting and returning -1.0.\n";
         return Vector(-1.0, -1.0, -1.0);
     }
     int n = 0;
@@ -88,22 +92,23 @@ Vector BinaryFile::ReadVector(unsigned int * nCurPos, int nMarking, int nBytes){
 
 void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int nMarking, int nNumber){
     if(*nCurPos+nNumber > sBuffer.size()){
-        std::cout<<"ReadString(): Reading past buffer size in "<<GetName()<<", aborting.\n";
+        throw mdlexception("Attempting to read string in " + GetName() + " at offset " + std::to_string(*nCurPos) + ", which would read past the buffer size (" + std::to_string(sBuffer.size()) + ").");
+        std::cout << "ReadString(): Reading past buffer size in " << GetName() << ", aborting.\n";
         return;
     }
     sArray1.assign(&sBuffer[*nCurPos], nNumber);
-    //std::cout<<"ReadString(): "<<sArray1<<"\n";
+    //std::cout << "ReadString(): " << sArray1 << "\n";
     MarkBytes(*nCurPos, nNumber, nMarking);
     *nCurPos += nNumber;
 }
 
 void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
     int n = 0;
-    //std::cout<<"Setting known: offset "<<nOffset<<" length "<<nLength<<" class "<<nClass<<"\n.";
+    //std::cout << "Setting known: offset " << nOffset << " length " << nLength << " class " << nClass << "\n.";
     while(n < nLength && n < sBuffer.size()){
         if(bKnown[nOffset + n] != 0){
-            std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown[nOffset + n] << " at offset " << nOffset + n << " in " << GetName() << "!\n";
-            throw mdlexception("! MDLedit exception: Interpreting already interpreted data. !");
+            std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown[nOffset + n] << " at offset " << nOffset + n << " in " << GetName() << "! Trying to reinterpret as " << nClass << ".\n";
+            throw mdlexception("Interpreting already interpreted data in " + GetName() + ".");
         }
         bKnown[nOffset + n] = nClass;
         n++;
@@ -215,7 +220,7 @@ bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
        sBuffer[nPosition] == 0x0A ||
        sBuffer[nPosition] == 0x00)
     {
-        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
+        if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading float at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -225,7 +230,7 @@ bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
            sBuffer[nPosition] == 0x0A ||
            sBuffer[nPosition] == 0x00)
         {
-            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading float at end of line!\n";
+            if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading float at end of line!\n";
             return false;
         }
     }
@@ -241,7 +246,7 @@ bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadFloat(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "TextFile::ReadFloat(): Reading: " << sCheck << ". ";
 
     if(sGet != nullptr) *sGet = sCheck;
 
@@ -249,18 +254,18 @@ bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
         fNew = std::stof(sCheck, (size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"TextFile::ReadFloat(): There was an error converting the string: "<<sCheck<<". \n";
+        std::cout << "TextFile::ReadFloat(): There was an error converting the string: " << sCheck << ". \n";
         throw mdlexception("Could not convert '" + sCheck + "' to float.");
     }
     catch(std::out_of_range){
-        std::cout<<"TextFile::ReadFloat(): The float is out of range: "<<sCheck<<".\n";
+        std::cout << "TextFile::ReadFloat(): The float is out of range: " << sCheck << ".\n";
         throw mdlexception("The float " + sCheck + " is out of range.");
     }
     catch(...){
-        std::cout<<"TextFile::ReadFloat(): An unknown exception occurred while converting: "<<sCheck<<". \n";
+        std::cout << "TextFile::ReadFloat(): An unknown exception occurred while converting: " << sCheck << ". \n";
         throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to float.");
     }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<fNew<<".\n";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "Converted: " << fNew << ".\n";
     return true;
 }
 
@@ -272,7 +277,7 @@ bool TextFile::ReadInt(int & nNew, std::string * sGet, bool bPrint){
        sBuffer[nPosition] == 0x0A ||
        sBuffer[nPosition] == 0x00)
     {
-        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
+        if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading int at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -282,7 +287,7 @@ bool TextFile::ReadInt(int & nNew, std::string * sGet, bool bPrint){
            sBuffer[nPosition] == 0x0A ||
            sBuffer[nPosition] == 0x00)
         {
-            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
+            if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading int at end of line!\n";
             return false;
         }
     }
@@ -298,7 +303,7 @@ bool TextFile::ReadInt(int & nNew, std::string * sGet, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadInt(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "TextFile::ReadInt(): Reading: " << sCheck << ". ";
 
     if(sGet != nullptr) *sGet = sCheck;
 
@@ -306,18 +311,18 @@ bool TextFile::ReadInt(int & nNew, std::string * sGet, bool bPrint){
         nNew = stoi(sCheck,(size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"TextFile::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        std::cout << "TextFile::ReadInt(): There was an error converting the string: " << sCheck << ". Printing 0xFFFFFFFF. \n";
         throw mdlexception("Could not convert '" + sCheck + "' to integer.");
     }
     catch(std::out_of_range){
-        std::cout<<"TextFile::ReadInt(): The integer is out of range: "<<sCheck<<".\n";
+        std::cout << "TextFile::ReadInt(): The integer is out of range: " << sCheck << ".\n";
         throw mdlexception("The integer " + sCheck + " is out of range.");
     }
     catch(...){
-        std::cout<<"TextFile::ReadInt(): An unknown exception occurred while converting: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        std::cout << "TextFile::ReadInt(): An unknown exception occurred while converting: " << sCheck << ". Printing 0xFFFFFFFF. \n";
         throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to integer.");
     }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<nNew<<".\n";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "Converted: " << nNew << ".\n";
     return true;
 }
 
@@ -329,7 +334,7 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
        sBuffer[nPosition] == 0x0A ||
        sBuffer[nPosition] == 0x00)
     {
-        if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
+        if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading int at end of line!\n";
         return false;
     }
     while(sBuffer[nPosition] == 0x20){
@@ -339,7 +344,7 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
            sBuffer[nPosition] == 0x0A ||
            sBuffer[nPosition] == 0x00)
         {
-            if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Reading int at end of line!\n";
+            if(bPrint || DEBUG_LEVEL > 5) std::cout << "Reading int at end of line!\n";
             return false;
         }
     }
@@ -355,7 +360,7 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
     if(sCheck.length() == 0) return false;
 
     //Report
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"TextFile::ReadInt(): Reading: "<<sCheck<<". ";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "TextFile::ReadInt(): Reading: " << sCheck << ". ";
 
     if(sGet != nullptr) *sGet = sCheck;
 
@@ -363,18 +368,18 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
         nNew = stou(sCheck,(size_t*) NULL);
     }
     catch(std::invalid_argument){
-        std::cout<<"TextFile::ReadInt(): There was an error converting the string: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        std::cout << "TextFile::ReadInt(): There was an error converting the string: " << sCheck << ". Printing 0xFFFFFFFF. \n";
         throw mdlexception("Could not convert '" + sCheck + "' to integer.");
     }
     catch(std::out_of_range){
-        std::cout<<"TextFile::ReadInt(): The integer is out of range: "<<sCheck<<".\n";
+        std::cout << "TextFile::ReadInt(): The integer is out of range: " << sCheck << ".\n";
         throw mdlexception("The integer " + sCheck + " is out of range.");
     }
     catch(...){
-        std::cout<<"TextFile::ReadInt(): An unknown exception occurred while converting: "<<sCheck<<". Printing 0xFFFFFFFF. \n";
+        std::cout << "TextFile::ReadInt(): An unknown exception occurred while converting: " << sCheck << ". Printing 0xFFFFFFFF. \n";
         throw mdlexception("An unknown exception occurred while converting '" + sCheck + "' to integer.");
     }
-    if(bPrint || DEBUG_LEVEL > 5) std::cout<<"Converted: "<<nNew<<".\n";
+    if(bPrint || DEBUG_LEVEL > 5) std::cout << "Converted: " << nNew << ".\n";
     return true;
 }
 
@@ -411,7 +416,7 @@ bool TextFile::EmptyRow(){
 bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrictNoNewLine){
     sHandle = ""; //Make sure the handle is cleared
     while(nPosition < sBuffer.size()){
-        //std::cout<<"Looping in ReadUntilText main while(), nPosition="<<nPosition<<".\n";
+        //std::cout << "Looping in ReadUntilText main while(), nPosition=" << nPosition << ".\n";
         if(sBuffer[nPosition] == 0x20){
             //Skip space
             nPosition++;
@@ -436,9 +441,9 @@ bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStr
                 }
             }
             //Now it gets interesting - we may actually have relevant text now
-                //std::cout<<"Reading and saving non-null character. "<<sBuffer[nPosition]<<".\n";
+                //std::cout << "Reading and saving non-null character. " << sBuffer[nPosition] << ".\n";
             do{
-                //std::cout<<"Reading and saving non-null character. "<<sBuffer[nPosition]<<".\n";
+                //std::cout << "Reading and saving non-null character. " << sBuffer[nPosition] << ".\n";
                 sHandle.push_back(sBuffer[nPosition]);
                 nPosition++;
             }
@@ -449,7 +454,7 @@ bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStr
                   nPosition < sBuffer.size());
 
             //Report
-            //if(sHandle != "") std::cout<<"ReadUntilText() found the following string: "<<sHandle<<".\n";
+            //if(sHandle != "") std::cout << "ReadUntilText() found the following string: " << sHandle << ".\n";
 
             //convert to lowercase
             if(bToLowercase) std::transform(sHandle.begin(), sHandle.end(), sHandle.begin(), ::tolower);
@@ -460,4 +465,78 @@ bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStr
     }
     //Go back and tell them you're done
     return false;
+}
+
+void IniFile::ReadIni(std::string & sIni){
+    std::ifstream fIni (sIni, std::ios::binary);
+
+    if(!fIni.is_open()){
+        throw mdlexception("Error opening .ini file.");
+    }
+
+    fIni.seekg(0, std::ios::end);
+    std::streampos length = fIni.tellg();
+    fIni.seekg(0, std::ios::beg);
+
+    std::vector<char> & sBufferRef = CreateBuffer(length);
+    fIni.read(&sBufferRef[0], length);
+    fIni.close();
+
+    SetFilePath(sIni);
+
+    std::string sID;
+    int nConvert = 0;
+    unsigned uConvert = 0;
+    double fConvert = 0.0;
+
+    while(nPosition < sBuffer.size()){
+        if(EmptyRow()){
+            SkipLine();
+        }
+        else{
+            ReadUntilText(sID, true);
+            for(IniOption & option : Options){
+                std::string sToken = option.sToken;
+                std::transform(sToken.begin(), sToken.end(), sToken.begin(), ::tolower);
+
+                if(sID != sToken) continue;
+
+                switch(option.nType){
+                    case DT_bool: if(ReadInt(nConvert)) *((bool*) option.lpVariable) = (nConvert == 0 ? false : true);
+                    break;
+                    case DT_int: if(ReadInt(nConvert)) *((int*) option.lpVariable) = nConvert;
+                    break;
+                    case DT_float: if(ReadFloat(fConvert)) *((double*) option.lpVariable) = fConvert;
+                    break;
+                    case DT_string: if(ReadUntilText(sID, false)) *((std::string*) option.lpVariable) = sID;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+void IniFile::WriteIni(std::string & sIni){
+    std::ofstream fIni (sIni, std::ios::binary);
+
+    if(!fIni.is_open()){
+        throw mdlexception("Error opening .ini file.");
+    }
+
+    for(IniOption & option : Options){
+        fIni << option.sToken << " ";
+
+        switch(option.nType){
+            case DT_bool: fIni << (*((bool*) option.lpVariable) ? 1 : 0);
+            break;
+            case DT_int: fIni << *((int*) option.lpVariable);
+            break;
+            case DT_float: fIni << PrepareFloat(*((double*) option.lpVariable), true);
+            break;
+            case DT_string: fIni << *((std::string*) option.lpVariable);
+            break;
+        }
+
+        if(&option != &Options.back()) fIni << "\r\n";
+    }
 }

@@ -12,17 +12,26 @@ class Frame{
     static char cClassName[];
     HWND hMe;
 
-    public:
+  public:
     //Main Window Creation
     static LRESULT CALLBACK FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     Frame(HINSTANCE hInstanceCreate);
     bool Run(int nCmdShow);
+
 };
 
 #define ACTION_UPDATE_DISPLAY      0
 #define ACTION_ADD_MENU_LINES      1
 #define ACTION_OPEN_VIEWER         2
 #define ACTION_OPEN_EDITOR         3
+
+extern bool bDotAsciiDefault;
+
+enum IniConst {
+    INI_READ,
+    INI_WRITE
+};
+void ManageIni(IniConst Action);
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);

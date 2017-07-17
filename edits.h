@@ -29,6 +29,7 @@ class Edits{
     bool bSelection;
     std::string sSelected;
     std::vector<int> * nKnownArray = nullptr;
+    std::vector<int> * nDiffArray = nullptr;
     std::vector<char> * sBuffer = nullptr;
 
   public:
@@ -60,34 +61,42 @@ class Edits{
         else sSelected = "";
         if(sSelected == "MDL" && !Model.empty()){
             nKnownArray = &Model.GetKnownData();
+            nDiffArray = &Model.GetDifferenceData();
             sBuffer = &Model.GetBuffer();
         }
         else if(sSelected == "MDX" && Model.Mdx){
             nKnownArray = &Model.Mdx->GetKnownData();
+            nDiffArray = &Model.Mdx->GetDifferenceData();
             sBuffer = &Model.Mdx->GetBuffer();
         }
         else if(sSelected == "WOK" && Model.Wok){
             nKnownArray = &Model.Wok->GetKnownData();
+            nDiffArray = &Model.Wok->GetDifferenceData();
             sBuffer = &Model.Wok->GetBuffer();
         }
         else if(sSelected == "PWK" && Model.Pwk){
             nKnownArray = &Model.Pwk->GetKnownData();
+            nDiffArray = &Model.Pwk->GetDifferenceData();
             sBuffer = &Model.Pwk->GetBuffer();
         }
         else if(sSelected == "DWK 0" && Model.Dwk0){
             nKnownArray = &Model.Dwk0->GetKnownData();
+            nDiffArray = &Model.Dwk0->GetDifferenceData();
             sBuffer = &Model.Dwk0->GetBuffer();
         }
         else if(sSelected == "DWK 1" && Model.Dwk1){
             nKnownArray = &Model.Dwk1->GetKnownData();
+            nDiffArray = &Model.Dwk1->GetDifferenceData();
             sBuffer = &Model.Dwk1->GetBuffer();
         }
         else if(sSelected == "DWK 2" && Model.Dwk2){
             nKnownArray = &Model.Dwk2->GetKnownData();
+            nDiffArray = &Model.Dwk2->GetDifferenceData();
             sBuffer = &Model.Dwk2->GetBuffer();
         }
         else{
             nKnownArray = nullptr;
+            nDiffArray = nullptr;
             sBuffer = nullptr;
         }
 
@@ -118,7 +127,7 @@ class Edits{
         UpdateEdit();
         UpdateStatusBar();
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) "");
-        if(DEBUG_LEVEL > 80) std::cout<<"New MaxScroll: "<<yMaxScroll<<", new CurrentScroll: "<<yCurrentScroll<<"\n";
+        if(DEBUG_LEVEL > 80) std::cout << "New MaxScroll: " << yMaxScroll << ", new CurrentScroll: " << yCurrentScroll << "\n";
     }
     HWND GetWindowHandle(){
         return hMe;
@@ -151,7 +160,7 @@ class Edits{
             si.nPos = yCurrentScroll;
             si.nPage = rcClient.bottom;
             SetScrollInfo(hScrollVert, SB_CTL, &si, true);
-            if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: "<<si.nMax<<", min: "<<si.nMin<<", page: n/a, current: "<<si.nPos<<"\n";
+            if(DEBUG_LEVEL > 80) std::cout << "GetScrollInfo(): max: " << si.nMax << ", min: " << si.nMin << ", page: n/a, current: " << si.nPos << "\n";
         }
     }
     void Resize(){
@@ -181,7 +190,7 @@ class Edits{
         }
         nSelectEnd = std::min(nSelectEnd, (int) sBuffer->size() - 1);
         nSelectStart = std::min(nSelectStart, (int) sBuffer->size() - 1);
-        if(DEBUG_LEVEL > 100) std::cout<<"Current selection from byte "<<nSelectStart<<" to byte "<<nSelectEnd<<".\n";
+        if(DEBUG_LEVEL > 100) std::cout << "Current selection from byte " << nSelectStart << " to byte " << nSelectEnd << ".\n";
     }
     void UpdateStatusBar(bool bCheck = true){
         char cString1 [255];
@@ -217,5 +226,6 @@ class Edits{
 };
 
 COLORREF DataColor(int nDataKnown, bool bHilite);
+extern bool bShowDiff;
 
 #endif // EDITS_H_INCLUDED

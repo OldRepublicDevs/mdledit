@@ -57,11 +57,11 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
     Edits * Edit = nullptr;
     if(GetDlgCtrlID(hwnd) == IDC_MAIN_EDIT) Edit = &Edit1;
     if(Edit == nullptr){
-        std::cout<<"MAJORMAJORMAJOR ERROR!! Running the EditsProc() for an unexisting Edit :S \n";
+        std::cout << "MAJORMAJORMAJOR ERROR!! Running the EditsProc() for an unexisting Edit :S \n";
         return DefWindowProc (hwnd, message, wParam, lParam);
     }
     //After here, Edit is definitely not NULL
-    if(DEBUG_LEVEL > 500) std::cout<<"EditsProc(): "<<(int) message<<"\n";
+    if(DEBUG_LEVEL > 500) std::cout << "EditsProc(): " << (int) message << "\n";
 
 	PAINTSTRUCT ps;
 	HDC hdc;
@@ -80,7 +80,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
     switch(message){
         case WM_CREATE:
         {
-                if(DEBUG_LEVEL > 80) std::cout<<"Should be creating the scrollbar now.\n";
+                if(DEBUG_LEVEL > 80) std::cout << "Should be creating the scrollbar now.\n";
 
                 bDrag = false;
                 bDblClick = false;
@@ -113,7 +113,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 si.nPage = Edit->rcClient.bottom;
                 si.nPos = 0;
                 SetScrollInfo(Edit->hScrollVert, SB_CTL, &si, true);
-                if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: "<<si.nMax<<", min: "<<si.nMin<<", page: "<<si.nPage<<", current: "<<si.nPos<<"\n";
+                if(DEBUG_LEVEL > 80) std::cout << "GetScrollInfo(): max: " << si.nMax << ", min: " << si.nMin << ", page: " << si.nPage << ", current: " << si.nPos << "\n";
         }
         break;
         case WM_COMMAND:
@@ -165,7 +165,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentY = std::min( (int) (Edit->rcClient.bottom + Edit->yCurrentScroll - 1) / ME_EDIT_NEXT_ROW - 1, nCurrentY);
                 if(Edit->ptHover.y != nCurrentY){
                     Edit->ptHover.y = nCurrentY;
-                    if(DEBUG_LEVEL > 100) std::cout<<"Update current row hover: "<<Edit->ptHover.y<<"\n";
+                    if(DEBUG_LEVEL > 100) std::cout << "Update current row hover: " << Edit->ptHover.y << "\n";
                     bThreshold = true;
                 }
                 int nCurrentX = (xPos + 2 - ME_EDIT_ROWNUM_OFFSET) / ME_EDIT_CHAR_SIZE_X;
@@ -173,7 +173,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentX = std::min(nCurrentX, 47);
                 if(Edit->ptHover.x != nCurrentX){
                     Edit->ptHover.x = nCurrentX;
-                    if(DEBUG_LEVEL > 49) std::cout<<"Update current char hover: "<<Edit->ptHover.x<<"\n";
+                    if(DEBUG_LEVEL > 49) std::cout << "Update current char hover: " << Edit->ptHover.x << "\n";
                     bThreshold = true;
                 }
             }
@@ -183,7 +183,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentY = std::min((int)(Edit->rcClient.bottom + Edit->yCurrentScroll - 1) / ME_EDIT_NEXT_ROW - 1, nCurrentY);
                 if(Edit->ptHover.y != nCurrentY){
                     Edit->ptHover.y = nCurrentY;
-                    if(DEBUG_LEVEL > 100) std::cout<<"Update current row hover: "<<Edit->ptHover.y<<"\n";
+                    if(DEBUG_LEVEL > 100) std::cout << "Update current row hover: " << Edit->ptHover.y << "\n";
                     bThreshold = true;
                 }
                 int nCurrentX = (xPos + 2 - ME_EDIT_CHARSET_OFFSET) / ME_EDIT_CHAR_SIZE_X * 3;
@@ -191,7 +191,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 nCurrentX = std::min(nCurrentX, 47);
                 if(Edit->ptHover.x != nCurrentX){
                     Edit->ptHover.x = nCurrentX;
-                    if(DEBUG_LEVEL > 49) std::cout<<"Update current char hover: "<<Edit->ptHover.x<<"\n";
+                    if(DEBUG_LEVEL > 49) std::cout << "Update current char hover: " << Edit->ptHover.x << "\n";
                     bThreshold = true;
                 }
             }
@@ -261,7 +261,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 Edit->ptPrevious = Edit->ptHover;
                 if(!(wParam & MK_SHIFT) || Edit->ptClick.x == -1 || Edit->ptClick.y == -1) Edit->ptClick = Edit->ptHover;
                 Edit->PrintValues(bDrag || Edit->bSelection);
-                if(DEBUG_LEVEL > 20) std::cout<<"WM_LBUTTONDOWN: bSelection: "<<Edit->bSelection<<" bDrag: "<<bDrag<<"\n";
+                if(DEBUG_LEVEL > 20) std::cout << "WM_LBUTTONDOWN: bSelection: " << Edit->bSelection << " bDrag: " << bDrag << "\n";
             }
         }
         break;
@@ -280,13 +280,13 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             bDblClick = false;
             bClick = false;
             InvalidateRect(hwnd, &Edit->rcClient, false);
-            if(DEBUG_LEVEL > 20) std::cout<<"WM_LBUTTONUP: bSelection: "<<Edit->bSelection<<" bDrag: "<<bDrag<<"\n";
+            if(DEBUG_LEVEL > 20) std::cout << "WM_LBUTTONUP: bSelection: " << Edit->bSelection << " bDrag: " << bDrag << "\n";
             Edit->PrintValues(bDrag || Edit->bSelection);
         }
         break;
         case WM_PAINT:
         {
-            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Start.\n";
+            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Start.\n";
 
             HDC hdcReal = BeginPaint(hwnd, &ps);
 
@@ -347,7 +347,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             else ptEnd = Edit->ptRelease;
             if(Edit->bSelection || bDrag){
                     bHilite = true;
-                    //std::cout<<string_format("bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
+                    //std::cout << string_format("bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
             }
             if(ptEnd.y < Edit->ptClick.y || (ptEnd.y == Edit->ptClick.y && ptEnd.x < Edit->ptClick.x)){
                 nRowMin = ptEnd.y;
@@ -371,7 +371,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             char cIntPrint [255];
             int i = 0;
             int nDataKnown;
-            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Beginning data while. Starting position: "<<n<<". Max: "<<nMax<<".\n";
+            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Beginning data while. Starting position: " << n << ". Max: " << nMax << ".\n";
             char cHexText [50];
             while(n < nMax){
                 CharsToHex(cHexText, *Edit->sBuffer, n * 16, 16);
@@ -396,7 +396,20 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                     }
                     else{
                         SetTextColor(hdc, DataColor(nDataKnown, false));
-                        SetBkColor(hdc, RGB(255, 255, 255));
+                        if(bShowDiff && (Edit->nDiffArray->size() > n*16 + i / 3 && (i % 3 < 2 ||
+                           Edit->nDiffArray->size() > n*16 + i / 3 + 1 && Edit->nDiffArray->at(n*16 + i / 3) == Edit->nDiffArray->at(n*16 + i / 3 + 1) &&
+                           (Edit->nDiffArray->at(n*16 + i / 3) != 1 ||
+                            Edit->nKnownArray->size() > n*16 + i / 3 + 1 && Edit->nKnownArray->at(n*16 + i / 3) == Edit->nKnownArray->at(n*16 + i / 3 + 1)))))
+                        {
+                            if(Edit->nDiffArray->at(n*16 + i / 3) == 0) SetBkColor(hdc, RGB(255, 255, 255)); // Not different
+                            if(Edit->nDiffArray->at(n*16 + i / 3) == 1){ // Different
+                                //SetBkColor(hdc, RGB(255, 220, 220));
+                                SetTextColor(hdc, RGB(255, 255, 255));
+                                SetBkColor(hdc, DataColor(nDataKnown, false));
+                            }
+                            if(Edit->nDiffArray->at(n*16 + i / 3) == 2) SetBkColor(hdc, RGB(230, 180, 230)); // Out of range
+                        }
+                        else SetBkColor(hdc, RGB(255, 255, 255));
                     }
                     ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cHexText + i, 1, NULL);
 
@@ -429,7 +442,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 }
                 n++;
             }
-            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. Ending data while. Ending position: "<<n<<"\n";
+            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Ending data while. Ending position: " << n << "\n";
         }
         }
             /**/
@@ -442,7 +455,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             DeleteDC(hdc);
 
             EndPaint(hwnd, &ps);
-            if(DEBUG_LEVEL > 50) std::cout<<"Edits: WM_PAINT. End.\n";
+            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. End.\n";
         }
         break;
         case WM_VSCROLL:
@@ -452,7 +465,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             si.cbSize = sizeof(si);
             si.fMask  = SIF_DISABLENOSCROLL | SIF_POS | SIF_TRACKPOS | SIF_PAGE;
             GetScrollInfo(Edit->hScrollVert, SB_CTL, &si);
-            if(DEBUG_LEVEL > 80) std::cout<<"GetScrollInfo(): max: n/a, min: n/a, page: "<<si.nPage<<", current: "<<si.nPos<<" \n";
+            if(DEBUG_LEVEL > 80) std::cout << "GetScrollInfo(): max: n/a, min: n/a, page: " << si.nPage << ", current: " << si.nPos << " \n";
 
             switch(LOWORD(wParam)){
                 case SB_TOP:
@@ -486,22 +499,22 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 /* User dragged the scroll box. */
                 case SB_THUMBPOSITION:
                     yNewPos = (signed int) si.nPos;
-                    //std::cout<<string_format("WM_HSCROLL: Thumb: %i \n", yNewPos);
+                    //std::cout << string_format("WM_HSCROLL: Thumb: %i \n", yNewPos);
                     //yNewPos = std::min(Edit->yMaxScroll - (signed int) si.nPage, yNewPos);
-                    //std::cout<<string_format("WM_HSCROLL: Thumb corrected: %i \n", yNewPos);
+                    //std::cout << string_format("WM_HSCROLL: Thumb corrected: %i \n", yNewPos);
                 break;
                 /* User is dragging the scroll box. */
                 case SB_THUMBTRACK:
                     yNewPos = (signed int) si.nTrackPos;
-                    //std::cout<<string_format("WM_HSCROLL: Thumbtrack: %i \n", yNewPos);
-                    //std::cout<<string_format("WM_HSCROLL: Thumbtrack corrected: %i (compared to %i - %i)\n", yNewPos, Edit->yMaxScroll, (signed int) si.nPage);
+                    //std::cout << string_format("WM_HSCROLL: Thumbtrack: %i \n", yNewPos);
+                    //std::cout << string_format("WM_HSCROLL: Thumbtrack corrected: %i (compared to %i - %i)\n", yNewPos, Edit->yMaxScroll, (signed int) si.nPage);
                 break;
                 default:
                     yNewPos = Edit->yCurrentScroll;
             }
             //yNewPos = min(Edit->yMaxScroll, yNewPos);
             //yNewPos = max(0, yNewPos);
-            if(DEBUG_LEVEL > 80) std::cout<<"WM_VSCROLL: max: "<<Edit->yMaxScroll<<", page: "<<si.nPage<<", current: "<<Edit->yCurrentScroll<<", new: "<<yNewPos<<"\n";
+            if(DEBUG_LEVEL > 80) std::cout << "WM_VSCROLL: max: " << Edit->yMaxScroll << ", page: " << si.nPage << ", current: " << Edit->yCurrentScroll << ", new: " << yNewPos << "\n";
 
             /* If the current position does not change, do not scroll.*/
             if (yNewPos == Edit->yCurrentScroll) break;
@@ -532,7 +545,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             si.nMin   = 0;
             SetScrollInfo(Edit->hScrollVert, SB_CTL, &si, true);
 
-            //std::cout<<string_format("Zoom DEBUG: Zooming. \nnMinP=%i, nMaxP=%i, xCurrentScroll=%i, \nxCurrentScroll+rcClient.right/2=%i\n0=%i, Edit->yMaxScroll=%i, Edit->yCurrentScroll=%i, \nyCurrentScroll+(rcClient.bottom-nNonScreenY)/2=%i\n", nMinP, nMaxP, xCurrentScroll, xCurrentScroll+rcClient.right/2, 0, Edit->yMaxScroll, Edit->yCurrentScroll, Edit->yCurrentScroll+(rcClient.bottom-nNonScreenY)/2);
+            //std::cout << string_format("Zoom DEBUG: Zooming. \nnMinP=%i, nMaxP=%i, xCurrentScroll=%i, \nxCurrentScroll+rcClient.right/2=%i\n0=%i, Edit->yMaxScroll=%i, Edit->yCurrentScroll=%i, \nyCurrentScroll+(rcClient.bottom-nNonScreenY)/2=%i\n", nMinP, nMaxP, xCurrentScroll, xCurrentScroll+rcClient.right/2, 0, Edit->yMaxScroll, Edit->yCurrentScroll, Edit->yCurrentScroll+(rcClient.bottom-nNonScreenY)/2);
 
             return 0;
         }
@@ -560,7 +573,7 @@ void Edits::PrintValues(bool bCheck){
     }
 
     int nSize = nSelectEnd - nSelectStart + 1;
-    if(DEBUG_LEVEL > 70) std::cout<<"Selected bytes: "<<nSize<<".\n";
+    if(DEBUG_LEVEL > 70) std::cout << "Selected bytes: " << nSize << ".\n";
     std::string sString;
     //char * cString = new char [nSize+1];
     char cInt [255];
@@ -568,7 +581,7 @@ void Edits::PrintValues(bool bCheck){
     char cFloat [255];
     int n = 0;
     while(nSelectStart + n <= nSelectEnd){
-        if(DEBUG_LEVEL > 70) std::cout<<"Extract byte #"<<nSelectStart + n<<".\n";
+        if(DEBUG_LEVEL > 70) std::cout << "Extract byte #" << nSelectStart + n << ".\n";
         sString += sBuffer->at(nSelectStart+n);
         //if(nSelectStart + n == nSelectEnd) cString[n+1] = '\0';
         n++;
@@ -653,7 +666,7 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
 
 void Edits::UpdateStatusPositionMdx(){
     if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDX.\n";
+    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for the MDX.\n";
     std::stringstream ssPrint;
     FileHeader & FH = *(Model.GetFileData());
     int nPos = ptHover.y * 16 + (ptHover.x) / 3;
@@ -676,12 +689,12 @@ void Edits::UpdateStatusPositionMdx(){
     else if(NODE != nullptr){
         nMin = NODE->Mesh.nOffsetIntoMdx;
         if((nPos - nMin) / (NODE->Mesh.nMdxDataSize) == NODE->Mesh.nNumberOfVerts){
-            ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str()<<" > Extra Data";
+            ssPrint << "MDX > " << FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str() << " > Extra Data";
         }
-        else ssPrint<<"MDX > "<<FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str()<<" > Vertex "<<(nPos - nMin) / (NODE->Mesh.nMdxDataSize);
+        else ssPrint << "MDX > " << FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str() << " > Vertex " << (nPos - nMin) / (NODE->Mesh.nMdxDataSize);
     }
     else{
-        ssPrint<<"MDX > Unknown";
+        ssPrint << "MDX > Unknown";
     }
 
     //Change text
@@ -694,7 +707,7 @@ void Edits::UpdateStatusPositionMdx(){
 
 void Edits::UpdateStatusPositionBwm(const std::string & sType){
     if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for " << sType << ".\n";
+    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for " << sType << ".\n";
     std::stringstream ssPrint;
     BWMHeader * ptr_bwm = nullptr;
     if(sType == "WOK") ptr_bwm = Model.Wok->GetData().get();
@@ -718,55 +731,55 @@ void Edits::UpdateStatusPositionBwm(const std::string & sType){
     }
     else if(nPos < 136){
         //We are in Header
-        ssPrint<< sType << " > Header";
+        ssPrint << sType << " > Header";
     }
     else if(nPos < Bwm.nOffsetToVerts + Bwm.nNumberOfVerts * 12){
         //We are in Header
         nMin = Bwm.nOffsetToVerts;
-        ssPrint<< sType << " > Vertices > Vertex " << (nPos - nMin)/12;
+        ssPrint << sType << " > Vertices > Vertex " << (nPos - nMin)/12;
     }
     else if(nPos < Bwm.nOffsetToIndices + Bwm.nNumberOfFaces * 12){
         //We are in Header
         nMin = Bwm.nOffsetToIndices;
-        ssPrint<< sType << " > Vertex Indices > Face " << (nPos - nMin)/12 << " > Index " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
+        ssPrint << sType << " > Vertex Indices > Face " << (nPos - nMin)/12 << " > Index " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
     }
     else if(nPos < Bwm.nOffsetToMaterials + Bwm.nNumberOfFaces * 4){
         //We are in Header
         nMin = Bwm.nOffsetToMaterials;
-        ssPrint<< sType << " > Materials > Material " << (nPos - nMin)/4;
+        ssPrint << sType << " > Materials > Material " << (nPos - nMin)/4;
     }
     else if(nPos < Bwm.nOffsetToNormals + Bwm.nNumberOfFaces * 12){
         //We are in Header
         nMin = Bwm.nOffsetToNormals;
-        ssPrint<< sType << " > Face Normals > Normal " << (nPos - nMin)/12;
+        ssPrint << sType << " > Face Normals > Normal " << (nPos - nMin)/12;
     }
     else if(nPos < Bwm.nOffsetToDistances + Bwm.nNumberOfFaces * 4){
         //We are in Header
         nMin = Bwm.nOffsetToDistances;
-        ssPrint<< sType << " > Plane Distances > Distance " << (nPos - nMin)/4;
+        ssPrint << sType << " > Plane Distances > Distance " << (nPos - nMin)/4;
     }
     else if(nPos < Bwm.nOffsetToAabb + Bwm.nNumberOfAabb * 44){
         //We are in Header
         nMin = Bwm.nOffsetToAabb;
-        ssPrint<< sType << " > Aabbs > Aabb " << (nPos - nMin)/44;
+        ssPrint << sType << " > Aabbs > Aabb " << (nPos - nMin)/44;
     }
     else if(nPos < Bwm.nOffsetToAdjacentFaces + Bwm.nNumberOfAdjacentFaces * 12){
         //We are in Header
         nMin = Bwm.nOffsetToAdjacentFaces;
-        ssPrint<< sType << " > Adjacent Faces > Face " << (nPos - nMin)/12 << " > Edge " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
+        ssPrint << sType << " > Adjacent Faces > Face " << (nPos - nMin)/12 << " > Edge " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
     }
     else if(nPos < Bwm.nOffsetToEdges + Bwm.nNumberOfEdges * 8){
         //We are in Header
         nMin = Bwm.nOffsetToEdges;
-        ssPrint<< sType << " > Edges > Edge " << (nPos - nMin)/8;
+        ssPrint << sType << " > Edges > Edge " << (nPos - nMin)/8;
     }
     else if(nPos < Bwm.nOffsetToPerimeters + Bwm.nNumberOfPerimeters * 4){
         //We are in Header
         nMin = Bwm.nOffsetToPerimeters;
-        ssPrint<< sType << " > Perimeters > Perimeter " << (nPos - nMin)/4;
+        ssPrint << sType << " > Perimeters > Perimeter " << (nPos - nMin)/4;
     }
     else{
-        ssPrint<< sType << " > Unknown";
+        ssPrint << sType << " > Unknown";
     }
 
     //Change text
@@ -779,7 +792,7 @@ void Edits::UpdateStatusPositionBwm(const std::string & sType){
 
 void Edits::UpdateStatusPositionModel(){
     if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout<<"Begin updating status position for the MDL.\n";
+    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for the MDL.\n";
     //char cPrint [255];
     std::stringstream ssPrint;
     FileHeader & FH = *(Model.GetFileData());
@@ -791,13 +804,13 @@ void Edits::UpdateStatusPositionModel(){
     }
     else if(nPos < 208){
         //We are in Header
-        ssPrint<<"Header";
+        ssPrint << "Header";
     }
     else if(nPos < FH.MH.AnimationArray.nOffset + 12){
         //We are in Names
         if(nPos < FH.MH.Names.at(0).nOffset + 12){
             nMin = 208;
-            ssPrint<<"Name Array > Pointers > Pointer "<<(nPos - nMin)/4;
+            ssPrint << "Name Array > Pointers > Pointer " << (nPos - nMin)/4;
         }
         else{
             int n = 1;
@@ -814,14 +827,14 @@ void Edits::UpdateStatusPositionModel(){
                 else n++;
             }
             int nName = n - 1;
-            ssPrint<<"Name Array > Strings > \""<<FH.MH.Names.at(nName).sName.c_str()<<"\"";
+            ssPrint << "Name Array > Strings > \"" << FH.MH.Names.at(nName).sName.c_str() << "\"";
         }
     }
     else if(nPos < FH.MH.GH.nOffsetToRootNode + 12){
         //We are in Animations
         if(nPos < FH.MH.Animations[0].nOffset + 12){
             nMin = FH.MH.AnimationArray.nOffset + 12;
-            ssPrint<<"Animations > Pointers > Pointer"<<(nPos - nMin)/4;
+            ssPrint << "Animations > Pointers > Pointer" << (nPos - nMin)/4;
         }
         else{
             int n = 1;
@@ -840,7 +853,7 @@ void Edits::UpdateStatusPositionModel(){
             int nAnimation = n - 1;
             nMin = FH.MH.Animations.at(nAnimation).nOffset + 12;
             if(nPos < nMin + ANIM_OFFSET){
-                ssPrint<<"Animations > "<<FH.MH.Animations.at(nAnimation).sName.c_str()<<" > Header";
+                ssPrint << "Animations > " << FH.MH.Animations.at(nAnimation).sName.c_str() << " > Header";
             }
             else{
                 Node * NODE = nullptr;
@@ -862,30 +875,30 @@ void Edits::UpdateStatusPositionModel(){
                     }
                 }
                 if(NODE == nullptr){
-                    ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > Unknown";
+                    ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > Unknown";
                 }
                 else{
                     int nNode = NODE->Head.nNodeNumber;
                     nMin += ANIM_OFFSET;
                     if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
                         if(nPos < NODE->nOffset + 12 + NODE_SIZE_HEADER){
-                            ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header";
+                            ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header";
                         }
                         else{
                             nMin = NODE->nOffset + 12 + NODE_SIZE_HEADER;
-                            ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Child Pointers > Pointer "<<(nPos - nMin)/4;
+                            ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Child Pointers > Pointer " << (nPos - nMin)/4;
                         }
                     }
                     else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
                         nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Controller Data > Float "<<(nPos - nMin)/4;
+                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Controller Data > Float " << (nPos - nMin)/4;
                     }
                     else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
                         nMin = NODE->Head.ControllerArray.nOffset + 12;
-                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Controllers > Controller "<<(nPos - nMin)/16;
+                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Controllers > Controller " << (nPos - nMin)/16;
                     }
                     else{
-                        ssPrint<<"Animations > "<<FH.MH.Animations[nAnimation].sName.c_str()<<" > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Unknown";
+                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Unknown";
                     }
                 }
             }
@@ -897,23 +910,23 @@ void Edits::UpdateStatusPositionModel(){
         for(int b = 0; b < FH.MH.ArrayOfNodes.size() && NODE==nullptr; b++){
             Node & node = FH.MH.ArrayOfNodes[b];
             if(nPos >= node.nOffset+12 &&
-               nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.Children.size()){
+               nPos < node.Head.ChildrenArray.nOffset+12 + 4 * node.Head.ChildrenArray.nCount){
                 NODE = &node;
             }
             else if(node.Head.Controllers.size() > 0 &&
                     nPos >= node.Head.ControllerArray.nOffset+12 &&
-                    nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.Controllers.size()){
+                    nPos < node.Head.ControllerArray.nOffset+12 + 16 * node.Head.ControllerArray.nCount){
                 NODE = &node;
             }
             else if(node.Head.ControllerData.size() > 0 &&
                     nPos >= node.Head.ControllerDataArray.nOffset+12 &&
-                    nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerData.size()){
+                    nPos < node.Head.ControllerDataArray.nOffset+12 + 4 * node.Head.ControllerDataArray.nCount){
                 NODE = &node;
             }
         }
 
         if(NODE == NULL){
-            ssPrint<<"Geometry > Unknown";
+            ssPrint << "Geometry > Unknown";
         }
         else{
             int nNode = NODE->Head.nNodeNumber;
@@ -924,28 +937,28 @@ void Edits::UpdateStatusPositionModel(){
                 if(nType & NODE_HEADER && !bFound){
                     nHeaderSize += NODE_SIZE_HEADER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Basic";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Basic";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_LIGHT && !bFound){
                     nHeaderSize += NODE_SIZE_LIGHT;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Light";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Light";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_EMITTER && !bFound){
                     nHeaderSize += NODE_SIZE_EMITTER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Emitter";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Emitter";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_REFERENCE && !bFound){
                     nHeaderSize += NODE_SIZE_REFERENCE;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Reference";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Reference";
                         bFound = true;
                     }
                 }
@@ -954,42 +967,42 @@ void Edits::UpdateStatusPositionModel(){
                     if(Model.bXbox) nHeaderSize -= 4;
                     if(!Model.bK2) nHeaderSize -= 8;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Mesh";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Mesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_SKIN && !bFound){
                     nHeaderSize += NODE_SIZE_SKIN;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Skin";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Skin";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_DANGLY && !bFound){
                     nHeaderSize += NODE_SIZE_DANGLY;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Danglymesh";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Danglymesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_AABB && !bFound){
                     nHeaderSize += NODE_SIZE_AABB;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Walkmesh";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Walkmesh";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_SABER && !bFound){
                     nHeaderSize += NODE_SIZE_SABER;
                     if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Header > Saber";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Saber";
                         bFound = true;
                     }
                 }
                 if(nType & NODE_HEADER && !bFound){
                     if(nPos >= NODE->Head.ChildrenArray.nOffset + 12){
                         nMin = NODE->Head.ChildrenArray.nOffset + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Child Array > Pointer "<<(nPos - nMin)/4;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Child Array > Pointer " << (nPos - nMin)/4;
                         bFound = true;
                     }
                 }
@@ -1005,103 +1018,103 @@ void Edits::UpdateStatusPositionModel(){
                 if(nType & NODE_MESH && !bFound){
                     if(nPos >= NODE->Mesh.nVertIndicesLocation + 12 && NODE->Mesh.IndexLocationArray.nCount > 0){
                         nMin = NODE->Mesh.nVertIndicesLocation + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Indices > Face "<<(nPos - nMin)/6;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Vert Indices > Face " << (nPos - nMin)/6;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.MeshInvertedCounterArray.nOffset + 12){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Inverted Counter";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Inverted Counter";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.IndexLocationArray.nOffset + 12){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Pointer to Vert Indices";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Pointer to Vert Indices";
                         bFound = true;
                     }
                     else if(!Model.bXbox && nPos >= NODE->Mesh.nOffsetToVertArray + 12){
                         nMin = NODE->Mesh.nOffsetToVertArray + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Vert Coordinates > Vert "<<(nPos - nMin)/12;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Vert Coordinates > Vert " << (nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.IndexCounterArray.nOffset + 12){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Pointer to Vert Number";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Pointer to Vert Number";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Mesh.FaceArray.nOffset + 12){
                         nMin = NODE->Mesh.FaceArray.nOffset + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Mesh > Faces > Face "<<(nPos - nMin)/32;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Faces > Face " << (nPos - nMin)/32;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_SKIN && !bFound){
                     if(nPos >= NODE->Skin.Array8Array.nOffset + 12){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Array8 (unused)";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Array8 (unused)";
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.TBoneArray.nOffset + 12){
                         nMin = NODE->Skin.TBoneArray.nOffset + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > T-Bones > "<<FH.MH.Names.at((nPos - nMin)/12).sName.c_str();
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > T-Bones > " << FH.MH.Names.at((nPos - nMin)/12).sName.c_str();
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.QBoneArray.nOffset + 12){
                         nMin = NODE->Skin.QBoneArray.nOffset + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Q-Bones > "<<FH.MH.Names.at((nPos - nMin)/16).sName.c_str();
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Q-Bones > " << FH.MH.Names.at((nPos - nMin)/16).sName.c_str();
                         bFound = true;
                     }
                     else if(nPos >= NODE->Skin.nOffsetToBonemap + 12){
                         nMin = NODE->Skin.nOffsetToBonemap + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Skin > Bonemap > "<<FH.MH.Names.at(Model.bXbox ? (nPos - nMin)/2 : (nPos - nMin)/4).sName.c_str();
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Bonemap > " << FH.MH.Names.at(Model.bXbox ? (nPos - nMin)/2 : (nPos - nMin)/4).sName.c_str();
                         bFound = true;
                     }
                 }
                 if(nType & NODE_DANGLY && !bFound){
                     if(nPos >= NODE->Dangly.nOffsetToData2 + 12){
                         nMin = NODE->Dangly.nOffsetToData2 + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Danglymesh > Data2 > Vertex "<<(nPos - nMin)/12;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Danglymesh > Data2 > Vertex " << (nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Dangly.ConstraintArray.nOffset + 12){
                         nMin = NODE->Dangly.ConstraintArray.nOffset + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Danglymesh > Constraints > Constraint "<<(nPos - nMin)/4;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Danglymesh > Constraints > Constraint " << (nPos - nMin)/4;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_AABB && !bFound){
                     if(nPos >= NODE->Walkmesh.nOffsetToAabb + 12){
                         nMin = NODE->Walkmesh.nOffsetToAabb + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Walkmesh > AABB Tree > Aabb "<<(nPos - nMin)/40;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Walkmesh > AABB Tree > Aabb " << (nPos - nMin)/40;
                         bFound = true;
                     }
                 }
                 if(nType & NODE_SABER && !bFound){
                     if(nPos >= NODE->Saber.nOffsetToSaberUVs + 12){
                         nMin = NODE->Saber.nOffsetToSaberUVs + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data2 > Member "<<(nPos - nMin)/8;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Saber > Data2 > Member " << (nPos - nMin)/8;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Saber.nOffsetToSaberNormals + 12){
                         nMin = NODE->Saber.nOffsetToSaberNormals + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data3 > Member "<<(nPos - nMin)/12;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Saber > Data3 > Member " << (nPos - nMin)/12;
                         bFound = true;
                     }
                     else if(nPos >= NODE->Saber.nOffsetToSaberVerts + 12){
                         nMin = NODE->Saber.nOffsetToSaberVerts + 12;
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Saber > Data1 > Member "<<(nPos - nMin)/12;
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Saber > Data1 > Member " << (nPos - nMin)/12;
                         bFound = true;
                     }
                 }
                 if(!bFound){
-                        ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Unknown";
+                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Unknown";
                 }
             }
             else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
                 nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Controller Data > Float "<<(nPos - nMin)/4;
+                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Controller Data > Float " << (nPos - nMin)/4;
             }
             else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
                 nMin = NODE->Head.ControllerArray.nOffset + 12;
-                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Data > Controllers > Controller "<<(nPos - nMin)/16;
+                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Controllers > Controller " << (nPos - nMin)/16;
             }
             else{
-                ssPrint<<"Geometry > "<<FH.MH.Names.at(nNode).sName.c_str()<<" > Unknown";
+                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Unknown";
             }
         }
     }

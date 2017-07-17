@@ -10,16 +10,19 @@ HWND hProgress;
 HWND hProgressMass;
 char * lpStrFiles = nullptr;
 std::string sFolder;
-DWORD WINAPI ThreadReprocess(LPVOID lpParam);
-DWORD WINAPI ThreadProcessAscii(LPVOID lpParam);
-DWORD WINAPI ThreadProcessBinary(LPVOID lpParam);
-DWORD WINAPI ThreadMassAscii(LPVOID lpParam);
-DWORD WINAPI ThreadMassBinary(LPVOID lpParam);
-DWORD WINAPI ThreadMassAnalyze(LPVOID lpParam);
+DWORD WINAPI ThreadProcessing(LPVOID lpParam);
 bool bCancelMass = false;
+bool bDotAsciiDefault = true;
+
+enum MdlProcessing{
+    PROCESSING_ASCII,
+    PROCESSING_BINARY,
+    PROCESSING_MASS_ASCII,
+    PROCESSING_MASS_BINARY,
+    PROCESSING_MASS_ANALYZE
+} CurrentProcess;
 
 void ReportGetOpenFileNameError(){
-    //std::cout<<"GetOpenFileName() failed. :( \n";
     unsigned int nError = CommDlgExtendedError();
     if(nError == CDERR_DIALOGFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_DIALOGFAILURE\n";
     else if(nError == CDERR_FINDRESFAILURE) std::cout << "GetOpenFileName() failed. Error: CDERR_FINDRESFAILURE\n";
@@ -45,9 +48,9 @@ void ReportGetOpenFileNameError(){
 bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     bool bDisplay = false;
     if(&mdl == &Model) bDisplay = true;
-    /// Create file
 
-    std::string sMdl = sFileNoExt + ".mdl";
+    /// Create file
+    std::string sMdl = sFileNoExt + (bAscii ? ".mdl.ascii" : ".mdl");
     std::ifstream file(sMdl, std::ios::binary);
 
     if(!file.is_open()){
@@ -68,7 +71,14 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     char cBinary [4];
     file.read(cBinary, 4);
     if(cBinary[0] != '\0' || cBinary[1] != '\0' || cBinary[2] != '\0' || cBinary[3] != '\0') bAscii = true;
-    else bAscii = false;
+    else{
+        if(bAscii){
+            if(bDisplay) Error("The selected .ascii file does not seem to be in the ASCII MDL format!");
+            else std::cout << "The selected .ascii file does not seem to be in the ASCII MDL format!\n";
+            return false;
+        }
+        bAscii = false;
+    }
 
     /// Now we need to check our current data
     if(mdl.GetFileData()){
@@ -87,18 +97,20 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         std::vector<char> & sBufferRef = mdl.CreateAsciiBuffer(filelength);
         file.read(&sBufferRef[0], filelength);
         file.close();
-        mdl.SetFilePath(sMdl);
         if(bDisplay){
             AppendTab(hTabs, "MDL");
             AppendTab(hTabs, "MDX");
         }
 
         /// Open and process .pwk if it exists
-        std::string cPwk = sFileNoExt + ".pwk";
-        if(PathFileExists(cPwk.c_str())){
+        std::string cPwk = "";
+        if(bDotAsciiDefault && PathFileExists(std::string(sFileNoExt + ".pwk.ascii").c_str())) cPwk = sFileNoExt + ".pwk.ascii";
+        else if(PathFileExists(std::string(sFileNoExt + ".pwk").c_str())) cPwk = sFileNoExt + ".pwk";
+        else if(PathFileExists(std::string(sFileNoExt + ".pwk.ascii").c_str())) cPwk = sFileNoExt + ".pwk.ascii";
+        if(cPwk != ""){
             file.open(cPwk, std::ifstream::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed (pwk) for " << cPwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed (pwk) for " << cPwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -111,6 +123,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) != "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.PwkAscii.reset(new ASCII());
                         std::vector<char> & sBufferRef = mdl.PwkAscii->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -123,11 +136,14 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         }
 
         //Open and process .dwk if it exists
-        std::string cDwk = sFileNoExt + ".dwk";
-        if(PathFileExists(cDwk.c_str())){
+        std::string cDwk = "";
+        if(bDotAsciiDefault && PathFileExists(std::string(sFileNoExt + ".dwk.ascii").c_str())) cDwk = sFileNoExt + ".dwk.ascii";
+        else if(PathFileExists(std::string(sFileNoExt + ".dwk").c_str())) cDwk = sFileNoExt + ".dwk";
+        else if(PathFileExists(std::string(sFileNoExt + ".dwk.ascii").c_str())) cDwk = sFileNoExt + ".dwk.ascii";
+        if(cDwk != ""){
             file.open(cDwk);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cDwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -140,6 +156,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) != "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.DwkAscii.reset(new ASCII());
                         std::vector<char> & sBufferRef = mdl.DwkAscii->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -163,7 +180,6 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         std::vector<char> & sBufferRef = mdl.CreateBuffer(filelength);
         file.read(&sBufferRef[0], filelength);
         file.close();
-        mdl.SetFilePath(sMdl);
         if(bDisplay) AppendTab(hTabs, "MDL");
 
         /// Open and process .mdx if it exists
@@ -171,7 +187,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cMdx.c_str())){
             file.open(cMdx, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cMdx << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cMdx << ". Aborting.\n";
             }
             else{
                 //We may begin reading
@@ -195,7 +211,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cWok.c_str())){
             file.open(cWok, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cWok << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cWok << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -208,6 +224,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) == "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.Wok.reset(new WOK());
                         std::vector<char> & sBufferRef = mdl.Wok->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -225,7 +242,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cPwk.c_str())){
             file.open(cPwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cPwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cPwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -238,6 +255,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) == "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.Pwk.reset(new PWK());
                         std::vector<char> & sBufferRef = mdl.Pwk->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -255,7 +273,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cDwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 bAscii = false;
@@ -269,6 +287,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) == "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.Dwk0.reset(new DWK());
                         std::vector<char> & sBufferRef = mdl.Dwk0->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -284,7 +303,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cDwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -297,6 +316,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) == "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.Dwk1.reset(new DWK());
                         std::vector<char> & sBufferRef = mdl.Dwk1->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -312,7 +332,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout<<"File creation/opening failed for " << cDwk << ". Aborting.\n";
+                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
@@ -325,6 +345,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                     file.read(cBinary, 8);
                     if(std::string(cBinary, 8) == "BWM V1.0"){
                         /// We may begin reading
+                        file.seekg(0, std::ios::beg);
                         mdl.Dwk2.reset(new DWK());
                         std::vector<char> & sBufferRef = mdl.Dwk2->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
@@ -341,9 +362,11 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     return true;
 }
 
-bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
+bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii = false){
     std::string sMdl = sFileNoExt + ".mdl";
     if(nID == IDM_ASCII_SAVE){
+        if(bAscii) sMdl += ".ascii";
+
         /// Convert the data and put it into a string
         std::string sAsciiExport;
         mdl.ExportAscii(sAsciiExport);
@@ -352,7 +375,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
         std::ofstream file(sMdl, std::fstream::out);
 
         if(!file.is_open()){
-            std::cout<<"File creation failed for " << sMdl << ". Aborting.\n";
+            std::cout << "File creation failed for " << sMdl << ". Aborting.\n";
             return false;
         }
 
@@ -366,6 +389,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
         /// Save Pwk
         if(mdl.Pwk){
             std::string cPwk = sFileNoExt + ".pwk";
+            if(bAscii) cPwk += ".ascii";
 
             sAsciiExport.clear();
             mdl.ExportPwkAscii(sAsciiExport);
@@ -386,6 +410,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
         /// Save Dwk
         if(mdl.Dwk0 || mdl.Dwk1 || mdl.Dwk2){
             std::string cDwk = sFileNoExt + ".dwk";
+            if(bAscii) cDwk += ".ascii";
 
             sAsciiExport.clear();
             mdl.ExportDwkAscii(sAsciiExport);
@@ -406,6 +431,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
         //Save Wok
         if(mdl.Wok && mdl.bExportWok){
             std::string cWok = sFileNoExt + ".wok";
+            if(bAscii) cWok += ".ascii";
 
             sAsciiExport.clear();
             mdl.ExportWokAscii(sAsciiExport);
@@ -432,7 +458,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
         std::ofstream file(sMdl, std::ios::binary | std::fstream::out);
 
         if(!file.is_open()){
-            std::cout<<"File creation failed for " << sMdl << ". Aborting.\n";
+            std::cout << "File creation failed for " << sMdl << ". Aborting.\n";
             return false;
         }
 
@@ -449,10 +475,10 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cMdx, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cMdx << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cMdx << ". Aborting.\n";
             else{
                 /// Write and close file
-                file<<sBinaryExport;
+                file << sBinaryExport;
                 file.close();
 
                 sBinaryExport.clear();
@@ -469,10 +495,10 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cWok, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cWok << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cWok << ". Aborting.\n";
             else{
                 /// Write and close file
-                file<<sBinaryExport;
+                file << sBinaryExport;
                 file.close();
 
                 sBinaryExport.clear();
@@ -489,10 +515,10 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cPwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cPwk << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cPwk << ". Aborting.\n";
             else{
                 /// Write and close file
-                file<<sBinaryExport;
+                file << sBinaryExport;
                 file.close();
 
                 sBinaryExport.clear();
@@ -509,10 +535,10 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
-                file<<sBinaryExport;
+                file << sBinaryExport;
                 file.close();
 
                 sBinaryExport.clear();
@@ -527,10 +553,10 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
-                file<<sBinaryExport;
+                file << sBinaryExport;
                 file.close();
 
                 sBinaryExport.clear();
@@ -545,7 +571,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID){
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout<<"File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -569,59 +595,107 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
     bool bReturn = false;
     const unsigned int MAX_PATH_MASS = 40000;
     ZeroMemory(&ofn, sizeof(ofn));    ofn.lStructSize = sizeof(ofn);    ofn.hwndOwner = hwnd;
-    ofn.lpstrDefExt = "mdl";
-    ofn.lpstrFile = nullptr;    ofn.nMaxFile = MAX_PATH;    ofn.lpstrFilter = "MDL Format (*.mdl)\0*.mdl\0";    ofn.nFilterIndex = 1;    ofn.lpstrFileTitle = NULL;    ofn.nMaxFileTitle = 0;    ofn.lpstrInitialDir = NULL;
+    ofn.lpstrFile = nullptr;    ofn.nMaxFile = MAX_PATH;    ofn.lpstrFilter = "MDL Format (*.mdl, *.mdl.ascii)\0*.mdl;*.mdl.ascii\0";    ofn.nFilterIndex = 1;
 
     cFile.resize(MAX_PATH);
-    if(nID == IDM_ASCII_SAVE){        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0";        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout << "\nSelected File:\n" << cFile.c_str() << "\n";
+    if(nID == IDM_ASCII_SAVE){
+        bool bValidFileName = false;
+        while(!bValidFileName){            ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path            ofn.lpstrFilter = "ASCII MDL Format (*.mdl)\0*.mdl\0ASCII MDL Format (*.mdl.ascii)\0*.mdl.ascii\0";            ofn.nFilterIndex = bDotAsciiDefault ? 2 : 1;            ofn.Flags = OFN_PATHMUSTEXIST;            if(GetSaveFileName(&ofn)){                std::cout << "Selected File:\n" << cFile.c_str() << "\n";
+                if(ofn.nFileExtension != 0) std::cout << "File extension: " << &cFile[ofn.nFileExtension - 1] << "\n";
 
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
-                Error("The specified file is not an .mdl file! Unable to save!");
-                return false;
+                /// The bAscii bool will (at this point) tell us, whether we're saving as .mdl or as .mdl.ascii.
+                bool bAscii = false;
+                if(ofn.nFilterIndex == 2) bAscii = true;
+                std::string sFileNoExt = cFile.c_str();
+
+                /// If the user manually entered a different extension, this overrides the currently selected one
+                //if(safesubstr(sFileNoExt, sFileNoExt.size() - 10, 10) == ".mdl.ascii") bAscii = true;
+                //if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") bAscii = false;
+
+                /// Remove .ascii and .mdl extensions.
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 6, 6) == ".ascii") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 6);
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 4);
+
+                /// Re-construct the save file name
+                if(bAscii) cFile = sFileNoExt + std::string(".mdl.ascii");
+                else cFile = sFileNoExt + std::string(".mdl");
+
+                /// Now we check if this file exists already
+                if(PathFileExists(cFile.c_str())){
+                    int nDecision = WarningYesNoCancel("The file '" + std::string(PathFindFileName(cFile.c_str())) + "' already exists! Do you want to overwrite?");
+                    if(nDecision == IDCANCEL) return false;
+                    else if(nDecision == IDNO) continue; /// This will run the file selection dialog a second time
+                }
+                bValidFileName = true;
+
+                Timer t1;
+                bReturn = SaveFiles(Model, sFileNoExt, IDM_ASCII_SAVE, bAscii);
+                std::cout << "Wrote files in: " << t1.GetTime() << "\n";            }
+            else{
+                ReportGetOpenFileNameError();
+                break;
             }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
-            cFile = sFileNoExt + std::string(".mdl");
-
-            bReturn = SaveFiles(Model, sFileNoExt, IDM_ASCII_SAVE);
-            //if(bReturn) Model.SetFilePath(cFile);        }
-        else ReportGetOpenFileNameError();
+        }
     }
-    else if(nID == IDM_BIN_SAVE){        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;        if(GetSaveFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_BIN_SAVE){
+        bool bValidFileName = false;
+        while(!bValidFileName){            ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path            ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";            ofn.Flags = OFN_PATHMUSTEXIST;            if(GetSaveFileName(&ofn)){                std::cout << "Selected File:\n" << cFile.c_str() << "\n";
+                if(ofn.nFileExtension != 0) std::cout << "File extension: " << &cFile[ofn.nFileExtension - 1] << "\n";
 
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT && strlen(cFile.c_str()) + 5 > MAX_PATH) {
-                Error("The specified file is not an .mdl file! Unable to save!");
-                return false;
+                std::string sFileNoExt = cFile.c_str();
+
+                /// Remove .ascii and .mdl extensions.
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 4);
+
+                /// Re-construct the save file name
+                cFile = sFileNoExt + std::string(".mdl");
+
+                /// Now we check if this file exists already
+                if(PathFileExists(cFile.c_str())){
+                    int nDecision = WarningYesNoCancel("The file '" + std::string(PathFindFileName(cFile.c_str())) + "' already exists! Do you want to overwrite?");
+                    if(nDecision == IDCANCEL) return false;
+                    else if(nDecision == IDNO) continue; /// This will run the file selection dialog a second time
+                }
+                bValidFileName = true;
+
+                Timer t1;
+                bReturn = SaveFiles(Model, sFileNoExt, IDM_BIN_SAVE);
+                std::cout << "Wrote files in: " << t1.GetTime() << "\n";            }
+            else{
+                ReportGetOpenFileNameError();
+                break;
             }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1);
-            cFile = sFileNoExt + std::string(".mdl");
-
-            bReturn = SaveFiles(Model, sFileNoExt, IDM_BIN_SAVE);
-            //if(bReturn) Model.SetFilePath(cFile);        }
-        else ReportGetOpenFileNameError();
+        }
     }
-    else if(nID == IDM_MDL_OPEN){        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path
-        std::cout << "Default file: " << cFile << "\n";        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;        if(GetOpenFileName(&ofn)){            std::cout<<"\nSelected File:\n"<<cFile.c_str()<<"\n";
+    else if(nID == IDM_MDL_OPEN){
+        bool bValidFileName = false;
+        while(!bValidFileName){            ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path            ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;            if(GetOpenFileName(&ofn)){                std::cout << "Selected File:\n" << cFile.c_str() << "\n";
+                if(ofn.nFileExtension != 0) std::cout << "File extension: " << &cFile[ofn.nFileExtension - 1] << "\n";
 
-            //First figure out if we're opening a .mdl.
-            if (ofn.Flags & OFN_EXTENSIONDIFFERENT) {
-                Error("The specified file is not an .mdl file!");
-                return false;
-            }
-            std::string sFileNoExt = cFile.c_str();
-            if (ofn.nFileExtension != 0) sFileNoExt = safesubstr(cFile, 0, ofn.nFileExtension - 1).c_str();
-            cFile = sFileNoExt + std::string(".mdl");
+                std::string sFileNoExt = cFile.c_str();
 
-            bool bAscii = false;
-            bReturn = LoadFiles(Model, sFileNoExt, bAscii);
+                /// Get whether we have an .ascii extension or not
+                bool bAscii = false;
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 10, 10) == ".mdl.ascii") bAscii = true;
+                else if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") bAscii = false;
+                else{
+                    Error("The specified file is not an MDL file!");
+                    continue;
+                }
+                bValidFileName = true;
 
-            if(bAscii){
-                /// Process the data
+                /// Remove .ascii and .mdl extensions.
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 6, 6) == ".ascii") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 6);
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 4);
+
+                Timer t1;
                 Model.SetFilePath(cFile);
-                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 1)){
+                bReturn = LoadFiles(Model, sFileNoExt, bAscii);
+                std::cout << "Read files in: " << t1.GetTime() << "\n";
+
+                /// Process the data
+                CurrentProcess = bAscii ? PROCESSING_ASCII : PROCESSING_BINARY;
+                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, bAscii ? 1 : 2)){
                     bReturn = true;
                 }
                 else{
@@ -633,60 +707,103 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
                     bReturn = false;
                 }
-            }
+                std::cout << "Total processing time: " << t1.GetTime() << "\n";            }
             else{
-                /// Process the data
-                if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, 2)){
-                    bReturn = true;
-                }
-                else{
-                    /// Something failed, cleanup
-                    Model.FlushData();
-                    Edit1.LoadData();
-                    ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
-                    bReturn = false;
-                }
-            }        }
-        else ReportGetOpenFileNameError();    }
+                ReportGetOpenFileNameError();
+                break;
+            }
+        }    }
     else if(nID == IDM_MASS_TO_ASCII){
         std::string sMassFiles (MAX_PATH_MASS, 0);
         int nOffsetToFirst = 0;        ofn.lpstrFile = &sMassFiles.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH_MASS;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;        if(GetOpenFileName(&ofn)){
+            Timer tTotal;
             lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
             sFolder = cFile;
             if(ofn.nFileExtension == 0) cFile += std::string(lpStrFiles);
+            CurrentProcess = PROCESSING_MASS_ASCII;
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 1);
             bReturn = true;
-            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< sFolder <<"\n";
-            else std::cout << "\nConverted file: "<< cFile <<"\n";        }
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: " << sFolder << "\n";
+            else std::cout << "\nConverted file: " << cFile << "\n";
+            std::cout << "Total processing time: " << tTotal.GetTime() << "\n";        }
         else ReportGetOpenFileNameError();    }
     else if(nID == IDM_MASS_TO_BIN){
         std::string sMassFiles (MAX_PATH_MASS, 0);
         int nOffsetToFirst = 0;        ofn.lpstrFile = &sMassFiles.front();        ofn.nMaxFile = MAX_PATH_MASS;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;        if(GetOpenFileName(&ofn)){
+            Timer tTotal;
             lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
             sFolder = cFile;
             if(ofn.nFileExtension == 0) cFile += std::string(lpStrFiles);
+            CurrentProcess = PROCESSING_MASS_BINARY;
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 2);
             bReturn = true;
-            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: "<< sFolder <<"\n";
-            else std::cout << "\nConverted file: "<< cFile <<"\n";        }
+            if(ofn.nFileExtension == 0) std::cout << "\nConverted files in: " << sFolder << "\n";
+            else std::cout << "\nConverted file: " << cFile << "\n";
+            std::cout << "Total processing time: " << tTotal.GetTime() << "\n";        }
         else ReportGetOpenFileNameError();    }
     else if(nID == IDM_MASS_ANALYZE){
         std::string sMassFiles (MAX_PATH_MASS, 0);
         int nOffsetToFirst = 0;        ofn.lpstrFile = &sMassFiles.front(); //The open dialog will update cFile with the file path        ofn.nMaxFile = MAX_PATH_MASS;        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT | OFN_EXPLORER;        if(GetOpenFileName(&ofn)){
+            Timer tTotal;
             lpStrFiles = &sMassFiles[0] + ofn.nFileOffset;
             cFile = sMassFiles.c_str();
             if(ofn.nFileExtension == 0) cFile += "\\";
             sFolder = cFile;
             if(ofn.nFileExtension == 0) cFile += std::string(lpStrFiles);
+            CurrentProcess = PROCESSING_MASS_ANALYZE;
             DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESSMASS), hFrame, ProgressMassProc, 3);
             bReturn = true;
-            if(ofn.nFileExtension == 0) std::cout << "\nAnalyzed files in: "<< sFolder <<"\n";
-            else std::cout << "\nAnalyzed file: "<< cFile <<"\n";        }
+            if(ofn.nFileExtension == 0) std::cout << "\nAnalyzed files in: " << sFolder << "\n";
+            else std::cout << "\nAnalyzed file: " << cFile << "\n";
+            std::cout << "Total processing time: " << tTotal.GetTime() << "\n";        }
         else ReportGetOpenFileNameError();    }
+    else if(nID == IDM_BIN_COMPARE){        ofn.lpstrFile = &cFile.front(); //The open dialog will update cFile with the file path        ofn.lpstrFilter = "Binary MDL Format (*.mdl)\0*.mdl\0";        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        bool bValidFileName = false;
+        while(!bValidFileName){            if(GetOpenFileName(&ofn)){                std::cout << "Selected File:\n" << cFile.c_str() << "\n";
+                if(ofn.nFileExtension != 0) std::cout << "File extension: " << &cFile[ofn.nFileExtension - 1] << "\n";
+
+                std::string sFileNoExt = cFile.c_str();
+
+                /// Check the extension.
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) != ".mdl"){
+                    Error("The specified file is not a valid MDL file!");
+                    continue;
+                }
+
+                /// Remove .ascii and .mdl extensions.
+                if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 4);
+
+                MDL compModel;
+
+                Timer t1;
+                compModel.SetFilePath(cFile);
+                bool bAscii = false;
+                bReturn = LoadFiles(compModel, sFileNoExt, bAscii);
+                std::cout << "Read files in: " << t1.GetTime() << "\n";
+
+                if(bAscii){
+                    Error("The specified file is not a binary MDL file!");
+                    continue;
+                }
+                bValidFileName = true;
+
+                if(bReturn){
+                    Model.Compare(compModel);
+                    if(Model.Mdx && compModel.Mdx) Model.Mdx->Compare(*compModel.Mdx);
+                    if(Model.Wok && compModel.Wok) Model.Wok->Compare(*compModel.Wok);
+                    if(Model.Pwk && compModel.Pwk) Model.Pwk->Compare(*compModel.Pwk);
+                    if(Model.Dwk0 && compModel.Dwk0) Model.Dwk0->Compare(*compModel.Dwk0);
+                }
+                std::cout << "Total processing time: " << t1.GetTime() << "\n";            }
+            else{
+                ReportGetOpenFileNameError();
+                break;
+            }
+        }    }
     return bReturn;
 }
 
@@ -705,10 +822,7 @@ INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             Model.PtrProgressSize = ProgressSize;
             Model.PtrProgressPos = ProgressPos;
 
-            if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessAscii, hwnd, 0, NULL);
-            else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessBinary, hwnd, 0, NULL);
-            else if(lParam == 3) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadReprocess, hwnd, 0, NULL);
-            else EndDialog(hwnd, NULL);
+            hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessing, hwnd, 0, NULL);
         }
         break;
         case 69:
@@ -743,10 +857,7 @@ INT_PTR CALLBACK ProgressMassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
             bCancelMass = false;
 
-            if(lParam == 1) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadMassAscii, hwnd, 0, NULL);
-            else if(lParam == 2) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadMassBinary, hwnd, 0, NULL);
-            else if(lParam == 3) hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadMassAnalyze, hwnd, 0, NULL);
-            else EndDialog(hwnd, NULL);
+            hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) ThreadProcessing, hwnd, 0, NULL);
         }
         break;
         case WM_COMMAND:
@@ -783,450 +894,337 @@ void ProgressPos(int nPos){
     UpdateWindow(hProgress);
 }
 
-DWORD WINAPI ThreadReprocess(LPVOID lpParam){
-    Model.Compile();
-    //This should bring us to a state where all data is ready,
-    //even the binary-file-specific data
-
-    //Load the data
-    Report("Loading data...");
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData(); //Loads up the binary file onto the screen
-    BuildTree(Model); //Fills the TreeView control
-    std::cout<<"Data loaded!\n";
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadProcessAscii(LPVOID lpParam){
-    bool bReadWell = Model.ReadAscii();
-    //Just read it.
-    if(!bReadWell){
-        SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
-        return 0;
-    }
-
-    /// Now we know whether we have WOK data
-    if(Model.Wok) AppendTab(hTabs, "WOK");
-
-    Model.Compile();
-    //This should bring us to a state where all data is ready,
-    //even the binary-file-specific data
-
-    //Load the data
-    Report("Loading data...");
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData(); //Loads up the binary file onto the screen
-    BuildTree(Model); //Fills the TreeView control
-    if(Model.Pwk) BuildTree(*Model.Pwk);
-    if(Model.Dwk0) BuildTree(*Model.Dwk0);
-    if(Model.Dwk1) BuildTree(*Model.Dwk1);
-    if(Model.Dwk2) BuildTree(*Model.Dwk2);
-    if(Model.Wok){
-        std::string sWok = ".wok"; //Model.GetFullPath();
-        //char * cExt2 = PathFindExtension(sWok.c_str());
-        //sprintf(cExt2, ".wok");
-        Model.Wok->SetFilePath(sWok);
-        std::cout << "About to build wok tree.\n";
-        BuildTree(*Model.Wok);
-    }
-    std::cout<<"Data loaded!\n";
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadProcessBinary(LPVOID lpParam){
-    try{
-        Model.DecompileModel();
-    }
-    catch(const std::exception & e){
-        std::cout << "Model decompilation for " << Model.GetFilename() << " failed with the following exception:\n" << e.what() << "\n";
-        throw e;
-    }
-    catch(...){
-        std::cout << "Model decompilation for " << Model.GetFilename() << " failed with an unknown exception.\n";
-    }
-
-    Report("Processing walkmesh...");
-    if(Model.Wok){
-        Model.Wok->ProcessBWM();
-        Model.GetLytPositionFromWok();
-    }
-    if(Model.Pwk) Model.Pwk->ProcessBWM();
-    if(Model.Dwk0) Model.Dwk0->ProcessBWM();
-    if(Model.Dwk1) Model.Dwk1->ProcessBWM();
-    if(Model.Dwk2) Model.Dwk2->ProcessBWM();
-
-    //Load the data
-    Report("Loading data...");
-    BuildTree(Model);
-    if(Model.Wok) BuildTree(*Model.Wok);
-    if(Model.Pwk) BuildTree(*Model.Pwk);
-    if(Model.Dwk0) BuildTree(*Model.Dwk0);
-    if(Model.Dwk1) BuildTree(*Model.Dwk1);
-    if(Model.Dwk2) BuildTree(*Model.Dwk2);
-    SetWindowText(hDisplayEdit, "");
-    Edit1.LoadData();
-    std::cout<<"Data loaded!\n";
-
-    Model.CheckPeculiarities(); //Finally, check for peculiarities
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadMassAscii(LPVOID lpParam){
-    int nMax = 0;
-    char * lpstrCounter = lpStrFiles;
-    while(*lpstrCounter != 0){
-        lpstrCounter = lpstrCounter + (strlen(lpstrCounter) + 1);
-        nMax++;
-    }
-
-    SendMessage(hProgressMass, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, nMax));
-
-    /// Set tempModel and its settings
-    MDL tempModel;
-    tempModel.PtrReport = nullptr;
-    tempModel.PtrProgressSize = ProgressSize;
-    tempModel.PtrProgressPos = ProgressPos;
-    tempModel.bExportWok = Model.bExportWok;
-    tempModel.bDetermineSmoothing = Model.bDetermineSmoothing;
-    tempModel.bLightsaberToTrimesh = Model.bLightsaberToTrimesh;
-    tempModel.bSkinToTrimesh = Model.bSkinToTrimesh;
-    tempModel.bSmoothAngleWeighting = Model.bSmoothAngleWeighting;
-    tempModel.bSmoothAreaWeighting = Model.bSmoothAreaWeighting;
-    tempModel.bWriteAnimations = Model.bWriteAnimations;
-    tempModel.bK2 = Model.bK2;
-
-    int nCounter = 0;
-    while(*lpStrFiles != 0 && !bCancelMass){
-        std::string sCurrentFile = std::string();
-        if(sFolder.back() == '\\'){
-            sCurrentFile += sFolder;
-            sCurrentFile += lpStrFiles;
+DWORD WINAPI ThreadProcessing(LPVOID lpParam){
+    if(CurrentProcess == PROCESSING_ASCII){
+        bool bReadWell = Model.ReadAscii();
+        //Just read it.
+        if(!bReadWell){
+            SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+            return 0;
         }
-        else sCurrentFile += sFolder;
-        lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
 
-        std::string sFileNoExt = sCurrentFile.c_str();
-        if(safesubstr(sCurrentFile, sCurrentFile.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sCurrentFile, 0, sCurrentFile.size() - 4);
+        /// Now we know whether we have WOK data
+        if(Model.Wok) AppendTab(hTabs, "WOK");
 
-        std::string sStatic = "Processing " + std::string(PathFindFileName(sFileNoExt.c_str())) + "...";
-        SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
+        Model.Compile();
+        //This should bring us to a state where all data is ready,
+        //even the binary-file-specific data
 
-        tempModel.FlushAll();
+        //Load the data
+        Timer tLoad;
+        Report("Loading data...");
+        SetWindowText(hDisplayEdit, "");
+        Edit1.LoadData(); //Loads up the binary file onto the screen
+        BuildTree(Model); //Fills the TreeView control
+        if(Model.Pwk) BuildTree(*Model.Pwk);
+        if(Model.Dwk0) BuildTree(*Model.Dwk0);
+        if(Model.Dwk1) BuildTree(*Model.Dwk1);
+        if(Model.Dwk2) BuildTree(*Model.Dwk2);
+        if(Model.Wok){
+            std::string sWok = ".wok";
+            Model.Wok->SetFilePath(sWok);
+            BuildTree(*Model.Wok);
+        }
+        std::cout << "Data loaded in " << tLoad.GetTime() << ".\n";
+    }
+    else if(CurrentProcess == PROCESSING_BINARY){
+        try{
+            Model.DecompileModel();
+        }
+        catch(const std::exception & e){
+            Error("Model decompilation for " + Model.GetFilename() + " failed with the following exception:\n\n" + e.what());
+            std::cout << "Model decompilation for " << Model.GetFilename() << " failed with the following exception:\n" << e.what() << "\n";
+            SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+            return 0;
+        }
+        catch(...){
+            Error("Model decompilation for " + Model.GetFilename() + " failed with an unknown exception.");
+            std::cout << "Model decompilation for " << Model.GetFilename() << " failed with an unknown exception.\n";
+            SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+            return 0;
+        }
 
-        bool bAscii = false;
-        if(LoadFiles(tempModel, sFileNoExt, bAscii)){
-            try{
-                if(bAscii){
-                    if(!tempModel.ReadAscii()) throw;
-                    if(!tempModel.Compile()) throw;
-                }
-                else{
-                    tempModel.DecompileModel();
-                    if(tempModel.Wok){
-                        tempModel.Wok->ProcessBWM();
-                        tempModel.GetLytPositionFromWok();
-                    }
-                    if(tempModel.Pwk) tempModel.Pwk->ProcessBWM();
-                    if(tempModel.Dwk0) tempModel.Dwk0->ProcessBWM();
-                    if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
-                    if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
-                }
+        Report("Processing walkmesh...");
+        try{
+            if(Model.Wok){
+                Model.Wok->ProcessBWM();
+                Model.GetLytPositionFromWok();
             }
-            catch(...){
-                std::cout << "Model (de)compilation for " << Model.GetFilename() << " failed.\n";
+            if(Model.Pwk) Model.Pwk->ProcessBWM();
+            if(Model.Dwk0) Model.Dwk0->ProcessBWM();
+            if(Model.Dwk1) Model.Dwk1->ProcessBWM();
+            if(Model.Dwk2) Model.Dwk2->ProcessBWM();
+        }
+        catch(const std::exception & e){
+            Error(std::string("Walkmesh decompilation for " + Model.GetFilename() + " failed with the following exception:\n\n") + e.what());
+            std::cout << "Walkmesh decompilation for " + Model.GetFilename() + " failed with the following exception:\n" << e.what() << "\n";
+            SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+            return 0;
+        }
+        catch(...){
+            Error("Walkmesh decompilation for " + Model.GetFilename() + " failed with an unknown exception.");
+            std::cout << "Walkmesh decompilation for " + Model.GetFilename() + " failed with an unknown exception.\n";
+            SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
+            return 0;
+        }
+
+        //Load the data
+        Report("Loading data...");
+        BuildTree(Model);
+        if(Model.Wok) BuildTree(*Model.Wok);
+        if(Model.Pwk) BuildTree(*Model.Pwk);
+        if(Model.Dwk0) BuildTree(*Model.Dwk0);
+        if(Model.Dwk1) BuildTree(*Model.Dwk1);
+        if(Model.Dwk2) BuildTree(*Model.Dwk2);
+        SetWindowText(hDisplayEdit, "");
+        Edit1.LoadData();
+        std::cout << "Data loaded!\n";
+
+        Model.CheckPeculiarities(); //Finally, check for peculiarities
+    }
+    else if(CurrentProcess == PROCESSING_MASS_ASCII || CurrentProcess == PROCESSING_MASS_BINARY || CurrentProcess == PROCESSING_MASS_ANALYZE){
+        int nMax = 0;
+        char * lpstrCounter = lpStrFiles;
+        while(*lpstrCounter != 0){
+            lpstrCounter = lpstrCounter + (strlen(lpstrCounter) + 1);
+            nMax++;
+        }
+
+        SendMessage(hProgressMass, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, nMax));
+
+        /// Set tempModel and its settings
+        MDL tempModel;
+        tempModel.PtrReport = nullptr;
+        tempModel.PtrProgressSize = ProgressSize;
+        tempModel.PtrProgressPos = ProgressPos;
+        tempModel.bExportWok = Model.bExportWok;
+        tempModel.bDetermineSmoothing = Model.bDetermineSmoothing;
+        tempModel.bLightsaberToTrimesh = Model.bLightsaberToTrimesh;
+        tempModel.bSkinToTrimesh = Model.bSkinToTrimesh;
+        tempModel.bSmoothAngleWeighting = Model.bSmoothAngleWeighting;
+        tempModel.bSmoothAreaWeighting = Model.bSmoothAreaWeighting;
+        tempModel.bWriteAnimations = Model.bWriteAnimations;
+        tempModel.bK2 = Model.bK2;
+
+        /// Define lists of model names that have some property.
+        std::array<std::vector<std::string>, 32> HasEmitterFlag;
+        std::array<std::vector<std::string>, 8> HasClassification;
+        std::vector<std::string> HasDepthTexture, HasRenderOrder, HasFrameBlending, HasFlareSize, HasFlarePosition, HasFlareTexture, HasFlareColor,
+                                 HasClassUnknown1, HasClassUnknown2, HasClassUnknown3, HasNoClassification, HasMultipleClassification, HasDirtEnabled,
+                                 HasBeaming, HasBackgroundGeometry, HasSubclass2, HasSubclass4, HasNoSubclass4, HasBwmUnknown, HasBwmExtra;
+
+        int nCounter = 0;
+        while(*lpStrFiles != 0 && !bCancelMass){
+            std::string sCurrentFile = std::string();
+            if(sFolder.back() == '\\'){
+                sCurrentFile += sFolder;
+                sCurrentFile += lpStrFiles;
+            }
+            else sCurrentFile += sFolder;
+            lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
+
+            std::string sFileNoExt = sCurrentFile.c_str();
+
+            bool bAscii = false;
+            if(safesubstr(sFileNoExt, sFileNoExt.size() - 10, 10) == ".mdl.ascii") bAscii = true;
+            else if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") bAscii = false;
+            else{
+                std::cout << "File " << Model.GetFilename() << " is in the wrong format.\n";
                 nCounter++;
                 SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
                 continue;
             }
 
-            sFileNoExt += "-mdledit-ascii";
-            sCurrentFile = sFileNoExt + std::string(".mdl");
+            /// Remove .ascii and .mdl extensions.
+            if(safesubstr(sFileNoExt, sFileNoExt.size() - 6, 6) == ".ascii") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 6);
+            if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sFileNoExt, 0, sFileNoExt.size() - 4);
 
-            SaveFiles(tempModel, sFileNoExt, IDM_ASCII_SAVE);
-        }
+            std::string sStatic = "Processing " + std::string(PathFindFileName(sCurrentFile.c_str())) + "...";
+            SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
 
-        nCounter++;
-        SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
-        UpdateWindow(hProgressMass);
-    }
+            tempModel.FlushAll();
+            tempModel.SetFilePath(sCurrentFile);
 
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadMassAnalyze(LPVOID lpParam){
-    int nMax = 0;
-    char * lpstrCounter = lpStrFiles;
-    while(*lpstrCounter != 0){
-        lpstrCounter = lpstrCounter + (strlen(lpstrCounter) + 1);
-        nMax++;
-    }
-
-    SendMessage(hProgressMass, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, nMax));
-
-    /// Set tempModel and its settings
-    MDL tempModel;
-    tempModel.PtrReport = nullptr;
-    tempModel.PtrProgressSize = ProgressSize;
-    tempModel.PtrProgressPos = ProgressPos;
-    tempModel.bExportWok = Model.bExportWok;
-    tempModel.bDetermineSmoothing = Model.bDetermineSmoothing;
-    tempModel.bLightsaberToTrimesh = Model.bLightsaberToTrimesh;
-    tempModel.bSkinToTrimesh = Model.bSkinToTrimesh;
-    tempModel.bSmoothAngleWeighting = Model.bSmoothAngleWeighting;
-    tempModel.bSmoothAreaWeighting = Model.bSmoothAreaWeighting;
-    tempModel.bWriteAnimations = Model.bWriteAnimations;
-    tempModel.bK2 = Model.bK2;
-
-    /// Define lists of model names that have some property.
-    std::array<std::vector<std::string>, 32> HasEmitterFlag;
-    std::array<std::vector<std::string>, 8> HasClassification;
-    std::vector<std::string> HasDepthTexture, HasRenderOrder, HasFrameBlending, HasFlareSize, HasFlarePosition, HasFlareTexture, HasFlareColor,
-                             HasClassUnknown1, HasClassUnknown2, HasClassUnknown3, HasNoClassification, HasMultipleClassification, HasDirtEnabled,
-                             HasBeaming, HasBackgroundGeometry;
-
-    int nCounter = 0;
-    while(*lpStrFiles != 0 && !bCancelMass){
-        std::string sCurrentFile = std::string();
-        if(sFolder.back() == '\\'){
-            sCurrentFile += sFolder;
-            sCurrentFile += lpStrFiles;
-        }
-        else sCurrentFile += sFolder;
-
-        /// Make lpStrFiles point to next filename
-        lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
-
-        std::string sFileNoExt = sCurrentFile.c_str();
-        if(safesubstr(sCurrentFile, sCurrentFile.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sCurrentFile, 0, sCurrentFile.size() - 4);
-
-        std::string sStatic = "Analyzing " + std::string(PathFindFileName(sFileNoExt.c_str())) + "...";
-        SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
-
-        tempModel.FlushAll();
-
-        bool bAscii = false;
-        if(LoadFiles(tempModel, sFileNoExt, bAscii)){
-            if(!bAscii){
+            if(LoadFiles(tempModel, sFileNoExt, bAscii)){
                 try{
-                    tempModel.DecompileModel();
-                    if(tempModel.Wok){
-                        tempModel.Wok->ProcessBWM();
-                        tempModel.GetLytPositionFromWok();
+                    if(bAscii){
+                        if(!tempModel.ReadAscii()) throw;
+                        if(!tempModel.Compile()) throw;
+                        //std::cout << "Decompiled successfully!\n";
                     }
-                    if(tempModel.Pwk) tempModel.Pwk->ProcessBWM();
-                    if(tempModel.Dwk0) tempModel.Dwk0->ProcessBWM();
-                    if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
-                    if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
+                    else{
+                        tempModel.DecompileModel();
+                        if(tempModel.Wok){
+                            tempModel.Wok->ProcessBWM();
+                            tempModel.GetLytPositionFromWok();
+                        }
+                        if(tempModel.Pwk) tempModel.Pwk->ProcessBWM();
+                        if(tempModel.Dwk0) tempModel.Dwk0->ProcessBWM();
+                        if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
+                        if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
+                    }
                 }
                 catch(...){
-                    std::cout << "Model decompilation for " << Model.GetFilename() << " failed.\n";
+                    std::cout << "Model (de)compilation for " << Model.GetFilename() << " failed.\n";
                     nCounter++;
                     SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
-                    UpdateWindow(hProgressMass);
                     continue;
                 }
 
-                tempModel.CheckPeculiarities(); //Finally, check for peculiarities
+                //std::cout << "Saving now!\n";
 
-                /// Decompilation should now be done. Here we will perform our tests.
-                ModelHeader & Data = tempModel.GetFileData()->MH;
+                if(CurrentProcess == PROCESSING_MASS_ASCII){
+                    sFileNoExt += "-mdledit";
+                    sCurrentFile = sFileNoExt + std::string(".mdl.ascii");
+                    SaveFiles(tempModel, sFileNoExt, IDM_ASCII_SAVE, true);
+                }
+                else if(CurrentProcess == PROCESSING_MASS_BINARY){
+                    sFileNoExt += "-mdledit";
+                    sCurrentFile = sFileNoExt + std::string(".mdl");
+                    SaveFiles(tempModel, sFileNoExt, IDM_BIN_SAVE);
+                }
+                else if(CurrentProcess == PROCESSING_MASS_ANALYZE && !bAscii){
+                    tempModel.CheckPeculiarities(); //Finally, check for peculiarities
 
-                bool bFoundClassification = false;
-                bool bAdded = false;
-                for(int ef = 0; ef < HasClassification.size(); ef++){
-                    if(Data.nClassification & pown(2, ef)){
-                        HasClassification.at(ef).push_back(Data.GH.sName.c_str());
-                        if(bFoundClassification && !bAdded){
-                            HasMultipleClassification.push_back(Data.GH.sName.c_str());
-                            bAdded = true;
+                    /// Decompilation should now be done. Here we will perform our tests.
+                    ModelHeader & Data = tempModel.GetFileData()->MH;
+
+                    /// We do BWM first
+                    for(int nBwm = 0; nBwm < 5; nBwm++){
+                        BWMHeader * bwm_ptr = nullptr;
+                        if(nBwm == 0 && tempModel.Wok) bwm_ptr = tempModel.Wok->GetData().get();
+                        if(nBwm == 1 && tempModel.Pwk) bwm_ptr = tempModel.Pwk->GetData().get();
+                        if(nBwm == 2 && tempModel.Dwk0) bwm_ptr = tempModel.Dwk0->GetData().get();
+                        if(nBwm == 3 && tempModel.Dwk1) bwm_ptr = tempModel.Dwk1->GetData().get();
+                        if(nBwm == 4 && tempModel.Dwk2) bwm_ptr = tempModel.Dwk2->GetData().get();
+                        if(bwm_ptr == nullptr) continue;
+
+                        BWMHeader bwm = *bwm_ptr;
+                        if(bwm.nPadding != 0) HasBwmUnknown.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(bwm.nPadding) + std::string(")"));
+                        for(Aabb & aabb : bwm.aabb){
+                            if(aabb.nExtra != 4){
+                                HasBwmExtra.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(aabb.nExtra) + std::string(")"));
+                                break;
+                            }
                         }
-                        else if(!bFoundClassification) bFoundClassification = true;
                     }
-                }
-                if(!bFoundClassification){
-                    HasNoClassification.push_back(Data.GH.sName.c_str());
-                }
-                if(Data.nSubclassification != 0) HasClassUnknown1.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nSubclassification) + std::string(")"));
-                if(Data.nUnknown != 0) HasClassUnknown2.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nUnknown) + std::string(")"));
-                if(Data.nAffectedByFog != 1) HasClassUnknown3.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nAffectedByFog) + std::string(")"));
 
-                for(int nNode = 0; nNode < Data.ArrayOfNodes.size(); nNode++){
-                    Node & node = Data.ArrayOfNodes.at(nNode);
-                    if(node.Head.nType & NODE_EMITTER){
-                        for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
-                            if(node.Emitter.nFlags & pown(2, ef)) HasEmitterFlag.at(ef).push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str());
+                    bool bFoundClassification = false;
+                    bool bAdded = false;
+                    for(int ef = 0; ef < HasClassification.size(); ef++){
+                        if(Data.nClassification & pown(2, ef)){
+                            HasClassification.at(ef).push_back(Data.GH.sName.c_str());
+                            if(bFoundClassification && !bAdded){
+                                HasMultipleClassification.push_back(Data.GH.sName.c_str());
+                                bAdded = true;
+                            }
+                            else if(!bFoundClassification) bFoundClassification = true;
                         }
-                        if(node.Emitter.nFrameBlending != 0) HasFrameBlending.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Emitter.nFrameBlending) + std::string(")"));
-                        if(node.Emitter.cDepthTextureName.c_str() != std::string("NULL") &&
-                           node.Emitter.cDepthTextureName.c_str() != std::string("") ) HasDepthTexture.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + node.Emitter.cDepthTextureName.c_str() + std::string(")"));
-                        if(node.Emitter.nRenderOrder != 0) HasRenderOrder.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string(node.Emitter.nRenderOrder) + std::string(")"));
                     }
-                    if(node.Head.nType & NODE_LIGHT){
-                        if(node.Light.FlareSizes.size() > 0) HasFlareSize.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareSizes.size()) + std::string(")"));
-                        if(node.Light.FlarePositions.size() > 0) HasFlarePosition.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlarePositions.size()) + std::string(")"));
-                        if(node.Light.FlareTextureNames.size() > 0) HasFlareTexture.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareTextureNames.size()) + std::string(")"));
-                        if(node.Light.FlareColorShifts.size() > 0) HasFlareColor.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareColorShifts.size()) + std::string(")"));
+                    if(!bFoundClassification){
+                        HasNoClassification.push_back(Data.GH.sName.c_str());
                     }
-                    if(node.Head.nType & NODE_MESH){
-                        if(node.Mesh.nDirtEnabled != 0) HasDirtEnabled.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nDirtEnabled) + std::string(")"));
-                        if(node.Mesh.nBeaming != 0) HasBeaming.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nBeaming) + std::string(")"));
-                        if(node.Mesh.nBackgroundGeometry != 0) HasBackgroundGeometry.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nBackgroundGeometry) + std::string(")"));
+                    if(Data.nSubclassification == 2 && Data.nClassification != CLASS_CHARACTER) HasSubclass2.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nClassification) + std::string(")"));
+                    if(Data.nSubclassification == 4 && Data.nClassification != CLASS_PLACEABLE) HasSubclass4.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nClassification) + std::string(")"));
+                    if(Data.nSubclassification != 4 && Data.nClassification == CLASS_PLACEABLE) HasNoSubclass4.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nSubclassification) + std::string(")"));
+                    if(Data.nSubclassification != 0) HasClassUnknown1.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nSubclassification) + std::string(")"));
+                    if(Data.nUnknown != 0) HasClassUnknown2.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nUnknown) + std::string(")"));
+                    if(Data.nAffectedByFog != 1) HasClassUnknown3.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nAffectedByFog) + std::string(")"));
+
+                    for(int nNode = 0; nNode < Data.ArrayOfNodes.size(); nNode++){
+                        Node & node = Data.ArrayOfNodes.at(nNode);
+                        if(node.Head.nType & NODE_EMITTER){
+                            for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
+                                if(node.Emitter.nFlags & pown(2, ef)) HasEmitterFlag.at(ef).push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str());
+                            }
+                            if(node.Emitter.nFrameBlending != 0) HasFrameBlending.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Emitter.nFrameBlending) + std::string(")"));
+                            if(node.Emitter.cDepthTextureName.c_str() != std::string("NULL") &&
+                               node.Emitter.cDepthTextureName.c_str() != std::string("") ) HasDepthTexture.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + node.Emitter.cDepthTextureName.c_str() + std::string(")"));
+                            if(node.Emitter.nRenderOrder != 0) HasRenderOrder.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string(node.Emitter.nRenderOrder) + std::string(")"));
+                        }
+                        if(node.Head.nType & NODE_LIGHT){
+                            if(node.Light.FlareSizes.size() > 0) HasFlareSize.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareSizes.size()) + std::string(")"));
+                            if(node.Light.FlarePositions.size() > 0) HasFlarePosition.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlarePositions.size()) + std::string(")"));
+                            if(node.Light.FlareTextureNames.size() > 0) HasFlareTexture.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareTextureNames.size()) + std::string(")"));
+                            if(node.Light.FlareColorShifts.size() > 0) HasFlareColor.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Light.FlareColorShifts.size()) + std::string(")"));
+                        }
+                        if(node.Head.nType & NODE_MESH){
+                            if(node.Mesh.nDirtEnabled != 0) HasDirtEnabled.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nDirtEnabled) + std::string(")"));
+                            if(node.Mesh.nBeaming != 0) HasBeaming.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nBeaming) + std::string(")"));
+                            if(node.Mesh.nBackgroundGeometry != 0) HasBackgroundGeometry.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str() + std::string(" (") + std::to_string((int) node.Mesh.nBackgroundGeometry) + std::string(")"));
+                        }
                     }
                 }
             }
+
+            nCounter++;
+            SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
+            UpdateWindow(hProgressMass);
         }
 
-        nCounter++;
-        SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
-        UpdateWindow(hProgressMass);
-    }
+        /// Now, let's report our findings.
+        if(CurrentProcess == PROCESSING_MASS_ANALYZE && sFolder.back() == '\\'){
+            std::ofstream reportfile(sFolder + "mdl_analysis.txt", std::fstream::out);
 
-    /// Now, let's report our findings.
-    if(sFolder.back() == '\\'){
-        std::ofstream reportfile(sFolder + "mdl_analysis.txt", std::fstream::out);
-
-        if(true){
-            reportfile << "FLAG STATS\n\n";
-            reportfile << "dirt_enabled > 0:\n";
-            for(int n = 0; n < HasDirtEnabled.size(); n++) reportfile << "    " << HasDirtEnabled.at(n) << "\n";
-            reportfile << "beaming > 0:\n";
-            for(int n = 0; n < HasBeaming.size(); n++) reportfile << "    " << HasBeaming.at(n) << "\n";
-            reportfile << "backgroundgeometry > 0:\n";
-            for(int n = 0; n < HasBackgroundGeometry.size(); n++) reportfile << "    " << HasBackgroundGeometry.at(n) << "\n";
-        }
-        if(false){
-            reportfile << "\nCLASSIFICATION STATS\n\n";
-            reportfile << "Classification 0:\n";
-            for(int n = 0; n < HasNoClassification.size(); n++) reportfile << "    " << HasNoClassification.at(n) << "\n";
-            for(int ef = 0; ef < HasClassification.size(); ef++){
-                reportfile << "Classification " << pown(2, ef) << ":\n";
-                for(int n = 0; n < HasClassification.at(ef).size(); n++) reportfile << "    " << HasClassification.at(ef).at(n) << "\n";
+            if(true){
+                reportfile << "BWM STATS\n\n";
+                reportfile << "nPadding != 0:\n";
+                for(int n = 0; n < HasBwmUnknown.size(); n++) reportfile << "    " << HasBwmUnknown.at(n) << "\n";
+                reportfile << "nExtra != 4:\n";
+                for(int n = 0; n < HasBwmExtra.size(); n++) reportfile << "    " << HasBwmExtra.at(n) << "\n";
             }
-            reportfile << "Mixed Classification:\n";
-            for(int n = 0; n < HasMultipleClassification.size(); n++) reportfile << "    " << HasMultipleClassification.at(n) << "\n";
-        }
-        if(false){
-            reportfile << "\nCLASSIFICATION BYTE STATS\n\n";
-            reportfile << "Classification byte 2:\n";
-            for(int n = 0; n < HasClassUnknown1.size(); n++) reportfile << "    " << HasClassUnknown1.at(n) << "\n";
-            reportfile << "Classification byte 3:\n";
-            for(int n = 0; n < HasClassUnknown2.size(); n++) reportfile << "    " << HasClassUnknown2.at(n) << "\n";
-            reportfile << "Classification byte 4:\n";
-            for(int n = 0; n < HasClassUnknown3.size(); n++) reportfile << "    " << HasClassUnknown3.at(n) << "\n";
-        }
-        if(false){
-            reportfile << "\nEMITTER STATS\n\n";
-            for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
-                reportfile << "Emitter flag " << ef << ":\n";
-                for(int n = 0; n < HasEmitterFlag.at(ef).size(); n++) reportfile << "    " << HasEmitterFlag.at(ef).at(n) << "\n";
+            if(false){
+                reportfile << "FLAG STATS\n\n";
+                reportfile << "dirt_enabled > 0:\n";
+                for(int n = 0; n < HasDirtEnabled.size(); n++) reportfile << "    " << HasDirtEnabled.at(n) << "\n";
+                reportfile << "beaming > 0:\n";
+                for(int n = 0; n < HasBeaming.size(); n++) reportfile << "    " << HasBeaming.at(n) << "\n";
+                reportfile << "backgroundgeometry > 0:\n";
+                for(int n = 0; n < HasBackgroundGeometry.size(); n++) reportfile << "    " << HasBackgroundGeometry.at(n) << "\n";
             }
-            reportfile << "Frame Blending:\n";
-            for(int n = 0; n < HasFrameBlending.size(); n++) reportfile << "    " << HasFrameBlending.at(n) << "\n";
-            reportfile << "Depth Texture:\n";
-            for(int n = 0; n < HasDepthTexture.size(); n++) reportfile << "    " << HasDepthTexture.at(n) << "\n";
-            reportfile << "Render Order:\n";
-            for(int n = 0; n < HasRenderOrder.size(); n++) reportfile << "    " << HasRenderOrder.at(n) << "\n";
-        }
-        if(false){
-            reportfile << "\nLENS FLARE STATS\n\n";
-            reportfile << "Flare Sizes:\n";
-            for(int n = 0; n < HasFlareSize.size(); n++) reportfile << "    " << HasFlareSize.at(n) << "\n";
-            reportfile << "Flare Positions:\n";
-            for(int n = 0; n < HasFlarePosition.size(); n++) reportfile << "    " << HasFlarePosition.at(n) << "\n";
-            reportfile << "Flare Textures:\n";
-            for(int n = 0; n < HasFlareTexture.size(); n++) reportfile << "    " << HasFlareTexture.at(n) << "\n";
-            reportfile << "Flare Color Shifts:\n";
-            for(int n = 0; n < HasFlareColor.size(); n++) reportfile << "    " << HasFlareColor.at(n) << "\n";
-        }
-
-        reportfile.close();
-    }
-
-    SendMessage((HWND)lpParam, 69, NULL, NULL); //Done
-}
-
-DWORD WINAPI ThreadMassBinary(LPVOID lpParam){
-    int nMax = 0;
-    char * lpstrCounter = lpStrFiles;
-    while(*lpstrCounter != 0){
-        lpstrCounter = lpstrCounter + (strlen(lpstrCounter) + 1);
-        nMax++;
-    }
-
-    SendMessage(hProgressMass, PBM_SETRANGE, (WPARAM) NULL, MAKELPARAM(0, nMax));
-
-    /// Set tempModel and its settings
-    MDL tempModel;
-    tempModel.PtrReport = nullptr;
-    tempModel.PtrProgressSize = ProgressSize;
-    tempModel.PtrProgressPos = ProgressPos;
-    tempModel.bExportWok = Model.bExportWok;
-    tempModel.bDetermineSmoothing = Model.bDetermineSmoothing;
-    tempModel.bLightsaberToTrimesh = Model.bLightsaberToTrimesh;
-    tempModel.bSkinToTrimesh = Model.bSkinToTrimesh;
-    tempModel.bSmoothAngleWeighting = Model.bSmoothAngleWeighting;
-    tempModel.bSmoothAreaWeighting = Model.bSmoothAreaWeighting;
-    tempModel.bWriteAnimations = Model.bWriteAnimations;
-    tempModel.bK2 = Model.bK2;
-
-    int nCounter = 0;
-    while(*lpStrFiles != 0 && !bCancelMass){
-        //ProgressSize(0, 1);
-        ProgressPos(0);
-        //std::string sCurrentFile = lpStrFiles;
-        std::string sCurrentFile = std::string();
-        if(sFolder.back() == '\\'){
-            sCurrentFile += sFolder;
-            sCurrentFile += lpStrFiles;
-        }
-        else sCurrentFile += sFolder;
-        lpStrFiles = lpStrFiles + (strlen(lpStrFiles) + 1);
-
-        std::string sFileNoExt = sCurrentFile.c_str();
-        if(safesubstr(sCurrentFile, sCurrentFile.size() - 4, 4) == ".mdl") sFileNoExt = safesubstr(sCurrentFile, 0, sCurrentFile.size() - 4);
-
-        std::string sStatic = "Processing " + std::string(PathFindFileName(sFileNoExt.c_str())) + "...";
-        SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
-
-        tempModel.FlushAll();
-
-        bool bAscii = false;
-        if(LoadFiles(tempModel, sFileNoExt, bAscii)){
-            try{
-                if(bAscii){
-                    if(!tempModel.ReadAscii()) throw;
-                    if(!tempModel.Compile()) throw;
+            if(false){
+                reportfile << "\nSUBCLASSIFICATION STATS\n\n";
+                //reportfile << "Subclassification 2:\n";
+                //for(int n = 0; n < HasSubclass2.size(); n++) reportfile << "    " << HasSubclass2.at(n) << "\n";
+                reportfile << "Placeables without Subclassification 4:\n";
+                for(int n = 0; n < HasNoSubclass4.size(); n++) reportfile << "    " << HasNoSubclass4.at(n) << "\n";
+            }
+            if(false){
+                reportfile << "\nCLASSIFICATION BYTE STATS\n\n";
+                reportfile << "Classification byte 2:\n";
+                for(int n = 0; n < HasClassUnknown1.size(); n++) reportfile << "    " << HasClassUnknown1.at(n) << "\n";
+                reportfile << "Classification byte 3:\n";
+                for(int n = 0; n < HasClassUnknown2.size(); n++) reportfile << "    " << HasClassUnknown2.at(n) << "\n";
+                reportfile << "Classification byte 4:\n";
+                for(int n = 0; n < HasClassUnknown3.size(); n++) reportfile << "    " << HasClassUnknown3.at(n) << "\n";
+            }
+            if(false){
+                reportfile << "\nEMITTER STATS\n\n";
+                for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
+                    reportfile << "Emitter flag " << ef << ":\n";
+                    for(int n = 0; n < HasEmitterFlag.at(ef).size(); n++) reportfile << "    " << HasEmitterFlag.at(ef).at(n) << "\n";
                 }
-                else{
-                    tempModel.DecompileModel();
-                    if(tempModel.Wok){
-                        tempModel.Wok->ProcessBWM();
-                        tempModel.GetLytPositionFromWok();
-                    }
-                    if(tempModel.Pwk) tempModel.Pwk->ProcessBWM();
-                    if(tempModel.Dwk0) tempModel.Dwk0->ProcessBWM();
-                    if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
-                    if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
-                }
+                reportfile << "Frame Blending:\n";
+                for(int n = 0; n < HasFrameBlending.size(); n++) reportfile << "    " << HasFrameBlending.at(n) << "\n";
+                reportfile << "Depth Texture:\n";
+                for(int n = 0; n < HasDepthTexture.size(); n++) reportfile << "    " << HasDepthTexture.at(n) << "\n";
+                reportfile << "Render Order:\n";
+                for(int n = 0; n < HasRenderOrder.size(); n++) reportfile << "    " << HasRenderOrder.at(n) << "\n";
             }
-            catch(...){
-                std::cout << "Model (de)compilation for " << Model.GetFilename() << " failed.\n";
-                nCounter++;
-                SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
-                continue;
+            if(false){
+                reportfile << "\nLENS FLARE STATS\n\n";
+                reportfile << "Flare Sizes:\n";
+                for(int n = 0; n < HasFlareSize.size(); n++) reportfile << "    " << HasFlareSize.at(n) << "\n";
+                reportfile << "Flare Positions:\n";
+                for(int n = 0; n < HasFlarePosition.size(); n++) reportfile << "    " << HasFlarePosition.at(n) << "\n";
+                reportfile << "Flare Textures:\n";
+                for(int n = 0; n < HasFlareTexture.size(); n++) reportfile << "    " << HasFlareTexture.at(n) << "\n";
+                reportfile << "Flare Color Shifts:\n";
+                for(int n = 0; n < HasFlareColor.size(); n++) reportfile << "    " << HasFlareColor.at(n) << "\n";
             }
 
-            sFileNoExt += "-mdledit-bin";
-            sCurrentFile = sFileNoExt + std::string(".mdl");
-
-            SaveFiles(tempModel, sFileNoExt, IDM_BIN_SAVE);
+            reportfile.close();
         }
-
-        nCounter++;
-        SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
     }
 
     SendMessage((HWND)lpParam, 69, NULL, NULL); //Done

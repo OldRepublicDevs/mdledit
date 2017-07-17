@@ -65,6 +65,7 @@ class BinaryFile: public File{
   protected:
     //For coloring bytes
     std::vector<int> bKnown;
+    std::vector<int> bDifferent;
     void MarkBytes(unsigned int nOffset, int nLength, int nClass);
 
     //Reading functions
@@ -91,18 +92,31 @@ class BinaryFile: public File{
 
     //Getters
     std::vector<int> & GetKnownData(){ return bKnown; }
+    std::vector<int> & GetDifferenceData(){ return bDifferent; }
 
     //Loaders/Unloaders
     std::vector<char> & CreateBuffer(int nSize){
         bLoaded = true;
         sBuffer.resize(nSize, 0);
         bKnown.resize(nSize, 0);
+        //bDifferent.resize(nSize, 0);
         return sBuffer;
     }
     void FlushAll(){
         sBuffer.clear();
         bKnown.clear();
+        bDifferent.clear();
         bLoaded = false;
+    }
+    void Compare(File & file){
+        bDifferent.resize(sBuffer.size(), 0);
+        std::vector<char> & sBuffer2 = file.GetBuffer();
+        for(int i = 0; i < sBuffer.size(); i++){
+            if(i < sBuffer2.size()){
+                if(sBuffer.at(i) != sBuffer2.at(i)) bDifferent.at(i) = 1;
+            }
+            else bDifferent.at(i) = 2;
+        }
     }
 };
 
@@ -115,6 +129,34 @@ class TextFile: public File{
     bool ReadUntilText(std::string & sHandle, bool bToLowercase = true, bool bStrictNoNewLine = false);
     void SkipLine();
     bool EmptyRow();
+};
+
+enum DataType {
+    DT_string,
+    DT_int,
+    DT_bool,
+    DT_float
+};
+struct IniOption{
+    std::string sToken;
+    DataType nType = static_cast<DataType>(0);
+    void * lpVariable = nullptr;
+
+    IniOption(){}
+    IniOption(const std::string & s, DataType t, void * lptr): sToken(s), nType(t), lpVariable(lptr) {}
+};
+
+class IniFile: public TextFile{
+    std::vector<IniOption> Options;
+  public:
+    void AddIniOption(const std::string & s, DataType t, void * lptr){
+        Options.push_back(IniOption(s, t, lptr));
+    }
+    void ClearIniOptions(){
+        Options.clear();
+    }
+    void ReadIni(std::string &);
+    void WriteIni(std::string &);
 };
 
 //Convert unions

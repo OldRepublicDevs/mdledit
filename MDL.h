@@ -40,7 +40,7 @@
 #define FN_PTR_PC_K1_MESH_1     4216656
 #define FN_PTR_PC_K1_MESH_2     4216672
 #define FN_PTR_PC_K1_SKIN_1     4216592
-#define FN_PTR_PC_K1_SKIN_2     4216592
+#define FN_PTR_PC_K1_SKIN_2     4216608
 #define FN_PTR_PC_K1_DANGLY_1   4216640
 #define FN_PTR_PC_K1_DANGLY_2   4216624
 
@@ -51,7 +51,7 @@
 #define FN_PTR_PC_K2_MESH_1     4216880
 #define FN_PTR_PC_K2_MESH_2     4216896
 #define FN_PTR_PC_K2_SKIN_1     4216816
-#define FN_PTR_PC_K2_SKIN_2     4216608
+#define FN_PTR_PC_K2_SKIN_2     4216832
 #define FN_PTR_PC_K2_DANGLY_1   4216864
 #define FN_PTR_PC_K2_DANGLY_2   4216848
 
@@ -142,9 +142,9 @@
 #define MDX_FLAG_NORMAL                 0x0020
 #define MDX_FLAG_COLOR                  0x0040
 #define MDX_FLAG_TANGENT1               0x0080
-#define MDX_FLAG_TANGENT2 /*??*/        0x0100
-#define MDX_FLAG_TANGENT3 /*??*/        0x0200
-#define MDX_FLAG_TANGENT4 /*??*/        0x0400
+#define MDX_FLAG_TANGENT2               0x0100
+#define MDX_FLAG_TANGENT3               0x0200
+#define MDX_FLAG_TANGENT4               0x0400
 //#define MDX_FLAG_0800                 0x0800
 //#define MDX_FLAG_1000                 0x1000
 //#define MDX_FLAG_2000                 0x2000
@@ -304,6 +304,73 @@ struct Location{
     Orientation oOrientation;
 };
 
+struct Color{
+    double fR = 0.0;
+    double fG = 0.0;
+    double fB = 0.0;
+    int nR = 0;
+    int nG = 0;
+    int nB = 0;
+
+    Color(){}
+    Color(double f1, double f2, double f3){
+        fR = f1;
+        fG = f2;
+        fB = f3;
+    }
+    void ConvertToByte(){
+        nR = (int) round(255.0 * fR);
+        nG = (int) round(255.0 * fG);
+        nB = (int) round(255.0 * fB);
+    }
+    void Set(double f1, double f2, double f3){
+        fR = f1;
+        fG = f2;
+        fB = f3;
+    }
+};
+
+struct Weight{
+    std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
+    std::array<signed short, 4> nWeightIndex = {-1, -1, -1, -1};
+};
+
+struct VertexData{
+    //Binary members
+    Vector vVertex;
+    Vector vNormal;
+    Vector vUV1;
+    Vector vUV2;
+    Vector vUV3;
+    Vector vUV4;
+    Color cColor;
+    std::array<Vector, 3> vTangent1;
+    std::array<Vector, 3> vTangent2;
+    std::array<Vector, 3> vTangent3;
+    std::array<Vector, 3> vTangent4;
+    Weight Weights;
+
+    //Added members
+    int nNodeNumber = -1;
+
+    VertexData(){}
+    VertexData(const Vector & v1, const Vector & v2): vVertex(v1), vUV1(v2) {}
+    VertexData(const Vector & v1, const Vector & v2, const Vector & v3): vVertex(v1), vUV1(v2), vNormal(v3) {}
+};
+
+struct Vertex: public Vector{
+    int nOffset = 0;
+    VertexData MDXData;
+    int nLinkedFacesIndex = -1;
+    Vertex assign(const Vector & v){
+        fX = v.fX;
+        fY = v.fY;
+        fZ = v.fZ;
+        return *this;
+    }
+    Vector vFromRoot;
+};
+
 struct Edge{
     int nIndex;
     int nTransition;
@@ -324,6 +391,7 @@ struct Face{
     std::array<short, 3> nIndexTvert1 = {-1, -1, -1};
     std::array<short, 3> nIndexTvert2 = {-1, -1, -1};
     std::array<short, 3> nIndexTvert3 = {-1, -1, -1};
+    std::array<short, 3> nIndexColor = {-1, -1, -1};
     std::array<bool, 3> bProcessed = {false, false, false};
     bool bProcessedSG = false;
     std::array<short, 3> nEdgeTransitions = {-1, -1, -1};
@@ -382,34 +450,6 @@ struct Name{
     std::string sName;
 };
 
-struct Weight{
-    std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
-    std::array<signed short, 4> nWeightIndex = {-1, -1, -1, -1};
-};
-
-struct VertexData{
-    //Binary members
-    Vector vVertex;
-    Vector vNormal;
-    Vector vUV1;
-    Vector vUV2;
-    Vector vUV3;
-    Vector vUV4;
-    Vector vColor;
-    std::array<Vector, 3> vTangent1;
-    std::array<Vector, 3> vTangent2;
-    std::array<Vector, 3> vTangent3;
-    std::array<Vector, 3> vTangent4;
-    Weight Weights;
-
-    //Added members
-    int nNodeNumber = -1;
-
-    VertexData(){}
-    VertexData(const Vector & v1, const Vector & v2): vVertex(v1), vUV1(v2) {}
-    VertexData(const Vector & v1, const Vector & v2, const Vector & v3): vVertex(v1), vUV1(v2), vNormal(v3) {}
-};
-
 // ArrayHeads should only be relevant during (de)compilation. Otherwise, use vector lengths.
 struct ArrayHead{
     unsigned int nOffset = 0;
@@ -439,40 +479,6 @@ struct Patch{
     std::vector<int> SmoothedPatches;       // Other patches by num that this patch smooths to.
     std::vector<unsigned long int*> SmoothingGroupNumbers;
     bool bUniform = false;
-};
-
-struct Vertex: public Vector{
-    int nOffset = 0;
-    VertexData MDXData;
-    int nLinkedFacesIndex = -1;
-    Vertex assign(const Vector & v){
-        fX = v.fX;
-        fY = v.fY;
-        fZ = v.fZ;
-        return *this;
-    }
-    Vector vFromRoot;
-};
-
-struct Color{
-    double fR = 0.0;
-    double fG = 0.0;
-    double fB = 0.0;
-    int nR = 0;
-    int nG = 0;
-    int nB = 0;
-
-    Color(){}
-    Color(double f1, double f2, double f3){
-        fR = f1;
-        fG = f2;
-        fB = f3;
-    }
-    ConvertToByte(){
-        nR = (int) roundf(255.0 * fR);
-        nG = (int) roundf(255.0 * fG);
-        nB = (int) roundf(255.0 * fB);
-    }
 };
 
 struct Bone{
@@ -665,6 +671,7 @@ struct MeshHeader{
     std::vector<Vector> TempTverts1;
     std::vector<Vector> TempTverts2;
     std::vector<Vector> TempTverts3;
+    std::vector<Color> TempColors;
     VertexData MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;

@@ -97,7 +97,7 @@ HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hP
 }
 
 void AppendAabb(Aabb * AABB, HTREEITEM TopLevel, int & nCount){
-    //std::cout<<"AppendAabb() DEBUG: the values are: "<<AABB->f1<<", "<<AABB->f2<<", "<<AABB->f3<<".\n";
+    //std::cout << "AppendAabb() DEBUG: the values are: " << AABB->f1 << ", " << AABB->f2 << ", " << AABB->f3 << ".\n";
     char cAabb [255];
     sprintf(cAabb, "aabb %i", nCount);
     Append(cAabb, (LPARAM) AABB, TopLevel);
@@ -171,7 +171,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
 
 void BuildTree(MDL & Mdl){
     if(!Mdl.GetFileData()){
-        std::cout<<"No data. Do not build tree.\n";
+        std::cout << "No data. Do not build tree.\n";
         return;
     }
     FileHeader & Data = *Mdl.GetFileData();
@@ -254,7 +254,7 @@ void BuildTree(MDL & Mdl){
     }
 
     TreeView_Expand(hTree, Root, TVE_EXPAND);
-    std::cout<<"Model tree building done!\n";
+    std::cout << "Model tree building done!\n";
 }
 
 void BuildTree(BWM & Bwm){
@@ -284,7 +284,7 @@ void BuildTree(BWM & Bwm){
         Append("Perimeter " + std::to_string(n), (LPARAM) &Walkmesh.perimeters[n], Array3);
     }
     InvalidateRect(hTree, nullptr, true);
-    std::cout<<"Walkmesh tree building done!\n";
+    std::cout << "Walkmesh tree building done!\n";
 }
 
 extern MDL Model;
@@ -322,10 +322,10 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Model Name: " << Data.MH.GH.sName.c_str();
             sPrint << "\r\n" << "Model Type: " << (int)Data.MH.GH.nModelType << " (" << sModelType << ")";
             sPrint << "\r\n" << "Supermodel: " << Data.MH.cSupermodelName.c_str();
-            //sPrint << "\r\n" << " Supermodel Reference: "<<Data.MH.nSupermodelReference;
+            //sPrint << "\r\n" << " Supermodel Reference: " << Data.MH.nSupermodelReference;
             sPrint << "\r\n" << "Classification: " << (short) Data.MH.nClassification << " (" << ReturnClassificationName(Data.MH.nClassification).c_str() << ")";
             sPrint << "\r\n" << "Unknown1: " << (short) Data.MH.nSubclassification;
-            sPrint << "\r\n" << "Unknown2: " << (short) Data.MH.nUnknown;
+            //sPrint << "\r\n" << "Unknown2: " << (short) Data.MH.nUnknown;
             sPrint << "\r\n" << "Affected By Fog: " << (short) Data.MH.nAffectedByFog;
 
             sPrint << "\r\n";
@@ -338,17 +338,17 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Radius: " << PrepareFloat(Data.MH.fRadius);
             sPrint << "\r\n" << "Animation Scale: " << PrepareFloat(Data.MH.fScale);
             sPrint << "\r\n";
-            sPrint << "\r\n" << "MDL Length: "<<Data.nMdlLength;
-            sPrint << "\r\n" << "MDX Length: "<<Data.nMdxLength;
-            sPrint << "\r\n" << "Function Pointer 0: "<<Data.MH.GH.nFunctionPointer0;
-            sPrint << "\r\n" << "Function Pointer 1: "<<Data.MH.GH.nFunctionPointer1;
+            sPrint << "\r\n" << "MDL Length: " << Data.nMdlLength;
+            sPrint << "\r\n" << "MDX Length: " << Data.nMdxLength;
+            sPrint << "\r\n" << "Function Pointer 0: " << Data.MH.GH.nFunctionPointer0;
+            sPrint << "\r\n" << "Function Pointer 1: " << Data.MH.GH.nFunctionPointer1;
         }
 
         /// Animations ///
         else if(cItem.at(0) == "Animations"){
             sPrint << "== Animations ==";
-            sPrint << "\r\n" << "Offset to Animation Array: "<<Data.MH.AnimationArray.nOffset;
-            sPrint << "\r\n" << "Animation Count: "<<Data.MH.Animations.size();
+            sPrint << "\r\n" << "Offset to Animation Array: " << Data.MH.AnimationArray.nOffset;
+            sPrint << "\r\n" << "Animation Count: " << Data.MH.Animations.size();
         }
         else if(cItem.at(1) == "Animations"){
             Animation * anim = (Animation * ) lParam;
@@ -394,9 +394,9 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         /// Node ///
         else if(((cItem.at(1) == "Geometry") || (cItem.at(2) == "Animations") || (cItem.at(1) == "Children") || (cItem.at(1) == "Parent")) && !bWok){
             Node * node = (Node * ) lParam;
-            //std::cout<<"Current name in problematic position: "<<cItem.at(0).c_str()<<"\n";
+            //std::cout << "Current name in problematic position: " << cItem.at(0).c_str() << "\n";
             sPrint << "== " << Data.MH.Names[node->Head.nNodeNumber].sName.c_str() << " ==";
-            sPrint << "\r\n" << "Type: " << node->Head.nType<<" (";
+            sPrint << "\r\n" << "Type: " << node->Head.nType << " (";
                 if(     node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_DANGLY)) sPrint << "dangly";
                 else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SKIN)) sPrint << "skin";
                 else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SABER)) sPrint << "saber";
@@ -408,8 +408,8 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 else if(node->Head.nType == (NODE_HEADER)) sPrint << "basic";
                 else sPrint << "unknown";
                 sPrint << ")";
-            sPrint << "\r\n" << "Name: " << node->Head.nNodeNumber << " (" << Data.MH.Names[node->Head.nNodeNumber].sName.c_str() << ")";
             sPrint << "\r\n" << "Node: " << node->Head.nSupernodeNumber;
+            sPrint << "\r\n" << "Name: " << node->Head.nNodeNumber << " (" << Data.MH.Names[node->Head.nNodeNumber].sName.c_str() << ")";
             sPrint << "\r\n" << "Offset to Root:   " << node->Head.nOffsetToRoot;
             sPrint << "\r\n" << "Offset to Node:   " << node->nOffset;
             sPrint << "\r\n" << "Offset to Parent: " << node->Head.nOffsetToParent;
@@ -418,16 +418,16 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 sPrint << "\r\n" << "Position: " << PrepareFloat(node->Head.vPos.fX);
                 sPrint << "\r\n" << "          " << PrepareFloat(node->Head.vPos.fY);
                 sPrint << "\r\n" << "          " << PrepareFloat(node->Head.vPos.fZ);
-                sPrint << "\r\n" << "Orientation: " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fX);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fX)<<")";
-                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fY);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fY)<<")";
-                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fZ);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fZ)<<")";
-                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().fW);//<<" (AA "<<PrepareFloat(node->Head.oOrient.GetAxisAngle().fAngle)<<")";
+                sPrint << "\r\n" << "Orientation: " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fX);// << " (AA " << PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fX) << ")";
+                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fY);// << " (AA " << PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fY) << ")";
+                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().vAxis.fZ);// << " (AA " << PrepareFloat(node->Head.oOrient.GetAxisAngle().vAxis.fZ) << ")";
+                sPrint << "\r\n" << "             " << PrepareFloat(node->Head.oOrient.GetQuaternion().fW);// << " (AA " << PrepareFloat(node->Head.oOrient.GetAxisAngle().fAngle) << ")";
             }
         }
         else if(cItem.at(0) == "Controllers"){
             Header * head = (Header * ) lParam;
             sPrint << "== Controllers ==";
-            sPrint << "\r\n" << "Offset: "<<head->ControllerArray.nOffset;
+            sPrint << "\r\n" << "Offset: " << head->ControllerArray.nOffset;
             sPrint << "\r\n" << "Count:  " << head->ControllerArray.nCount;
 
             std::vector<double> & fFloats = head->ControllerData;
@@ -440,7 +440,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                 char cSpaces [10];
                 int i = 0;
                 while(i < fFloats.size()){
-                    //std::cout<<string_format("Printing Controller Data float %i\n", i);
+                    //std::cout << string_format("Printing Controller Data float %i\n", i);
                     if(fFloats[i] >= 0.0 || (!std::isfinite(fFloats[i]) && !(fFloats[i] < 0.0))) sprintf(cSpaces, " ");
                     else sprintf(cSpaces, "");
                     if(i < 10) strcat(cSpaces, " ");
@@ -508,7 +508,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
                     /// unknown orientation controller type
                     else{
-                        std::cout<<"Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName<<" (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
+                        std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName << " (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
                         Error("A controller type is not being handled! Check the console and add the necessary code!");
                     }
                 }
@@ -562,7 +562,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
                 /// unknown controller type
                 else{
-                    std::cout<<"Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName<<" (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
+                    std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName << " (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
                     Error("A controller type is not being handled! Check the console and add the necessary code!");
                 }
             }
@@ -614,7 +614,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             if(nPos == 0) return;
             try{ nIndex = stoi(sName.substr(nPos+1),(size_t*) NULL); }
             catch(std::invalid_argument){
-                std::cout<<"DetermineTreeText - Lens Flare: There was an error converting the string: "<<sName.substr(nPos)<<".\n";
+                std::cout << "DetermineTreeText - Lens Flare: There was an error converting the string: " << sName.substr(nPos) << ".\n";
                 return;
             }
 
@@ -743,8 +743,8 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Radius: " << PrepareFloat(mesh->fRadius);
             sPrint << "\r\n" << "Total Area: " << PrepareFloat(mesh->fTotalArea);
             sPrint << "\r\n";
-            sPrint << "\r\n" << "Mesh Inverted Counter: "<<mesh->nMeshInvertedCounter;
-            sPrint << "\r\n" << "(Offset: "<<mesh->MeshInvertedCounterArray.nOffset<<", Count: "<<mesh->MeshInvertedCounterArray.nCount<<")";
+            sPrint << "\r\n" << "Mesh Inverted Counter: " << mesh->nMeshInvertedCounter;
+            sPrint << "\r\n" << "(Offset: " << mesh->MeshInvertedCounterArray.nOffset << ", Count: " << mesh->MeshInvertedCounterArray.nCount << ")";
             sPrint << "\r\n";
             sPrint << "\r\n" << "Function Pointer 0: " << mesh->nFunctionPointer0;
             sPrint << "\r\n" << "Function Pointer 1: " << mesh->nFunctionPointer1;
@@ -760,97 +760,97 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Offset: " << mesh->nOffsetIntoMdx;
             sPrint << "\r\n" << "Size:   " << mesh->nMdxDataSize;
             sPrint << "\r\n" << "Bitflags:";
-            sPrint << "\r\n" << "  Vertex:   "<<(mesh->nMdxDataBitmap & MDX_FLAG_VERTEX ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxVertex<<")";
-            sPrint << "\r\n" << "  Normal:   "<<(mesh->nMdxDataBitmap & MDX_FLAG_NORMAL ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxNormal<<")";
-            sPrint << "\r\n" << "  UV1:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_UV1 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxUV1<<")";
-            sPrint << "\r\n" << "  UV2:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_UV2 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxUV2<<")";
-            sPrint << "\r\n" << "  UV3:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_UV3 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxUV3<<")";
-            sPrint << "\r\n" << "  UV4:      "<<(mesh->nMdxDataBitmap & MDX_FLAG_UV4 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxUV4<<")";
-            sPrint << "\r\n" << "  Colors:   "<<(mesh->nMdxDataBitmap & MDX_FLAG_COLOR ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxColor<<")";
-            sPrint << "\r\n" << "  Tangent1: "<<(mesh->nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxTangent1<<")";
-            sPrint << "\r\n" << "  Tangent2: "<<(mesh->nMdxDataBitmap & MDX_FLAG_TANGENT2 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxTangent2<<")";
-            sPrint << "\r\n" << "  Tangent3: "<<(mesh->nMdxDataBitmap & MDX_FLAG_TANGENT3 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxTangent3<<")";
-            sPrint << "\r\n" << "  Tangent4: "<<(mesh->nMdxDataBitmap & MDX_FLAG_TANGENT4 ? 1 : 0)<<" (Offset "<<mesh->nOffsetToMdxTangent4<<")";
+            sPrint << "\r\n" << "  Vertex:   " << (mesh->nMdxDataBitmap & MDX_FLAG_VERTEX ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxVertex << ")";
+            sPrint << "\r\n" << "  Normal:   " << (mesh->nMdxDataBitmap & MDX_FLAG_NORMAL ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxNormal << ")";
+            sPrint << "\r\n" << "  UV1:      " << (mesh->nMdxDataBitmap & MDX_FLAG_UV1 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxUV1 << ")";
+            sPrint << "\r\n" << "  UV2:      " << (mesh->nMdxDataBitmap & MDX_FLAG_UV2 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxUV2 << ")";
+            sPrint << "\r\n" << "  UV3:      " << (mesh->nMdxDataBitmap & MDX_FLAG_UV3 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxUV3 << ")";
+            sPrint << "\r\n" << "  UV4:      " << (mesh->nMdxDataBitmap & MDX_FLAG_UV4 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxUV4 << ")";
+            sPrint << "\r\n" << "  Colors:   " << (mesh->nMdxDataBitmap & MDX_FLAG_COLOR ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxColor << ")";
+            sPrint << "\r\n" << "  Tangent1: " << (mesh->nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxTangent1 << ")";
+            sPrint << "\r\n" << "  Tangent2: " << (mesh->nMdxDataBitmap & MDX_FLAG_TANGENT2 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxTangent2 << ")";
+            sPrint << "\r\n" << "  Tangent3: " << (mesh->nMdxDataBitmap & MDX_FLAG_TANGENT3 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxTangent3 << ")";
+            sPrint << "\r\n" << "  Tangent4: " << (mesh->nMdxDataBitmap & MDX_FLAG_TANGENT4 ? 1 : 0) << " (Offset " << mesh->nOffsetToMdxTangent4 << ")";
 
             if(Model.Mdx){
                 sPrint << "\r\n";
                 sPrint << "\r\n" << "-- Extra MDX Data --";
                 VertexData * mdx = &mesh->MDXData;
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                    sPrint << "\r\n" << "Vertex: " << PrepareFloat(mdx->vVertex.fX);
-                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fY);
-                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fZ);
+                    sPrint << "\r\n" << "Vertex: " << PrepareFloat(mdx->vVertex.fX, false);
+                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fY, false);
+                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fZ, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
-                    sPrint << "\r\n" << "Normal: " << PrepareFloat(mdx->vNormal.fX);
-                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY);
-                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ);
+                    sPrint << "\r\n" << "Normal: " << PrepareFloat(mdx->vNormal.fX, false);
+                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY, false);
+                    sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
-                    sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX);
-                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV1.fY);
+                    sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX, false);
+                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV1.fY, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
-                    sPrint << "\r\n" << "UV2: " << PrepareFloat(mdx->vUV2.fX);
-                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV2.fY);
+                    sPrint << "\r\n" << "UV2: " << PrepareFloat(mdx->vUV2.fX, false);
+                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV2.fY, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
-                    sPrint << "\r\n" << "UV3: " << PrepareFloat(mdx->vUV3.fX);
-                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV3.fY);
+                    sPrint << "\r\n" << "UV3: " << PrepareFloat(mdx->vUV3.fX, false);
+                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV3.fY, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
-                    sPrint << "\r\n" << "UV4: " << PrepareFloat(mdx->vUV4.fX);
-                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV4.fY);
+                    sPrint << "\r\n" << "UV4: " << PrepareFloat(mdx->vUV4.fX, false);
+                    sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV4.fY, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
-                    sPrint << "\r\n" << "Tangent 1:   " << PrepareFloat(mdx->vTangent1[0].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fZ);
-                    sPrint << "\r\n" << "Bitangent 1: " << PrepareFloat(mdx->vTangent1[1].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fZ);
-                    sPrint << "\r\n" << "Normal 1:    " << PrepareFloat(mdx->vTangent1[2].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fZ);
+                    sPrint << "\r\n" << "Tangent 1:   " << PrepareFloat(mdx->vTangent1[0].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fZ, false);
+                    sPrint << "\r\n" << "Bitangent 1: " << PrepareFloat(mdx->vTangent1[1].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fZ, false);
+                    sPrint << "\r\n" << "Normal 1:    " << PrepareFloat(mdx->vTangent1[2].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fZ, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
-                    sPrint << "\r\n" << "Tangent 2:   " << PrepareFloat(mdx->vTangent2[0].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fZ);
-                    sPrint << "\r\n" << "Bitangent 2: " << PrepareFloat(mdx->vTangent2[1].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fZ);
-                    sPrint << "\r\n" << "Normal 2:    " << PrepareFloat(mdx->vTangent2[2].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fZ);
+                    sPrint << "\r\n" << "Tangent 2:   " << PrepareFloat(mdx->vTangent2[0].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fZ, false);
+                    sPrint << "\r\n" << "Bitangent 2: " << PrepareFloat(mdx->vTangent2[1].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fZ, false);
+                    sPrint << "\r\n" << "Normal 2:    " << PrepareFloat(mdx->vTangent2[2].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fZ, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
-                    sPrint << "\r\n" << "Tangent 3:   " << PrepareFloat(mdx->vTangent3[0].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fZ);
-                    sPrint << "\r\n" << "Bitangent 3: " << PrepareFloat(mdx->vTangent3[1].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fZ);
-                    sPrint << "\r\n" << "Normal 3:    " << PrepareFloat(mdx->vTangent3[2].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fZ);
+                    sPrint << "\r\n" << "Tangent 3:   " << PrepareFloat(mdx->vTangent3[0].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fZ, false);
+                    sPrint << "\r\n" << "Bitangent 3: " << PrepareFloat(mdx->vTangent3[1].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fZ, false);
+                    sPrint << "\r\n" << "Normal 3:    " << PrepareFloat(mdx->vTangent3[2].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fZ, false);
                 }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
-                    sPrint << "\r\n" << "Tangent 4:   " << PrepareFloat(mdx->vTangent4[0].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fZ);
-                    sPrint << "\r\n" << "Bitangent 4: " << PrepareFloat(mdx->vTangent4[1].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fZ);
-                    sPrint << "\r\n" << "Normal 4:    " << PrepareFloat(mdx->vTangent4[2].fX);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY);
-                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ);
+                    sPrint << "\r\n" << "Tangent 4:   " << PrepareFloat(mdx->vTangent4[0].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fZ, false);
+                    sPrint << "\r\n" << "Bitangent 4: " << PrepareFloat(mdx->vTangent4[1].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fZ, false);
+                    sPrint << "\r\n" << "Normal 4:    " << PrepareFloat(mdx->vTangent4[2].fX, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY, false);
+                    sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ, false);
                 }
                 if(node.Head.nType & NODE_SKIN){
-                    sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0]);
-                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1]);
-                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2]);
-                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3]);
+                    sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0], false);
+                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1], false);
+                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2], false);
+                    sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3], false);
                     sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0];
                     sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1];
                     sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2];
@@ -860,12 +860,12 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         }
         else if(cItem.at(1) == "Vertices"){
             Vertex * vert = (Vertex * ) lParam;
-            sPrint <<           "== " <<cItem.at(0).c_str() << " ==";
+            sPrint <<           "== " << cItem.at(0).c_str() << " ==";
             if(!Model.bXbox){
                 sPrint << "\r\n" << "-- MDL Data --";
-                sPrint << "\r\n" << "Vertex: " << PrepareFloat(vert->fX);
-                sPrint << "\r\n" << "        " << PrepareFloat(vert->fY);
-                sPrint << "\r\n" << "        " << PrepareFloat(vert->fZ);
+                sPrint << "\r\n" << "Vertex: " << PrepareFloat(vert->fX, false);
+                sPrint << "\r\n" << "        " << PrepareFloat(vert->fY, false);
+                sPrint << "\r\n" << "        " << PrepareFloat(vert->fZ, false);
             }
 
             VertexData * mdx = &vert->MDXData;
@@ -875,80 +875,80 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                     if(!Model.bXbox) sPrint << "\r\n";
                     sPrint << "\r\n" << "-- MDX Data --";
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
-                        sPrint << "\r\n" << "Vertex: " << PrepareFloat(mdx->vVertex.fX);
-                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fY);
-                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fZ);
+                        sPrint << "\r\n" << "Vertex: " << PrepareFloat(mdx->vVertex.fX, false);
+                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fY, false);
+                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vVertex.fZ, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
-                        sPrint << "\r\n" << "Normal: " << PrepareFloat(mdx->vNormal.fX);
-                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY);
-                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ);
+                        sPrint << "\r\n" << "Normal: " << PrepareFloat(mdx->vNormal.fX, false);
+                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY, false);
+                        sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
-                        sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX);
-                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV1.fY);
+                        sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX, false);
+                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV1.fY, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
-                        sPrint << "\r\n" << "UV2: " << PrepareFloat(mdx->vUV2.fX);
-                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV2.fY);
+                        sPrint << "\r\n" << "UV2: " << PrepareFloat(mdx->vUV2.fX, false);
+                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV2.fY, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
-                        sPrint << "\r\n" << "UV3: " << PrepareFloat(mdx->vUV3.fX);
-                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV3.fY);
+                        sPrint << "\r\n" << "UV3: " << PrepareFloat(mdx->vUV3.fX, false);
+                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV3.fY, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
-                        sPrint << "\r\n" << "UV4: " << PrepareFloat(mdx->vUV4.fX);
-                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV4.fY);
+                        sPrint << "\r\n" << "UV4: " << PrepareFloat(mdx->vUV4.fX, false);
+                        sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV4.fY, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
-                        sPrint << "\r\n" << "Tangent 1:   " << PrepareFloat(mdx->vTangent1[0].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fZ);
-                        sPrint << "\r\n" << "Bitangent 1: " << PrepareFloat(mdx->vTangent1[1].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fZ);
-                        sPrint << "\r\n" << "Normal 1:    " << PrepareFloat(mdx->vTangent1[2].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fZ);
+                        sPrint << "\r\n" << "Tangent 1:   " << PrepareFloat(mdx->vTangent1[0].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[0].fZ, false);
+                        sPrint << "\r\n" << "Bitangent 1: " << PrepareFloat(mdx->vTangent1[1].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[1].fZ, false);
+                        sPrint << "\r\n" << "Normal 1:    " << PrepareFloat(mdx->vTangent1[2].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent1[2].fZ, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
-                        sPrint << "\r\n" << "Tangent 2:   " << PrepareFloat(mdx->vTangent2[0].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fZ);
-                        sPrint << "\r\n" << "Bitangent 2: " << PrepareFloat(mdx->vTangent2[1].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fZ);
-                        sPrint << "\r\n" << "Normal 2:    " << PrepareFloat(mdx->vTangent2[2].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fZ);
+                        sPrint << "\r\n" << "Tangent 2:   " << PrepareFloat(mdx->vTangent2[0].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[0].fZ, false);
+                        sPrint << "\r\n" << "Bitangent 2: " << PrepareFloat(mdx->vTangent2[1].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[1].fZ, false);
+                        sPrint << "\r\n" << "Normal 2:    " << PrepareFloat(mdx->vTangent2[2].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent2[2].fZ, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
-                        sPrint << "\r\n" << "Tangent 3:   " << PrepareFloat(mdx->vTangent3[0].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fZ);
-                        sPrint << "\r\n" << "Bitangent 3: " << PrepareFloat(mdx->vTangent3[1].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fZ);
-                        sPrint << "\r\n" << "Normal 3:    " << PrepareFloat(mdx->vTangent3[2].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fZ);
+                        sPrint << "\r\n" << "Tangent 3:   " << PrepareFloat(mdx->vTangent3[0].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[0].fZ, false);
+                        sPrint << "\r\n" << "Bitangent 3: " << PrepareFloat(mdx->vTangent3[1].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[1].fZ, false);
+                        sPrint << "\r\n" << "Normal 3:    " << PrepareFloat(mdx->vTangent3[2].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent3[2].fZ, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
-                        sPrint << "\r\n" << "Tangent 4:   " << PrepareFloat(mdx->vTangent4[0].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fZ);
-                        sPrint << "\r\n" << "Bitangent 4: " << PrepareFloat(mdx->vTangent4[1].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fZ);
-                        sPrint << "\r\n" << "Normal 4:    " << PrepareFloat(mdx->vTangent4[2].fX);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY);
-                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ);
+                        sPrint << "\r\n" << "Tangent 4:   " << PrepareFloat(mdx->vTangent4[0].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[0].fZ, false);
+                        sPrint << "\r\n" << "Bitangent 4: " << PrepareFloat(mdx->vTangent4[1].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[1].fZ, false);
+                        sPrint << "\r\n" << "Normal 4:    " << PrepareFloat(mdx->vTangent4[2].fX, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fY, false);
+                        sPrint << "\r\n" << "             " << PrepareFloat(mdx->vTangent4[2].fZ, false);
                     }
                     if(node.Head.nType & NODE_SKIN){
-                        sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2]);
-                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3]);
+                        sPrint << "\r\n" << "Weight Value: " << PrepareFloat(mdx->Weights.fWeightValue[0], false);
+                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1], false);
+                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2], false);
+                        sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3], false);
                         sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0];
                         sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1];
                         sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2];
@@ -964,8 +964,8 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Count:  " << mesh->FaceArray.nCount;
             sPrint << "\r\n";
             sPrint << "\r\n" << "-- Vertex Indices --";
-            sPrint << "\r\n" << "Indices Count: "<<mesh->nVertIndicesCount << " (Offset: "<<mesh->IndexCounterArray.nOffset<<")";
-            sPrint << "\r\n" << "Indices Offset: "<<mesh->nVertIndicesLocation << " (Offset: "<<mesh->IndexLocationArray.nOffset<<")";
+            sPrint << "\r\n" << "Indices Count: " << mesh->nVertIndicesCount << " (Offset: " << mesh->IndexCounterArray.nOffset << ")";
+            sPrint << "\r\n" << "Indices Offset: " << mesh->nVertIndicesLocation << " (Offset: " << mesh->IndexLocationArray.nOffset << ")";
             //sPrint << "\r\n";
             for(int n = 0; n < mesh->VertIndices.size(); n++){
                 sPrint << "\r\n" << "Face " << n << ":  " << mesh->VertIndices.at(n).at(0) << ", " << mesh->VertIndices.at(n).at(1) << ", " << mesh->VertIndices.at(n).at(2);
@@ -974,27 +974,27 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         else if(cItem.at(1) == "Faces"){
             Face * face = (Face * ) lParam;
             sPrint << "== " << cItem.at(0).c_str() << " ==";
-            sPrint << "\r\n" << "Face Normal: " << PrepareFloat(face->vNormal.fX);
-            sPrint << "\r\n" << "             " << PrepareFloat(face->vNormal.fY);
-            sPrint << "\r\n" << "             " << PrepareFloat(face->vNormal.fZ);
-            sPrint << "\r\n" << "Plane Distance: " << PrepareFloat(face->fDistance);
+            sPrint << "\r\n" << "Face Normal: " << PrepareFloat(face->vNormal.fX, false);
+            sPrint << "\r\n" << "             " << PrepareFloat(face->vNormal.fY, false);
+            sPrint << "\r\n" << "             " << PrepareFloat(face->vNormal.fZ, false);
+            sPrint << "\r\n" << "Plane Distance: " << PrepareFloat(face->fDistance, false);
             sPrint << "\r\n" << "Material ID: " << face->nMaterialID;
-            sPrint << "\r\n" << "Adjacent Faces: "<<face->nAdjacentFaces[0]<<", "<<face->nAdjacentFaces[1]<<", "<<face->nAdjacentFaces[2];
-            sPrint << "\r\n" << "Vertex Indices: "<<face->nIndexVertex[0]<<", "<<face->nIndexVertex[1]<<", "<<face->nIndexVertex[2];
+            sPrint << "\r\n" << "Adjacent Faces: " << face->nAdjacentFaces[0] << ", " << face->nAdjacentFaces[1] << ", " << face->nAdjacentFaces[2];
+            sPrint << "\r\n" << "Vertex Indices: " << face->nIndexVertex[0] << ", " << face->nIndexVertex[1] << ", " << face->nIndexVertex[2];
             sPrint << "\r\n";
-            sPrint << "\r\n" << "Area: "<<PrepareFloat(face->fArea);
+            sPrint << "\r\n" << "Area: " << PrepareFloat(face->fArea);
             sPrint << "\r\n" << "Smoothing groups: ";
             for(int n = 0; n < 32; n++){
-                if(pown(2, n) & face->nSmoothingGroup) sPrint << n+1 <<" ";
+                if(pown(2, n) & face->nSmoothingGroup) sPrint << n+1 << " ";
             }
             /*
             sPrint << "\r\n";
-            sPrint << "\r\nBounding Box Min: "<<std::setprecision(5)<<face->vBBmin.fX;
-            sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmin.fY;
-            sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmin.fZ;
-            sPrint << "\r\nBounding Box Max: "<<std::setprecision(5)<<face->vBBmax.fX;
-            sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fY;
-            sPrint << "\r\n                  "<<std::setprecision(5)<<face->vBBmax.fZ;
+            sPrint << "\r\nBounding Box Min: " << std::setprecision(5) << face->vBBmin.fX;
+            sPrint << "\r\n                  " << std::setprecision(5) << face->vBBmin.fY;
+            sPrint << "\r\n                  " << std::setprecision(5) << face->vBBmin.fZ;
+            sPrint << "\r\nBounding Box Max: " << std::setprecision(5) << face->vBBmax.fX;
+            sPrint << "\r\n                  " << std::setprecision(5) << face->vBBmax.fY;
+            sPrint << "\r\n                  " << std::setprecision(5) << face->vBBmax.fZ;
             */
         }
 
@@ -1008,7 +1008,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "To Weight Index: " << skin->nOffsetToMdxBoneIndices;
             sPrint << "\r\n";
             sPrint << "\r\n" << "-- Bone Indices --";
-            for(int n = 0; n < 16; n++) sPrint << "\r\n" << "Index "<<n+1<<": "<<skin->nBoneIndices[n];
+            for(int n = 0; n < 16; n++) sPrint << "\r\n" << "Index " << n+1 << ": " << skin->nBoneIndices[n];
         }
         else if(cItem.at(0) == "Bones"){
             SkinHeader * skin = (SkinHeader * ) lParam;
@@ -1032,13 +1032,13 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             Bone * bone = (Bone * ) lParam;
             sPrint << "== " << cItem.at(0).c_str() << " ==";
             sPrint << "\r\n" << "Bonemap: " << bone->nBonemap;
-            sPrint << "\r\n" << "TBone: "<<PrepareFloat(bone->TBone.fX);
-            sPrint << "\r\n" << "       "<<PrepareFloat(bone->TBone.fY);
-            sPrint << "\r\n" << "       "<<PrepareFloat(bone->TBone.fZ);
-            sPrint << "\r\n" << "QBone: "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fX);
-            sPrint << "\r\n" << "       "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fY);
-            sPrint << "\r\n" << "       "<<PrepareFloat(bone->QBone.GetQuaternion().vAxis.fZ);
-            sPrint << "\r\n" << "       "<<PrepareFloat(bone->QBone.GetQuaternion().fW);
+            sPrint << "\r\n" << "TBone: " << PrepareFloat(bone->TBone.fX);
+            sPrint << "\r\n" << "       " << PrepareFloat(bone->TBone.fY);
+            sPrint << "\r\n" << "       " << PrepareFloat(bone->TBone.fZ);
+            sPrint << "\r\n" << "QBone: " << PrepareFloat(bone->QBone.GetQuaternion().vAxis.fX);
+            sPrint << "\r\n" << "       " << PrepareFloat(bone->QBone.GetQuaternion().vAxis.fY);
+            sPrint << "\r\n" << "       " << PrepareFloat(bone->QBone.GetQuaternion().vAxis.fZ);
+            sPrint << "\r\n" << "       " << PrepareFloat(bone->QBone.GetQuaternion().fW);
         }
 
         /// Danglymesh ///
@@ -1067,7 +1067,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             if(nPos == 0) return;
             try{ nIndex = stoi(sName.substr(nPos+1),(size_t*) NULL); }
             catch(std::invalid_argument){
-                std::cout<<"DetermineTreeText - Dangly Vertices: There was an error converting the string: " << sName.substr(nPos) << ".\n";
+                std::cout << "DetermineTreeText - Dangly Vertices: There was an error converting the string: " << sName.substr(nPos) << ".\n";
                 return;
             }
 
@@ -1082,7 +1082,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         else if(cItem.at(0) == "Aabb"){
             WalkmeshHeader * walk = (WalkmeshHeader * ) lParam;
             sPrint <<           "== AABB Tree ==";
-            sPrint << "\r\n" << "Offset to AABB Tree: "<< walk->nOffsetToAabb;
+            sPrint << "\r\n" << "Offset to AABB Tree: " << walk->nOffsetToAabb;
         }
         else if(cItem.at(1) == "Aabb"){
             Aabb * aabb = (Aabb * ) lParam;
@@ -1095,17 +1095,17 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             else if(aabb->nProperty == 32) sProperty = "Negative Z";
             else sProperty = "None";
             sPrint <<           "== " << cItem.at(0) << " ==";
-            sPrint << "\r\n" << "Offset: "<<aabb->nOffset;
-            sPrint << "\r\n" << "Bounding Box Min: "<<PrepareFloat(aabb->vBBmin.fX);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmin.fY);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmin.fZ);
-            sPrint << "\r\n" << "Bounding Box Max: "<<PrepareFloat(aabb->vBBmax.fX);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmax.fY);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmax.fZ);
-            sPrint << "\r\n" << "Face Index: "<<aabb->nID;
+            sPrint << "\r\n" << "Offset: " << aabb->nOffset;
+            sPrint << "\r\n" << "Bounding Box Min: " << PrepareFloat(aabb->vBBmin.fX);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmin.fY);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmin.fZ);
+            sPrint << "\r\n" << "Bounding Box Max: " << PrepareFloat(aabb->vBBmax.fX);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmax.fY);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmax.fZ);
+            sPrint << "\r\n" << "Face Index: " << aabb->nID;
             sPrint << "\r\n" << "2nd Child Property: " << aabb->nProperty << " (" << sProperty << ")";
-            sPrint << "\r\n" << "Offset to Child 1: "<<aabb->nChild1;
-            sPrint << "\r\n" << "Offset to Child 2: "<<aabb->nChild2;
+            sPrint << "\r\n" << "Offset to Child 1: " << aabb->nChild1;
+            sPrint << "\r\n" << "Offset to Child 2: " << aabb->nChild2;
         }
 
         /// Saber ///
@@ -1176,22 +1176,22 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             else if(aabb->nProperty == 32) sProperty = "Negative Z";
             else sProperty = "None";
             sPrint <<           "== " << cItem.at(0) << " ==";
-            sPrint << "\r\n" << "Bounding Box Min: "<<PrepareFloat(aabb->vBBmin.fX);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmin.fY);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmin.fZ);
-            sPrint << "\r\n" << "Bounding Box Max: "<<PrepareFloat(aabb->vBBmax.fX);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmax.fY);
-            sPrint << "\r\n" << "                  "<<PrepareFloat(aabb->vBBmax.fZ);
-            sPrint << "\r\n" << "Face Index: "<<aabb->nID;
+            sPrint << "\r\n" << "Bounding Box Min: " << PrepareFloat(aabb->vBBmin.fX);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmin.fY);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmin.fZ);
+            sPrint << "\r\n" << "Bounding Box Max: " << PrepareFloat(aabb->vBBmax.fX);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmax.fY);
+            sPrint << "\r\n" << "                  " << PrepareFloat(aabb->vBBmax.fZ);
+            sPrint << "\r\n" << "Face Index: " << aabb->nID;
             sPrint << "\r\n" << "2nd Child Property: " << aabb->nProperty << " (" << sProperty << ")";
-            sPrint << "\r\n" << "Child 1 Index: "<< (signed int) aabb->nChild1;
-            sPrint << "\r\n" << "Child 2 Index: "<< (signed int) aabb->nChild2;
-            sPrint << "\r\n" << "Unknown: "<<aabb->nExtra;
+            sPrint << "\r\n" << "Child 1 Index: " << (signed int) aabb->nChild1;
+            sPrint << "\r\n" << "Child 2 Index: " << (signed int) aabb->nChild2;
+            sPrint << "\r\n" << "Unknown: " << aabb->nExtra;
         }
         else if((cItem.at(0) == "Vertices")){
             sPrint <<           "== Vertices ==";
-            sPrint << "\r\n" << "Offset: "<<Data.nOffsetToVerts;
-            sPrint << "\r\n" << "Count: "<<Data.nNumberOfVerts;
+            sPrint << "\r\n" << "Offset: " << Data.nOffsetToVerts;
+            sPrint << "\r\n" << "Count: " << Data.nNumberOfVerts;
         }
         else if(cItem.at(1) == "Vertices"){
             Vector * vert = (Vector * ) lParam;
@@ -1219,16 +1219,16 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Plane Distance: " << PrepareFloat(face->fDistance);
             sPrint << "\r\n" << "Material ID: " << face->nMaterialID;
             if(face->nMaterialID != 7)
-                sPrint << "\r\n" << "Adjacent Edges: "<<face->nAdjacentFaces[0]<<", "<<face->nAdjacentFaces[1]<<", "<<face->nAdjacentFaces[2];
-            sPrint << "\r\n" << "Vertex Indices: "<<face->nIndexVertex[0]<<", "<<face->nIndexVertex[1]<<", "<<face->nIndexVertex[2];
+                sPrint << "\r\n" << "Adjacent Edges: " << face->nAdjacentFaces[0] << ", " << face->nAdjacentFaces[1] << ", " << face->nAdjacentFaces[2];
+            sPrint << "\r\n" << "Vertex Indices: " << face->nIndexVertex[0] << ", " << face->nIndexVertex[1] << ", " << face->nIndexVertex[2];
             /*
             sPrint << "\r\n";
-            sPrint << "\r\n" << "Bounding Box Min: "<<std::setprecision(5)<<face->vBBmin.fX;
-            sPrint << "\r\n" << "                  "<<std::setprecision(5)<<face->vBBmin.fY;
-            sPrint << "\r\n" << "                  "<<std::setprecision(5)<<face->vBBmin.fZ;
-            sPrint << "\r\n" << "Bounding Box Max: "<<std::setprecision(5)<<face->vBBmax.fX;
-            sPrint << "\r\n" << "                  "<<std::setprecision(5)<<face->vBBmax.fY;
-            sPrint << "\r\n" << "                  "<<std::setprecision(5)<<face->vBBmax.fZ;
+            sPrint << "\r\n" << "Bounding Box Min: " << std::setprecision(5) << face->vBBmin.fX;
+            sPrint << "\r\n" << "                  " << std::setprecision(5) << face->vBBmin.fY;
+            sPrint << "\r\n" << "                  " << std::setprecision(5) << face->vBBmin.fZ;
+            sPrint << "\r\n" << "Bounding Box Max: " << std::setprecision(5) << face->vBBmax.fX;
+            sPrint << "\r\n" << "                  " << std::setprecision(5) << face->vBBmax.fY;
+            sPrint << "\r\n" << "                  " << std::setprecision(5) << face->vBBmax.fZ;
             */
         }
         else if(cItem.at(0) == "Edges"){

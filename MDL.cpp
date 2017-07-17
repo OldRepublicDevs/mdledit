@@ -21,7 +21,9 @@ int MDL::GetNameIndex(std::string sName){
             if(Names[n].sName == sName) return n;
             n++;
         }
+        //throw mdlexception("Node name not found: " + sName);
     }
+    //throw mdlexception("This model has no data structure.");
     return -1;
 }
 
@@ -94,15 +96,15 @@ unsigned int GetFunctionPointer(unsigned int FN_PTR, int n, bool bXbox, bool bK2
             }
         }
     }
-    return 0;
+    return -1;
 }
 
 unsigned int MDL::FunctionPointer1(unsigned int FN_PTR){
-    GetFunctionPointer(FN_PTR, 1, bXbox, bK2);
+    return GetFunctionPointer(FN_PTR, 1, bXbox, bK2);
 }
 
 unsigned int MDL::FunctionPointer2(unsigned int FN_PTR){
-    GetFunctionPointer(FN_PTR, 2, bXbox, bK2);
+    return GetFunctionPointer(FN_PTR, 2, bXbox, bK2);
 }
 
 void MDL::GetLytPositionFromWok(){
@@ -111,6 +113,7 @@ void MDL::GetLytPositionFromWok(){
     if(!Wok->GetData()) return;
     FileHeader & Data = *FH;
     BWMHeader & data = *Wok->GetData();
+    if(data.faces.size() == 0) return;
 
     int nSearchMaterial = data.faces.front().nMaterialID;
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
@@ -171,7 +174,7 @@ Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
     else{
         std::vector<Node> & Array = FH->MH.Animations[nAnimation].ArrayOfNodes;
         for(int n = 0; n < Array.size(); n++){
-            //std::cout<<"Looping through animation nodes for our node\n";
+            //std::cout << "Looping through animation nodes for our node\n";
             if(Array[n].Head.nNodeNumber == nIndex) return Array[n];
         }
     }
@@ -286,21 +289,21 @@ bool MDL::ReadAscii(){
             FlushData();
             return false;
         }
-        else std::cout<<"Mdl ascii read succesfully!\n";
+        else std::cout << "Mdl ascii read succesfully!\n";
     }
     if(PwkAscii){
         if(!PwkAscii->ReadWalkmesh(*this, true)){
             FlushData();
             return false;
         }
-        else std::cout<<"Pwk ascii read succesfully!\n";
+        else std::cout << "Pwk ascii read succesfully!\n";
     }
     if(DwkAscii){
         if(!DwkAscii->ReadWalkmesh(*this, false)){
             FlushData();
             return false;
         }
-        else std::cout<<"Dwk ascii read succesfully!\n";
+        else std::cout << "Dwk ascii read succesfully!\n";
     }
     return true;
 }
@@ -384,7 +387,7 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         bool bReturn = true;
         if(bOpen){
             Supermodel.reset(new MDL);
-            std::cout<<"Reading supermodel: \n"<<sNewMdl<<"\n";
+            std::cout << "Reading supermodel: \n" << sNewMdl << "\n";
             file.seekg(0, std::ios::end);
             std::streampos length = file.tellg();
             file.seekg(0, std::ios::beg);
@@ -446,7 +449,7 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
         }
         bool bReturn = true;
         if(bOpen){
-            std::cout<<"Reading supermodel: \n"<<sNewMdl<<"\n";
+            std::cout << "Reading supermodel: \n" << sNewMdl << "\n";
             file.seekg(0, std::ios::end);
             std::streampos length = file.tellg();
             file.seekg(0, std::ios::beg);
@@ -475,10 +478,11 @@ bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
 /// It is very expensive, so modify with care to keep it efficient. Any calculations that can be performed outside, should be.
 void MDL::CreatePatches(){
     FileHeader & Data = *FH;
+    Timer tPatches;
 
     ProgressSize(0, Data.MH.ArrayOfNodes.size());
     Report("Building Patch array... (this may take a while)");
-    std::cout<<"Building Patch array... (this may take a while)\n";
+    std::cout << "Building Patch array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         /// Currently, this takes all meshes, including skins, danglymeshes and walkmeshes, with render on or off
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
@@ -508,6 +512,9 @@ void MDL::CreatePatches(){
 
                             /// Loop through all the verts in the mesh and look for matching vertices - theoretically there is no way to optimize this part
                             for(int v2 = v; v2 < node2.Mesh.Vertices.size(); v2++){
+                                /// Skip if this vertex has been processed
+                                if(node2.Mesh.Vertices.at(v2).nLinkedFacesIndex >= 0) continue;
+
                                 /// Check if vertices are equal (enough)
                                 Vector & vCoords2 = node2.Mesh.Vertices.at(v2).vFromRoot;
                                 if(vCoords.Compare(vCoords2)){
@@ -543,12 +550,14 @@ void MDL::CreatePatches(){
         }
     }
     ProgressPos(Data.MH.ArrayOfNodes.size());
-    std::cout<<"Done creating patches!\n";
+    int nPatches = 0;
+    for(std::vector<Patch> & patch : Data.MH.PatchArrayPointers) nPatches += patch.size();
+    std::cout << "Done creating patches in " << tPatches.GetTime() << ".\n"; //"! Total: " << nPatches << ", vs " << Data.MH.nTotalVertCount << " verts \n";
     /*
     Report("Building LinkedFaces array... (this may take a while)");
-    std::cout<<"Building LinkedFaces array... (this may take a while)\n";
+    std::cout << "Building LinkedFaces array... (this may take a while)\n";
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        //std::cout<<"Linking faces for node "<<n+1<<"/"<<Data.MH.ArrayOfNodes.size()<<".\n";
+        //std::cout << "Linking faces for node " << n+1 << "/" << Data.MH.ArrayOfNodes.size() << ".\n";
         //Currently, this takes all meshes, including skins, danglymeshes and walkmeshes
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
             Node & node = Data.MH.ArrayOfNodes.at(n);
@@ -605,9 +614,9 @@ void MDL::CreatePatches(){
             ProgressPos(n);
         }
     }
-    std::cout<<"Done building LinkedFaces array!\n";
+    std::cout << "Done building LinkedFaces array!\n";
     ProgressPos(Data.MH.ArrayOfNodes.size());
-    std::cout<<"Creating patches... \n";
+    std::cout << "Creating patches... \n";
     Report("Building patches...");
     for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
         //For every vector of linked faces, create a vector of patches
@@ -645,7 +654,7 @@ void MDL::CreatePatches(){
                         }
                     }
                 }
-                //file<<"   patch "<<PatchVector.size()<<" ("<<Data.MH.Names.at(newpatch.nNodeNumber).sName.c_str()<<", vert "<<newpatch.nVertex<<") contains faces: "<<ssReport.str()<<"\n";
+                //file << "   patch " << PatchVector.size() << " (" << Data.MH.Names.at(newpatch.nNodeNumber).sName.c_str() << ", vert " << newpatch.nVertex << ") contains faces: " << ssReport.str() << "\n";
                 PatchVector.push_back(std::move(newpatch));
             }
         }
@@ -653,7 +662,7 @@ void MDL::CreatePatches(){
     }
     Data.MH.LinkedFacesPointers.resize(0);
     Data.MH.LinkedFacesPointers.shrink_to_fit();
-    std::cout<<"Done creating patches! LinkedFace array deleted!\n";
+    std::cout << "Done creating patches! LinkedFace array deleted!\n";
     */
 }
 
@@ -690,81 +699,81 @@ void MDL::CheckPeculiarities(){
     std::stringstream ssReturn;
     bool bUpdate = false;
     Report("Checking for peculiarities...");
-    ssReturn<<"Lucky you! Your model has some peculiarities:";
+    ssReturn << "Lucky you! Your model has some peculiarities:";
     if(!Data.MH.GH.RuntimeArray1.empty()){
-        ssReturn<<"\r\n - First empty runtime array in the GH has a some nonzero value!";
+        ssReturn << "\r\n - First empty runtime array in the GH has a some nonzero value!";
         bUpdate = true;
     }
     if(!Data.MH.GH.RuntimeArray2.empty()){
-        ssReturn<<"\r\n - Second empty runtime array in the GH has a some nonzero value!";
+        ssReturn << "\r\n - Second empty runtime array in the GH has a some nonzero value!";
         bUpdate = true;
     }
     if(Data.MH.GH.nRefCount != 0){
-        ssReturn<<"\r\n - RefCount has a value!";
+        ssReturn << "\r\n - RefCount has a value!";
         bUpdate = true;
     }
     if(Data.MH.GH.nModelType != 2){
-        ssReturn<<"\r\n - Header ModelType different than 2!";
+        ssReturn << "\r\n - Header ModelType different than 2!";
         bUpdate = true;
     }
     if(Data.MH.nUnknown != 0){
-        ssReturn<<"\r\n - Second classification padding number different than 0!";
+        ssReturn << "\r\n - Second classification padding number different than 0!";
         bUpdate = true;
     }
     if(Data.MH.nChildModelCount != 0){
-        ssReturn<<"\r\n - ChildModelCount has a value!";
+        ssReturn << "\r\n - ChildModelCount has a value!";
         bUpdate = true;
     }
     if(Data.MH.AnimationArray.GetDoCountsDiffer()){
-        ssReturn<<"\r\n - AnimationArray counts differ!";
+        ssReturn << "\r\n - AnimationArray counts differ!";
         bUpdate = true;
     }
     if(Data.MH.nPadding != 0){
-        ssReturn<<"\r\n - Unknown int32 after the Root Head Node Offset in the MH has a value!";
+        ssReturn << "\r\n - Unknown int32 after the Root Head Node Offset in the MH has a value!";
         bUpdate = true;
     }
     if(Data.MH.nMdxLength2 != Data.nMdxLength){
-        ssReturn<<"\r\n - MdxLength in FH and MdxLength2 in MH don't have the same value!";
+        ssReturn << "\r\n - MdxLength in FH and MdxLength2 in MH don't have the same value!";
         bUpdate = true;
     }
     if(Data.MH.nOffsetIntoMdx != 0){
-        ssReturn<<"\r\n - OffsetIntoMdx after the MdxLength2 in the MH has a value!";
+        ssReturn << "\r\n - OffsetIntoMdx after the MdxLength2 in the MH has a value!";
         bUpdate = true;
     }
     if(Data.MH.NameArray.GetDoCountsDiffer()){
-        ssReturn<<"\r\n - NameArray counts differ!";
+        ssReturn << "\r\n - NameArray counts differ!";
         bUpdate = true;
     }
     for(int a = 0; a < Data.MH.AnimationArray.nCount; a++){
         if(!Data.MH.GH.RuntimeArray1.empty()){
-            ssReturn<<"\r\n   - First empty runtime array in the Animation GH has a some nonzero value!";
+            ssReturn << "\r\n   - First empty runtime array in the Animation GH has a some nonzero value!";
             bUpdate = true;
         }
         if(!Data.MH.GH.RuntimeArray2.empty()){
-            ssReturn<<"\r\n   - Second empty runtime array in the Animation GH has a some nonzero value!";
+            ssReturn << "\r\n   - Second empty runtime array in the Animation GH has a some nonzero value!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).nRefCount != 0){
-            ssReturn<<"\r\n   - Animation counterpart to RefCount has a value!";
+            ssReturn << "\r\n   - Animation counterpart to RefCount has a value!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).EventArray.GetDoCountsDiffer()){
-            ssReturn<<"\r\n   - EventArray counts differ!";
+            ssReturn << "\r\n   - EventArray counts differ!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).nPadding2 != 0){
-            ssReturn<<"\r\n   - Unknown int32 after EventArrayHead has a value!";
+            ssReturn << "\r\n   - Unknown int32 after EventArrayHead has a value!";
             bUpdate = true;
         }
         if(Data.MH.Animations.at(a).nModelType != 5){
-            ssReturn<<"\r\n   - Animation ModelType is not 5!";
+            ssReturn << "\r\n   - Animation ModelType is not 5!";
             bUpdate = true;
         }
         if(CheckNodes(Data.MH.Animations.at(a).ArrayOfNodes, ssReturn, a)) bUpdate = true;
     }
     if(CheckNodes(Data.MH.ArrayOfNodes, ssReturn, -1)) bUpdate = true;
     if(!bUpdate){
-        std::cout<<"Checked for peculiarities, nothing to report.\n";
+        std::cout << "Checked for peculiarities, nothing to report.\n";
         return;
     }
     MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
@@ -786,7 +795,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                   NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_AABB ||
                   NodeArray.at(b).Head.nType == NODE_HEADER | NODE_MESH | NODE_SABER ) )
         {
-            ssReturn<<"\r\n     - Unknown node type: " << NodeArray.at(b).Head.nType << "!";
+            ssReturn << "\r\n     - Unknown node type: " << NodeArray.at(b).Head.nType << "!";
             bMasterUpdate = true;
         }
         else{
@@ -795,22 +804,22 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
             std::string sCont;
             if(nAnimation == -1) sCont = "geometry";
             else sCont = FH->MH.Animations.at(nAnimation).sName.c_str();
-            ssAdd<<"\r\n - "<<FH->MH.Names.at(NodeArray.at(b).Head.nNodeNumber).sName<<" ("<<sCont<<")";
+            ssAdd << "\r\n - " << FH->MH.Names.at(NodeArray.at(b).Head.nNodeNumber).sName << " (" << sCont << ")";
             if(NodeArray.at(b).Head.nType & NODE_HEADER){
                 if(NodeArray.at(b).Head.nPadding1 != 0){
-                    ssAdd<<"\r\n     - Header: Unknown short after NameIndex has a value!";
+                    ssAdd << "\r\n     - Header: Unknown short after NameIndex has a value!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Head.ChildrenArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Header: ChildArray counts differ!";
+                    ssAdd << "\r\n     - Header: ChildArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Head.ControllerArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Header: ControllerArray counts differ!";
+                    ssAdd << "\r\n     - Header: ControllerArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Head.ControllerDataArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Header: ControllerDataArray counts differ!";
+                    ssAdd << "\r\n     - Header: ControllerDataArray counts differ!";
                     bUpdate = true;
                 }
                 for(int c = 0; c < NodeArray.at(b).Head.Controllers.size(); c++){
@@ -828,7 +837,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                         std::string sLoc;
                         if(ctrl.nAnimation == -1) sLoc = "geometry";
                         else sLoc = FH->MH.Animations.at(ctrl.nAnimation).sName.c_str();
-                        ssAdd<<"\r\n     - Header: New controller unknown2 value! ("<<ctrl.nUnknown2<<" - "<<ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNodeNumber).Head.nType)<<" controller in node "<<FH->MH.Names.at(ctrl.nNodeNumber).sName<<" in "<<sLoc<<")";
+                        ssAdd << "\r\n     - Header: New controller unknown2 value! (" << ctrl.nUnknown2 << " - " << ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNodeNumber).Head.nType) << " controller in node " << FH->MH.Names.at(ctrl.nNodeNumber).sName << " in " << sLoc << ")";
                         bUpdate = true;
                     }
                     /***
@@ -873,90 +882,90 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                               GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_MESH) &&
                               ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                     else{
-                        //ssAdd<<"\r\n     - Header: Previously unseen controller padding! ("<<(int)ctrl.nPadding[0]<<", "<<(int)ctrl.nPadding[1]<<", "<<(int)ctrl.nPadding[2]<<")";
+                        //ssAdd << "\r\n     - Header: Previously unseen controller padding! (" << (int)ctrl.nPadding[0] << ", " << (int)ctrl.nPadding[1] << ", " << (int)ctrl.nPadding[2] << ")";
                         //bUpdate = true;
                     }
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_LIGHT){
                 if(NodeArray.at(b).Light.UnknownArray.nCount != 0){
-                    ssAdd<<"\r\n     - Light: Unknown array not empty!";
+                    ssAdd << "\r\n     - Light: Unknown array not empty!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Light.FlareSizeArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Light: FlareSizeArray counts differ!";
+                    ssAdd << "\r\n     - Light: FlareSizeArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Light.FlarePositionArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Light: FlarePositionArray counts differ!";
+                    ssAdd << "\r\n     - Light: FlarePositionArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Light.FlareColorShiftArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Light: FlareColorShiftArray counts differ!";
+                    ssAdd << "\r\n     - Light: FlareColorShiftArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Light.FlareTextureNameArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Light: FlareTextureNameArray counts differ!";
+                    ssAdd << "\r\n     - Light: FlareTextureNameArray counts differ!";
                     bUpdate = true;
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_EMITTER){
                 /*
                 if(NodeArray.at(b).Emitter.nUnknown1 != 0){
-                    ssAdd<<"\r\n     - Emitter: Unknown short after Loop has a value!";
+                    ssAdd << "\r\n     - Emitter: Unknown short after Loop has a value!";
                     bUpdate = true;
                 }
                 */
             }
             if(NodeArray.at(b).Head.nType & NODE_MESH){
                 if(NodeArray.at(b).Mesh.nUnknown3[1] != -1 || NodeArray.at(b).Mesh.nUnknown3[2] != 0){
-                    ssAdd<<"\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
+                    ssAdd << "\r\n     - Mesh: The unknown -1 -1 0 array has a different value!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Mesh.FaceArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Mesh: FaceArray counts differ!";
+                    ssAdd << "\r\n     - Mesh: FaceArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Mesh.IndexCounterArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Mesh: IndexCounterArray counts differ!";
+                    ssAdd << "\r\n     - Mesh: IndexCounterArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Mesh.IndexLocationArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Mesh: IndexLocationArray counts differ!";
+                    ssAdd << "\r\n     - Mesh: IndexLocationArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Mesh.MeshInvertedCounterArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Mesh: MeshInvertedCounterArray counts differ!";
+                    ssAdd << "\r\n     - Mesh: MeshInvertedCounterArray counts differ!";
                     bUpdate = true;
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_SKIN){
                 if(!NodeArray.at(b).Skin.UnknownArray.empty()){
-                    ssAdd<<"\r\n     - Skin: Unknown empty array has some nonzero value!";
+                    ssAdd << "\r\n     - Skin: Unknown empty array has some nonzero value!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Skin.QBoneArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Skin: QBoneArray counts differ!";
+                    ssAdd << "\r\n     - Skin: QBoneArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Skin.TBoneArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Skin: TBoneArray counts differ!";
+                    ssAdd << "\r\n     - Skin: TBoneArray counts differ!";
                     bUpdate = true;
                 }
                 if(NodeArray.at(b).Skin.Array8Array.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Skin: Array8Array counts differ!";
+                    ssAdd << "\r\n     - Skin: Array8Array counts differ!";
                     bUpdate = true;
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_DANGLY){
                 if(NodeArray.at(b).Dangly.ConstraintArray.GetDoCountsDiffer()){
-                    ssAdd<<"\r\n     - Dangly: ConstraintArray counts differ!";
+                    ssAdd << "\r\n     - Dangly: ConstraintArray counts differ!";
                     bUpdate = true;
                 }
             }
             if(bUpdate){
                 bMasterUpdate = true;
-                ssReturn<<ssAdd.str();
+                ssReturn << ssAdd.str();
             }
         }
     }
@@ -975,7 +984,7 @@ std::string ReturnClassificationName(int nClassification){
         case CLASS_PLACEABLE: return "placeable";
         case CLASS_FLYER: return "flyer";
     }
-    std::cout<<"ReturnClassification() ERROR: Unknown classification "<<nClassification<<".\n";
+    std::cout << "ReturnClassification() ERROR: Unknown classification " << nClassification << ".\n";
     return "unknown";
 }
 
@@ -1116,6 +1125,6 @@ std::string ReturnControllerName(int nController, int nType){
         case CONTROLLER_MESH_ALPHA:                 return "alpha";
         }
     }
-    std::cout<<"ReturnController() ERROR: Unknown controller "<<nController<<" (type "<<nType<<").\n";
+    std::cout << "ReturnController() ERROR: Unknown controller " << nController << " (type " << nType << ").\n";
     return "unknown";
 }

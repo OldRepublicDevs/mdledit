@@ -73,6 +73,7 @@ void PrepareCharForDisplay(char * cChar);
 void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount);
 int Error(std::string sErrorMessage);
 int WarningCancel(std::string sWarningMessage);
+int WarningYesNoCancel(std::string sWarningMessage);
 int Warning(std::string sWarningMessage);
 int pown(int base, int exp);
 float deg(float rad);
@@ -92,14 +93,42 @@ struct MenuLineAdder{
     int nIndex;
 };
 
+class Timer{
+    DWORD nReferenceTime = 0;
+  public:
+    Timer(){
+        nReferenceTime = timeGetTime();
+    }
+    void StartTimer(){
+        nReferenceTime = timeGetTime();
+    }
+    std::string GetTime(bool bRestart = false){
+        DWORD nNewTime = timeGetTime();
+        int nSeconds = 0;
+        int nMiliseconds = 0;
+        if(nNewTime < nReferenceTime){
+            DWORD dwMaxVal = 0;
+            dwMaxVal = ~dwMaxVal;
+            nSeconds = ((dwMaxVal - nReferenceTime) + nNewTime)/1000;
+            nMiliseconds = ((dwMaxVal - nReferenceTime) + nNewTime)%1000;
+        }
+        else{
+            nSeconds = (nNewTime - nReferenceTime)/1000;
+            nMiliseconds = (nNewTime - nReferenceTime)%1000;
+        }
+        if(bRestart) nReferenceTime = nNewTime;
+        return (std::to_string(nSeconds) + "." + (nMiliseconds < 100 ? "0" : "") + (nMiliseconds < 10 ? "0" : "") + std::to_string(nMiliseconds) + "s");
+    }
+};
+
 class mdlexception: public std::exception {
     std::string sException;
-    virtual const char* what() const throw() {
-        return sException.c_str();
-    }
   public:
     mdlexception() {}
     mdlexception(const std::string & sNew): sException(sNew) {}
+    virtual const char* what() const throw() {
+        return sException.c_str();
+    }
     void SetText(const std::string & sNew){
         sException = sNew;
     }

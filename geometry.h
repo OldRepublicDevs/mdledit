@@ -80,7 +80,7 @@ struct Quaternion{
 
     std::string Print() const {
         std::stringstream ss;
-        ss<<"("<<vAxis.fX<<", "<<vAxis.fY<<", "<<vAxis.fZ<<", "<<fW<<")";
+        ss << "(" << vAxis.fX << ", " << vAxis.fY << ", " << vAxis.fZ << ", " << fW << ")";
         return ss.str();
     }
 };
@@ -106,7 +106,7 @@ struct AxisAngle{
 
     std::string Print() const {
         std::stringstream ss;
-        ss<<"("<<vAxis.fX<<", "<<vAxis.fY<<", "<<vAxis.fZ<<"), "<<fAngle;
+        ss << "(" << vAxis.fX << ", " << vAxis.fY << ", " << vAxis.fZ << "), " << fAngle;
         return ss.str();
     }
 };

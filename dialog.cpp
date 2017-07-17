@@ -36,10 +36,10 @@ DialogWindow::DialogWindow(){
 bool DialogWindow::Run(){
     if(!bRegistered){
         if(!RegisterClassEx(&WindowClass)){
-            std::cout<<"Registering Window Class "<<WindowClass.lpszClassName<<" failed!\n";
+            std::cout << "Registering Window Class " << WindowClass.lpszClassName << " failed!\n";
             return false;
         }
-        std::cout<<"Class "<<WindowClass.lpszClassName<<" registered!\n";
+        std::cout << "Class " << WindowClass.lpszClassName << " registered!\n";
         bRegistered = true;
     }
     //HMENU HAS to be NULL!!!!! Otherwise the function fails to create the window!
@@ -170,7 +170,7 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
     //Create window
     DialogWindow ctrldata;
     if(!ctrldata.Run()){
-        std::cout<<"DialogWindow creation failed!\n";
+        std::cout << "DialogWindow creation failed!\n";
     }
     SetWindowText(ctrldata.hMe, sName.str().c_str());
     SetWindowText(GetDlgItem(ctrldata.hMe, IDDB_EDIT), text.c_str());

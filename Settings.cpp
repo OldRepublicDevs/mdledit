@@ -43,9 +43,9 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
             //Fill ListViews
             if(Mdl != nullptr){
-                //std::cout<<"Mdl is valid pointer\n";
+                //std::cout << "Mdl is valid pointer\n";
                 if(Mdl->GetFileData()){
-                    //std::cout<<"Mdl has data\n";
+                    //std::cout << "Mdl has data\n";
                     FileHeader & Data = *Mdl->GetFileData();
                     int nCount1 = 0, nCount2 = 0, nCount3 = 0, nCount4 = 0;
                     LVITEM item;
@@ -56,7 +56,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                     LVFINDINFO find;
                     find.flags = LVFI_STRING;
                     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-                        //std::cout<<"Checking node\n";
+                        //std::cout << "Checking node\n";
                         Node & node = Data.MH.ArrayOfNodes.at(n);
                         if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB) && !(node.Head.nType & NODE_SABER)){
                             if(std::string(node.Mesh.cTexture1.c_str()) != "" && std::string(node.Mesh.cTexture1.c_str()) != "NULL"){
@@ -119,7 +119,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                             if(Mdl->GetFileData()){
                                 NMLISTVIEW * ia = (NMLISTVIEW*) lParam;
                                 bool bChecked = ListView_GetCheckState(hControl, ia->iItem);
-                                //std::cout<<"Model is good, bChecked="<<bChecked<<"\n";
+                                //std::cout << "Model is good, bChecked=" << bChecked << "\n";
                                 FileHeader & Data = *Mdl->GetFileData();
                                 std::string sOldTex;
                                 sOldTex.resize(33);
@@ -128,7 +128,7 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                                     Node & node = Data.MH.ArrayOfNodes.at(n);
                                     if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_AABB)){
                                         if(nID == IDC_TEXTURE_LISTVIEW1 && std::string(sOldTex.c_str()) == std::string(node.Mesh.cTexture1.c_str()) && (!bChecked != !(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1))){
-                                            //std::cout<<"Found difference. ("<<Data.MH.Names.at(node.Head.nNodeNumber).sName<<")\n";
+                                            //std::cout << "Found difference. (" << Data.MH.Names.at(node.Head.nNodeNumber).sName << ")\n";
                                             bChange = true;
                                             node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap ^ MDX_FLAG_TANGENT1;
                                         }
@@ -245,6 +245,7 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             if(Mdl->bLightsaberToTrimesh) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SABER_TRIMESH), BST_CHECKED);
             if(Mdl->bBezierToLinear) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_BEZIER_LINEAR), BST_CHECKED);
             if(Mdl->bExportWok) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_EXPORT_WOK), BST_CHECKED);
+            if(bDotAsciiDefault) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_DOT_ASCII), BST_CHECKED);
         }
         break;
         case WM_COMMAND:
@@ -299,13 +300,21 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bBezierToLinear = true;
                         else Mdl->bBezierToLinear = false;
                     }
+                    break;
                     case DLG_ID_EXPORT_WOK:
                     {
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bExportWok = true;
                         else Mdl->bExportWok = false;
                     }
                     break;
+                    case DLG_ID_DOT_ASCII:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) bDotAsciiDefault = true;
+                        else bDotAsciiDefault = false;
+                    }
+                    break;
                 }
+                ManageIni(INI_WRITE);
             }
         }
         break;

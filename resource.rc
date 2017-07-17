@@ -7,7 +7,7 @@ ID_CUR_DRAG CURSOR "cursor.cur"
 
 //IDI_ICON ICON "acdc_icon.ico"
 
-DLG_SETTINGS DIALOGEX  20, 10, 200, 176
+DLG_SETTINGS DIALOGEX  20, 10, 200, 188
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg"
@@ -17,15 +17,16 @@ BEGIN
     AUTOCHECKBOX "Include Angle Weighting", DLG_ID_ANGLE_WEIGHT, 15, 34, 160, 8
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
 
-    GROUPBOX "Reading Binary", DLG_ID_STATIC, 10, 64, 180, 25 // size is 13 + n * 12
+    GROUPBOX "Reading Binary", DLG_ID_STATIC, 10, 64, 180, 25 // y-size (last) is 13 + n * 12
     AUTOCHECKBOX "Calculate Smoothing Groups", DLG_ID_CALC_SMOOTHING, 15, 76, 160, 8
 
-    GROUPBOX "Writing Ascii", DLG_ID_STATIC, 10, 94, 180, 73 // size is 13 + n * 12
+    GROUPBOX "Writing Ascii", DLG_ID_STATIC, 10, 94, 180, 85 // y-size (last) is 13 + n * 12
     AUTOCHECKBOX "Write Animations", DLG_ID_DO_ANIMATIONS, 15, 106, 160, 8
     AUTOCHECKBOX "Convert Skin to Trimesh", DLG_ID_SKIN_TRIMESH, 15, 118, 160, 8
     AUTOCHECKBOX "Convert Lightsaber to Trimesh", DLG_ID_SABER_TRIMESH, 15, 130, 160, 8
     AUTOCHECKBOX "Convert Bezier Controllers to Linear", DLG_ID_BEZIER_LINEAR, 15, 142, 160, 8
     AUTOCHECKBOX "Export WOK File", DLG_ID_EXPORT_WOK, 15, 154, 160, 8
+    AUTOCHECKBOX "Use .ascii extension by default", DLG_ID_DOT_ASCII, 15, 166, 160, 8
 END
 
 DLG_ABOUT DIALOGEX  20, 10, 316, 140
@@ -71,15 +72,15 @@ BEGIN
     POPUP " &File "
         BEGIN
         MENUITEM "&Load ...", IDM_MDL_OPEN
-        POPUP "Save"
+        POPUP "Save", GRAYED
             BEGIN
             MENUITEM "&Binary ...", IDM_BIN_SAVE
             MENUITEM "&ASCII ...", IDM_ASCII_SAVE
             END
-        POPUP "Mass Convert"
+        POPUP "Mass"
             BEGIN
-            MENUITEM "&To Binary ...", IDM_MASS_TO_BIN
-            MENUITEM "&To ASCII ...", IDM_MASS_TO_ASCII
+            MENUITEM "&Convert to Binary ...", IDM_MASS_TO_BIN
+            MENUITEM "&Convert to ASCII ...", IDM_MASS_TO_ASCII
             //MENUITEM "&Analyze ...", IDM_MASS_ANALYZE
             END
         MENUITEM SEPARATOR
@@ -87,23 +88,26 @@ BEGIN
         END
     POPUP " &Options "
         BEGIN
-        MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD
-        MENUITEM "&Edit textures ...", IDM_EDIT_TEXTURES
+        MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD, GRAYED
+        MENUITEM "&Textures ...", IDM_EDIT_TEXTURES
         MENUITEM "&Settings ...", IDM_SETTINGS
         END
     POPUP " &Game "
         BEGIN
         MENUITEM "&K1", IDM_GAME_K1
-        MENUITEM "&K2", IDM_GAME_K2
+        MENUITEM "&K2", IDM_GAME_K2, CHECKED
         END
     POPUP " &Platform "
         BEGIN
-        MENUITEM "&PC", IDM_PLATFORM_PC
+        MENUITEM "&PC", IDM_PLATFORM_PC, CHECKED
         MENUITEM "&XBOX", IDM_PLATFORM_XBOX
         END
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode", IDM_VIEW_HEX
+        MENUITEM SEPARATOR
+        MENUITEM "&Compare to ...", IDM_BIN_COMPARE, GRAYED
+        MENUITEM "&Show Differences", IDM_SHOW_DIFF, GRAYED, CHECKED
         END
     /*
     POPUP " &Help "

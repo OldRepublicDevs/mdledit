@@ -249,6 +249,10 @@ int WarningCancel(std::string sWarningMessage){
     return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OKCANCEL | MB_ICONWARNING);
 }
 
+int WarningYesNoCancel(std::string sWarningMessage){
+    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_YESNOCANCEL | MB_ICONWARNING);
+}
+
 int Warning(std::string sWarningMessage){
     return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OK | MB_ICONWARNING);
 }
