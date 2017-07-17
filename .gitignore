@@ -106,3 +106,7 @@ obj/Release/fileprocessing.o
 obj/Debug/fileprocessing.o
 
 obj/Debug/fileprocessing.o
+
+bin/Debug/mdledit.ini
+
+obj/Release/fileprocessing.o
