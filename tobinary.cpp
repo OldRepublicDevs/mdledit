@@ -1,5 +1,4 @@
 #include "MDL.h"
-//#include <fstream>
 
 /**
     Functions:
@@ -8,12 +7,19 @@
     MDL::WriteNodes()
 /**/
 
+unsigned nMdxPrevPadding = 0;
+
 bool MDL::Compile(){
     Timer tCompile;
     nPosition = 0;
     sBuffer.resize(0);
     bKnown.resize(0);
-    Mdx.reset(new MDX());
+    if(!Mdx) Mdx.reset(new MDX());
+    else{
+        Mdx->GetBuffer().clear();
+        Mdx->GetKnownData().clear();
+        Mdx->nPosition = 0;
+    }
 
     std::unique_ptr<FileHeader> & Data = FH;
     Report("Compiling model...");
@@ -69,7 +75,7 @@ bool MDL::Compile(){
     WriteInt(Data->MH.Animations.size(), 1);
 
     //Unknown supermodel int?
-    WriteInt(Data->MH.nPadding, 11);
+    WriteInt(Data->MH.nSupermodelReference, 11);
 
     //Floats
     WriteFloat(Data->MH.vBBmin.fX, 2);
@@ -175,6 +181,7 @@ bool MDL::Compile(){
 
     WriteIntToPH(nPosition - 12, PHnOffsetToRootNode, Data->MH.GH.nOffsetToRootNode);
     WriteIntToPH(nPosition - 12, PHnOffsetToHeadRootNode, Data->MH.nOffsetToHeadRootNode); //For now we will make these two equal in all cases
+    nMdxPrevPadding = 0;
     WriteNodes(Data->MH.ArrayOfNodes.front());
 
     WriteIntToPH(nPosition - 12, PHnMdlLength, Data->nMdlLength);
@@ -507,11 +514,11 @@ void MDL::WriteNodes(Node & node){
             node.Skin.nOffsetToMdxWeightValues = nMDXsize;
             nMDXsize += 16;
             node.Skin.nOffsetToMdxBoneIndices = nMDXsize;
-            nMDXsize += 16;
+            if(bXbox) nMDXsize += 8;
+            else nMDXsize += 16;
         }
         if(node.Mesh.Vertices.size() == 0) nMDXsize = -1;
         node.Mesh.nMdxDataSize = nMDXsize;
-        node.Mesh.nOffsetToMdxColor = -1;
 
         WriteInt(node.Mesh.nMdxDataSize, 1);
         WriteInt(node.Mesh.nMdxDataBitmap, 4);
@@ -698,13 +705,17 @@ void MDL::WriteNodes(Node & node){
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         else WriteIntToPH(0, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
         for(int d = 0; d < node.Skin.Bones.size(); d++){
-            WriteInt(0, 11); //This array is not in use, might as well fill it with zeros
+            WriteInt(node.Skin.Bones.at(d).nPadding, 11); //This array is not in use, might as well fill it with zeros
         }
     }
 
     /// MDX DATA
 
     if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
+
+        /// First, write the padding that we collected from the previous MDX item
+        for(int n = 0; n < nMdxPrevPadding; n++) Mdx->WriteByte(0, 0);
+
         WriteIntToPH(Mdx->nPosition, PHnOffsetIntoMdx, node.Mesh.nOffsetIntoMdx);
         for(int d = 0; d < node.Mesh.nNumberOfVerts; d++){
             Vertex & vert = node.Mesh.Vertices.at(d);
@@ -848,15 +859,18 @@ void MDL::WriteNodes(Node & node){
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
             node.Mesh.MDXData.vNormal.Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fZ, 8);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fZ, 8);
+            }
+            else Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vNormal), 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
             node.Mesh.MDXData.cColor.Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fR, 2);
-            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fG, 2);
-            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fB, 2);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fR, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fG, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fB, 8);
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
             node.Mesh.MDXData.vUV1.Set(0.0, 0.0, 0.0);
@@ -882,57 +896,85 @@ void MDL::WriteNodes(Node & node){
             node.Mesh.MDXData.vTangent1[0].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent1[1].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent1[2].Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fZ, 8);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[2]), 8);
+            }
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
             node.Mesh.MDXData.vTangent2[0].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent2[1].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent2[2].Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fZ, 8);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[2]), 8);
+            }
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
             node.Mesh.MDXData.vTangent3[0].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent3[1].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent3[2].Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fZ, 8);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[2]), 8);
+            }
         }
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
             node.Mesh.MDXData.vTangent4[0].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent4[1].Set(0.0, 0.0, 0.0);
             node.Mesh.MDXData.vTangent4[2].Set(0.0, 0.0, 0.0);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fZ, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fX, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fY, 8);
-            Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fZ, 8);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[2]), 8);
+            }
         }
         if(node.Head.nType & NODE_SKIN){
             node.Mesh.MDXData.Weights.fWeightValue[0] = 1.0;
@@ -961,8 +1003,8 @@ void MDL::WriteNodes(Node & node){
             }
         }
 
-        /// Additionally, let us add back the padding stuff.
-        for(int n = 0; n < (node.Mesh.nMdxDataSize % 16 + nCurrentMdx % 16) % 16; n++) Mdx->WriteByte(0, 0);
+        /// Save the padding size for the next MDX item to use.
+        nMdxPrevPadding = (node.Mesh.nMdxDataSize % 16 + nCurrentMdx % 16) % 16;
     }
 
     /// MESH DATA
@@ -1158,7 +1200,7 @@ void BWM::Compile(){
     int nOffsetAabb = nPosition;
     WriteInt(0xFFFFFFFF, 6);
 
-    WriteInt(data.nPadding, 10);
+    WriteInt(data.nPadding, 11);
 
     int nCount = 0;
     for(int f = 0; f < data.faces.size(); f++){

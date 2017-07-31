@@ -30,18 +30,18 @@
 #define IDM_MDX_SAVE        120
 #define IDM_WOK_SAVE        121
 #define IDM_ASCII_SAVE      122
-#define IDM_LINK_HEAD       123
+//#define IDM_LINK_HEAD       123
 #define IDM_SETTINGS        124
 #define IDM_EDITOR_DLG      125
-#define IDM_GAME_K1         126
-#define IDM_GAME_K2         127
+//#define IDM_GAME_K1         126
+//#define IDM_GAME_K2         127
 #define IDM_EDIT_TEXTURES   128
 #define IDM_VIEW_HEX        129
 #define IDM_HELP            130
 #define IDM_MASS_TO_ASCII   131
 #define IDM_MASS_TO_BIN     132
-#define IDM_PLATFORM_PC     133
-#define IDM_PLATFORM_XBOX   134
+//#define IDM_PLATFORM_PC     133
+//#define IDM_PLATFORM_XBOX   134
 #define IDM_MASS_ANALYZE    135
 #define IDM_BIN_COMPARE     136
 #define IDM_SHOW_DIFF       137
@@ -65,6 +65,9 @@
 #define IDC_TEXTURE_LISTVIEW2  215
 #define IDC_TEXTURE_LISTVIEW3  216
 #define IDC_TEXTURE_LISTVIEW4  217
+#define IDC_BTN_GAME     218
+#define IDC_BTN_PLATFORM 219
+#define IDC_BTN_NECK     220
 
 #define IDC_SBS_SBH      230
 #define IDC_SBS_SBV      231

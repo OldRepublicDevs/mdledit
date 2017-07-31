@@ -251,7 +251,7 @@ bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
     if(sGet != nullptr) *sGet = sCheck;
 
     try{
-        fNew = std::stof(sCheck, (size_t*) NULL);
+        fNew = std::stod(sCheck, (size_t*) NULL);
     }
     catch(std::invalid_argument){
         std::cout << "TextFile::ReadFloat(): There was an error converting the string: " << sCheck << ". \n";

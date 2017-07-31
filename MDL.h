@@ -485,12 +485,13 @@ struct Bone{
     signed short nBonemap = -1;
     Orientation QBone;
     Vector TBone;
+    unsigned int nPadding = 0;
     int nNodeNumber = -1;
 };
 
 /**** NODE ELEMENTS ****/
 
-// if NODE_HEADER
+/// NODE_HEADER
 struct Header{
     //Binary members
     unsigned short nType = 0;
@@ -514,7 +515,7 @@ struct Header{
     Vector vFromRoot;
 };
 
-// if NODE_LIGHT
+/// NODE_LIGHT
 struct LightHeader{
     //Binary members
     double fFlareRadius = 0.0;          /// 0   4B float
@@ -675,7 +676,7 @@ struct MeshHeader{
     VertexData MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;
-    unsigned int nMeshInvertedCounter = 0;
+    int nMeshInvertedCounter = -1;
     char * GetTexture(int nTex){
         if(nTex == 1) return (char*) cTexture1.c_str();
         if(nTex == 2) return (char*) cTexture2.c_str();
@@ -719,7 +720,7 @@ struct DanglymeshHeader{
     std::vector<Vector> Data2;
 };
 
-// if NODE_AABB
+/// NODE_AABB
 struct WalkmeshHeader{
     //Binary members
     unsigned int nOffsetToAabb = 0;
@@ -728,14 +729,14 @@ struct WalkmeshHeader{
     Aabb RootAabb;
 };
 
-// if NODE_SABER
+/// NODE_SABER
 struct SaberHeader{
     //Binary members
     unsigned int nOffsetToSaberVerts = 0;
     unsigned int nOffsetToSaberUVs = 0;
     unsigned int nOffsetToSaberNormals = 0;
-    int nInvCount1 = 0;
-    int nInvCount2 = 0;
+    int nInvCount1 = -1;
+    int nInvCount2 = -1;
 
     //Added members
     std::vector<VertexData> SaberData;

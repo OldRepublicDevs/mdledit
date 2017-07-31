@@ -13,6 +13,7 @@ HWND hTree;
 HWND hStatusBar;
 HWND hDisplayEdit;
 HWND hTabs;
+HWND hGame, hPlatform, hNeck;
 MDL Model;
 bool bShowHex = false;
 bool bShowDiff = true;
@@ -28,11 +29,7 @@ bool AppendTab(HWND hTabControl, std::string sName){
 }
 
 void FixHead(){
-    MENUITEMINFO mii;
-    mii.cbSize = sizeof(MENUITEMINFO);
-    mii.fMask = MIIM_STATE;
-    GetMenuItemInfo(GetSubMenu(GetMenu(hFrame), 1), IDM_LINK_HEAD, false, &mii);
-    bool bLinkHead = mii.fState & MFS_CHECKED;
+    bool bLinkHead = Button_GetCheck(hNeck) == BST_CHECKED;
     if(bLinkHead){
         if(Model.LinkHead(bLinkHead)){
             Edit1.UpdateEdit();
@@ -119,6 +116,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
     switch(message){
         case WM_CREATE:
         {
+            GetClientRect(hwnd, &rcClient);
+
             HFONT hFont1 = CreateFont(
                 14, //Size
                 0,  //??
@@ -151,11 +150,27 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
                 "MS Shell Dlg" //"Segoe UI" 	// pointer to typeface name string
             );
+            HFONT hFont4 = CreateFont(
+                14,  //Height
+                4,  //Width
+                0,  //??
+                0,  //??
+                FW_REGULAR, // font weight
+                FALSE,	    // italic attribute flag
+                FALSE,	    // underline attribute flag
+                FALSE,	    // strikeout attribute flag
+                DEFAULT_CHARSET,	    // character set identifier
+                OUT_DEFAULT_PRECIS	,	// output precision
+                CLIP_DEFAULT_PRECIS	,	// clipping precision
+                DEFAULT_QUALITY	,	    // output quality
+                DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
+                "Times New Roman" //"Segoe UI" //"MS Shell Dlg" // 	// pointer to typeface name string
+            );
 
             int nLabelOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X;
             int nEditOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X + ME_DATA_LABEL_SIZE_X + ME_DATA_EDIT_OFFSET_X;
-            int nDataOffsetY [3];
-            for(int n = 0; n < 3; n++){ nDataOffsetY[n] = ME_BASIC_OFFSET_Y + n * ME_DATA_NEXT_ROW;}
+            int nDataOffsetY [5];
+            for(int n = 0; n < 5; n++) nDataOffsetY[n] = ME_BASIC_OFFSET_Y + n * ME_DATA_NEXT_ROW;
             hIntLabel = CreateWindowEx(NULL, "STATIC", "Int:", WS_VISIBLE | WS_CHILD | SS_RIGHT,
                                         nLabelOffsetX, nDataOffsetY[0] + ME_DATA_LABEL_ROW_OFFSET_Y, ME_DATA_LABEL_SIZE_X, ME_DATA_LABEL_SIZE_Y,
                                         hwnd, (HMENU) IDC_LBL_INT, GetModuleHandle(NULL), NULL);
@@ -188,6 +203,22 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             ShowWindow(Edits::hUIntEdit, false);
             ShowWindow(Edits::hFloatEdit, false);
 
+            int nButtonOffsetX [3];
+            int nButtonSizeX = (rcClient.right - rcClient.left - ME_TREE_OFFSET_X - 5 - 10) / 3;
+            for(int n = 0; n < 3; n++) nButtonOffsetX[n] = ME_TREE_OFFSET_X + n * (nButtonSizeX + 5);
+            hGame = CreateWindowEx(NULL, "BUTTON", "Game", WS_VISIBLE | WS_CHILD,
+                                   nButtonOffsetX[0], nDataOffsetY[3], nButtonSizeX, ME_DATA_EDIT_SIZE_Y,
+                                   hwnd, (HMENU) IDC_BTN_GAME, GetModuleHandle(NULL), NULL);
+            hPlatform = CreateWindowEx(NULL, "BUTTON", "Platform", WS_VISIBLE | WS_CHILD,
+                                   nButtonOffsetX[1], nDataOffsetY[3], nButtonSizeX, ME_DATA_EDIT_SIZE_Y,
+                                   hwnd, (HMENU) IDC_BTN_PLATFORM, GetModuleHandle(NULL), NULL);
+            hNeck = CreateWindowEx(NULL, "BUTTON", "Head Link", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_PUSHLIKE | WS_DISABLED,
+                                   nButtonOffsetX[2], nDataOffsetY[3], nButtonSizeX, ME_DATA_EDIT_SIZE_Y,
+                                   hwnd, (HMENU) IDC_BTN_NECK, GetModuleHandle(NULL), NULL);
+            SendMessage(hGame, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
+            SendMessage(hPlatform, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
+            SendMessage(hNeck, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
+
             hStatusBar = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hwnd, IDC_STATUSBAR);
             int nBorders [4];
             nBorders[0] = ME_STATUSBAR_PART_X;
@@ -197,19 +228,18 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             SendMessage(hStatusBar, SB_SETPARTS, (WPARAM) 4, (LPARAM) nBorders);
             ShowWindow(hStatusBar, false);
 
-            GetClientRect(hwnd, &rcClient);
             hTree = CreateWindowEx(WS_EX_TOPMOST, WC_TREEVIEW, "Structure", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT | TVS_SHOWSELALWAYS,
                            ME_TREE_OFFSET_X, ME_TREE_OFFSET_Y, ME_TREE_SIZE_X, rcClient.bottom - ME_TREE_OFFSET_Y - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y,
                            hwnd, (HMENU) IDC_TREEVIEW, GetModuleHandle(NULL), NULL);
             hDisplayEdit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", WS_VISIBLE | WS_CHILD | ES_READONLY | ES_AUTOVSCROLL | ES_MULTILINE | WS_VSCROLL,
-                                        ME_TREE_OFFSET_X, ME_DISPLAY_OFFSET_Y, ME_TREE_SIZE_X, ME_DISPLAY_SIZE_Y,
+                                        ME_TREE_OFFSET_X, nDataOffsetY[4], ME_TREE_SIZE_X, ME_DISPLAY_SIZE_Y,
                                         hwnd, (HMENU) IDC_EDIT_DISPLAY, GetModuleHandle(NULL), NULL);
             SendMessage(hDisplayEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
 
             hTabs = CreateWindowEx(NULL, WC_TABCONTROL, "", WS_VISIBLE | WS_CHILD | TCS_FOCUSNEVER | TCS_FIXEDWIDTH,
                                    ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y,
                                    hwnd, (HMENU) IDC_TABS, GetModuleHandle(NULL), NULL);
-            SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
+            SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
             ShowWindow(hTabs, false);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
@@ -217,6 +247,14 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             }
 
             ManageIni(INI_READ);
+
+            std::string sUpdate;
+            if(Model.bK2) sUpdate = "KOTOR2";
+            else sUpdate = "KOTOR1";
+            SetWindowText(hGame, sUpdate.c_str());
+            if(Model.bXbox) sUpdate = "XBOX";
+            else sUpdate = "PC";
+            SetWindowText(hPlatform, sUpdate.c_str());
         }
         break;
         case WM_NOTIFY:
@@ -338,33 +376,34 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     MENUITEMINFO mii;
                     mii.cbSize = sizeof(MENUITEMINFO);
                     mii.fMask = MIIM_STATE;
+                    std::string sUpdate;
                     bool bSuccess = FileEditor(hwnd, nID, sFile);
                     if(bSuccess){
+                        if(!Model.NodeExists("neck_g")) Button_Enable(hNeck, false);
+                        else Button_Enable(hNeck, true);
+
                         bool bLinkHead = Model.HeadLinked();
-                        if(!Model.NodeExists("neck_g")) mii.fState = MFS_DISABLED;
-                        else if(bLinkHead) mii.fState = MFS_CHECKED;
-                        else mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetMenu(hwnd), IDM_LINK_HEAD, false, &mii);
-                        if(Model.bK2) mii.fState = MFS_UNCHECKED;
-                        else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetMenu(hwnd), IDM_GAME_K1, false, &mii);
-                        if(!Model.bK2) mii.fState = MFS_UNCHECKED;
-                        else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetMenu(hwnd), IDM_GAME_K2, false, &mii);
-                        if(Model.bXbox) mii.fState = MFS_UNCHECKED;
-                        else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetMenu(hwnd), IDM_PLATFORM_PC, false, &mii);
-                        if(!Model.bXbox) mii.fState = MFS_UNCHECKED;
-                        else mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetMenu(hwnd), IDM_PLATFORM_XBOX, false, &mii);
+                        if(bLinkHead) Button_SetCheck(hNeck, BST_CHECKED);
+                        else Button_SetCheck(hNeck, BST_UNCHECKED);
+
+                        if(Model.bK2) sUpdate = "KOTOR2";
+                        else sUpdate = "KOTOR1";
+                        SetWindowText(hGame, sUpdate.c_str());
+
+                        if(Model.bXbox) sUpdate = "XBOX";
+                        else sUpdate = "PC";
+                        SetWindowText(hPlatform, sUpdate.c_str());
+
                         if(!Model.empty()) mii.fState = MFS_ENABLED;
                         else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
                         SetMenuItemInfo(GetMenu(hwnd), IDM_BIN_COMPARE, false, &mii);
                         GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
-                        if(!Model.GetDifferenceData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                        if(!Model.GetCompareData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
                         else mii.fState = MFS_GRAYED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
                         SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
+
+                        ManageIni(INI_WRITE);
                     }
                     std::string sNewName = "MDLedit";
                     if(!Model.empty()) sNewName += " (" + Model.GetFilename() + ")";
@@ -378,7 +417,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     mii.cbSize = sizeof(MENUITEMINFO);
                     mii.fMask = MIIM_STATE;
                     GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
-                    if(!Model.GetDifferenceData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
+                    if(!Model.GetCompareData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
                     else mii.fState = MFS_GRAYED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
                     SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
                     Edit1.UpdateEdit();
@@ -403,13 +442,6 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     int nReturn = IDOK;
                     if(Model.GetBuffer().empty()) nReturn = IDCANCEL;
                     if(nReturn == IDOK) bSuccess = FileEditor(hwnd, nID, sFile);
-                    /*
-                    if(bSuccess){
-                        std::string sNewName = "MDLedit";
-                        sNewName += " (" + Model.GetFilename() + ")";
-                        SetWindowText(hwnd, sNewName.c_str());
-                    }
-                    */
                 }
                 break;
                 case IDM_ASCII_SAVE:
@@ -419,27 +451,15 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     if(!Model.GetFileData()) nReturn = IDCANCEL;
                     if(!Model.Mdx && nReturn == IDOK) nReturn = MessageBox(hwnd, "Warning! No MDX is loaded! MDLedit can still export without the MDX data, but this means exporting without weights, UVs, smoothing groups and for xbox binaries also vert coords.", "Warning!", MB_OKCANCEL | MB_ICONWARNING);
                     if(nReturn == IDOK) bSuccess = FileEditor(hwnd, nID, sFile);
-                    /*
-                    if(bSuccess){
-                        std::string sNewName = "MDLedit";
-                        sNewName += " (" + Model.GetFilename() + ")";
-                        SetWindowText(hwnd, sNewName.c_str());
-                    }
-                    */
                 }
                 break;
-                case IDM_LINK_HEAD:
+                case IDC_BTN_NECK:
                 {
                     if(!Model.empty()){
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
-                        bool bLinkHead = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                        bool bLinkHead = !(Button_GetCheck(hNeck) == BST_CHECKED);
                         if(Model.LinkHead(bLinkHead)){
-                            if(bLinkHead) mii.fState = MFS_CHECKED;
-                            else mii.fState = MFS_UNCHECKED;
-                            SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 1), IDM_LINK_HEAD, false, &mii);
+                            if(bLinkHead) Button_SetCheck(hNeck, BST_CHECKED);
+                            else Button_SetCheck(hNeck, BST_UNCHECKED);
                             Edit1.UpdateEdit();
                             HTREEITEM hSel = TreeView_GetSelection(hTree);
                             if(hSel != NULL) ProcessTreeAction(hSel, ACTION_UPDATE_DISPLAY);
@@ -448,84 +468,36 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                 }
                 break;
-                case IDM_GAME_K1:
+                case IDC_BTN_GAME:
                 {
-                    if(Model.bK2){
-                        Model.bK2 = false;
-                        if(Model.GetFileData()){
-                            Model.Compile();
-                            FixHead();
-                            Edit1.LoadData();
-                        }
-
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
-                        mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                    Model.bK2 = !Model.bK2;
+                    if(Model.GetFileData()){
+                        Model.Compile();
+                        FixHead();
+                        Edit1.LoadData();
                     }
+
+                    std::string sUpdate;
+                    if(Model.bK2) sUpdate = "KOTOR2";
+                    else sUpdate = "KOTOR1";
+                    SetWindowText(hGame, sUpdate.c_str());
+                    ManageIni(INI_WRITE);
                 }
                 break;
-                case IDM_GAME_K2:
+                case IDC_BTN_PLATFORM:
                 {
-                    if(!Model.bK2){
-                        Model.bK2 = true;
-                        if(Model.GetFileData()){
-                            Model.Compile();
-                            FixHead();
-                            Edit1.LoadData();
-                        }
-
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K1, false, &mii);
-                        mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 2), IDM_GAME_K2, false, &mii);
+                    Model.bXbox = !Model.bXbox;
+                    if(Model.GetFileData()){
+                        Model.Compile();
+                        FixHead();
+                        Edit1.LoadData();
                     }
-                }
-                break;
-                case IDM_PLATFORM_PC:
-                {
-                    if(Model.bXbox){
-                        Model.bXbox = false;
-                        if(Model.GetFileData()){
-                            Model.Compile();
-                            FixHead();
-                            Edit1.LoadData();
-                        }
 
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
-                        mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
-                    }
-                }
-                break;
-                case IDM_PLATFORM_XBOX:
-                {
-                    if(!Model.bXbox){
-                        Model.bXbox = true;
-                        if(Model.GetFileData()){
-                            Model.Compile();
-                            FixHead();
-                            Edit1.LoadData();
-                        }
-
-                        MENUITEMINFO mii;
-                        mii.cbSize = sizeof(MENUITEMINFO);
-                        mii.fMask = MIIM_STATE;
-                        mii.fState = MFS_UNCHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_PC, false, &mii);
-                        mii.fState = MFS_CHECKED;
-                        SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 3), IDM_PLATFORM_XBOX, false, &mii);
-                    }
+                    std::string sUpdate;
+                    if(Model.bXbox) sUpdate = "XBOX";
+                    else sUpdate = "PC";
+                    SetWindowText(hPlatform, sUpdate.c_str());
+                    ManageIni(INI_WRITE);
                 }
                 break;
                 case IDD_EDITOR_DLG:
@@ -557,11 +529,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     MENUITEMINFO mii;
                     mii.cbSize = sizeof(MENUITEMINFO);
                     mii.fMask = MIIM_STATE;
-                    GetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 4), IDM_VIEW_HEX, false, &mii);
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_VIEW_HEX, false, &mii);
                     bShowHex = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
                     if(bShowHex) mii.fState = MFS_CHECKED;
                     else mii.fState = MFS_UNCHECKED;
-                    SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 4), IDM_VIEW_HEX, false, &mii);
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_VIEW_HEX, false, &mii);
                     Edit1.ShowHideEdit();
                     if(bShowHex){
                         ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), true);
@@ -641,27 +613,90 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             const int nCompactOffsetLeft = 1;
             const int nCompactOffsetRight = 1;
 
-            if(bShowHex) SetWindowPos(hDisplayEdit, NULL,
-                                      ME_TREE_OFFSET_X,
-                                      ME_DISPLAY_OFFSET_Y,
-                                      (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
-                                      ME_DISPLAY_SIZE_Y, NULL);
-            else SetWindowPos(hDisplayEdit, NULL,
+            if(bShowHex){
+                SetWindowPos(hDisplayEdit, NULL,
+                             ME_TREE_OFFSET_X,
+                             ME_DISPLAY_OFFSET_Y,
+                             (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
+                             ME_DISPLAY_SIZE_Y,
+                             NULL);
+                SetWindowPos(hTree, NULL,
+                             ME_TREE_OFFSET_X,
+                             ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2, //ME_TREE_OFFSET_Y,
+                             (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
+                             rcClient.bottom - (ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2) - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y + 5, NULL);
+                int nEditOffsetX = ME_HEX_WIN_OFFSET_X + ME_HEX_WIN_SIZE_X + ME_DATA_LABEL_OFFSET_X + ME_DATA_LABEL_SIZE_X + ME_DATA_EDIT_OFFSET_X;
+                SetWindowPos(Edits::hIntEdit, NULL,
+                             0,
+                             0,
+                             (rcClient.right - rcClient.left) - nEditOffsetX - 5,
+                             ME_DATA_EDIT_SIZE_Y,
+                             SWP_NOMOVE);
+                SetWindowPos(Edits::hUIntEdit, NULL,
+                             0,
+                             0,
+                             (rcClient.right - rcClient.left) - nEditOffsetX - 5,
+                             ME_DATA_EDIT_SIZE_Y,
+                             SWP_NOMOVE);
+                SetWindowPos(Edits::hFloatEdit, NULL,
+                             0,
+                             0,
+                             (rcClient.right - rcClient.left) - nEditOffsetX - 5,
+                             ME_DATA_EDIT_SIZE_Y,
+                             SWP_NOMOVE);
+                int nButtonSizeX = (rcClient.right - rcClient.left - ME_TREE_OFFSET_X + 1 - 4) / 3;
+                int nDataOffsetY [5];
+                for(int n = 0; n < 5; n++) nDataOffsetY[n] = ME_BASIC_OFFSET_Y + n * ME_DATA_NEXT_ROW;
+                SetWindowPos(hGame, NULL,
+                             ME_TREE_OFFSET_X - 1,
+                             nDataOffsetY[3],
+                             nButtonSizeX,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+                SetWindowPos(hPlatform, NULL,
+                             ME_TREE_OFFSET_X - 1 + nButtonSizeX,
+                             nDataOffsetY[3],
+                             rcClient.right - rcClient.left - 4 - nButtonSizeX - ME_TREE_OFFSET_X + 1 - nButtonSizeX,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+                SetWindowPos(hNeck, NULL,
+                             rcClient.right - rcClient.left - 4 - nButtonSizeX,
+                             nDataOffsetY[3],
+                             nButtonSizeX,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+            }
+            else{
+                SetWindowPos(hDisplayEdit, NULL,
                               nCompactOffsetLeft,
-                              nCompactOffsetTop,
+                              ME_DATA_EDIT_SIZE_Y,
                               (rcClient.right - rcClient.left) - nCompactOffsetLeft - nCompactOffsetRight,
                               ME_DISPLAY_SIZE_Y, NULL);
-
-            if(bShowHex) SetWindowPos(hTree, NULL,
-                                      ME_TREE_OFFSET_X,
-                                      ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2, //ME_TREE_OFFSET_Y,
-                                      (rcClient.right - rcClient.left) - ME_HEX_WIN_OFFSET_X - ME_TREE_OFFSET_X - 5,
-                                      rcClient.bottom - (ME_DISPLAY_OFFSET_Y + ME_DISPLAY_SIZE_Y + 2) - ME_STATUSBAR_Y - ME_TREE_SIZE_DIFF_Y + 5, NULL);
-            else SetWindowPos(hTree, NULL,
+                SetWindowPos(hTree, NULL,
                               nCompactOffsetLeft,
-                              nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y,
+                              nCompactOffsetTop + ME_DISPLAY_SIZE_Y + ME_DATA_EDIT_SIZE_Y,
                               (rcClient.right - rcClient.left) - nCompactOffsetLeft - nCompactOffsetRight,
-                              rcClient.bottom - (nCompactOffsetTop*2 + ME_DISPLAY_SIZE_Y + nCompactOffsetBottom), NULL);
+                              rcClient.bottom - (nCompactOffsetTop + ME_DISPLAY_SIZE_Y + ME_DATA_EDIT_SIZE_Y + nCompactOffsetBottom), NULL);
+                int nButtonSizeX = (rcClient.right - rcClient.left - nCompactOffsetRight - nCompactOffsetLeft) / 3;
+                SetWindowPos(hGame, NULL,
+                             0, //nCompactOffsetLeft,
+                             0, //nCompactOffsetTop,
+                             nButtonSizeX,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+                SetWindowPos(hPlatform, NULL,
+                             nButtonSizeX, //nCompactOffsetLeft + nButtonSizeX + 1,
+                             0, //nCompactOffsetTop,
+                             rcClient.right - rcClient.left - 2*nButtonSizeX, //rcClient.right - rcClient.left - nCompactOffsetRight - nCompactOffsetLeft - 2*nButtonSizeX - 2,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+                SetWindowPos(hNeck, NULL,
+                             rcClient.right - rcClient.left - nButtonSizeX, //rcClient.right - rcClient.left - nCompactOffsetRight - nButtonSizeX,
+                             0, //nCompactOffsetTop,
+                             nButtonSizeX,
+                             ME_DATA_EDIT_SIZE_Y,
+                             NULL);
+            }
 
             if(bShowHex) SetWindowPos(hTabs, NULL, ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y, NULL);
             if(bShowHex) Edit1.Resize();
@@ -823,6 +858,8 @@ void ManageIni(IniConst Action){
         Ini.AddIniOption("BezierToLinear", DT_bool, &Model.bBezierToLinear);
         Ini.AddIniOption("ExportWOK", DT_bool, &Model.bExportWok);
         Ini.AddIniOption("UseDotAscii", DT_bool, &bDotAsciiDefault);
+        Ini.AddIniOption("KOTOR2", DT_bool, &Model.bK2);
+        Ini.AddIniOption("XBOX", DT_bool, &Model.bXbox);
         try{
             if(Action == INI_READ) Ini.ReadIni(sIni);
             else if(Action == INI_WRITE) Ini.WriteIni(sIni);

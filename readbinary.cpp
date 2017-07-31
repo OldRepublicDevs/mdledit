@@ -759,9 +759,9 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 NODE->Skin.Bones[n].TBone.fY = ReadFloat(&nPosData3, 2);
                 NODE->Skin.Bones[n].TBone.fZ = ReadFloat(&nPosData3, 2);
 
-                MarkBytes(nPosData4, 4, 11);
-                nPosData4+=4;
-                //NODE->Skin.Bones[n].fArray8 = ReadFloat(&nPosData4, 2);
+                //MarkBytes(nPosData4, 4, 11);
+                //nPosData4+=4;
+                NODE->Skin.Bones[n].nPadding = ReadInt(&nPosData4, 11);
 
                 n++;
             }

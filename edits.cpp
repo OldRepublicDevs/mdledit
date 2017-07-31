@@ -396,20 +396,21 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                     }
                     else{
                         SetTextColor(hdc, DataColor(nDataKnown, false));
-                        if(bShowDiff && (Edit->nDiffArray->size() > n*16 + i / 3 && (i % 3 < 2 ||
-                           Edit->nDiffArray->size() > n*16 + i / 3 + 1 && Edit->nDiffArray->at(n*16 + i / 3) == Edit->nDiffArray->at(n*16 + i / 3 + 1) &&
-                           (Edit->nDiffArray->at(n*16 + i / 3) != 1 ||
-                            Edit->nKnownArray->size() > n*16 + i / 3 + 1 && Edit->nKnownArray->at(n*16 + i / 3) == Edit->nKnownArray->at(n*16 + i / 3 + 1)))))
-                        {
-                            if(Edit->nDiffArray->at(n*16 + i / 3) == 0) SetBkColor(hdc, RGB(255, 255, 255)); // Not different
-                            if(Edit->nDiffArray->at(n*16 + i / 3) == 1){ // Different
-                                //SetBkColor(hdc, RGB(255, 220, 220));
-                                SetTextColor(hdc, RGB(255, 255, 255));
-                                SetBkColor(hdc, DataColor(nDataKnown, false));
+                        SetBkColor(hdc, RGB(255, 255, 255));
+                        if(bShowDiff && Edit->Compare(n*16 + i / 3) > 0){
+                            if(i % 3 < 2 || // ignore the space
+                               Edit->Compare(n*16 + i / 3) == Edit->Compare(n*16 + i / 3 + 1) && Edit->Compare(n*16 + i / 3) == 2 || // color the space if out of range
+                               Edit->Compare(n*16 + i / 3) == Edit->Compare(n*16 + i / 3 + 1) && Edit->nKnownArray->at(n*16 + i / 3) == Edit->nKnownArray->at(n*16 + i / 3 + 1)) //color the space if same known value
+                            {
+                                if(Edit->Compare(n*16 + i / 3) == 1){ // Different
+                                    SetTextColor(hdc, RGB(255, 255, 255));
+                                    SetBkColor(hdc, DataColor(nDataKnown, false));
+                                }
+                                if(Edit->Compare(n*16 + i / 3) == 2){
+                                    SetBkColor(hdc, RGB(230, 180, 230)); // Out of range
+                                }
                             }
-                            if(Edit->nDiffArray->at(n*16 + i / 3) == 2) SetBkColor(hdc, RGB(230, 180, 230)); // Out of range
                         }
-                        else SetBkColor(hdc, RGB(255, 255, 255));
                     }
                     ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cHexText + i, 1, NULL);
 

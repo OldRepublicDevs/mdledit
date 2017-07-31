@@ -77,7 +77,7 @@ BEGIN
             MENUITEM "&Binary ...", IDM_BIN_SAVE
             MENUITEM "&ASCII ...", IDM_ASCII_SAVE
             END
-        POPUP "Mass"
+        POPUP "Batch"
             BEGIN
             MENUITEM "&Convert to Binary ...", IDM_MASS_TO_BIN
             MENUITEM "&Convert to ASCII ...", IDM_MASS_TO_ASCII
@@ -86,12 +86,13 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "E&xit", IDM_FILE_EXIT
         END
-    POPUP " &Options "
+    POPUP " &Edit "
         BEGIN
-        MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD, GRAYED
+        //MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD, GRAYED
         MENUITEM "&Textures ...", IDM_EDIT_TEXTURES
         MENUITEM "&Settings ...", IDM_SETTINGS
         END
+    /*
     POPUP " &Game "
         BEGIN
         MENUITEM "&K1", IDM_GAME_K1
@@ -102,6 +103,7 @@ BEGIN
         MENUITEM "&PC", IDM_PLATFORM_PC, CHECKED
         MENUITEM "&XBOX", IDM_PLATFORM_XBOX
         END
+    */
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode", IDM_VIEW_HEX

@@ -65,7 +65,7 @@ class BinaryFile: public File{
   protected:
     //For coloring bytes
     std::vector<int> bKnown;
-    std::vector<int> bDifferent;
+    std::vector<char> sCompareBuffer;
     void MarkBytes(unsigned int nOffset, int nLength, int nClass);
 
     //Reading functions
@@ -92,31 +92,24 @@ class BinaryFile: public File{
 
     //Getters
     std::vector<int> & GetKnownData(){ return bKnown; }
-    std::vector<int> & GetDifferenceData(){ return bDifferent; }
+    std::vector<char> & GetCompareData(){ return sCompareBuffer; }
 
     //Loaders/Unloaders
     std::vector<char> & CreateBuffer(int nSize){
         bLoaded = true;
         sBuffer.resize(nSize, 0);
         bKnown.resize(nSize, 0);
-        //bDifferent.resize(nSize, 0);
         return sBuffer;
     }
     void FlushAll(){
         sBuffer.clear();
+        sCompareBuffer.clear();
         bKnown.clear();
-        bDifferent.clear();
         bLoaded = false;
     }
     void Compare(File & file){
-        bDifferent.resize(sBuffer.size(), 0);
-        std::vector<char> & sBuffer2 = file.GetBuffer();
-        for(int i = 0; i < sBuffer.size(); i++){
-            if(i < sBuffer2.size()){
-                if(sBuffer.at(i) != sBuffer2.at(i)) bDifferent.at(i) = 1;
-            }
-            else bDifferent.at(i) = 2;
-        }
+        sCompareBuffer = file.GetBuffer();
+        //if(sBuffer.size() < sCompareBuffer.size()) sCompareBuffer.resize(sBuffer.size());
     }
 };
 

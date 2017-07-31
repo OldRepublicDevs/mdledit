@@ -1305,7 +1305,7 @@ bool ASCII::Read(MDL & Mdl){
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         bFound = ReadUntilText(sID, false);
                         if(bFound){
-                            if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                            if(sID != "") node.Mesh.nTextureNumber++;
                             if(sID.size() > 32){
                                 Error("Bitmap name larger than the limit, 32 characters! Will truncate and continue.");
                                 sID.resize(32);
@@ -1322,7 +1322,7 @@ bool ASCII::Read(MDL & Mdl){
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         bFound = ReadUntilText(sID, false);
                         if(bFound){
-                            if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                            if(sID != "") node.Mesh.nTextureNumber++;
                             if(sID.size() > 32){
                                 Error("Bitmap2 name larger than the limit, 32 characters! Will truncate and continue.");
                                 sID.resize(32);
@@ -1339,7 +1339,7 @@ bool ASCII::Read(MDL & Mdl){
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         bFound = ReadUntilText(sID, false);
                         if(bFound){
-                            if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                            if(sID != "") node.Mesh.nTextureNumber++;
                             if(sID.size() > 12){
                                 Error("Texture0 name larger than the limit, 12 characters! Will truncate and continue.");
                                 sID.resize(12);
@@ -1353,7 +1353,7 @@ bool ASCII::Read(MDL & Mdl){
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         bFound = ReadUntilText(sID, false);
                         if(bFound){
-                            if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                            if(sID != "") node.Mesh.nTextureNumber++;
                             if(sID.size() > 12){
                                 Error("Texture1 name larger than the limit, 12 characters! Will truncate and continue.");
                                 sID.resize(12);
@@ -1368,7 +1368,7 @@ bool ASCII::Read(MDL & Mdl){
                         bFound = ReadUntilText(sID, false);
                         if(bFound){
                             bMagnusll = true;
-                            if(sID != "" && sID != "NULL") node.Mesh.nTextureNumber++;
+                            if(sID != "") node.Mesh.nTextureNumber++;
                             if(sID.size() > 32){
                                 Error("Lightmap name larger than the limit, 32 characters! Will truncate and continue.");
                                 sID.resize(32);
@@ -2625,6 +2625,12 @@ void MDL::AsciiPostProcess(){
                 }
             }
 
+            /// Texture count depends on the UVs.
+            node.Mesh.nTextureNumber = node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1 ? 1 : 0 +
+                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2 ? 1 : 0 +
+                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3 ? 1 : 0 +
+                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4 ? 1 : 0;
+
             node.Mesh.TempVerts.resize(0);
             node.Mesh.TempTverts.resize(0);
             node.Mesh.TempTverts1.resize(0);
@@ -2916,7 +2922,7 @@ void MDL::AsciiPostProcess(){
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         Node & node = Data.MH.ArrayOfNodes.at(n);
 
-        if(node.Head.nType & NODE_SABER && node.Saber.nInvCount1 == 0 && node.Saber.nInvCount2 == 0){
+        if(node.Head.nType & NODE_SABER && node.Saber.nInvCount1 == -1 && node.Saber.nInvCount2 == -1){
             //inverted counter
             nMeshCounter++;
             int Quo = nMeshCounter/100;
@@ -2929,7 +2935,7 @@ void MDL::AsciiPostProcess(){
         }
         else if(node.Head.nType & NODE_MESH){
             //inverted counter
-            if(node.Mesh.nMeshInvertedCounter == 0){
+            if(node.Mesh.nMeshInvertedCounter == -1){
                 nMeshCounter++;
                 int Quo = nMeshCounter/100;
                 int Mod = nMeshCounter%100;

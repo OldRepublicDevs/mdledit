@@ -786,6 +786,11 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                     sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY, false);
                     sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ, false);
                 }
+                if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                    sPrint << "\r\n" << "Color: " << PrepareFloat(mdx->cColor.fR, false);
+                    sPrint << "\r\n" << "       " << PrepareFloat(mdx->cColor.fG, false);
+                    sPrint << "\r\n" << "       " << PrepareFloat(mdx->cColor.fB, false);
+                }
                 if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                     sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX, false);
                     sPrint << "\r\n" << "     " << PrepareFloat(mdx->vUV1.fY, false);
@@ -883,6 +888,11 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                         sPrint << "\r\n" << "Normal: " << PrepareFloat(mdx->vNormal.fX, false);
                         sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fY, false);
                         sPrint << "\r\n" << "        " << PrepareFloat(mdx->vNormal.fZ, false);
+                    }
+                    if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                        sPrint << "\r\n" << "Color: " << PrepareFloat(mdx->cColor.fR, false);
+                        sPrint << "\r\n" << "       " << PrepareFloat(mdx->cColor.fG, false);
+                        sPrint << "\r\n" << "       " << PrepareFloat(mdx->cColor.fB, false);
                     }
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                         sPrint << "\r\n" << "UV1: " << PrepareFloat(mdx->vUV1.fX, false);

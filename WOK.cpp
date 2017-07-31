@@ -31,7 +31,7 @@ void BWM::ProcessBWM(){
         Data.nOffsetToDistances = ReadInt(&nPos, 6);
         Data.nNumberOfAabb = ReadInt(&nPos, 1); /// In my test model this equals the number of aabb in the mdl
         Data.nOffsetToAabb = ReadInt(&nPos, 6);
-        Data.nPadding = ReadInt(&nPos, 10);
+        Data.nPadding = ReadInt(&nPos, 11);
         Data.nNumberOfAdjacentFaces = ReadInt(&nPos, 1);
         Data.nOffsetToAdjacentFaces = ReadInt(&nPos, 6);
         Data.nNumberOfEdges = ReadInt(&nPos, 1);

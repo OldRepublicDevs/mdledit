@@ -2,6 +2,7 @@
 #define EDITS_H_INCLUDED
 
 #include "general.h"
+#include "frame.h"
 #include "MDL.h"
 #include <windowsx.h>
 #include <commctrl.h>
@@ -29,7 +30,7 @@ class Edits{
     bool bSelection;
     std::string sSelected;
     std::vector<int> * nKnownArray = nullptr;
-    std::vector<int> * nDiffArray = nullptr;
+    std::vector<char> * sCompareBuffer = nullptr;
     std::vector<char> * sBuffer = nullptr;
 
   public:
@@ -41,6 +42,12 @@ class Edits{
     bool Run(HWND hParent, UINT nID);
     friend LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
+    int Compare(unsigned nPos){
+        if(sCompareBuffer == nullptr || sBuffer == nullptr || sCompareBuffer->size() == 0 || sBuffer->size() == 0 || nPos >= sBuffer->size()) return -1; // Don't mark
+        if(nPos >= sCompareBuffer->size()) return 2; // Out of range
+        if(sBuffer->at(nPos) != sCompareBuffer->at(nPos)) return 1; // Different
+        return 0; // Not different
+    }
     void Cleanup(){
         nKnownArray = nullptr;
         sBuffer = nullptr;
@@ -61,42 +68,42 @@ class Edits{
         else sSelected = "";
         if(sSelected == "MDL" && !Model.empty()){
             nKnownArray = &Model.GetKnownData();
-            nDiffArray = &Model.GetDifferenceData();
+            sCompareBuffer = &Model.GetCompareData();
             sBuffer = &Model.GetBuffer();
         }
         else if(sSelected == "MDX" && Model.Mdx){
             nKnownArray = &Model.Mdx->GetKnownData();
-            nDiffArray = &Model.Mdx->GetDifferenceData();
+            sCompareBuffer = &Model.Mdx->GetCompareData();
             sBuffer = &Model.Mdx->GetBuffer();
         }
         else if(sSelected == "WOK" && Model.Wok){
             nKnownArray = &Model.Wok->GetKnownData();
-            nDiffArray = &Model.Wok->GetDifferenceData();
+            sCompareBuffer = &Model.Wok->GetCompareData();
             sBuffer = &Model.Wok->GetBuffer();
         }
         else if(sSelected == "PWK" && Model.Pwk){
             nKnownArray = &Model.Pwk->GetKnownData();
-            nDiffArray = &Model.Pwk->GetDifferenceData();
+            sCompareBuffer = &Model.Pwk->GetCompareData();
             sBuffer = &Model.Pwk->GetBuffer();
         }
         else if(sSelected == "DWK 0" && Model.Dwk0){
             nKnownArray = &Model.Dwk0->GetKnownData();
-            nDiffArray = &Model.Dwk0->GetDifferenceData();
+            sCompareBuffer = &Model.Dwk0->GetCompareData();
             sBuffer = &Model.Dwk0->GetBuffer();
         }
         else if(sSelected == "DWK 1" && Model.Dwk1){
             nKnownArray = &Model.Dwk1->GetKnownData();
-            nDiffArray = &Model.Dwk1->GetDifferenceData();
+            sCompareBuffer = &Model.Dwk1->GetCompareData();
             sBuffer = &Model.Dwk1->GetBuffer();
         }
         else if(sSelected == "DWK 2" && Model.Dwk2){
             nKnownArray = &Model.Dwk2->GetKnownData();
-            nDiffArray = &Model.Dwk2->GetDifferenceData();
+            sCompareBuffer = &Model.Dwk2->GetCompareData();
             sBuffer = &Model.Dwk2->GetBuffer();
         }
         else{
             nKnownArray = nullptr;
-            nDiffArray = nullptr;
+            sCompareBuffer = nullptr;
             sBuffer = nullptr;
         }
 

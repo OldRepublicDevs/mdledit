@@ -77,7 +77,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\n";
         sReturn << "\n# GEOM ASCII";
         sReturn << "\nbeginmodelgeom " << mh->GH.sName.c_str();
-        if(!mh->vLytPosition.Null())
+        if(Wok)
             sReturn << "\n  layoutposition " << PrepareFloat(mh->vLytPosition.fX) << " " << PrepareFloat(mh->vLytPosition.fY) << " " << PrepareFloat(mh->vLytPosition.fZ);
         sReturn     << "\n  bmin " << PrepareFloat(mh->vBBmin.fX) << " " << PrepareFloat(mh->vBBmin.fY) << " " << PrepareFloat(mh->vBBmin.fZ);
         sReturn     << "\n  bmax " << PrepareFloat(mh->vBBmax.fX) << " " << PrepareFloat(mh->vBBmax.fY) << " " << PrepareFloat(mh->vBBmax.fZ);

@@ -337,7 +337,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         TokenData.push_back(TokenDatum("ambient_r", "double", "MDL", (void*) &node.Mesh.fAmbient.fR, MDL_OFFSET + node.nOffset + nHeaderOffset + 72));
         TokenData.push_back(TokenDatum("ambient_g", "double", "MDL", (void*) &node.Mesh.fAmbient.fG, MDL_OFFSET + node.nOffset + nHeaderOffset + 76));
         TokenData.push_back(TokenDatum("ambient_b", "double", "MDL", (void*) &node.Mesh.fAmbient.fB, MDL_OFFSET + node.nOffset + nHeaderOffset + 80));
-        TokenData.push_back(TokenDatum("inv_counter", "unsigned int", "MDL", (void*) &node.Mesh.nMeshInvertedCounter, MDL_OFFSET + node.Mesh.MeshInvertedCounterArray.nOffset));
+        TokenData.push_back(TokenDatum("inv_counter", "int", "MDL", (void*) &node.Mesh.nMeshInvertedCounter, MDL_OFFSET + node.Mesh.MeshInvertedCounterArray.nOffset));
         TokenData.push_back(TokenDatum("bmin_x", "double", "MDL", (void*) &node.Mesh.vBBmin.fX, MDL_OFFSET + node.nOffset + nHeaderOffset + 20));
         TokenData.push_back(TokenDatum("bmin_y", "double", "MDL", (void*) &node.Mesh.vBBmin.fY, MDL_OFFSET + node.nOffset + nHeaderOffset + 24));
         TokenData.push_back(TokenDatum("bmin_z", "double", "MDL", (void*) &node.Mesh.vBBmin.fZ, MDL_OFFSET + node.nOffset + nHeaderOffset + 28));
