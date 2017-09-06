@@ -3,7 +3,9 @@
 
 //The icon
 #define IDI_ICON            1
-#define ID_CUR_DRAG         2
+#define IDI_ICON2           2
+#define IDI_DLG_ICON        3
+#define ID_CUR_DRAG         4
 
 //The menu
 #define IDM_MAIN            100
@@ -13,7 +15,7 @@
 #define IDM_FILE_EXIT       104
 #define IDM_ZOOM_IN         105
 #define IDM_ZOOM_OUT        106
-#define IDM_HELP_ABOUT      107
+#define IDM_MDLEDIT         107
 #define IDM_POINT_NEW       108
 #define IDM_POINT_DEL_LAST  109
 #define IDM_NORTH           110
@@ -45,6 +47,9 @@
 #define IDM_MASS_ANALYZE    135
 #define IDM_BIN_COMPARE     136
 #define IDM_SHOW_DIFF       137
+#define IDM_SHOW_GROUP      138
+#define IDM_SHOW_DATASTRUCT 139
+#define IDM_SHOW_REPORT     140
 
 //GUI controls
 #define IDC_MAIN_EDIT    201
@@ -84,6 +89,7 @@
 #define IDPM_VIEW_ASCII             305
 #define IDPM_OPEN_GEO_VIEWER        306
 #define IDPM_OPEN_EDITOR            307
+#define IDPM_SCROLL                 308
 
 #define IDP_DISPLAY_UPDATE      350
 
@@ -102,6 +108,11 @@
 #define DLG_ID_EXPORT_WOK       413
 #define DLG_PROGRESSMASS        414
 #define DLG_ID_DOT_ASCII        415
+#define DLG_ID_SAVE_REPORT      416
+#define DLG_ID_MIN_VERT         417
+#define DLG_ID_CREASE_ANGLE     418
+#define DLG_ID_CREASE_ANGLE_DEG 419
+
 
 #define IDDB_EDIT               500
 #define IDDB_SAVE               501

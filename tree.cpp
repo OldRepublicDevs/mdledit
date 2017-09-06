@@ -3,47 +3,59 @@
 
 /**
     Functions:
-    AddMenuLines() //frame.h
-    Append() //Helper
-    AppendAabb() //Helper
-    AppendChildren() //Helper
-    BuildTree() //frame.h
-    DetermineDisplayText //frame.h
+    AddMenuLines()       // frame.h
+    Append()             // Helper
+    AppendAabb()         // Helper
+    AppendChildren()     // Helper
+    BuildTree()          // frame.h
+    DetermineDisplayText // frame.h
 /**/
 
-void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile){
+void AddMenuLines(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile){
 
     if(cItem.at(0) == "") return;
 
     /// Header
-    else if(cItem.at(0) == "Header" && nFile == 0){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+    else if(cItem.at(0) == "Header"){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
     }
     /// Geometry Node
-    else if((cItem.at(1) == "Geometry") || ((cItem.at(3) == "Geometry") && ((cItem.at(1) == "Children") || (cItem.at(1) == "Parent")))){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ASCII");
+    else if((cItem.at(1) == "Geometry") || ((cItem.at(3) == "Geometry") && ((cItem.at(1) == "Children") || (safesubstr(cItem.at(0), 0, 7) == "Parent:")))){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ascii");
         pmla->nIndex++;
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
+        if(bShowHex){
+            InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
+            pmla->nIndex++;
+        }
     }
     /// Animation
     else if(cItem.at(1) == "Animations"){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ASCII");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ascii");
         pmla->nIndex++;
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
+        if(bShowHex){
+            InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
+            pmla->nIndex++;
+        }
     }
     /// Animation Node
-    else if((cItem.at(2) == "Animations") || ((cItem.at(4) == "Animations") && ((cItem.at(1) == "Children") || (cItem.at(1) == "Parent")))){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ASCII");
+    else if((cItem.at(2) == "Animations") || ((cItem.at(4) == "Animations") && ((cItem.at(1) == "Children") || (safesubstr(cItem.at(0), 0, 7) == "Parent:")))){
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ascii");
         pmla->nIndex++;
+        if(bShowHex){
+            InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
+            pmla->nIndex++;
+        }
     }
     /// Controllers
     else if(cItem.at(1) == "Controllers"){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ASCII");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ascii");
         pmla->nIndex++;
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
     }
     /// Node subtypes and arrays
@@ -59,8 +71,14 @@ void AddMenuLines(std::vector<std::string>cItem, LPARAM lParam, MenuLineAdder * 
             cItem.at(1) == "Danglymesh" ||
             cItem.at(0) == "Lightsaber" ||
             cItem.at(1) == "Lightsaber" ){
-        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit");
+        InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
+    }
+    else if(cItem.at(0) == "Vertices" && nFile == 0){
+        if(Mdl.Mdx && bShowHex){
+            InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here (MDX)");
+            pmla->nIndex++;
+        }
     }
     else return;
 }
@@ -107,66 +125,66 @@ void AppendAabb(Aabb * AABB, HTREEITEM TopLevel, int & nCount){
 }
 
 HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names, MDL & Mdl){
-        if(node.Head.nType & NODE_LIGHT){
-            HTREEITEM Light = Append("Light", (LPARAM) &node, Prev);
-            HTREEITEM LensFlares = Append("Lens Flares", (LPARAM) &node.Light, Light);
-            int nMaxSize = std::max(node.Light.FlareSizes.size(),
-                           std::max(node.Light.FlarePositions.size(),
-                           std::max(node.Light.FlareColorShifts.size(),
-                                    node.Light.FlareTextureNames.size())));
-            for(int n = 0; n < nMaxSize; n++)
-                Append("Lens Flare " + std::to_string(n), (LPARAM) &node, LensFlares);
+    if(node.Head.nType & NODE_LIGHT){
+        HTREEITEM Light = Append("Light", (LPARAM) &node, Prev);
+        HTREEITEM LensFlares = Append("Lens Flares", (LPARAM) &node.Light, Light);
+        int nMaxSize = std::max(node.Light.FlareSizes.size(),
+                       std::max(node.Light.FlarePositions.size(),
+                       std::max(node.Light.FlareColorShifts.size(),
+                                node.Light.FlareTextureNames.size())));
+        for(int n = 0; n < nMaxSize; n++)
+            Append("Lens Flare " + std::to_string(n), (LPARAM) &node, LensFlares);
+    }
+    if(node.Head.nType & NODE_EMITTER){
+        HTREEITEM Emitter = Append("Emitter", (LPARAM) &node, Prev);
+    }
+    if(node.Head.nType & NODE_REFERENCE){
+        HTREEITEM Reference = Append("Reference", (LPARAM) &node, Prev);
+    }
+    if(node.Head.nType & NODE_MESH){
+        HTREEITEM Mesh = Append("Mesh", (LPARAM) &node, Prev);
+        HTREEITEM Vertices = Append("Vertices", (LPARAM) &node, Mesh);
+        if(node.Mesh.Vertices.size() > 0){
+            for(int n = 0; n < node.Mesh.Vertices.size(); n++)
+                Append("Vertex " + std::to_string(n), (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
         }
-        if(node.Head.nType & NODE_EMITTER){
-            HTREEITEM Emitter = Append("Emitter", (LPARAM) &node, Prev);
-        }
-        if(node.Head.nType & NODE_REFERENCE){
-            HTREEITEM Reference = Append("Reference", (LPARAM) &node, Prev);
-        }
-        if(node.Head.nType & NODE_MESH){
-            HTREEITEM Mesh = Append("Mesh", (LPARAM) &node, Prev);
-            HTREEITEM Vertices = Append("Vertices", (LPARAM) &node, Mesh);
-            if(node.Mesh.Vertices.size() > 0){
-                for(int n = 0; n < node.Mesh.Vertices.size(); n++)
-                    Append("Vertex " + std::to_string(n), (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
-            }
-            HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
-            if(node.Mesh.Faces.size() > 0){
-                for(int n = 0; n < node.Mesh.Faces.size(); n++){
-                    Append("Face " + std::to_string(n), (LPARAM) &(node.Mesh.Faces[n]), Faces);
-                }
-            }
-        }
-        if(node.Head.nType & NODE_SKIN){
-            char cBone [255];
-            HTREEITEM Skin = Append("Skin", (LPARAM) &node, Prev);
-            HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
-            if(node.Skin.Bones.size() > 0){
-                for(int n = 0; n < node.Skin.Bones.size(); n++){
-                    std::string sBone = "Bone " + Names[n].sName;
-                    Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
-                }
+        HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
+        if(node.Mesh.Faces.size() > 0){
+            for(int n = 0; n < node.Mesh.Faces.size(); n++){
+                Append("Face " + std::to_string(n), (LPARAM) &(node.Mesh.Faces[n]), Faces);
             }
         }
-        if(node.Head.nType & NODE_DANGLY){
-            HTREEITEM Danglymesh = Append("Danglymesh", (LPARAM) &node, Prev);
-            for(int i = 0; i < node.Dangly.Constraints.size(); i++)
-                Append("Dangly Vertex " + std::to_string(i), (LPARAM) &(node), Danglymesh);
+    }
+    if(node.Head.nType & NODE_SKIN){
+        char cBone [255];
+        HTREEITEM Skin = Append("Skin", (LPARAM) &node, Prev);
+        HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
+        if(node.Skin.Bones.size() > 0){
+            for(int n = 0; n < node.Skin.Bones.size(); n++){
+                std::string sBone = "Bone " + Names[n].sName;
+                Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
+            }
         }
-        if(node.Head.nType & NODE_AABB){
-            HTREEITEM Walkmesh = Append("Aabb", (LPARAM) &node.Walkmesh, Prev);
-            int nCounter = 0;
-            if(node.Walkmesh.nOffsetToAabb > 0) AppendAabb(&(node.Walkmesh.RootAabb), Walkmesh, nCounter);
-        }
-        if(node.Head.nType & NODE_SABER){
-            HTREEITEM Saber = Append("Lightsaber", (LPARAM) &node, Prev);
-            if(node.Saber.SaberData.size() > 0){
-                for(int i = 0; i < node.Saber.SaberData.size(); i++){
-                    Append("Lightsaber Vertex " + std::to_string(i), (LPARAM) &(node.Saber.SaberData[i]), Saber);
-                }
+    }
+    if(node.Head.nType & NODE_DANGLY){
+        HTREEITEM Danglymesh = Append("Danglymesh", (LPARAM) &node, Prev);
+        for(int i = 0; i < node.Dangly.Constraints.size(); i++)
+            Append("Dangly Vertex " + std::to_string(i), (LPARAM) &(node), Danglymesh);
+    }
+    if(node.Head.nType & NODE_AABB){
+        HTREEITEM Walkmesh = Append("Aabb", (LPARAM) &node.Walkmesh, Prev);
+        int nCounter = 0;
+        if(node.Walkmesh.nOffsetToAabb > 0) AppendAabb(&(node.Walkmesh.RootAabb), Walkmesh, nCounter);
+    }
+    if(node.Head.nType & NODE_SABER){
+        HTREEITEM Saber = Append("Lightsaber", (LPARAM) &node, Prev);
+        if(node.Saber.SaberData.size() > 0){
+            for(int i = 0; i < node.Saber.SaberData.size(); i++){
+                Append("Lightsaber Vertex " + std::to_string(i), (LPARAM) &(node.Saber.SaberData[i]), Saber);
+            }
 
-            }
         }
+    }
 }
 
 void BuildTree(MDL & Mdl){
@@ -188,20 +206,21 @@ void BuildTree(MDL & Mdl){
 
             CurrentNode = Append(Data.MH.Names[node.Head.nNodeNumber].sName, (LPARAM) &node, Animation);
 
-            HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
-            for(int n = 0; n < node.Head.Controllers.size(); n++){
-                int nCtrlIndex = node.Head.Controllers[n].nNodeNumber;
-                int nCtrlType = node.Head.Controllers[n].nControllerType;
-                Node & ctrlnode = Mdl.GetNodeByNameIndex(nCtrlIndex);
-                std::string sName = ReturnControllerName(nCtrlType, ctrlnode.Head.nType);
-                if(node.Head.Controllers[n].nColumnCount == 19) sName+="bezierkey";
-                else sName+="key";
-                Append(sName, (LPARAM) &(node.Head.Controllers[n]), Controllers);
-            }
+            if(a > 0){
+                HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
+                for(int n = 0; n < node.Head.Controllers.size(); n++){
+                    int nCtrlIndex = node.Head.Controllers[n].nNodeNumber;
+                    int nCtrlType = node.Head.Controllers[n].nControllerType;
+                    Node & ctrlnode = Mdl.GetNodeByNameIndex(nCtrlIndex);
+                    std::string sName = ReturnControllerName(nCtrlType, ctrlnode.Head.nType);
+                    if(node.Head.Controllers[n].nColumnCount == 19) sName+="bezierkey";
+                    else sName+="key";
+                    Append(sName, (LPARAM) &(node.Head.Controllers[n]), Controllers);
+                }
 
-            HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
-            if(node.Head.nParentIndex != -1){
-                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, n), Parent);
+                if(node.Head.nParentIndex != -1){
+                    Append("Parent: " + Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, n), CurrentNode);
+                }
             }
 
             HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
@@ -233,14 +252,15 @@ void BuildTree(MDL & Mdl){
 
             AppendChildren(node, CurrentNode, Data.MH.Names, Mdl);
 
-            HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
-            for(int n = 0; n < node.Head.Controllers.size(); n++){
-                Append(ReturnControllerName(node.Head.Controllers[n].nControllerType, node.Head.nType), (LPARAM) &(node.Head.Controllers[n]), Controllers);
-            }
+            if(a > 0){
+                HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, CurrentNode);
+                for(int n = 0; n < node.Head.Controllers.size(); n++){
+                    Append(ReturnControllerName(node.Head.Controllers[n].nControllerType, node.Head.nType), (LPARAM) &(node.Head.Controllers[n]), Controllers);
+                }
 
-            HTREEITEM Parent = Append("Parent", NULL, CurrentNode);
-            if(node.Head.nParentIndex != -1){
-                Append(Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, -1), Parent);
+                if(node.Head.nParentIndex != -1){
+                    Append("Parent: " + Data.MH.Names[node.Head.nParentIndex].sName, (LPARAM) &Mdl.GetNodeByNameIndex(node.Head.nParentIndex, -1), CurrentNode);
+                }
             }
 
             HTREEITEM Children = Append("Children", (LPARAM) &node.Head, CurrentNode);
@@ -392,7 +412,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
         }
 
         /// Node ///
-        else if(((cItem.at(1) == "Geometry") || (cItem.at(2) == "Animations") || (cItem.at(1) == "Children") || (cItem.at(1) == "Parent")) && !bWok){
+        else if(((cItem.at(1) == "Geometry") || (cItem.at(2) == "Animations") || (cItem.at(1) == "Children") || (safesubstr(cItem.at(0), 0, 7) == "Parent:")) && !bWok){
             Node * node = (Node * ) lParam;
             //std::cout << "Current name in problematic position: " << cItem.at(0).c_str() << "\n";
             sPrint << "== " << Data.MH.Names[node->Head.nNodeNumber].sName.c_str() << " ==";
@@ -480,91 +500,95 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             else tempNode = &geonode;
             Node & node = *tempNode;
             Location loc = geonode.GetLocation();
+            try{
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    if(ctrl->nAnimation >= 0) sPrint << "\r\n" << "(" << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << ") ";
+                    else sPrint << " ";
 
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                if(ctrl->nAnimation >= 0) sPrint << "\r\n" << "(" << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << ") ";
-                else sPrint << " ";
+                    /// Orientation controller
+                    if(ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
 
-                /// Orientation controller
-                if(ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                        /// Compressed orientation
+                        if(ctrl->nColumnCount == 2){
+                            ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
+                            Quaternion qCurrent = DecompressQuaternion(ByteBlock4.ui);
 
-                    /// Compressed orientation
-                    if(ctrl->nColumnCount == 2){
-                        ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
-                        Quaternion qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                            sPrint << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
+                        }
 
-                        sPrint << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
+                        /// Uncompressed orientation
+                        else if(ctrl->nColumnCount == 4){
+                            Quaternion qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
+                                                  node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
+                                                  node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
+                                                  node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 3));
+
+                            sPrint << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
+                        }
+
+                        /// unknown orientation controller type
+                        else{
+                            std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName << " (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
+                            Error("A controller type is not being handled! Check the console and add the necessary code!");
+                        }
                     }
 
-                    /// Uncompressed orientation
-                    else if(ctrl->nColumnCount == 4){
-                        Quaternion qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
-                                              node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
-                                              node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
-                                              node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 3));
+                    /// bezier controller
+                    else if(ctrl->nColumnCount & 16){
 
-                        sPrint << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
+                        /// Position controller
+                        if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION && ctrl->nAnimation >= 0){
+                            sPrint << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
+                            sPrint << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
+                            sPrint << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
+                            sPrint << " | " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
+                            sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
+                            sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
+                            sPrint << " | " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
+                            sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
+                            sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
+                        }
+
+                        /// Other controllers
+                        else{
+                            for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
+                                sPrint << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n * ((ctrl->nColumnCount & 15) * 3) + i));
+                                if(i < (ctrl->nColumnCount & 15) * 3 - 1) sPrint << " ";
+                                if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sPrint << "| ";
+                            }
+                        }
                     }
 
-                    /// unknown orientation controller type
+                    /// regular controller
+                    else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
+
+                        /// Position controller
+                        if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION && ctrl->nAnimation >= 0){
+                            sPrint << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
+                            sPrint << " ";
+                            sPrint << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
+                            sPrint << " ";
+                            sPrint << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 2));
+                        }
+
+                        /// Other controllers
+                        else{
+                            for(int i = 0; i < ctrl->nColumnCount; i++){
+                                sPrint << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
+                                if(i < ctrl->nColumnCount - 1) sPrint << " ";
+                            }
+                        }
+                    }
+
+                    /// unknown controller type
                     else{
                         std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName << " (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
                         Error("A controller type is not being handled! Check the console and add the necessary code!");
                     }
                 }
-
-                /// bezier controller
-                else if(ctrl->nColumnCount & 16){
-
-                    /// Position controller
-                    if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION && ctrl->nAnimation >= 0){
-                        sPrint << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
-                        sPrint << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
-                        sPrint << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
-                        sPrint << " | " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
-                        sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
-                        sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
-                        sPrint << " | " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
-                        sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
-                        sPrint << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
-                    }
-
-                    /// Other controllers
-                    else{
-                        for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
-                            sPrint << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n * ((ctrl->nColumnCount & 15) * 3) + i));
-                            if(i < (ctrl->nColumnCount & 15) * 3 - 1) sPrint << " ";
-                            if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sPrint << "| ";
-                        }
-                    }
-                }
-
-                /// regular controller
-                else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
-
-                    /// Position controller
-                    if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION && ctrl->nAnimation >= 0){
-                        sPrint << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
-                        sPrint << " ";
-                        sPrint << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
-                        sPrint << " ";
-                        sPrint << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 2));
-                    }
-
-                    /// Other controllers
-                    else{
-                        for(int i = 0; i < ctrl->nColumnCount; i++){
-                            sPrint << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
-                            if(i < ctrl->nColumnCount - 1) sPrint << " ";
-                        }
-                    }
-                }
-
-                /// unknown controller type
-                else{
-                    std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << Data.MH.Names.at(ctrl->nNodeNumber).sName << " (" << (ctrl->nAnimation == -1 ? "geometry" : Data.MH.Animations.at(ctrl->nAnimation).sName.c_str()) << ")!\n";
-                    Error("A controller type is not being handled! Check the console and add the necessary code!");
-                }
+            }
+            catch(const std::out_of_range & e){
+                Error("An out of range exception occurred:\n\n" + std::string(e.what()));
             }
         }
         else if(cItem.at(0) == "Children"){
@@ -669,7 +693,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "  splat:          " << (emitter->nFlags & EMITTER_FLAG_SPLAT ? 1 : 0);
             sPrint << "\r\n" << "  inherit_part:   " << (emitter->nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
             sPrint << "\r\n" << "  depth_texture?: " << (emitter->nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
-            sPrint << "\r\n" << "  renderorder?:   " << (emitter->nFlags & EMITTER_FLAG_13 ? 1 : 0);
+            sPrint << "\r\n" << "  emitterflag13:  " << (emitter->nFlags & EMITTER_FLAG_13 ? 1 : 0);
         }
 
         /// Reference ///
@@ -721,6 +745,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "               " << PrepareFloat(mesh->fDiffuse.fG);
             sPrint << "\r\n" << "               " << PrepareFloat(mesh->fDiffuse.fB);
             sPrint << "\r\n";
+            /*
             sPrint << "\r\n" << "-- Unknown Lightsaber Bytes --";
             sPrint << "\r\n" << "Unknown 1: " << (int) mesh->nSaberUnknown1;
             sPrint << "\r\n" << "Unknown 2: " << (int) mesh->nSaberUnknown2;
@@ -731,6 +756,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Unknown 7: " << (int) mesh->nSaberUnknown7;
             sPrint << "\r\n" << "Unknown 8: " << (int) mesh->nSaberUnknown8;
             sPrint << "\r\n";
+            */
             sPrint << "\r\n" << "Bounding Box Min: " << PrepareFloat(mesh->vBBmin.fX);
             sPrint << "\r\n" << "                  " << PrepareFloat(mesh->vBBmin.fY);
             sPrint << "\r\n" << "                  " << PrepareFloat(mesh->vBBmin.fZ);
@@ -1228,7 +1254,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "             " << PrepareFloat(face->vNormal.fZ);
             sPrint << "\r\n" << "Plane Distance: " << PrepareFloat(face->fDistance);
             sPrint << "\r\n" << "Material ID: " << face->nMaterialID;
-            if(face->nMaterialID != 7)
+            if(IsMaterialWalkable(face->nMaterialID))
                 sPrint << "\r\n" << "Adjacent Edges: " << face->nAdjacentFaces[0] << ", " << face->nAdjacentFaces[1] << ", " << face->nAdjacentFaces[2];
             sPrint << "\r\n" << "Vertex Indices: " << face->nIndexVertex[0] << ", " << face->nIndexVertex[1] << ", " << face->nIndexVertex[2];
             /*

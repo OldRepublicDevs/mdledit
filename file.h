@@ -67,6 +67,7 @@ class BinaryFile: public File{
     std::vector<int> bKnown;
     std::vector<char> sCompareBuffer;
     void MarkBytes(unsigned int nOffset, int nLength, int nClass);
+    void MarkDataBorder(unsigned nOffset);
 
     //Reading functions
     int ReadInt(unsigned int * nPosition, int nMarking, int nBytes = 4);
@@ -127,6 +128,7 @@ class TextFile: public File{
 enum DataType {
     DT_string,
     DT_int,
+    DT_uint,
     DT_bool,
     DT_float
 };

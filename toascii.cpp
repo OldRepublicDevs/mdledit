@@ -15,26 +15,46 @@
 void MDL::ExportAscii(std::string &sExport){
     if(!FH) return;
     std::stringstream ss;
-    ConvertToAscii(CONVERT_MODEL, ss, (void*) &(FH->MH));
+    try{
+        ConvertToAscii(CONVERT_MODEL, ss, (void*) &(FH->MH));
+    }
+    catch(const std::exception & e){
+        Error("An exception occurred while creating model ascii:\n\n" + std::string(e.what()) + "\n\nThe exported ascii will be broken.");
+    }
     sExport = ss.str();
 }
 void MDL::ExportPwkAscii(std::string &sExport){
     if(!Pwk) return;
     if(!Pwk->GetData()) return;
     std::stringstream ss;
-    ConvertToAscii(CONVERT_PWK, ss, (void*) Pwk.get());
+    try{
+        ConvertToAscii(CONVERT_PWK, ss, (void*) Pwk.get());
+    }
+    catch(const std::exception & e){
+        Error("An exception occurred while creating pwk ascii:\n\n" + std::string(e.what()) + "\n\nThe exported ascii will be broken.");
+    }
     sExport = ss.str();
 }
 void MDL::ExportDwkAscii(std::string &sExport){
     std::stringstream ss;
-    ConvertToAscii(CONVERT_DWK, ss, (void*) this);
+    try{
+        ConvertToAscii(CONVERT_DWK, ss, (void*) this);
+    }
+    catch(const std::exception & e){
+        Error("An exception occurred while creating dwk ascii:\n\n" + std::string(e.what()) + "\n\nThe exported ascii will be broken.");
+    }
     sExport = ss.str();
 }
 void MDL::ExportWokAscii(std::string &sExport){
     if(!Wok) return;
     if(!Wok->GetData()) return;
     std::stringstream ss;
-    ConvertToAscii(CONVERT_WOK, ss, (void*) Wok.get());
+    try{
+        ConvertToAscii(CONVERT_WOK, ss, (void*) Wok.get());
+    }
+    catch(const std::exception & e){
+        Error("An exception occurred while creating wok ascii:\n\n" + std::string(e.what()) + "\n\nThe exported ascii will be broken.");
+    }
     sExport = ss.str();
 }
 
@@ -55,18 +75,23 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
 }
 
 void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data){
-    //std::cout << "Converting to ascii, data type: " << nDataType << "\n";
+    ReportObject ReportMdl(*this);
+    //ReportMdl << "Converting to ascii, data type: " << nDataType << "\n";
     std::stringstream sTimestamp;
     SYSTEMTIME st;
     GetLocalTime(&st);
-    sTimestamp << "at " << (st.wDay<10? "0" : "") << st.wDay << "/" << (st.wMonth<10? "0" : "") << st.wMonth << "/" << st.wYear;
+    sTimestamp << (st.wDay<10? "0" : "") << st.wDay << "/" << (st.wMonth<10? "0" : "") << st.wMonth << "/" << st.wYear;
     sTimestamp << " " << (st.wHour<10? "0" : "") << st.wHour << ":" << (st.wMinute<10? "0" : "") << st.wMinute << ":" << (st.wSecond<10? "0" : "") << st.wSecond;
     sTimestamp << " (Local Time)";
 
     if(nDataType == 0) return;
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
-        sReturn << "# MDLedit from KOTOR binary source " << sTimestamp.str();
+        sReturn << "# Exported with MDLedit " << version.Print() << " ";
+        if(src == AsciiSource) sReturn << "from ascii source ";
+        else if(src == BinarySource) sReturn << "from binary source ";
+        else std::cout << "Error: Source neither ascii nor binary!\n";
+        sReturn << "at " << sTimestamp.str();
         sReturn << "\n# MODEL ASCII";
         sReturn << "\nnewmodel " << mh->GH.sName.c_str();
         sReturn << "\nsetsupermodel " << mh->GH.sName.c_str() << " " << mh->cSupermodelName.c_str();
@@ -74,6 +99,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << "\nclassification_unk1 " << (int) mh->nSubclassification;
         sReturn << "\nignorefog " << (mh->nAffectedByFog ? 0 : 1);
         sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale);
+        sReturn << "\nheadlink " << (HeadLinked() ? 1 : 0);
+        sReturn << "\ncompress_quaternions " << (mh->bCompressQuaternions ? 1 : 0);
         sReturn << "\n";
         sReturn << "\n# GEOM ASCII";
         sReturn << "\nbeginmodelgeom " << mh->GH.sName.c_str();
@@ -116,12 +143,15 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node * node = (Node*) Data;
         sReturn << "\n    node dummy ";
         sReturn << MakeUniqueName(node->Head.nNodeNumber);
-        //std::cout << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << "\n";
+        //ReportMdl << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << "\n";
         sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers.at(n)));
             }
+        }
+        else if(node->Head.ControllerData.size() > 0){
+            //ConvertToAscii(CONVERT_CONTROLLERLESS_DATA, sReturn, (void*) node);
         }
         sReturn << "\n    endnode";
     }
@@ -135,7 +165,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
         }
         else{
-            //std::cout << "Writing ASCII WARNING: Headerless (ghost?) node! Offset: " << node.nOffset << "\n";
+            //ReportMdl << "Writing ASCII WARNING: Headerless (ghost?) node! Offset: " << node.nOffset << "\n";
             sReturn << "\nname " << mh->Names.at(n).sName;
         }
         if(node.Head.nType & NODE_AABB){
@@ -260,16 +290,6 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node * node = (Node*) Data;
         sReturn << "\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) << " " << PrepareFloat(node->Mesh.fDiffuse.fB);
         sReturn << "\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) << " " << PrepareFloat(node->Mesh.fAmbient.fB);
-        sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
-        sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
-        sReturn << "\n  render " << (int) node->Mesh.nRender;
-        sReturn << "\n  beaming " << (int) node->Mesh.nBeaming;
-        sReturn << "\n  lightmapped " << (int) node->Mesh.nHasLightmap;
-        sReturn << "\n  m_blsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
-        sReturn << "\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
-        sReturn << "\n  dirt_texture " << node->Mesh.nDirtTexture;
-        sReturn << "\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
-        sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         sReturn << "\n  transparencyhint " << node->Mesh.nTransparencyHint;
         sReturn << "\n  animateuv " << node->Mesh.nAnimateUV;
         if(node->Mesh.nAnimateUV == 0){
@@ -284,6 +304,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
             sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
         }
+        sReturn << "\n  lightmapped " << (int) node->Mesh.nHasLightmap;
+        sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
+        sReturn << "\n  m_bIsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
+        sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
+        sReturn << "\n  beaming " << (int) node->Mesh.nBeaming;
+        sReturn << "\n  render " << (int) node->Mesh.nRender;
+        sReturn << "\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
+        sReturn << "\n  dirt_texture " << node->Mesh.nDirtTexture;
+        sReturn << "\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
+        sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
         sReturn << "\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0);
         sReturn << "\n" << "  inv_count " << node->Mesh.nMeshInvertedCounter;
         if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n  bitmap " << node->Mesh.GetTexture(1);
@@ -314,7 +344,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
             sReturn << "\n  tverts " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n   " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
+                sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
                 sReturn << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fY);
             }
         }
@@ -366,18 +396,18 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(!Mdx->sBuffer.empty()){
             sReturn << "\n  weights " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n   ";
+                sReturn << "\n    ";
                 int i = 0;
                 signed short nBoneNumber; // = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
-                //std::cout << "Bone name index array size: " << node->Skin.BoneNameIndices.size() << "\n";
+                //ReportMdl << "Bone name index array size: " << node->Skin.BoneNameIndices.size() << "\n";
                 bool bDependentVert = false;
                 while(i < 4){
                     nBoneNumber = node->Mesh.Vertices.at(n).MDXData.Weights.nWeightIndex.at(i);
-                    //std::cout << "Reading bone number " << nBoneNumber << "\n";
+                    //ReportMdl << "Reading bone number " << nBoneNumber << "\n";
                     if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
                         int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
-                        //std::cout << "Reading bone number " << nBoneNumber;
-                        //std::cout << ", representing bone " << FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str() << ".\n";
+                        //ReportMdl << "Reading bone number " << nBoneNumber;
+                        //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str() << ".\n";
                         //sReturn << " " << FH->MH.Names.at(nNodeNumber).sName.c_str() << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
                         if(nNodeNumber > -1 && nNodeNumber < FH->MH.ArrayOfNodes.size()){
                             if(!bDependentVert) bDependentVert = true;
@@ -542,6 +572,68 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0
+    else if(nDataType == CONVERT_CONTROLLERLESS_DATA){
+        Node & node = * (Node*) Data;
+        ModelHeader & data = FH->MH;
+        Node & geonode = GetNodeByNameIndex(node.Head.nNodeNumber);
+        Location loc = geonode.GetLocation();
+
+        std::cout << "Converting controllerless data " << node.Head.ControllerData.size() << ".\n";
+        if(node.Head.ControllerData.size() == 4){
+            sReturn << "\n      controllerless_orientationkey";
+            //Compressed orientation
+            Quaternion qCurrent;
+            AxisAngle aaCurrent;
+            for(int n = 0; n < 2; n++){
+                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                ByteBlock4.f = node.Head.ControllerData.at(2 + n);
+                qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                aaCurrent = AxisAngle(qCurrent);
+                sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+            }
+            sReturn << "\n      endlist";
+        }
+        else if(node.Head.ControllerData.size() == 8){
+            sReturn << "\n      controllerless_positionkey";
+            //normal position
+            for(int n = 0; n < 2; n++){
+                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(2 + n*3 + 0));
+                sReturn << " ";
+                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(2 + n*3 + 1));
+                sReturn << " ";
+                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(2 + n*3 + 2));
+            }
+            sReturn << "\n      endlist";
+        }
+        else if(node.Head.ControllerData.size() == 12){
+            sReturn << "\n      controllerless_positionkey";
+            //normal position
+            for(int n = 0; n < 2; n++){
+                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(2 + n*3 + 0));
+                sReturn << " ";
+                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(2 + n*3 + 1));
+                sReturn << " ";
+                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(2 + n*3 + 2));
+            }
+            sReturn << "\n      endlist";
+
+            sReturn << "\n      controllerless_orientationkey";
+            //Compressed orientation
+            Quaternion qCurrent;
+            AxisAngle aaCurrent;
+            for(int n = 0; n < 2; n++){
+                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(8 + n)) << " ";
+                ByteBlock4.f = node.Head.ControllerData.at(8 + 2 + n);
+                qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                aaCurrent = AxisAngle(qCurrent);
+                sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+            }
+            sReturn << "\n      endlist";
+        }
+        else std::cout << "Found a new type of controllerless animation data: " << node.Head.ControllerData.size() << "floats!\n";
+    }
     else if(nDataType == CONVERT_CONTROLLER_KEYED){
         Controller * ctrl = (Controller*) Data;
         ModelHeader & data = FH->MH;
@@ -560,159 +652,111 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
         Node & node = *tempNode;
-        //std::cout << "Node does not crash\n";
+        //ReportMdl << "Node does not crash\n";
 
-        sReturn << "\n      " << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
+        sReturn << "\n      ";
+        sReturn << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
         if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn << "bezier";
         sReturn << "key";
-        double PI = 3.14159;
-        if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
-            //Compressed orientation
-            Quaternion qCurrent, qPrevious;
-            AxisAngle aaCurrent, aaDiff;
-            //std::cout << "Printing compressed orientation keys. Timekey: " << ctrl->nTimekeyStart << ", Datakey: " << ctrl->nDataStart << ", Values: " << ctrl->nValueCount << "\n";
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
-                qCurrent = DecompressQuaternion(ByteBlock4.ui);
-                aaCurrent = AxisAngle(qCurrent);
-                /*
-                if(n > 0){
-                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
-                    //std::cout << "Theta is " << aaDiff.fAngle << ".\n";
-                    if(abs(aaDiff.fAngle) - PI > 0.0001){
-                        std::cout << "Correcting orientation on node '" << FH->MH.Names.at(ctrl->nNodeNumber).sName.c_str() << "' in animation '" << FH->MH.Animations.at(ctrl->nAnimation).sName.c_str() << "'.\n";
-                        //std::cout << "Changing " << aaCurrent.Print() << "... ";
-                        if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
-                        else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
-                        //std::cout << "to " << aaCurrent.Print() << ".\n";
+        try{
+            if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                //Compressed orientation
+                Quaternion qCurrent, qPrevious;
+                AxisAngle aaCurrent, aaDiff;
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
+                    qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                    aaCurrent = AxisAngle(qCurrent);
+
+                    sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+                }
+            }
+            else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
+                //Uncompressed orientation
+                Quaternion qCurrent, qPrevious;
+                AxisAngle aaCurrent, aaDiff;
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
+                                          node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
+                                          node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
+                                          node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 3));
+                    aaCurrent = AxisAngle(qCurrent);
+
+                    sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+                }
+            }
+            /// positionbezierkey
+            else if(ctrl->nColumnCount & 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+                //positionbezierkey
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
+                    sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
+                    sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
+                    sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
+                    sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
+                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
+                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
+                    sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
+                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
+                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
+                }
+            }
+            /// regular bezierkey
+            else if(ctrl->nColumnCount & 16 && !bBezierToLinear){
+                //bezierkey
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
+                        sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount & 15) * 3) + i));
+                        if(i < (ctrl->nColumnCount & 15) * 3 - 1) sReturn << " ";
+                        if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sReturn << " ";
                     }
                 }
-                /*
-                if(n > 0){
-                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
-                    //std::cout << "Theta is " << aaDiff.fAngle << ".\n";
-                    int znj = 0;
-                    while(abs(aaDiff.fAngle) > PI && znj < 10){
-                        //std::cout << "Changing " << aaCurrent.Print() << "... ";
-                        aaCurrent.fAngle = pow(-1.0, (double) znj) * (double) (znj+1) * 2.0 * PI + aaCurrent.fAngle;
-                        znj++;
-                        aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
-                        //std::cout << "to " << aaCurrent.Print() << ".\n";
+            }
+            /// positionkey
+            else if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+                //normal position
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
+                    sReturn << " ";
+                    sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
+                    sReturn << " ";
+                    sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 2));
+                }
+            }
+            /// regular key
+            else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
+                //default parser
+                for(int n = 0; n < ctrl->nValueCount; n++){
+                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    for(int i = 0; i < ctrl->nColumnCount; i++){
+                        sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
+                        if(i < ctrl->nColumnCount - 1) sReturn << " ";
                     }
                 }
-                qCurrent = Quaternion(aaCurrent);
-                qPrevious = qCurrent;
-                */
-
-                //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
-                sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
+            }
+            else{
+                std::string sLocation;
+                if(ctrl->nAnimation == -1) sLocation = "geometry";
+                else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
+                ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
+                Error("A controller type is not being handled! Check the console and add the necessary code!");
             }
         }
-        else if(ctrl->nColumnCount == 4 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
-            //Uncompressed orientation
-            //std::cout << "Printing uncompressed orientation keys. Timekey: " << ctrl->nTimekeyStart << ", Datakey: " << ctrl->nDataStart << ", Values: " << ctrl->nValueCount << "\n";
-            Quaternion qCurrent, qPrevious;
-            AxisAngle aaCurrent, aaDiff;
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
-                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
-                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
-                                      node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 3));
-                aaCurrent = AxisAngle(qCurrent);
-                /*
-                if(n > 0){
-                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
-                    //std::cout << "Theta is " << aaDiff.fAngle << ".\n";
-                    if(abs(aaDiff.fAngle) - PI > 0.0001){
-                        //std::cout << "Changing " << aaCurrent.Print() << "... ";
-                        if(abs(aaCurrent.fAngle) == 0.0) aaCurrent.fAngle = 2.0 * PI;
-                        else aaCurrent.fAngle = (aaCurrent.fAngle / abs(aaCurrent.fAngle)) * -2.0 * PI + aaCurrent.fAngle;
-                        //std::cout << "to " << aaCurrent.Print() << ".\n";
-                    }
-                }
-                /*
-                if(n > 0){
-                    aaDiff = AxisAngle(qCurrent * qPrevious.inverse());
-                    //std::cout << "Theta is " << aaDiff.fAngle << ".\n";
-                    int znj = 0;
-                    while(abs(aaDiff.fAngle) > PI && znj < 10){
-                        //std::cout << "Changing " << aaCurrent.Print() << "... ";
-                        aaCurrent.fAngle = pow(-1.0, (double) znj) * (double) (znj+1) * 2.0 * PI + aaCurrent.fAngle;
-                        znj++;
-                        aaDiff = AxisAngle(Quaternion(aaCurrent) * qPrevious.inverse());
-                        //std::cout << "to " << aaCurrent.Print() << ".\n";
-                    }
-                }
-                qCurrent = Quaternion(aaCurrent);
-                qPrevious = qCurrent;
-                */
-
-                //sReturn << PrepareFloat(qCurrent.vAxis.fX) << " " << PrepareFloat(qCurrent.vAxis.fY) << " " << PrepareFloat(qCurrent.vAxis.fZ) << " " << PrepareFloat(qCurrent.fW);
-                sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
-                //std::cout << "Done printing key " << n << "\n";
-            }
+        catch(const std::out_of_range & e){
+            Error("Missing controller data on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
+                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.\n" + e.what());
         }
-        /// positionbezierkey
-        else if(ctrl->nColumnCount & 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
-            //positionbezierkey
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
-                sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
-                sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
-                sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
-                sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
-                sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
-                sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
-            }
+        catch(const std::exception & e){
+            Error("An exception occurred on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
+                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "':\n" + e.what());
         }
-        /// regular bezierkey
-        else if(ctrl->nColumnCount & 16 && !bBezierToLinear){
-            //bezierkey
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
-                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount & 15) * 3) + i));
-                    if(i < (ctrl->nColumnCount & 15) * 3 - 1) sReturn << " ";
-                    if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sReturn << " ";
-                }
-            }
-        }
-        /// positionkey
-        else if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
-            //normal position
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
-                sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
-                sReturn << " ";
-                sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 2));
-            }
-
-        }
-        /// regular key
-        else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
-            //default parser
-            for(int n = 0; n < ctrl->nValueCount; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                for(int i = 0; i < ctrl->nColumnCount; i++){
-                    sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
-                    if(i < ctrl->nColumnCount - 1) sReturn << " ";
-                }
-            }
-
-        }
-        else{
-            std::string sLocation;
-            if(ctrl->nAnimation == -1) sLocation = "geometry";
-            else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
-            std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
-            Error("A controller type is not being handled! Check the console and add the necessary code!");
+        catch(...){
+            Error("An unknown exception occurred on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
+                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.");
         }
         sReturn << "\n      endlist";
     }
@@ -754,7 +798,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             std::string sLocation;
             if(ctrl->nAnimation == -1) sLocation = "geometry";
             else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
-            std::cout << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
+            ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }
@@ -766,7 +810,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         std::string sModel ("unknown");
         if(FH) sModel = FH->MH.GH.sName.c_str();
 
-        sReturn         << "# Exported from MDLedit " << sTimestamp.str();
+        sReturn << "# Exported with MDLedit " << version.Print() << " ";
+        if(src == AsciiSource) sReturn << "from ascii source ";
+        else if(src == BinarySource) sReturn << "from binary source ";
+        else std::cout << "Error: Source neither ascii nor binary!\n";
+        sReturn << "at " << sTimestamp.str();
         sReturn << "\n" << "# WOKMESH  ASCII";
         sReturn << "\n" << "node trimesh WALKMESH";
         sReturn << "\n" << "  parent " << sModel;
@@ -833,7 +881,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(sRoot.empty()) sRoot = "pwk";
 
         /// WRITE PWK
-        sReturn      << "# Exported from MDLedit " << sTimestamp.str();
+        sReturn << "# Exported with MDLedit " << version.Print() << " ";
+        if(src == AsciiSource) sReturn << "from ascii source ";
+        else if(src == BinarySource) sReturn << "from binary source ";
+        else std::cout << "Error: Source neither ascii nor binary!\n";
+        sReturn << "at " << sTimestamp.str();
         sReturn << "\n" << "# PWKMESH  ASCII";
         sReturn << "\n" << "node dummy " << sRoot;
         sReturn << "\n" << "  parent " << sModel;
@@ -913,7 +965,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(sRoot.empty()) sRoot = "DWK";
 
         /// WRITE DWK
-        sReturn      << "# Exported from MDLedit " << sTimestamp.str();
+        sReturn << "# Exported with MDLedit " << version.Print() << " ";
+        if(src == AsciiSource) sReturn << "from ascii source ";
+        else if(src == BinarySource) sReturn << "from binary source ";
+        else std::cout << "Error: Source neither ascii nor binary!\n";
+        sReturn << "at " << sTimestamp.str();
         sReturn << "\n" << "# DWKMESH  ASCII";
         sReturn << "\n" << "node dummy " << sRoot;
         sReturn << "\n" << "  parent " << sModel;

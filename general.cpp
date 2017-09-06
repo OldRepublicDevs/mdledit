@@ -1,7 +1,8 @@
 #include "general.h"
 #include <limits>
+#include "strsafe.h"
 
-double PI = 3.14159;
+double PI = 3.141592653589793;
 
 int pown(int base, int exp){
     int result = 1;
@@ -19,79 +20,21 @@ int pown(int base, int exp){
 }
 
 float deg(float rad){
-    return rad * 180.0 / 3.141592653589793;
+    return rad * 180.0 / PI;
 
 }
 
 float rad(float deg){
-    return deg * 3.141592653589793 / 180.0;
+    return deg * PI / 180.0;
 }
 
 double deg(double rad){
-    return rad * 180.0 / 3.141592653589793;
+    return rad * 180.0 / PI;
 
 }
 
 double rad(double deg){
-    return deg * 3.141592653589793 / 180.0;
-}
-
-void QuaternionToAA(float * fQuaternion, float * fAA){
-    if(fQuaternion[3] > 1.0){
-        //Normalize
-    }
-    fAA[3] = 2.0 * acosf(fQuaternion[3]);
-    float s = sqrtf( (1.0 - powf(fQuaternion[3], 2.0)));
-    if(s < 0.001){
-        //Without normalization
-        // if it is important that axis is normalised then replace with x=1; y=z=0;
-        // MDLOps turns them into 0,0,0. Need to check what the best solution for NWMax is (maybe it's irrelevant)
-        fAA[0] = 1.0; //fQuaternion[0];
-        fAA[1] = 0.0; //fQuaternion[1];
-        fAA[2] = 0.0; //fQuaternion[2];
-    }
-    else{
-        fAA[0] = fQuaternion[0] / s;
-        fAA[1] = fQuaternion[1] / s;
-        fAA[2] = fQuaternion[2] / s;
-    }
-}
-
-void QuaternionToAA(double * fQuaternion, double * fAA){
-    if(fQuaternion[3] > 1.0){
-        //Normalize
-    }
-    fAA[3] = 2.0 * acosf(fQuaternion[3]);
-    double s = sqrtf( (1.0 - powf(fQuaternion[3], 2.0)));
-    if(s < 0.001){
-        //Without normalization
-        // if it is important that axis is normalised then replace with x=1; y=z=0;
-        // MDLOps turns them into 0,0,0. Need to check what the best solution for NWMax is (maybe it's irrelevant)
-        fAA[0] = 1.0; //fQuaternion[0];
-        fAA[1] = 0.0; //fQuaternion[1];
-        fAA[2] = 0.0; //fQuaternion[2];
-    }
-    else{
-        fAA[0] = fQuaternion[0] / s;
-        fAA[1] = fQuaternion[1] / s;
-        fAA[2] = fQuaternion[2] / s;
-    }
-}
-
-void AAToQuaternion(float * fAA, float * fQuaternion){
-    float a = fAA[3] / 2.0;
-    fQuaternion[3] = cosf(a);
-    fQuaternion[0] = fAA[0] * sinf(a);
-    fQuaternion[1] = fAA[1] * sinf(a);
-    fQuaternion[2] = fAA[2] * sinf(a);
-}
-
-void AAToQuaternion(double * fAA, double * fQuaternion){
-    double a = fAA[3] / 2.0;
-    fQuaternion[3] = cosf(a);
-    fQuaternion[0] = fAA[0] * sinf(a);
-    fQuaternion[1] = fAA[1] * sinf(a);
-    fQuaternion[2] = fAA[2] * sinf(a);
+    return deg * PI / 180.0;
 }
 
 char DecToHexDigit(int nDec){
@@ -125,7 +68,8 @@ void AddSignificantZeroes(char * cInt, int nSignificant){
         n++;
     }
     cString[nSignificant] = '\0';
-    sprintf(cInt, cString);
+    StringCchCopy(cInt, nSignificant+1, cString);
+    //sprintf(cInt, cString);
     delete [] cString;
 }
 
@@ -141,6 +85,14 @@ void TruncateDec(TCHAR * tcString){
 
 //Removes final zeros, unless a decimal operator precedes it.
 std::string TruncateDec(std::string sCopy){
+    size_t n = sCopy.find('e');
+    std::string sPart2;
+    if(n != std::string::npos){
+        sPart2 = safesubstr(sCopy, n);
+        sCopy = safesubstr(sCopy, 0, n);
+    }
+
+    ///Delete string final occurrence
     if(sCopy.find('.') == std::string::npos){
         return sCopy + ".0";
     }
@@ -150,6 +102,9 @@ std::string TruncateDec(std::string sCopy){
     if(sCopy.back() == '.'){
         sCopy.push_back('0');
     }
+
+    sCopy += sPart2;
+
     return sCopy;
 }
 
@@ -241,35 +196,6 @@ double RoundDec(float fNumber, int nDecPlaces){
     return fReturn;
 }
 
-int Error(std::string sErrorMessage){
-    return MessageBox(hFrame, sErrorMessage.c_str(), "Error", MB_OK | MB_ICONERROR);
-}
-
-int WarningCancel(std::string sWarningMessage){
-    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OKCANCEL | MB_ICONWARNING);
-}
-
-int WarningYesNoCancel(std::string sWarningMessage){
-    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_YESNOCANCEL | MB_ICONWARNING);
-}
-
-int Warning(std::string sWarningMessage){
-    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OK | MB_ICONWARNING);
-}
-
-void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount){
-    int n = 0;
-    while(n<nCount){
-        cCopyTo[n] = cCopyFrom[n];
-        n++;
-    }
-}
-/*
-char * operator&(std::string & sStr){
-    if(sStr.length() > 0) return &sStr.at(0);
-    else return nullptr;
-}*/
-
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset){
     int nx = ptLine1.x;
     int nx2 = ptLine2.x;
@@ -355,4 +281,25 @@ unsigned int stou(std::string const & str, size_t * idx, int base){
         throw std::out_of_range("stou");
     }
     return result;
+}
+
+int Error(std::string sErrorMessage){
+    return MessageBox(hFrame, sErrorMessage.c_str(), "Error", MB_OK | MB_ICONERROR);
+}
+
+int WarningCancel(std::string sWarningMessage){
+    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OKCANCEL | MB_ICONWARNING);
+}
+
+int WarningYesNoCancel(std::string sWarningMessage){
+    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_YESNOCANCEL | MB_ICONWARNING);
+}
+
+int Warning(std::string sWarningMessage){
+    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OK | MB_ICONWARNING);
+}
+
+void ClearStringstream(std::stringstream & ssClearMe){
+    ssClearMe.str(std::string());
+    ssClearMe.clear();
 }

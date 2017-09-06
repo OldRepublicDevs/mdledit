@@ -29,6 +29,7 @@ struct Vector{
     Vector & operator-=(const Vector & v);
     Vector & operator/=(const Vector & v);
     Vector & Rotate(const Quaternion & q);
+    bool operator==(const Vector & v);
     double GetLength() const;
     void Normalize();
     bool Compare(const Vector & v1, double fDiff = 0.00001);
@@ -91,6 +92,7 @@ Quaternion operator-(Quaternion q, const Quaternion & q2);
 Quaternion operator*(Quaternion q, const Quaternion & q2);
 Quaternion operator*(Quaternion q, const Quaternion && q2);
 Quaternion DecompressQuaternion(unsigned int nCompressed);
+unsigned int CompressQuaternion(Quaternion qUncompressed);
 
 struct AxisAngle{
     Vector vAxis;

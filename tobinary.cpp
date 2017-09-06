@@ -10,6 +10,7 @@
 unsigned nMdxPrevPadding = 0;
 
 bool MDL::Compile(){
+    ReportObject ReportMdl(*this);
     Timer tCompile;
     nPosition = 0;
     sBuffer.resize(0);
@@ -30,6 +31,7 @@ bool MDL::Compile(){
     WriteInt(0xFFFFFFFF, 1);
     int PHnMdxLength = nPosition;
     WriteInt(0xFFFFFFFF, 1);
+    MarkDataBorder(nPosition - 1);
 
     //GeoHeader
     Data->MH.GH.nFunctionPointer0 = FunctionPointer1(FN_PTR_MODEL);
@@ -59,10 +61,12 @@ bool MDL::Compile(){
     WriteByte(Data->MH.GH.nPadding[0], 11); //padding
     WriteByte(Data->MH.GH.nPadding[1], 11);
     WriteByte(Data->MH.GH.nPadding[2], 11);
+    MarkDataBorder(nPosition - 1);
 
     //Model header
     WriteByte(Data->MH.nClassification, 7); //Classification
     WriteByte(Data->MH.nSubclassification, 10); //Unknown
+    if(bWriteSmoothing) Data->MH.nUnknown = 1;
     WriteByte(Data->MH.nUnknown, 8);
     WriteByte(Data->MH.nAffectedByFog, 7);
 
@@ -101,6 +105,7 @@ bool MDL::Compile(){
     WriteInt(0xFFFFFFFF, 6);
     WriteInt(Data->MH.Names.size(), 1);
     WriteInt(Data->MH.Names.size(), 1);
+    MarkDataBorder(nPosition - 1);
 
     //Create Name array
     Data->MH.NameArray.ResetToSize(Data->MH.Names.size());
@@ -110,11 +115,13 @@ bool MDL::Compile(){
     for(int c = 0; c < Data->MH.Names.size(); c++){
         PHnOffsetToName.push_back(nPosition);
         WriteInt(0xFFFFFFFF, 6);
+        MarkDataBorder(nPosition - 1);
     }
     for(int c = 0; c < Data->MH.Names.size(); c++){
         WriteIntToPH(nPosition - 12, PHnOffsetToName.at(c), Data->MH.Names.at(c).nOffset);
         WriteString(Data->MH.Names[c].sName.c_str(), 3);
         WriteByte(0, 3);
+        MarkDataBorder(nPosition - 1);
     }
 
     //Create Animation array
@@ -124,6 +131,7 @@ bool MDL::Compile(){
     for(int c = 0; c < Data->MH.Animations.size(); c++){
         pnOffsetsToAnimation.push_back(nPosition);
         WriteInt(0xFFFFFFFF, 6);
+        MarkDataBorder(nPosition - 1);
     }
     for(int c = 0; c < Data->MH.Animations.size(); c++){
         //This is where we fill EVERYTHING about the animation
@@ -152,6 +160,7 @@ bool MDL::Compile(){
         WriteByte(anim.nPadding[0], 11);
         WriteByte(anim.nPadding[1], 11);
         WriteByte(anim.nPadding[2], 11);
+        MarkDataBorder(nPosition - 1);
 
         WriteFloat(anim.fLength, 2);
         WriteFloat(anim.fTransition, 2);
@@ -164,6 +173,7 @@ bool MDL::Compile(){
         WriteInt(anim.Events.size(), 1);
         WriteInt(anim.Events.size(), 1);
         WriteInt(0, 8); //Unknown constant
+        MarkDataBorder(nPosition - 1);
         if(anim.Events.size() > 0){
             anim.EventArray.ResetToSize(anim.Events.size());
             WriteIntToPH(nPosition - 12, PHnOffsetToEventArray, anim.EventArray.nOffset);
@@ -171,6 +181,7 @@ bool MDL::Compile(){
                 WriteFloat(anim.Events[b].fTime, 2);
                 anim.Events[b].sName.resize(32);
                 WriteString(anim.Events[b].sName, 3);
+                MarkDataBorder(nPosition - 1);
             }
         }
         else WriteIntToPH(0, PHnOffsetToEventArray, Data->MH.Animations[c].EventArray.nOffset);
@@ -180,9 +191,12 @@ bool MDL::Compile(){
     }
 
     WriteIntToPH(nPosition - 12, PHnOffsetToRootNode, Data->MH.GH.nOffsetToRootNode);
-    WriteIntToPH(nPosition - 12, PHnOffsetToHeadRootNode, Data->MH.nOffsetToHeadRootNode); //For now we will make these two equal in all cases
+    if(!Data->MH.bHeadLink || !NodeExists("neck_g")) WriteIntToPH(nPosition - 12, PHnOffsetToHeadRootNode, Data->MH.nOffsetToHeadRootNode); //For now we will make these two equal in all cases
+    else Data->MH.nOffsetToHeadRootNode = PHnOffsetToHeadRootNode;
     nMdxPrevPadding = 0;
     WriteNodes(Data->MH.ArrayOfNodes.front());
+    for(Node & node : Data->MH.ArrayOfNodes) if ((node.Head.nType & NODE_MESH) && !(node.Head.nType & NODE_SABER) && !(node.Head.nType & NODE_SKIN)) WriteMDX(node);
+    for(Node & node : Data->MH.ArrayOfNodes) if (node.Head.nType & (NODE_SKIN)) WriteMDX(node);
 
     WriteIntToPH(nPosition - 12, PHnMdlLength, Data->nMdlLength);
     WriteIntToPH(Mdx->nPosition, PHnMdxLength, Data->nMdxLength);
@@ -195,7 +209,7 @@ bool MDL::Compile(){
     if(Dwk0) Dwk0->Compile();
     if(Dwk1) Dwk1->Compile();
     if(Dwk2) Dwk2->Compile();
-    std::cout << "Model compiled in " << tCompile.GetTime() << ".\n";
+    ReportMdl << "Model compiled in " << tCompile.GetTime() << ".\n";
     return true;
 }
 
@@ -213,6 +227,7 @@ void MDL::WriteAabb(Aabb & aabb){
     WriteInt(0, 6);
     WriteInt(aabb.nID, 4);
     WriteInt(aabb.nProperty, 4);
+    MarkDataBorder(nPosition - 1);
     if(aabb.Child1.size() > 0){
         WriteIntToPH(nPosition - 12, PHnChild1, aabb.nChild1);
         WriteAabb(aabb.Child1.front());
@@ -223,10 +238,314 @@ void MDL::WriteAabb(Aabb & aabb){
     }
 }
 
+void MDL::WriteMDX(Node & node){
+    if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
+        /// First, write the padding that we collected from the previous MDX item
+        std::string sPadding;
+        sPadding.resize(nMdxPrevPadding, '\0');
+        Mdx->WriteString(sPadding, 0);
+        if(Mdx->nPosition > 0) Mdx->MarkDataBorder(Mdx->nPosition - 1);
+
+        WriteIntToPH(Mdx->nPosition, node.Mesh.nOffsetIntoMdx, node.Mesh.nOffsetIntoMdx);
+        for(int d = 0; d < node.Mesh.nNumberOfVerts; d++){
+            Vertex & vert = node.Mesh.Vertices.at(d);
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+                Mdx->WriteFloat(vert.MDXData.vVertex.fX, 2);
+                Mdx->WriteFloat(vert.MDXData.vVertex.fY, 2);
+                Mdx->WriteFloat(vert.MDXData.vVertex.fZ, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vNormal.fZ, 2);
+                }
+                else Mdx->WriteInt(CompressVector(vert.MDXData.vNormal), 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+                Mdx->WriteFloat(vert.MDXData.cColor.fR, 2);
+                Mdx->WriteFloat(vert.MDXData.cColor.fG, 2);
+                Mdx->WriteFloat(vert.MDXData.cColor.fB, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
+                Mdx->WriteFloat(vert.MDXData.vUV1.fX, 2);
+                Mdx->WriteFloat(vert.MDXData.vUV1.fY, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
+                Mdx->WriteFloat(vert.MDXData.vUV2.fX, 2);
+                Mdx->WriteFloat(vert.MDXData.vUV2.fY, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
+                Mdx->WriteFloat(vert.MDXData.vUV3.fX, 2);
+                Mdx->WriteFloat(vert.MDXData.vUV3.fY, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
+                Mdx->WriteFloat(vert.MDXData.vUV4.fX, 2);
+                Mdx->WriteFloat(vert.MDXData.vUV4.fY, 2);
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent1[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent1[2]), 2);
+                }
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent2[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent2[2]), 2);
+                }
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent3[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent3[2]), 2);
+                }
+            }
+            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
+                if(!bXbox){
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[0].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[1].fZ, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fX, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fY, 2);
+                    Mdx->WriteFloat(vert.MDXData.vTangent4[2].fZ, 2);
+                }
+                else{
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[0]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[1]), 2);
+                    Mdx->WriteInt(CompressVector(vert.MDXData.vTangent4[2]), 2);
+                }
+            }
+            if(node.Head.nType & NODE_SKIN){
+                Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[0], 2);
+                Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[1], 2);
+                Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[2], 2);
+                Mdx->WriteFloat(vert.MDXData.Weights.fWeightValue[3], 2);
+                if(bXbox){
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[0], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[1], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[2], 5, 2);
+                    Mdx->WriteInt(vert.MDXData.Weights.nWeightIndex[3], 5, 2);
+                }
+                else{
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[0], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[1], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[2], 2);
+                    Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[3], 2);
+                }
+            }
+            Mdx->MarkDataBorder(Mdx->nPosition - 1);
+        }
+
+        /// We first need to save the current position for the padding afterwards
+        unsigned nCurrentMdx = Mdx->nPosition;
+
+        /// Also write the extra empty vert data
+        node.Mesh.MDXData.nNodeNumber = node.Head.nNodeNumber;
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
+            if(node.Head.nType & NODE_SKIN) node.Mesh.MDXData.vVertex.Set(1000000.0, 1000000.0, 1000000.0);
+            else node.Mesh.MDXData.vVertex.Set(10000000.0, 10000000.0, 10000000.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.vVertex.fX, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vVertex.fY, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vVertex.fZ, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_NORMAL){
+            node.Mesh.MDXData.vNormal.Set(0.0, 0.0, 0.0);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vNormal.fZ, 8);
+            }
+            else Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vNormal), 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_COLOR){
+            node.Mesh.MDXData.cColor.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fR, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fG, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.cColor.fB, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
+            node.Mesh.MDXData.vUV1.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV1.fX, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV1.fY, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
+            node.Mesh.MDXData.vUV2.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV2.fX, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV2.fY, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
+            node.Mesh.MDXData.vUV3.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV3.fX, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV3.fY, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
+            node.Mesh.MDXData.vUV4.Set(0.0, 0.0, 0.0);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV4.fX, 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.vUV4.fY, 8);
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1){
+            node.Mesh.MDXData.vTangent1[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent1[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent1[2].Set(0.0, 0.0, 0.0);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent1[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent1[2]), 8);
+            }
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2){
+            node.Mesh.MDXData.vTangent2[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent2[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent2[2].Set(0.0, 0.0, 0.0);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent2[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent2[2]), 8);
+            }
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3){
+            node.Mesh.MDXData.vTangent3[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent3[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent3[2].Set(0.0, 0.0, 0.0);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent3[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent3[2]), 8);
+            }
+        }
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4){
+            node.Mesh.MDXData.vTangent4[0].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent4[1].Set(0.0, 0.0, 0.0);
+            node.Mesh.MDXData.vTangent4[2].Set(0.0, 0.0, 0.0);
+            if(!bXbox){
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[0].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[1].fZ, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fX, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fY, 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.vTangent4[2].fZ, 8);
+            }
+            else{
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[0]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[1]), 8);
+                Mdx->WriteInt(CompressVector(node.Mesh.MDXData.vTangent4[2]), 8);
+            }
+        }
+        if(node.Head.nType & NODE_SKIN){
+            node.Mesh.MDXData.Weights.fWeightValue[0] = 1.0;
+            node.Mesh.MDXData.Weights.fWeightValue[1] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightValue[2] = 0.0;
+            node.Mesh.MDXData.Weights.fWeightValue[3] = 0.0;
+            node.Mesh.MDXData.Weights.nWeightIndex[0] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[1] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[2] = 0;
+            node.Mesh.MDXData.Weights.nWeightIndex[3] = 0;
+            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[0], 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[1], 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[2], 8);
+            Mdx->WriteFloat(node.Mesh.MDXData.Weights.fWeightValue[3], 8);
+            if(bXbox){
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[0], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[1], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[2], 8, 2);
+                Mdx->WriteInt(node.Mesh.MDXData.Weights.nWeightIndex[3], 8, 2);
+            }
+            else{
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[0], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[1], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[2], 8);
+                Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[3], 8);
+            }
+        }
+        Mdx->MarkDataBorder(Mdx->nPosition - 1);
+
+        /// Save the padding size for the next MDX item to use.
+        nMdxPrevPadding = (node.Mesh.nMdxDataSize % 16 + nCurrentMdx % 16) % 16;
+    }
+}
+
 void MDL::WriteNodes(Node & node){
     FileHeader & Data = *FH;
+    ReportObject ReportMdl(*this);
 
     node.nOffset = nPosition - 12;
+    if(Data.MH.bHeadLink && Data.MH.Names.at(node.Head.nNodeNumber).sName == "neck_g") WriteIntToPH(node.nOffset, Data.MH.nOffsetToHeadRootNode, Data.MH.nOffsetToHeadRootNode);
     WriteInt(node.Head.nType, 5, 2);
     WriteInt(node.Head.nSupernodeNumber, 5, 2);
     WriteInt(node.Head.nNodeNumber, 5, 2);
@@ -248,7 +567,7 @@ void MDL::WriteNodes(Node & node){
         node.Head.nOffsetToParent = 0;
     }
     else{
-        //std::cout << "Found parent " << parent.Head.nNodeNumber << ". His offset is " << parent.nOffset << ".\n";
+        //ReportMdl << "Found parent " << parent.Head.nNodeNumber << ". His offset is " << parent.nOffset << ".\n";
         WriteInt(GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset, 6);
         node.Head.nOffsetToParent = GetNodeByNameIndex(node.Head.nParentIndex, node.nAnimation).nOffset;
     }
@@ -281,6 +600,7 @@ void MDL::WriteNodes(Node & node){
     WriteInt(0xFFFFFFFF, 6);
     WriteInt(node.Head.ControllerData.size(), 1);
     WriteInt(node.Head.ControllerData.size(), 1);
+    MarkDataBorder(nPosition - 1);
 
 
     //Here comes all the subheader bullshit.
@@ -316,6 +636,7 @@ void MDL::WriteNodes(Node & node){
         WriteInt(node.Light.nShadow, 4);
         WriteInt(node.Light.nFlare, 4);
         WriteInt(node.Light.nFadingLight, 4);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// EMITTER HEADER
@@ -351,7 +672,8 @@ void MDL::WriteNodes(Node & node){
         WriteString(node.Emitter.cDepthTextureName, 3);
 
         WriteInt(node.Emitter.nPadding1, 11, 1);
-        WriteInt(node.Emitter.nFlags, 10);
+        WriteInt(node.Emitter.nFlags, 4);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// REFERENCE HEADER
@@ -359,6 +681,7 @@ void MDL::WriteNodes(Node & node){
         node.Reference.sRefModel.resize(32);
         WriteString(node.Reference.sRefModel, 3);
         WriteInt(node.Reference.nReattachable, 4);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// MESH HEADER
@@ -559,10 +882,15 @@ void MDL::WriteNodes(Node & node){
 
         PHnOffsetIntoMdx = nPosition;
         WriteInt(0xFFFFFFFF, 6);
+
+        /// We moved the mdx writing to a separate function, so we need to preserve this value somehow
+        node.Mesh.nOffsetIntoMdx = PHnOffsetIntoMdx;
+
         if(!bXbox){
             PHnOffsetToVertArray = nPosition;
             WriteInt(0xFFFFFFFF, 6);
         }
+        MarkDataBorder(nPosition - 1);
     }
 
     /// SKIN HEADER
@@ -593,6 +921,7 @@ void MDL::WriteNodes(Node & node){
         }
         WriteInt(node.Skin.nPadding1, 11, 2);
         WriteInt(node.Skin.nPadding2, 11, 2);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// DANGLY HEADER
@@ -607,6 +936,7 @@ void MDL::WriteNodes(Node & node){
         WriteFloat(node.Dangly.fPeriod, 2);
         PHnOffsetToData2 = nPosition;
         WriteInt(0xFFFFFFFF, 6);
+        MarkDataBorder(nPosition - 1);
 
     }
 
@@ -615,6 +945,7 @@ void MDL::WriteNodes(Node & node){
     if(node.Head.nType & NODE_AABB){
         PHnOffsetToAabb = nPosition;
         WriteInt(0xFFFFFFFF, 6);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// SABER HEADER
@@ -628,6 +959,7 @@ void MDL::WriteNodes(Node & node){
         WriteInt(0xFFFFFFFF, 6);
         WriteInt(node.Saber.nInvCount1, 4);
         WriteInt(node.Saber.nInvCount2, 4);
+        MarkDataBorder(nPosition - 1);
     }
 
     //now comes all the data in reversed order
@@ -638,17 +970,20 @@ void MDL::WriteNodes(Node & node){
             WriteFloat(node.Saber.SaberData[d].vVertex.fX, 2);
             WriteFloat(node.Saber.SaberData[d].vVertex.fY, 2);
             WriteFloat(node.Saber.SaberData[d].vVertex.fZ, 2);
+            MarkDataBorder(nPosition - 1);
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToSaberNormals, node.Saber.nOffsetToSaberNormals);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
             WriteFloat(node.Saber.SaberData[d].vNormal.fX, 2);
             WriteFloat(node.Saber.SaberData[d].vNormal.fY, 2);
             WriteFloat(node.Saber.SaberData[d].vNormal.fZ, 2);
+            MarkDataBorder(nPosition - 1);
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToSaberUVs, node.Saber.nOffsetToSaberUVs);
         for(int d = 0; d < node.Saber.SaberData.size(); d++){
             WriteFloat(node.Saber.SaberData[d].vUV1.fX, 2);
             WriteFloat(node.Saber.SaberData[d].vUV1.fY, 2);
+            MarkDataBorder(nPosition - 1);
         }
 
     }
@@ -657,6 +992,7 @@ void MDL::WriteNodes(Node & node){
     if(node.Head.nType & NODE_AABB){
         WriteIntToPH(nPosition - 12, PHnOffsetToAabb, node.Walkmesh.nOffsetToAabb);
         WriteAabb(node.Walkmesh.RootAabb);
+        MarkDataBorder(nPosition - 1);
     }
 
     /// DANGLY DATA
@@ -666,12 +1002,14 @@ void MDL::WriteNodes(Node & node){
         else WriteIntToPH(0, PHnOffsetToConstraints, node.Dangly.ConstraintArray.nOffset);
         for(int d = 0; d < node.Dangly.Constraints.size(); d++){
             WriteFloat(node.Dangly.Constraints.at(d), 2);
+            MarkDataBorder(nPosition - 1);
         }
         WriteIntToPH(nPosition - 12, PHnOffsetToData2, node.Dangly.nOffsetToData2);
         for(int d = 0; d < node.Dangly.Data2.size(); d++){
             WriteFloat(node.Dangly.Data2.at(d).fX, 2);
             WriteFloat(node.Dangly.Data2.at(d).fY, 2);
             WriteFloat(node.Dangly.Data2.at(d).fZ, 2);
+            MarkDataBorder(nPosition - 1);
         }
     }
 
@@ -683,6 +1021,7 @@ void MDL::WriteNodes(Node & node){
         for(int d = 0; d < node.Skin.Bones.size(); d++){
             if(bXbox) WriteInt(node.Skin.Bones.at(d).nBonemap, 5, 2);
             else WriteFloat( (double) node.Skin.Bones.at(d).nBonemap, 2);
+            MarkDataBorder(nPosition - 1);
         }
         node.Skin.QBoneArray.ResetToSize(node.Skin.Bones.size());
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToQBones, node.Skin.QBoneArray.nOffset);
@@ -692,6 +1031,7 @@ void MDL::WriteNodes(Node & node){
             WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fX, 2);
             WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fY, 2);
             WriteFloat(node.Skin.Bones.at(d).QBone.GetQuaternion().vAxis.fZ, 2);
+            MarkDataBorder(nPosition - 1);
         }
         node.Skin.TBoneArray.ResetToSize(node.Skin.Bones.size());
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToTBones, node.Skin.TBoneArray.nOffset);
@@ -700,6 +1040,7 @@ void MDL::WriteNodes(Node & node){
             WriteFloat(node.Skin.Bones.at(d).TBone.fX, 2);
             WriteFloat(node.Skin.Bones.at(d).TBone.fY, 2);
             WriteFloat(node.Skin.Bones.at(d).TBone.fZ, 2);
+            MarkDataBorder(nPosition - 1);
         }
         node.Skin.Array8Array.ResetToSize(node.Skin.Bones.size());
         if(node.Skin.Bones.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToArray8, node.Skin.Array8Array.nOffset);
@@ -707,14 +1048,20 @@ void MDL::WriteNodes(Node & node){
         for(int d = 0; d < node.Skin.Bones.size(); d++){
             WriteInt(node.Skin.Bones.at(d).nPadding, 11); //This array is not in use, might as well fill it with zeros
         }
+        MarkDataBorder(nPosition - 1);
     }
 
+    /*
     /// MDX DATA
 
     if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
 
         /// First, write the padding that we collected from the previous MDX item
-        for(int n = 0; n < nMdxPrevPadding; n++) Mdx->WriteByte(0, 0);
+        //for(int n = 0; n < nMdxPrevPadding; n++) Mdx->WriteByte(0, 0);
+        std::string sPadding;
+        sPadding.resize(nMdxPrevPadding, '\0');
+        Mdx->WriteString(sPadding, 0);
+        if(Mdx->nPosition > 0) Mdx->MarkDataBorder(Mdx->nPosition - 1);
 
         WriteIntToPH(Mdx->nPosition, PHnOffsetIntoMdx, node.Mesh.nOffsetIntoMdx);
         for(int d = 0; d < node.Mesh.nNumberOfVerts; d++){
@@ -843,6 +1190,7 @@ void MDL::WriteNodes(Node & node){
                     Mdx->WriteFloat(vert.MDXData.Weights.nWeightIndex[3], 2);
                 }
             }
+            Mdx->MarkDataBorder(Mdx->nPosition - 1);
         }
 
         /// We first need to save the current position for the padding afterwards
@@ -1002,10 +1350,12 @@ void MDL::WriteNodes(Node & node){
                 Mdx->WriteFloat(node.Mesh.MDXData.Weights.nWeightIndex[3], 8);
             }
         }
+        Mdx->MarkDataBorder(Mdx->nPosition - 1);
 
         /// Save the padding size for the next MDX item to use.
         nMdxPrevPadding = (node.Mesh.nMdxDataSize % 16 + nCurrentMdx % 16) % 16;
     }
+    */
 
     /// MESH DATA
     if(node.Head.nType & NODE_MESH){
@@ -1025,18 +1375,34 @@ void MDL::WriteNodes(Node & node){
             WriteInt(face.nIndexVertex[0], 5, 2);
             WriteInt(face.nIndexVertex[1], 5, 2);
             WriteInt(face.nIndexVertex[2], 5, 2);
+            MarkDataBorder(nPosition - 1);
         }
+        if(bWriteSmoothing){
+            for(int d = 0; d < node.Mesh.Faces.size(); d++){
+                Face & face = node.Mesh.Faces.at(d);
+                WriteInt(face.nSmoothingGroup, 4);
+                MarkDataBorder(nPosition - 1);
+            }
+        }
+
         if(node.Head.nType & NODE_SABER){
             node.Mesh.IndexCounterArray.ResetToSize(0);
             WriteIntToPH(0, PHnOffsetToIndexCount, node.Mesh.IndexCounterArray.nOffset);
-            WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
-            for(int d = 0; d < node.Mesh.Vertices.size(); d++){
-                WriteFloat(node.Mesh.Vertices.at(d).fX, 2);
-                WriteFloat(node.Mesh.Vertices.at(d).fY, 2);
-                WriteFloat(node.Mesh.Vertices.at(d).fZ, 2);
+
+            /// This should possibly be deleted for the saber
+            if(!bXbox){
+                WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
+                for(int d = 0; d < node.Mesh.Vertices.size(); d++){
+                    WriteFloat(node.Mesh.Vertices.at(d).fX, 2);
+                    WriteFloat(node.Mesh.Vertices.at(d).fY, 2);
+                    WriteFloat(node.Mesh.Vertices.at(d).fZ, 2);
+                    MarkDataBorder(nPosition - 1);
+                }
             }
+
             node.Mesh.IndexLocationArray.ResetToSize(0);
             WriteIntToPH(0, PHnOffsetToIndexLocation, node.Mesh.IndexLocationArray.nOffset);
+
             node.Mesh.MeshInvertedCounterArray.ResetToSize(0);
             WriteIntToPH(0, PHnOffsetToInvertedCounter, node.Mesh.MeshInvertedCounterArray.nOffset);
             //WriteIntToPH(0, PHnPointerToIndexLocation, node.Mesh.nVertIndicesLocation);
@@ -1044,28 +1410,39 @@ void MDL::WriteNodes(Node & node){
         else{
             node.Mesh.IndexCounterArray.ResetToSize(1);
             WriteIntToPH(nPosition - 12, PHnOffsetToIndexCount, node.Mesh.IndexCounterArray.nOffset);
+
             node.Mesh.nVertIndicesCount = node.Mesh.Faces.size() * 3;
             WriteInt(node.Mesh.nVertIndicesCount, 1);
+            MarkDataBorder(nPosition - 1);
+
             if(!bXbox){
                 WriteIntToPH(nPosition - 12, PHnOffsetToVertArray, node.Mesh.nOffsetToVertArray);
                 for(int d = 0; d < node.Mesh.Vertices.size(); d++){
                     WriteFloat(node.Mesh.Vertices.at(d).fX, 2);
                     WriteFloat(node.Mesh.Vertices.at(d).fY, 2);
                     WriteFloat(node.Mesh.Vertices.at(d).fZ, 2);
+                    MarkDataBorder(nPosition - 1);
                 }
             }
+
             node.Mesh.IndexLocationArray.ResetToSize(1);
             WriteIntToPH(nPosition - 12, PHnOffsetToIndexLocation, node.Mesh.IndexLocationArray.nOffset);
+
             int PHnPointerToIndexLocation = nPosition;
             WriteInt(0xFFFFFFFF, 6);
+            MarkDataBorder(nPosition - 1);
+
             node.Mesh.MeshInvertedCounterArray.ResetToSize(1);
             WriteIntToPH(nPosition - 12, PHnOffsetToInvertedCounter, node.Mesh.MeshInvertedCounterArray.nOffset);
             WriteInt(node.Mesh.nMeshInvertedCounter, 4);
+            MarkDataBorder(nPosition - 1);
+
             WriteIntToPH(nPosition - 12, PHnPointerToIndexLocation, node.Mesh.nVertIndicesLocation);
             for(int d = 0; d < node.Mesh.VertIndices.size(); d++){
                 WriteInt(node.Mesh.VertIndices.at(d).at(0), 5, 2);
                 WriteInt(node.Mesh.VertIndices.at(d).at(1), 5, 2);
                 WriteInt(node.Mesh.VertIndices.at(d).at(2), 5, 2);
+                MarkDataBorder(nPosition - 1);
             }
         }
     }
@@ -1073,38 +1450,51 @@ void MDL::WriteNodes(Node & node){
     /// LIGHT DATA
     if(node.Head.nType & NODE_LIGHT){
         //WriteIntToPH(nPosition - 12, PHnOffsetToUnknownLightArray, node.Light.UnknownArray.nOffset);
+
         node.Light.FlareTextureNameArray.ResetToSize(node.Light.FlareTextureNames.size());
         if(node.Light.FlareTextureNames.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFlareTextureNames, node.Light.FlareTextureNameArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToFlareTextureNames, node.Light.FlareTextureNameArray.nOffset);
+
         std::vector<int> PHnTextureNameOffset;
         for(int d = 0; d < node.Light.FlareTextureNames.size(); d++){
             PHnTextureNameOffset.push_back(nPosition);
             WriteInt(0xFFFFFFFF, 6);
+            MarkDataBorder(nPosition - 1);
         }
         for(int d = 0; d < node.Light.FlareTextureNames.size(); d++){
             WriteIntToPH(nPosition - 12, PHnTextureNameOffset.at(d), node.Light.FlareTextureNames.at(d).nOffset);
             WriteString(node.Light.FlareTextureNames.at(d).sName.c_str(), 3);
             WriteByte(0, 3);
+            MarkDataBorder(nPosition - 1);
         }
+
         node.Light.FlareSizeArray.ResetToSize(node.Light.FlareSizes.size());
         if(node.Light.FlareSizes.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFlareSizes, node.Light.FlareSizeArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToFlareSizes, node.Light.FlareSizeArray.nOffset);
+
         for(int d = 0; d < node.Light.FlareSizes.size(); d++){
             WriteFloat(node.Light.FlareSizes.at(d), 2);
+            MarkDataBorder(nPosition - 1);
         }
+
         node.Light.FlarePositionArray.ResetToSize(node.Light.FlarePositions.size());
         if(node.Light.FlarePositions.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFlarePositions, node.Light.FlarePositionArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToFlarePositions, node.Light.FlarePositionArray.nOffset);
+
         for(int d = 0; d < node.Light.FlarePositions.size(); d++){
             WriteFloat(node.Light.FlarePositions.at(d), 2);
+            MarkDataBorder(nPosition - 1);
         }
+
         node.Light.FlareColorShiftArray.ResetToSize(node.Light.FlareColorShifts.size());
         if(node.Light.FlareColorShifts.size() > 0) WriteIntToPH(nPosition - 12, PHnOffsetToFlareColorShifts, node.Light.FlareColorShiftArray.nOffset);
         else WriteIntToPH(0, PHnOffsetToFlareColorShifts, node.Light.FlareColorShiftArray.nOffset);
+
         for(int d = 0; d < node.Light.FlareColorShifts.size(); d++){
             WriteFloat(node.Light.FlareColorShifts.at(d).fR, 2);
             WriteFloat(node.Light.FlareColorShifts.at(d).fG, 2);
             WriteFloat(node.Light.FlareColorShifts.at(d).fB, 2);
+            MarkDataBorder(nPosition - 1);
         }
     }
     /// DONE WITH SUBHEADERS
@@ -1112,10 +1502,12 @@ void MDL::WriteNodes(Node & node){
     //We get to the children array
     node.Head.ChildrenArray.ResetToSize(node.Head.ChildIndices.size());
     WriteIntToPH(nPosition - 12, PHnOffsetToChildren, node.Head.ChildrenArray.nOffset);
+
     std::vector<int> PHnOffsetToChild;
     for(int a = 0; a < node.Head.ChildIndices.size(); a++){
         PHnOffsetToChild.push_back(nPosition);
         WriteInt(0xFFFFFFFF, 6);
+        MarkDataBorder(nPosition - 1);
     }
 
     for(int a = 0; a < node.Head.ChildIndices.size(); a++){
@@ -1128,6 +1520,7 @@ void MDL::WriteNodes(Node & node){
     node.Head.ControllerArray.ResetToSize(node.Head.Controllers.size());
     if(node.Head.Controllers.size() > 0) WriteIntToPH(nPosition-12, PHnOffsetToControllers, node.Head.ControllerArray.nOffset);
     else WriteIntToPH(0, PHnOffsetToControllers, node.Head.ControllerArray.nOffset);
+
     for(int a = 0; a < node.Head.Controllers.size(); a++){
         Controller & ctrl = node.Head.Controllers.at(a);
         WriteInt(ctrl.nControllerType, 4);
@@ -1139,14 +1532,17 @@ void MDL::WriteNodes(Node & node){
         WriteInt(ctrl.nPadding[0], 11, 1);
         WriteInt(ctrl.nPadding[1], 11, 1);
         WriteInt(ctrl.nPadding[2], 11, 1);
+        MarkDataBorder(nPosition - 1);
     }
 
     //We get to the controller data array
     node.Head.ControllerDataArray.ResetToSize(node.Head.ControllerData.size());
     if(node.Head.ControllerData.size() > 0) WriteIntToPH(nPosition-12, PHnOffsetToControllerData, node.Head.ControllerDataArray.nOffset);
     else WriteIntToPH(0, PHnOffsetToControllerData, node.Head.ControllerDataArray.nOffset);
+
     for(int a = 0; a < node.Head.ControllerData.size(); a++){
         WriteFloat(node.Head.ControllerData.at(a), 2);
+        MarkDataBorder(nPosition - 1);
     }
 
     //Done you are, padawan
@@ -1204,7 +1600,7 @@ void BWM::Compile(){
 
     int nCount = 0;
     for(int f = 0; f < data.faces.size(); f++){
-        if(data.faces.at(f).nMaterialID != 7) nCount++;
+        if(IsMaterialWalkable(data.faces.at(f).nMaterialID)) nCount++;
     }
     data.nNumberOfAdjacentFaces = nCount;
     WriteInt(data.nNumberOfAdjacentFaces, 1);
@@ -1220,6 +1616,7 @@ void BWM::Compile(){
     WriteInt(data.nNumberOfPerimeters, 1);
     int nOffsetPerimeters = nPosition;
     WriteInt(0xFFFFFFFF, 6);
+    MarkDataBorder(nPosition - 1);
 
     if(data.verts.size() == 0) WriteIntToPH(0, nOffsetVerts, data.nOffsetToVerts);
     else WriteIntToPH(nPosition, nOffsetVerts, data.nOffsetToVerts);
@@ -1228,6 +1625,7 @@ void BWM::Compile(){
         WriteFloat(vert.fX, 2);
         WriteFloat(vert.fY, 2);
         WriteFloat(vert.fZ, 2);
+        MarkDataBorder(nPosition - 1);
     }
 
     if(data.faces.size() == 0) WriteIntToPH(0, nOffsetVertIndices, data.nOffsetToIndices);
@@ -1237,12 +1635,14 @@ void BWM::Compile(){
         WriteInt(face.nIndexVertex.at(0), 4);
         WriteInt(face.nIndexVertex.at(1), 4);
         WriteInt(face.nIndexVertex.at(2), 4);
+        MarkDataBorder(nPosition - 1);
     }
     if(data.faces.size() == 0) WriteIntToPH(0, nOffsetMaterials, data.nOffsetToMaterials);
     else WriteIntToPH(nPosition, nOffsetMaterials, data.nOffsetToMaterials);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteInt(face.nMaterialID, 4);
+        MarkDataBorder(nPosition - 1);
     }
     if(data.faces.size() == 0) WriteIntToPH(0, nOffsetNormals, data.nOffsetToNormals);
     else WriteIntToPH(nPosition, nOffsetNormals, data.nOffsetToNormals);
@@ -1251,12 +1651,14 @@ void BWM::Compile(){
         WriteFloat(face.vNormal.fX, 2);
         WriteFloat(face.vNormal.fY, 2);
         WriteFloat(face.vNormal.fZ, 2);
+        MarkDataBorder(nPosition - 1);
     }
     if(data.faces.size() == 0) WriteIntToPH(0, nOffsetDistances, data.nOffsetToDistances);
     else WriteIntToPH(nPosition, nOffsetDistances, data.nOffsetToDistances);
     for(int f = 0; f < data.faces.size(); f++){
         Face & face = data.faces.at(f);
         WriteFloat(face.fDistance, 2);
+        MarkDataBorder(nPosition - 1);
     }
 
     if(data.aabb.size() == 0) WriteIntToPH(0, nOffsetAabb, data.nOffsetToAabb);
@@ -1274,30 +1676,34 @@ void BWM::Compile(){
         WriteInt(aabb.nProperty, 4);
         WriteInt(aabb.nChild1, 4);
         WriteInt(aabb.nChild2, 4);
+        MarkDataBorder(nPosition - 1);
     }
 
     if(data.faces.size() == 0 || data.nType == 0) WriteIntToPH(0, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
     else WriteIntToPH(nPosition, nOffsetAdjacent, data.nOffsetToAdjacentFaces);
-    for(int f = 0; f < data.faces.size(); f++){
+    for(int f = 0; f < data.faces.size() && data.nType == 1; f++){
         Face & face = data.faces.at(f);
-        if(face.nMaterialID != 7){
+        if(IsMaterialWalkable(face.nMaterialID)){
             WriteInt(face.nAdjacentFaces.at(0), 4);
             WriteInt(face.nAdjacentFaces.at(1), 4);
             WriteInt(face.nAdjacentFaces.at(2), 4);
+            MarkDataBorder(nPosition - 1);
         }
     }
-    if(data.edges.size() == 0) WriteIntToPH(0, nOffsetEdges, data.nOffsetToEdges);
+    if(data.edges.size() == 0 || data.nType == 0) WriteIntToPH(0, nOffsetEdges, data.nOffsetToEdges);
     else WriteIntToPH(nPosition, nOffsetEdges, data.nOffsetToEdges);
-    for(int f = 0; f < data.edges.size(); f++){
+    for(int f = 0; f < data.edges.size() && data.nType == 1; f++){
         Edge & edge = data.edges.at(f);
         WriteInt(edge.nIndex, 4);
         WriteInt(edge.nTransition, 4);
+        MarkDataBorder(nPosition - 1);
     }
-    if(data.perimeters.size() == 0) WriteIntToPH(0, nOffsetPerimeters, data.nOffsetToPerimeters);
+    if(data.perimeters.size() == 0 || data.nType == 0) WriteIntToPH(0, nOffsetPerimeters, data.nOffsetToPerimeters);
     else WriteIntToPH(nPosition, nOffsetPerimeters, data.nOffsetToPerimeters);
-    for(int f = 0; f < data.perimeters.size(); f++){
+    for(int f = 0; f < data.perimeters.size() && data.nType == 1; f++){
         int & perimeter = data.perimeters.at(f);
         WriteInt(perimeter, 4);
+        MarkDataBorder(nPosition - 1);
     }
     bLoaded = true;
 }

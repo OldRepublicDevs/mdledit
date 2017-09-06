@@ -1,5 +1,17 @@
+#include "general.h"
 #include "MDL.h"
-#include "dialog.h"
+
+class DialogWindow{
+    WNDCLASSEX WindowClass;
+    static char cClassName [];
+    static bool bRegistered;
+
+  public:
+    HWND hMe;
+    DialogWindow();
+    bool Run();
+    friend LRESULT CALLBACK DialogWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+};
 
 char DialogWindow::cClassName[] = "mdleditdialog";
 LRESULT CALLBACK DialogWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -22,8 +34,8 @@ DialogWindow::DialogWindow(){
     WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW); // Class cursor
 
     // #5 Icon
-    WindowClass.hIcon = NULL; // Class Icon
-    WindowClass.hIconSm = NULL; // Small icon for this class
+    WindowClass.hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_DLG_ICON)); //NULL; // Class Icon
+    WindowClass.hIconSm = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_DLG_ICON)); //NULL; // Small icon for this class
 
     // #6 Menu
     WindowClass.lpszMenuName = NULL; // Menu Resource

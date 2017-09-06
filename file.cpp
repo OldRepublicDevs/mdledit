@@ -10,7 +10,7 @@ BB4 ByteBlock4;
 BB8 ByteBlock8;
 
 void File::SetFilePath(std::string & sPath){
-    sFullPath = sPath;
+    sFullPath = sPath.c_str();
     sFile = sPath;    PathStripPath(&sFile.front());
     sFile.resize(strlen(sFile.c_str()));
 }
@@ -84,8 +84,8 @@ Vector BinaryFile::ReadVector(unsigned int * nCurPos, int nMarking, int nBytes){
             n++;
         }
         Coords[m] = ByteBlock4.f;
+        MarkBytes(*nCurPos + m * 4, 4, nMarking);
     }
-    MarkBytes(*nCurPos, 12, nMarking);
     *nCurPos += 12;
     return Vector(Coords[0], Coords[1], Coords[2]);
 }
@@ -102,15 +102,21 @@ void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int n
     *nCurPos += nNumber;
 }
 
+void BinaryFile::MarkDataBorder(unsigned nOffset){
+    bKnown.at(nOffset) = bKnown.at(nOffset) | 0x20000;
+}
+
 void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
     int n = 0;
     //std::cout << "Setting known: offset " << nOffset << " length " << nLength << " class " << nClass << "\n.";
+    if(nOffset > 0) bKnown[nOffset - 1] = bKnown[nOffset - 1] | 0x10000;
     while(n < nLength && n < sBuffer.size()){
-        if(bKnown[nOffset + n] != 0){
+        if(bKnown[nOffset + n] & 0xFFFF != 0){
             std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown[nOffset + n] << " at offset " << nOffset + n << " in " << GetName() << "! Trying to reinterpret as " << nClass << ".\n";
             throw mdlexception("Interpreting already interpreted data in " + GetName() + ".");
         }
-        bKnown[nOffset + n] = nClass;
+        bKnown[nOffset + n] = (nClass & 0xFFFF) + (bKnown[nOffset + n] & 0xFFFF0000);
+        if(n + 1 == nLength) bKnown[nOffset + n] = bKnown[nOffset + n] | 0x10000;
         n++;
     }
 }
@@ -153,34 +159,38 @@ void BinaryFile::WriteAtOffset(const std::string & sString, unsigned int nOffset
 
 void BinaryFile::WriteInt(int nInt, int nKnown, int nBytes){
     if(nBytes == 1){
+        if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
         sBuffer.push_back((char) nInt);
-        bKnown.push_back(nKnown);
+        bKnown.push_back(nKnown | 0x10000);
         nPosition++;
     }
     else if(nBytes == 2){
         ByteBlock2.i = nInt;
+        if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
         int n = 0;
         for(n = 0; n < 2; n++){
             sBuffer.push_back(ByteBlock2.bytes[n]);
-            bKnown.push_back(nKnown);
+            bKnown.push_back(nKnown | (n + 1 == 2 ? 0x10000 : 0));
         }
         nPosition+=n;
     }
     else if(nBytes == 4){
         ByteBlock4.i = nInt;
+        if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
         int n = 0;
         for(n = 0; n < 4; n++){
             sBuffer.push_back(ByteBlock4.bytes[n]);
-            bKnown.push_back(nKnown);
+            bKnown.push_back(nKnown | (n + 1 == 4 ? 0x10000 : 0));
         }
         nPosition+=n;
     }
     else if(nBytes == 8){
         ByteBlock8.i = nInt;
+        if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
         int n = 0;
         for(n = 0; n < 8; n++){
             sBuffer.push_back(ByteBlock8.bytes[n]);
-            bKnown.push_back(nKnown);
+            bKnown.push_back(nKnown | (n + 1 == 8 ? 0x10000 : 0));
         }
         nPosition+=n;
     }
@@ -189,26 +199,29 @@ void BinaryFile::WriteInt(int nInt, int nKnown, int nBytes){
 
 void BinaryFile::WriteFloat(float fFloat, int nKnown, int nBytes){
     ByteBlock4.f = fFloat;
+    if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
     int n = 0;
     for(n = 0; n < 4; n++){
         sBuffer.push_back(ByteBlock4.bytes[n]);
-        bKnown.push_back(nKnown);
+        bKnown.push_back(nKnown | (n + 1 == 4 ? 0x10000 : 0));
     }
     nPosition+=n;
 }
 
 void BinaryFile::WriteString(std::string sString, int nKnown){
+    if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
     int n = 0;
     for(n = 0; n < sString.length(); n++){
         sBuffer.push_back(sString.at(n));
-        bKnown.push_back(nKnown);
+        bKnown.push_back(nKnown | (n + 1 == sString.length() ? 0x10000 : 0));
     }
     nPosition+=n;
 }
 
 void BinaryFile::WriteByte(char cByte, int nKnown){
+    if(bKnown.size() > 0) bKnown.back() = bKnown.back() | 0x10000;
     sBuffer.push_back(cByte);
-    bKnown.push_back(nKnown);
+    bKnown.push_back(nKnown | 0x10000);
     nPosition++;
 }
 
@@ -384,6 +397,14 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
 }
 
 void TextFile::SkipLine(){
+    if(nPosition + 1 >= sBuffer.size()) throw mdlexception("Error: Trying to skip a line at the end of the file.");
+
+    bool bStop = false;
+    while(nPosition + 1 < sBuffer.size() && !bStop){
+        if(sBuffer[nPosition] != 0x0D && sBuffer[nPosition] != 0x0A) nPosition++;
+        else bStop = true;
+    }
+
     if(sBuffer[nPosition] == 0x0A){
         nPosition+=1;
         return;
@@ -392,22 +413,21 @@ void TextFile::SkipLine(){
         nPosition+=2;
         return;
     }
-    bool bStop = false;
-    while(nPosition + 1 < sBuffer.size() && !bStop){
-        if(sBuffer[nPosition] != 0x0D && sBuffer[nPosition+1] != 0x0A) nPosition++;
-        else bStop = true;
+    else if(sBuffer[nPosition] == 0x0D){
+        nPosition+=1;
+        return;
     }
-    nPosition+=2;
 }
 
 bool TextFile::EmptyRow(){
     int n = nPosition; //Do not use the iterator
-    while( sBuffer[n] != 0x0D &&
-           sBuffer[n+1] != 0x0A &&
-           sBuffer[n] != '#' &&
-           n+1 < sBuffer.size())
+    while( n < sBuffer.size() &&
+           sBuffer[n] != 0x0A &&
+           sBuffer[n] != 0x0D &&
+           sBuffer[n] != 0x00 &&
+           sBuffer[n] != '#' )
     {
-        if(sBuffer[n] != 0x20 || (sBuffer[n+1] != 0x20 && sBuffer[n+1] != 0x0D && sBuffer[n+1] != '#')) return false;
+        if(sBuffer[n] != 0x20) return false;
         n++;
     }
     return true;
@@ -415,46 +435,27 @@ bool TextFile::EmptyRow(){
 
 bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrictNoNewLine){
     sHandle = ""; //Make sure the handle is cleared
-    while(nPosition < sBuffer.size()){
-        //std::cout << "Looping in ReadUntilText main while(), nPosition=" << nPosition << ".\n";
+    while(nPosition < sBuffer.size() &&
+          sBuffer[nPosition] != '#' &&
+          sBuffer[nPosition] != 0x0A &&
+          sBuffer[nPosition] != 0x0D &&
+          sBuffer[nPosition] != 0x00 )
+    {
         if(sBuffer[nPosition] == 0x20){
             //Skip space
             nPosition++;
-            if(nPosition >= sBuffer.size()) return false;
-        }
-        else if(sBuffer[nPosition] == 0x0A){
-            if(bStrictNoNewLine) return false;
-            nPosition++;
-            if(nPosition >= sBuffer.size()) return false;
-        }
-        else if(sBuffer[nPosition] == '#'){
-            //Return because end of line and nothing was found
-            return false;
         }
         else{
-            if(nPosition + 1 < sBuffer.size()){
-                if(sBuffer[nPosition] == 0x0D &&
-                 sBuffer[nPosition+1] == 0x0A)
-                {
-                    //Return because end of line and nothing was found
-                    return false;
-                }
-            }
             //Now it gets interesting - we may actually have relevant text now
-                //std::cout << "Reading and saving non-null character. " << sBuffer[nPosition] << ".\n";
             do{
-                //std::cout << "Reading and saving non-null character. " << sBuffer[nPosition] << ".\n";
                 sHandle.push_back(sBuffer[nPosition]);
                 nPosition++;
             }
-            while(sBuffer[nPosition] != 0x20 &&
+            while(nPosition < sBuffer.size() &&
+                  sBuffer[nPosition] != 0x20 &&
                   sBuffer[nPosition] != '#' &&
                   sBuffer[nPosition] != 0x0D &&
-                  sBuffer[nPosition] != 0x0A &&
-                  nPosition < sBuffer.size());
-
-            //Report
-            //if(sHandle != "") std::cout << "ReadUntilText() found the following string: " << sHandle << ".\n";
+                  sBuffer[nPosition] != 0x0A);
 
             //convert to lowercase
             if(bToLowercase) std::transform(sHandle.begin(), sHandle.end(), sHandle.begin(), ::tolower);
@@ -506,6 +507,8 @@ void IniFile::ReadIni(std::string & sIni){
                     break;
                     case DT_int: if(ReadInt(nConvert)) *((int*) option.lpVariable) = nConvert;
                     break;
+                    case DT_uint: if(ReadUInt(uConvert)) *((unsigned*) option.lpVariable) = uConvert;
+                    break;
                     case DT_float: if(ReadFloat(fConvert)) *((double*) option.lpVariable) = fConvert;
                     break;
                     case DT_string: if(ReadUntilText(sID, false)) *((std::string*) option.lpVariable) = sID;
@@ -530,6 +533,8 @@ void IniFile::WriteIni(std::string & sIni){
             case DT_bool: fIni << (*((bool*) option.lpVariable) ? 1 : 0);
             break;
             case DT_int: fIni << *((int*) option.lpVariable);
+            break;
+            case DT_uint: fIni << *((unsigned*) option.lpVariable);
             break;
             case DT_float: fIni << PrepareFloat(*((double*) option.lpVariable), true);
             break;

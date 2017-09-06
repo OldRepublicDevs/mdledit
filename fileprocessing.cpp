@@ -1,7 +1,8 @@
 #include "frame.h"
-#include "edits.h"
+//#include "edits.h"
 #include <Shlwapi.h>
 #include <fstream>
+#include <algorithm>
 #include "MDL.h"
 
 extern Edits Edit1;
@@ -48,13 +49,14 @@ void ReportGetOpenFileNameError(){
 bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     bool bDisplay = false;
     if(&mdl == &Model) bDisplay = true;
+    ReportObject ReportMdl(mdl);
 
     /// Create file
     std::string sMdl = sFileNoExt + (bAscii ? ".mdl.ascii" : ".mdl");
     std::ifstream file(sMdl, std::ios::binary);
 
     if(!file.is_open()){
-        std::cout << ("File creation/opening failed for " + sMdl + ". Aborting.\n");
+        ReportMdl << ("File creation/opening failed for " + sMdl + ". Aborting.\n");
         return false;
     }
 
@@ -62,7 +64,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     file.seekg(0, std::ios::end);
     std::streampos filelength = file.tellg();
     if(filelength < 12){
-        std::cout << "File too short. Aborting.\n";
+        ReportMdl << "File too short. Aborting.\n";
         return false;
     }
 
@@ -70,11 +72,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     file.seekg(0,std::ios::beg);
     char cBinary [4];
     file.read(cBinary, 4);
-    if(cBinary[0] != '\0' || cBinary[1] != '\0' || cBinary[2] != '\0' || cBinary[3] != '\0') bAscii = true;
+    if(cBinary[0] != '\0' && cBinary[1] != '\0' && cBinary[2] != '\0' && cBinary[3] != '\0'){
+        bAscii = true;
+    }
     else{
         if(bAscii){
             if(bDisplay) Error("The selected .ascii file does not seem to be in the ASCII MDL format!");
-            else std::cout << "The selected .ascii file does not seem to be in the ASCII MDL format!\n";
+            else ReportMdl << "The selected .ascii file does not seem to be in the ASCII MDL format!\n";
             return false;
         }
         bAscii = false;
@@ -91,15 +95,15 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
     }
 
     if(bAscii){
-        std::cout << "Reading ascii...\n";
+        ReportMdl << "Reading ascii...\n";
         file.seekg(0, std::ios::beg);
         mdl.Ascii.reset(new ASCII());
         std::vector<char> & sBufferRef = mdl.CreateAsciiBuffer(filelength);
         file.read(&sBufferRef[0], filelength);
         file.close();
         if(bDisplay){
-            AppendTab(hTabs, "MDL");
-            AppendTab(hTabs, "MDX");
+            TabCtrl_AppendTab(hTabs, "MDL");
+            TabCtrl_AppendTab(hTabs, "MDX");
         }
 
         /// Open and process .pwk if it exists
@@ -110,13 +114,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(cPwk != ""){
             file.open(cPwk, std::ifstream::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed (pwk) for " << cPwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed (pwk) for " << cPwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cPwk << " too short. Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cPwk << " too short. Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -128,7 +132,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         std::vector<char> & sBufferRef = mdl.PwkAscii->CreateBuffer(length);
                         file.read(&sBufferRef[0], length);
                         mdl.PwkAscii->SetFilePath(cPwk);
-                        if(bDisplay) AppendTab(hTabs, "PWK");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "PWK");
                     }
                 }
                 file.close();
@@ -143,13 +147,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(cDwk != ""){
             file.open(cDwk);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cDwk << " too short. Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cDwk << " too short. Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -163,9 +167,9 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.close();
                         mdl.DwkAscii->SetFilePath(cDwk);
                         if(bDisplay){
-                            AppendTab(hTabs, "DWK 0");
-                            AppendTab(hTabs, "DWK 1");
-                            AppendTab(hTabs, "DWK 2");
+                            TabCtrl_AppendTab(hTabs, "DWK 0");
+                            TabCtrl_AppendTab(hTabs, "DWK 1");
+                            TabCtrl_AppendTab(hTabs, "DWK 2");
                         }
                     }
                 }
@@ -174,20 +178,20 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         }
     }
     else{
-        std::cout << "Reading binary...\n";
+        ReportMdl << "Reading binary...\n";
 
         file.seekg(0,std::ios::beg);
         std::vector<char> & sBufferRef = mdl.CreateBuffer(filelength);
         file.read(&sBufferRef[0], filelength);
         file.close();
-        if(bDisplay) AppendTab(hTabs, "MDL");
+        if(bDisplay) TabCtrl_AppendTab(hTabs, "MDL");
 
         /// Open and process .mdx if it exists
         std::string cMdx = sFileNoExt + ".mdx";
         if(PathFileExists(cMdx.c_str())){
             file.open(cMdx, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cMdx << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cMdx << ". Aborting.\n";
             }
             else{
                 //We may begin reading
@@ -199,7 +203,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                 file.read(&sBufferRef[0], length);
                 file.close();
                 mdl.Mdx->SetFilePath(cMdx);
-                if(bDisplay) AppendTab(hTabs, "MDX");
+                if(bDisplay) TabCtrl_AppendTab(hTabs, "MDX");
             }
         }
         else if(bDisplay){            PathStripPath(&cMdx.front());
@@ -211,13 +215,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cWok.c_str())){
             file.open(cWok, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cWok << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cWok << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cWok << " too short! Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cWok << " too short! Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -230,7 +234,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         mdl.Wok->SetFilePath(cWok);
-                        if(bDisplay) AppendTab(hTabs, "WOK");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "WOK");
                     }
                 }
                 file.close();
@@ -242,13 +246,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cPwk.c_str())){
             file.open(cPwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cPwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cPwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cPwk << " too short! Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cPwk << " too short! Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -261,7 +265,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         mdl.Pwk->SetFilePath(cPwk);
-                        if(bDisplay) AppendTab(hTabs, "PWK");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "PWK");
                     }
                 }
                 file.close();
@@ -273,14 +277,14 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 bAscii = false;
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cDwk << " too short! Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cDwk << " too short! Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -293,7 +297,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         mdl.Dwk0->SetFilePath(cDwk);
-                        if(bDisplay) AppendTab(hTabs, "DWK 0");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "DWK 0");
                     }
                 }
                 file.close();
@@ -303,13 +307,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cDwk << " too short! Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cDwk << " too short! Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -322,7 +326,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         mdl.Dwk1->SetFilePath(cDwk);
-                        if(bDisplay) AppendTab(hTabs, "DWK 1");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "DWK 1");
                     }
                 }
                 file.close();
@@ -332,13 +336,13 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
         if(PathFileExists(cDwk.c_str())){
             file.open(cDwk, std::ios::binary);
             if(!file.is_open()){
-                std::cout << "File creation/opening failed for " << cDwk << ". Aborting.\n";
+                ReportMdl << "File creation/opening failed for " << cDwk << ". Aborting.\n";
             }
             else{
                 file.seekg(0, std::ios::end);
                 std::streampos length = file.tellg();
                 file.seekg(0, std::ios::beg);
-                if(length < 12) std::cout << "File " << cDwk << " too short! Aborting.\n";
+                if(length < 12) ReportMdl << "File " << cDwk << " too short! Aborting.\n";
                 else{
                     /// First check whether it's an ascii or a binary
                     char cBinary [8];
@@ -351,7 +355,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
                         file.read(&sBufferRef[0], length);
                         file.close();
                         mdl.Dwk2->SetFilePath(cDwk);
-                        if(bDisplay) AppendTab(hTabs, "DWK 2");
+                        if(bDisplay) TabCtrl_AppendTab(hTabs, "DWK 2");
                     }
                 }
                 file.close();
@@ -364,6 +368,7 @@ bool LoadFiles(MDL & mdl, const std::string & sFileNoExt, bool & bAscii){
 
 bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii = false){
     std::string sMdl = sFileNoExt + ".mdl";
+    ReportObject ReportMdl(mdl);
     if(nID == IDM_ASCII_SAVE){
         if(bAscii) sMdl += ".ascii";
 
@@ -375,7 +380,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
         std::ofstream file(sMdl, std::fstream::out);
 
         if(!file.is_open()){
-            std::cout << "File creation failed for " << sMdl << ". Aborting.\n";
+            ReportMdl << "File creation failed for " << sMdl << ". Aborting.\n";
             return false;
         }
 
@@ -396,7 +401,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cPwk, std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cPwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cPwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sAsciiExport;
@@ -417,7 +422,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cDwk, std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sAsciiExport;
@@ -438,7 +443,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cWok, std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cWok << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cWok << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sAsciiExport;
@@ -458,7 +463,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
         std::ofstream file(sMdl, std::ios::binary | std::fstream::out);
 
         if(!file.is_open()){
-            std::cout << "File creation failed for " << sMdl << ". Aborting.\n";
+            ReportMdl << "File creation failed for " << sMdl << ". Aborting.\n";
             return false;
         }
 
@@ -475,7 +480,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cMdx, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cMdx << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cMdx << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -495,7 +500,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cWok, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cWok << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cWok << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -515,7 +520,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cPwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cPwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cPwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -535,7 +540,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -553,7 +558,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -571,7 +576,7 @@ bool SaveFiles(MDL & mdl, const std::string & sFileNoExt, int nID, bool bAscii =
 
             file.open(cDwk, std::ios::binary | std::fstream::out);
 
-            if(!file.is_open()) std::cout << "File creation failed for " << cDwk << ". Aborting.\n";
+            if(!file.is_open()) ReportMdl << "File creation failed for " << cDwk << ". Aborting.\n";
             else{
                 /// Write and close file
                 file << sBinaryExport;
@@ -630,7 +635,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
                 Timer t1;
                 bReturn = SaveFiles(Model, sFileNoExt, IDM_ASCII_SAVE, bAscii);
-                std::cout << "Wrote files in: " << t1.GetTime() << "\n";            }
+                ReportModel << "Wrote files in: " << t1.GetTime() << "\n";            }
             else{
                 ReportGetOpenFileNameError();
                 break;
@@ -660,7 +665,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
 
                 Timer t1;
                 bReturn = SaveFiles(Model, sFileNoExt, IDM_BIN_SAVE);
-                std::cout << "Wrote files in: " << t1.GetTime() << "\n";            }
+                ReportModel << "Wrote files in: " << t1.GetTime() << "\n";            }
             else{
                 ReportGetOpenFileNameError();
                 break;
@@ -691,14 +696,19 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                 Timer t1;
                 Model.SetFilePath(cFile);
                 bReturn = LoadFiles(Model, sFileNoExt, bAscii);
-                std::cout << "Read files in: " << t1.GetTime() << "\n";
+                ReportModel << "Read files in: " << t1.GetTime() << "\n";
 
                 /// Process the data
                 CurrentProcess = bAscii ? PROCESSING_ASCII : PROCESSING_BINARY;
                 if(DialogBoxParam(GetModuleHandle(NULL), MAKEINTRESOURCE(DLG_PROGRESS), hFrame, ProgressProc, bAscii ? 1 : 2)){
                     bReturn = true;
+                    ReportModel << "Total processing time: " << t1.GetTime() << "\n";
+                    if(bSaveReport) Model.SaveReport();
                 }
                 else{
+                    ReportModel << "Total processing time: " << t1.GetTime() << "\n";
+                    if(bSaveReport) Model.SaveReport();
+
                     /// We failed reading the ascii, so we need to clean up
                     TabCtrl_DeleteAllItems(hTabs);
                     TreeView_DeleteAllItems(hTree);
@@ -706,8 +716,7 @@ bool FileEditor(HWND hwnd, int nID, std::string & cFile){
                     Edit1.LoadData();
                     ProcessTreeAction(NULL, ACTION_UPDATE_DISPLAY, nullptr);
                     bReturn = false;
-                }
-                std::cout << "Total processing time: " << t1.GetTime() << "\n";            }
+                }            }
             else{
                 ReportGetOpenFileNameError();
                 break;
@@ -904,7 +913,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
         }
 
         /// Now we know whether we have WOK data
-        if(Model.Wok) AppendTab(hTabs, "WOK");
+        if(Model.Wok) TabCtrl_AppendTab(hTabs, "WOK");
 
         Model.Compile();
         //This should bring us to a state where all data is ready,
@@ -925,7 +934,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             Model.Wok->SetFilePath(sWok);
             BuildTree(*Model.Wok);
         }
-        std::cout << "Data loaded in " << tLoad.GetTime() << ".\n";
+        ReportModel << "Data loaded in " << tLoad.GetTime() << ".\n";
     }
     else if(CurrentProcess == PROCESSING_BINARY){
         try{
@@ -978,7 +987,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
         if(Model.Dwk2) BuildTree(*Model.Dwk2);
         SetWindowText(hDisplayEdit, "");
         Edit1.LoadData();
-        std::cout << "Data loaded!\n";
+        ReportModel << "Data loaded!\n";
 
         Model.CheckPeculiarities(); //Finally, check for peculiarities
     }
@@ -994,6 +1003,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
 
         /// Set tempModel and its settings
         MDL tempModel;
+        ReportObject ReportTempModel(tempModel);
         tempModel.PtrReport = nullptr;
         tempModel.PtrProgressSize = ProgressSize;
         tempModel.PtrProgressPos = ProgressPos;
@@ -1001,9 +1011,12 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
         tempModel.bDetermineSmoothing = Model.bDetermineSmoothing;
         tempModel.bLightsaberToTrimesh = Model.bLightsaberToTrimesh;
         tempModel.bSkinToTrimesh = Model.bSkinToTrimesh;
+        tempModel.bBezierToLinear = Model.bBezierToLinear;
         tempModel.bSmoothAngleWeighting = Model.bSmoothAngleWeighting;
         tempModel.bSmoothAreaWeighting = Model.bSmoothAreaWeighting;
         tempModel.bWriteAnimations = Model.bWriteAnimations;
+        tempModel.bMinimizeVerts = Model.bMinimizeVerts;
+        tempModel.bXbox = Model.bXbox;
         tempModel.bK2 = Model.bK2;
 
         /// Define lists of model names that have some property.
@@ -1012,6 +1025,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
         std::vector<std::string> HasDepthTexture, HasRenderOrder, HasFrameBlending, HasFlareSize, HasFlarePosition, HasFlareTexture, HasFlareColor,
                                  HasClassUnknown1, HasClassUnknown2, HasClassUnknown3, HasNoClassification, HasMultipleClassification, HasDirtEnabled,
                                  HasBeaming, HasBackgroundGeometry, HasSubclass2, HasSubclass4, HasNoSubclass4, HasBwmUnknown, HasBwmExtra;
+        std::vector<std::string> CompressedOrientation, ControllerlessAnimationData, HeadLink, WalkablePwkDwk;
 
         int nCounter = 0;
         while(*lpStrFiles != 0 && !bCancelMass){
@@ -1029,7 +1043,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             if(safesubstr(sFileNoExt, sFileNoExt.size() - 10, 10) == ".mdl.ascii") bAscii = true;
             else if(safesubstr(sFileNoExt, sFileNoExt.size() - 4, 4) == ".mdl") bAscii = false;
             else{
-                std::cout << "File " << Model.GetFilename() << " is in the wrong format.\n";
+                ReportTempModel << "File " << Model.GetFilename() << " is in the wrong format.\n";
                 nCounter++;
                 SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
                 continue;
@@ -1042,15 +1056,18 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             std::string sStatic = "Processing " + std::string(PathFindFileName(sCurrentFile.c_str())) + "...";
             SetWindowText(GetDlgItem(GetParent(hProgress), DLG_ID_STATIC), sStatic.c_str());
 
+            /// Flush tempModel
             tempModel.FlushAll();
-            tempModel.SetFilePath(sCurrentFile);
 
+            Timer tRead;
+            tempModel.SetFilePath(sCurrentFile);
             if(LoadFiles(tempModel, sFileNoExt, bAscii)){
+                ReportTempModel << "Read files in: " << tRead.GetTime() << "\n";
                 try{
                     if(bAscii){
                         if(!tempModel.ReadAscii()) throw;
                         if(!tempModel.Compile()) throw;
-                        //std::cout << "Decompiled successfully!\n";
+                        //ReportTempModel << "Decompiled successfully!\n";
                     }
                     else{
                         tempModel.DecompileModel();
@@ -1063,15 +1080,18 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
                         if(tempModel.Dwk1) tempModel.Dwk1->ProcessBWM();
                         if(tempModel.Dwk2) tempModel.Dwk2->ProcessBWM();
                     }
+                    ReportTempModel << "Total processing time: " << tRead.GetTime() << "\n";
                 }
                 catch(...){
-                    std::cout << "Model (de)compilation for " << Model.GetFilename() << " failed.\n";
+                    ReportTempModel << "Model (de)compilation for " << Model.GetFilename() << " failed.\n";
                     nCounter++;
                     SendMessage(hProgressMass, PBM_SETPOS, (WPARAM) nCounter, (LPARAM) NULL);
                     continue;
                 }
 
-                //std::cout << "Saving now!\n";
+                //ReportTempModel << "Saving now!\n";
+
+                if(bSaveReport) tempModel.SaveReport();
 
                 if(CurrentProcess == PROCESSING_MASS_ASCII){
                     sFileNoExt += "-mdledit";
@@ -1098,6 +1118,12 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
                         if(nBwm == 3 && tempModel.Dwk1) bwm_ptr = tempModel.Dwk1->GetData().get();
                         if(nBwm == 4 && tempModel.Dwk2) bwm_ptr = tempModel.Dwk2->GetData().get();
                         if(bwm_ptr == nullptr) continue;
+                        std::string sFileName;
+                        if(nBwm == 0) sFileName = tempModel.Wok->GetFilename();
+                        if(nBwm == 1) sFileName = tempModel.Pwk->GetFilename();
+                        if(nBwm == 2) sFileName = tempModel.Dwk0->GetFilename();
+                        if(nBwm == 3) sFileName = tempModel.Dwk1->GetFilename();
+                        if(nBwm == 4) sFileName = tempModel.Dwk2->GetFilename();
 
                         BWMHeader bwm = *bwm_ptr;
                         if(bwm.nPadding != 0) HasBwmUnknown.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(bwm.nPadding) + std::string(")"));
@@ -1105,6 +1131,15 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
                             if(aabb.nExtra != 4){
                                 HasBwmExtra.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(aabb.nExtra) + std::string(")"));
                                 break;
+                            }
+                        }
+                        if(nBwm > 0){
+                            std::vector<int> FoundIDs;
+                            for(Face & face : bwm.faces){
+                                if(face.nMaterialID != MATERIAL_NONWALK && std::find(FoundIDs.begin(), FoundIDs.end(), face.nMaterialID) == FoundIDs.end()){
+                                    WalkablePwkDwk.push_back(sFileName + std::string(" (") + std::to_string(face.nMaterialID) + std::string(")"));
+                                    FoundIDs.push_back(face.nMaterialID);
+                                }
                             }
                         }
                     }
@@ -1131,8 +1166,27 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
                     if(Data.nUnknown != 0) HasClassUnknown2.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nUnknown) + std::string(")"));
                     if(Data.nAffectedByFog != 1) HasClassUnknown3.push_back(Data.GH.sName.c_str() + std::string(" (") + std::to_string(Data.nAffectedByFog) + std::string(")"));
 
+                    unsigned int nCompressed = 0, nUncompressed = 0;
+                    for(int nAnim = 0; nAnim < Data.Animations.size(); nAnim++){
+                        for(int nNode = 0; nNode < Data.Animations.at(nAnim).ArrayOfNodes.size(); nNode++){
+                            Node & anim_node = Data.Animations.at(nAnim).ArrayOfNodes.at(nNode);
+                            for(int nCtrl = 0; nCtrl < anim_node.Head.Controllers.size(); nCtrl++){
+                                Controller & ctrl = anim_node.Head.Controllers.at(nCtrl);
+                                if(ctrl.nControllerType != CONTROLLER_HEADER_ORIENTATION) continue;
+                                if(ctrl.nColumnCount == 2) nCompressed++;
+                                else if(ctrl.nColumnCount == 4) nUncompressed++;
+                                else Warning("An orientation controller's column count is neither 2 nor 4!");
+                            }
+                            if(anim_node.Head.Controllers.size() == 0 && anim_node.Head.ControllerData.size() > 0){
+                                ControllerlessAnimationData.push_back(Data.GH.sName.c_str() + std::string("->") + Data.Animations.at(nAnim).sName.c_str() + std::string("->") + Data.Names.at(anim_node.Head.nNodeNumber).sName.c_str() + std::string(" (") + std::to_string(anim_node.Head.ControllerData.size()) + std::string(")"));
+                            }
+                        }
+                    }
+                    CompressedOrientation.push_back(Data.GH.sName.c_str() + std::string(" - compressed ") + std::to_string(nCompressed) + " : uncompressed " + std::to_string(nUncompressed));
+
                     for(int nNode = 0; nNode < Data.ArrayOfNodes.size(); nNode++){
                         Node & node = Data.ArrayOfNodes.at(nNode);
+                        if(Data.nOffsetToHeadRootNode != Data.GH.nOffsetToRootNode && node.nOffset == Data.nOffsetToHeadRootNode) HeadLink.push_back(Data.GH.sName.c_str() + std::string(": ") + Data.Names.at(nNode).sName.c_str());
                         if(node.Head.nType & NODE_EMITTER){
                             for(int ef = 0; ef < HasEmitterFlag.size(); ef++){
                                 if(node.Emitter.nFlags & pown(2, ef)) HasEmitterFlag.at(ef).push_back(Data.GH.sName.c_str() + std::string("->") + Data.Names.at(nNode).sName.c_str());
@@ -1167,6 +1221,24 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             std::ofstream reportfile(sFolder + "mdl_analysis.txt", std::fstream::out);
 
             if(true){
+                reportfile << "HEAD LINK\n\n";
+                for(int n = 0; n < HeadLink.size(); n++) reportfile << "    " << HeadLink.at(n) << "\n";
+                reportfile << "\n";
+            }
+            if(true){
+                reportfile << "PWK/DWK \"WALKABLE\" MATERIAL IDS\n\n";
+                for(int n = 0; n < WalkablePwkDwk.size(); n++) reportfile << "    " << WalkablePwkDwk.at(n) << "\n";
+                reportfile << "\n";
+            }
+            if(false){
+                reportfile << "CONTROLLERLESS ANIMATION DATA\n\n";
+                for(int n = 0; n < ControllerlessAnimationData.size(); n++) reportfile << "    " << ControllerlessAnimationData.at(n) << "\n";
+            }
+            if(false){
+                reportfile << "COMPRESSED QUATERNIONS\n\n";
+                for(int n = 0; n < CompressedOrientation.size(); n++) reportfile << "    " << CompressedOrientation.at(n) << "\n";
+            }
+            if(false){
                 reportfile << "BWM STATS\n\n";
                 reportfile << "nPadding != 0:\n";
                 for(int n = 0; n < HasBwmUnknown.size(); n++) reportfile << "    " << HasBwmUnknown.at(n) << "\n";

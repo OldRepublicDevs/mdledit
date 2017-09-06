@@ -9,23 +9,24 @@
 
 #define CONVERT_CONTROLLER_SINGLE        1
 #define CONVERT_CONTROLLER_KEYED         2
-#define CONVERT_HEADER                   3
-#define CONVERT_LIGHT                    4
-#define CONVERT_EMITTER                  5
-#define CONVERT_REFERENCE                6
-#define CONVERT_MESH                     7
-#define CONVERT_SKIN                     8
-#define CONVERT_DANGLY                   9
-#define CONVERT_AABB                     10
-#define CONVERT_SABER                    11
-#define CONVERT_NODE                     12
-#define CONVERT_ANIMATION                13
-#define CONVERT_ANIMATION_NODE           14
-#define CONVERT_MODEL_GEO                15
-#define CONVERT_MODEL                    16
-#define CONVERT_WOK                      17
-#define CONVERT_PWK                      18
-#define CONVERT_DWK                      19
+#define CONVERT_CONTROLLERLESS_DATA      3
+#define CONVERT_HEADER                   4
+#define CONVERT_LIGHT                    5
+#define CONVERT_EMITTER                  6
+#define CONVERT_REFERENCE                7
+#define CONVERT_MESH                     8
+#define CONVERT_SKIN                     9
+#define CONVERT_DANGLY                   10
+#define CONVERT_AABB                     11
+#define CONVERT_SABER                    12
+#define CONVERT_NODE                     13
+#define CONVERT_ANIMATION                14
+#define CONVERT_ANIMATION_NODE           15
+#define CONVERT_MODEL_GEO                16
+#define CONVERT_MODEL                    17
+#define CONVERT_WOK                      18
+#define CONVERT_PWK                      19
+#define CONVERT_DWK                      20
 
 #define FN_PTR_MODEL    1
 #define FN_PTR_ANIM     2
@@ -183,6 +184,8 @@
 #define MATERIAL_SNOW           19
 #define MATERIAL_SAND           20
 
+bool IsMaterialWalkable(int nMat);
+
 ///All controller numbers apparently must be divisible by 4? Except for detonate
 #define CONTROLLER_HEADER_POSITION              8
 #define CONTROLLER_HEADER_ORIENTATION           20
@@ -199,7 +202,7 @@
 ///------------------------------------------------
 #define CONTROLLER_EMITTER_ALPHAEND             80
 #define CONTROLLER_EMITTER_ALPHASTART           84
-#define CONTROLLER_EMITTER_BRITHRATE            88
+#define CONTROLLER_EMITTER_BIRTHRATE            88
 #define CONTROLLER_EMITTER_BOUNCE_CO            92
 #define CONTROLLER_EMITTER_COMBINETIME          96
 #define CONTROLLER_EMITTER_DRAG                 100
@@ -328,11 +331,23 @@ struct Color{
         fG = f2;
         fB = f3;
     }
+    bool operator==(const Color & c){
+        if(abs(fR-c.fR) < 0.0001 && abs(fG-c.fG) < 0.0001 && abs(fB-c.fB) < 0.0001) return true;
+        //if(fR == c.fR && fG == c.fG && fB == c.fB) return true;
+        return false;
+    }
 };
 
 struct Weight{
     std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
     std::array<signed short, 4> nWeightIndex = {-1, -1, -1, -1};
+    bool operator==(const Weight & w){
+        for(int n = 0; n < 4; n++){
+            //if(fWeightValue.at(n) != w.fWeightValue.at(n) || nWeightIndex.at(n) != w.nWeightIndex.at(n)) return false;
+            if(abs(fWeightValue.at(n) - w.fWeightValue.at(n)) >= 0.0001 || nWeightIndex.at(n) != w.nWeightIndex.at(n)) return false;
+        }
+        return true;
+    }
 };
 
 struct VertexData{
@@ -810,7 +825,6 @@ struct ModelHeader{
     unsigned char nSubclassification = 0;
     unsigned char nUnknown = 0;
     unsigned char nAffectedByFog = 1;
-    std::array<unsigned char, 3> nUnknown1 = {0, 0, 1};
     unsigned int nChildModelCount = 0; //Always 0
     ArrayHead AnimationArray;
 
@@ -839,6 +853,8 @@ struct ModelHeader{
     int nTotalTangent4Count = 0;
     int nNodeCount = 0; //Only the nodes that actually exist, and only the ones in this model
     Vector vLytPosition;
+    bool bCompressQuaternions = false;
+    bool bHeadLink = false;
     GeometryHeader GH;
     Node RootNode;
     std::vector<Animation> Animations;
@@ -910,20 +926,26 @@ class ASCII: public TextFile{
     bool ReadWalkmesh(MDL & Mdl, bool bPwk);
 };
 
+enum ModelSource {NoSource = 0, AsciiSource, BinarySource};
+extern Version version;
+
 class MDL: public BinaryFile{
     static const std::string sClassName;
     std::unique_ptr<FileHeader> FH;
+    ModelSource src = NoSource;
+    std::stringstream ssReport;
 
     //Reading
     void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMinimal = false);
     void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
     void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes);
-    void LinearizeAnimations(Node & NODE, std::vector<Node> & ArrayOfNodes);
+    void LinearizeAnimation(Node & NODE, std::vector<Node> & ArrayOfNodes, int n);
 
     bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
 
     //Writing
     void WriteNodes(Node & node);
+    void WriteMDX(Node & node);
     void WriteAabb(Aabb & aabb);
     void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
 
@@ -973,14 +995,18 @@ class MDL: public BinaryFile{
     bool bK2 = true;
     bool bXbox = false;
     bool bDebug = false;
+    bool bWriteSmoothing = false;
     bool bDetermineSmoothing = true;
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;
+    bool bMinimizeVerts = false;
     bool bWriteAnimations = true;
     bool bSkinToTrimesh = false;
     bool bLightsaberToTrimesh = false;
     bool bBezierToLinear = false;
     bool bExportWok = false;
+    bool bCreaseAngle = false;
+    unsigned nCreaseAngle = 60;
 
     //Getters
     std::unique_ptr<FileHeader> & GetFileData();
@@ -992,6 +1018,10 @@ class MDL: public BinaryFile{
     void UpdateTexture(Node & node, const std::string & sNew, int nTex);
     void GetLytPositionFromWok();
     unsigned GetHeaderOffset(const Node & node, unsigned short nHeader);
+    std::stringstream & GetReport();
+
+    //Printers
+    void SaveReport();
 
     //Loaders
     bool Compile();
@@ -1054,8 +1084,20 @@ class WOK: public BWM{
     void WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile);
 };
 
+class ReportObject{
+    MDL * ptr_mdl = nullptr;
 
-int ReturnController(std::string sController);
+  public:
+    ReportObject(const MDL & mdl): ptr_mdl(const_cast<MDL*>(&mdl)) {}
+    template<class T>
+    ReportObject & operator<<(const T & os){
+        std::cout << os;
+        if(ptr_mdl != nullptr) ptr_mdl->GetReport() << os;
+        return *this;
+    }
+};
+
+int ReturnController(std::string sController, int nType);
 std::string ReturnClassificationName(int nClassification);
 std::string ReturnControllerName(int, int nType);
 

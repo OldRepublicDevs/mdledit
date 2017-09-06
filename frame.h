@@ -2,6 +2,7 @@
 #define FRAME_H_INCLUDED
 
 #include "general.h"
+#include <windowsx.h>
 #include <commctrl.h>
 #include "MDL.h"
 
@@ -31,8 +32,8 @@
 #define ME_DATA_EDIT_SIZE_Y         20
 #define ME_DATA_LABEL_ROW_OFFSET_Y  3
 #define ME_EDIT_ROWNUM_OFFSET       67
-#define ME_EDIT_SEPARATOR_OFFSET    62
-#define ME_EDIT_SEPARATOR_2_OFFSET  447
+#define ME_EDIT_SEPARATOR_OFFSET    60
+#define ME_EDIT_SEPARATOR_2_OFFSET  448
 #define ME_EDIT_CHARSET_OFFSET      455
 #define ME_STATUSBAR_Y              23
 #define ME_STATUSBAR_PART_X         150
@@ -48,6 +49,7 @@
 #define ACTION_ADD_MENU_LINES      1
 #define ACTION_OPEN_VIEWER         2
 #define ACTION_OPEN_EDITOR         3
+#define ACTION_SCROLL              4
 
 class Frame{
     //Main Window Creation
@@ -64,7 +66,67 @@ class Frame{
 
 };
 
+class Edits{
+    //Control Creation
+    WNDCLASSEX WindowClass;
+    static char cClassName[];
+    HWND hMe = NULL;
+    HWND hScrollVert;
+    RECT rcClient;
+
+    char * cText;
+
+    int yCurrentScroll;   /* current vertical scroll value   */
+    int yMaxScroll;       /* max vertical scroll value       */
+    POINT ptHover;
+    POINT ptPrevious;
+    POINT ptClick;
+    POINT ptRelease;
+    int nSelectStart;
+    int nSelectEnd;
+    bool bSelection;
+    std::string sSelected;
+    std::vector<int> * nKnownArray = nullptr;
+    std::vector<char> * sCompareBuffer = nullptr;
+    std::vector<char> * sBuffer = nullptr;
+    HTREEITEM htHoverItem = NULL;
+
+  public:
+    static HWND hIntEdit;
+    static HWND hUIntEdit;
+    static HWND hFloatEdit;
+
+    Edits();
+    bool Run(HWND hParent, UINT nID);
+    friend LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    friend void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
+
+    int Compare(unsigned nPos);
+    void Cleanup();
+    void LoadData();
+    HWND GetWindowHandle();
+    void UpdateClientRect();
+    void ShowHideEdit();
+    void UpdateEdit();
+    void Resize();
+    void DetermineSelection();
+    void UpdateStatusBar(bool bCheck = true);
+    void UpdateStatusPositionBwm(const std::string & sType);
+    void UpdateStatusPositionMdx();
+    void UpdateStatusPositionModel();
+    void PrintValues(bool bCheck = true);
+};
+
+COLORREF DataColor(int nDataKnown, bool bHilite);
+
+extern bool bShowDiff;
+extern MDL Model;
+extern ReportObject ReportModel;
+extern bool bSaveReport;
 extern bool bDotAsciiDefault;
+extern bool bShowDataStruct;
+extern bool bShowGroup;
+extern bool bHexLocation;
 
 enum IniConst {
     INI_READ,
@@ -74,7 +136,6 @@ void ManageIni(IniConst Action);
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 bool FileEditor(HWND hwnd, int nID, std::string & cFile);
-bool AppendTab(HWND hTabControl, std::string sName);
 INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -83,11 +144,13 @@ INT_PTR CALLBACK ProgressMassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
 void BuildTree(MDL & Mdl);
 void BuildTree(BWM & Bwm);
 void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
-void AddMenuLines(std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile);
+void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile);
 void OpenGeoViewer(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam);
 void OpenViewer(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam);
 void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
-//bool AppendTab(HWND hTabControl, std::string sName);
+void OpenReportDlg(MDL & Mdl);
+void OpenHelpDlg();
+void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
 void Report(std::string sMessage);
 void ProgressSize(int nMin, int nMax);
 void ProgressPos(int nPos);

@@ -174,6 +174,11 @@ Vector & Vector::operator/=(const Vector & v){ //cross product
     fZ = std::move(fcrossz);
     return *this;
 }
+bool Vector::operator==(const Vector & v){
+    //if(fX == v.fX && fY == v.fY && fZ == v.fZ) return true;
+    if(abs(fX-v.fX) < 0.0001 && abs(fY-v.fY) < 0.0001 && abs(fZ-v.fZ) < 0.0001) return true;
+    return false;
+}
 Vector & Vector::Rotate(const Quaternion & q){
     if(fX == 0.0 && fY == 0.0 && fZ == 0.0) return *this;
     Quaternion qVec (fX, fY, fZ, 0.0);
@@ -188,7 +193,7 @@ double Vector::GetLength() const {
 }
 void Vector::Normalize(){
     double fNorm = GetLength();
-    if(fNorm == 0.0){
+    if(fNorm < 0.000001){
         /// 1.0 0.0 0.0 based on vanilla normals (in 003ebof for example) ?????????
         *this = Vector(0.0, 0.0, 0.0);
     }
@@ -300,6 +305,7 @@ Quaternion Quaternion::inverse() const{
 }
 Quaternion DecompressQuaternion(unsigned int nCompressed){
     Quaternion q;
+
     //Special compressed quaternion - from MDLOps
     /// Get only the first 11 bits (max value 0x07FF or 2047)
     /// Divide by half to get values in range from 0.0 to 2.0
@@ -318,7 +324,7 @@ Quaternion DecompressQuaternion(unsigned int nCompressed){
     /// Now we get the w from the other three through the formula:
     /// x^2 + y^2 + z^2 + w^2 == 1 (unit)
     double fSquares = pow(q.vAxis.fX, 2.0) + pow(q.vAxis.fY, 2.0) + pow(q.vAxis.fZ, 2.0);
-    if(fSquares < 1.0) q.fW = sqrt(1.0 - fSquares) * -1.0;
+    if(fSquares <= 1.0) q.fW = sqrt(1.0 - fSquares) * -1.0;
     else{
         /// If the sum is more than 1.0, we'd get a complex number for w
         /// Instead, set w to 0.0, then recalculate the vector (renormalize the quaternion?) accordingly
@@ -333,6 +339,18 @@ Quaternion DecompressQuaternion(unsigned int nCompressed){
     return q;
 }
 
+unsigned int CompressQuaternion(Quaternion q){
+    unsigned int nReturn = 0;
+    unsigned int nCurrent;
+    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fZ) * 511.0);
+    nReturn = nReturn | nCurrent;
+    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fY) * 1023.0);
+    nReturn = (nReturn << 11) | nCurrent;
+    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fX) * 1023.0);
+    nReturn = (nReturn << 11) | nCurrent;
+    return nReturn;
+}
+
 /// AXISANGLE
 AxisAngle::AxisAngle(Quaternion q){
     q.normalize();
@@ -342,7 +360,7 @@ AxisAngle::AxisAngle(Quaternion q){
     fAngle = 2.0 * atan2(q.vAxis.GetLength(), q.fW);
 
     double s = sin(fAngle/2.0); //sqrt( (1.0 - qW * qW));
-    if(s < 0.001) vAxis = Vector(); //Make it zero.
+    if(s < 0.001) vAxis = Vector(1.0, 0.0, 0.0); //Make it zero.
     else vAxis = q.vAxis / s;
 }
 AxisAngle & AxisAngle::operator*=(const double & f){

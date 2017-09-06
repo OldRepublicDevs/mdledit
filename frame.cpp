@@ -1,7 +1,7 @@
 #include "frame.h"
-#include "edits.h"
+//#include "edits.h"
+#include <windowsx.h>
 #include <Shlwapi.h>
-#include <fstream>
 #include "MDL.h"
 
 char Frame::cClassName[] = "mdleditframe";
@@ -15,18 +15,16 @@ HWND hDisplayEdit;
 HWND hTabs;
 HWND hGame, hPlatform, hNeck;
 MDL Model;
+ReportObject ReportModel(Model);
+bool bSaveReport = false;
 bool bShowHex = false;
 bool bShowDiff = true;
+bool bShowGroup = false;
+bool bShowDataStruct = false;
+bool bHexLocation = false;
+bool bAnalyze = false;
 std::string sExePath;
-
-bool AppendTab(HWND hTabControl, std::string sName){
-    int nTabs = TabCtrl_GetItemCount(hTabControl);
-    TCITEM tcAdd;
-    tcAdd.mask = TCIF_TEXT;
-    tcAdd.pszText = &sName[0];
-    tcAdd.cchTextMax = strlen(sName.c_str());
-    return (TabCtrl_InsertItem(hTabControl, nTabs, &tcAdd) != -1);
-}
+Version version (0,4,10);
 
 void FixHead(){
     bool bLinkHead = Button_GetCheck(hNeck) == BST_CHECKED;
@@ -65,11 +63,11 @@ Frame::Frame(HINSTANCE hInstanceCreate){
     WindowClass.hCursor = LoadCursor(NULL, IDC_ARROW); // Class cursor
 
     // #5 Icon
-    WindowClass.hIcon = LoadIcon (NULL, IDI_APPLICATION); //LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON)); // Class Icon
-    WindowClass.hIconSm = LoadIcon(NULL, IDI_APPLICATION); //LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON)); // Small icon for this class
+    WindowClass.hIcon = /* */ LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON)); // /**/ LoadIcon (NULL, IDI_APPLICATION); //LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON)); // Class Icon
+    WindowClass.hIconSm = /* */ LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON2)); // /**/ LoadIcon(NULL, IDI_APPLICATION); //LoadIcon(hInstance, MAKEINTRESOURCE(IDI_APP_ICON)); // Small icon for this class
 
     // #6 Menu
-    WindowClass.lpszMenuName = MAKEINTRESOURCE(IDM_MAIN); //MAKEINTRESOURCE(IDM_MAINMENU); // Menu Resource
+    WindowClass.lpszMenuName = MAKEINTRESOURCE(IDM_MAIN); // Menu Resource
 
     // #7 Other
     WindowClass.cbClsExtra = 0; // Extra bytes to allocate following the wndclassex structure
@@ -94,7 +92,7 @@ bool Frame::Run(int nCmdShow){
     InitCommonControlsEx(&icx); // Load the common control DLL
     /**/
 
-    hFrame = CreateWindowEx(NULL, cClassName, "MDLedit", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+    hFrame = CreateWindowEx(NULL, cClassName, std::string("MDLedit "+version.Print()).c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
                         CW_USEDEFAULT, CW_USEDEFAULT, 368, 610,
                         HWND_DESKTOP, NULL, hInstance, NULL);
     hMe = hFrame;
@@ -117,6 +115,14 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_CREATE:
         {
             GetClientRect(hwnd, &rcClient);
+            std::string sMonospace = "Consolas";
+            if(!Font_IsInstalled(sMonospace)){
+                std::cout << "Consolas font not installed! Switching to Courier New...\n";
+                sMonospace = "Courier New";
+                if(!Font_IsInstalled(sMonospace)){
+                    std::cout << "Courier New font not installed! No further alternatives!\n";
+                }
+            }
 
             HFONT hFont1 = CreateFont(
                 14, //Size
@@ -132,7 +138,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 CLIP_DEFAULT_PRECIS	,	// clipping precision
                 DEFAULT_QUALITY	,	    // output quality
                 DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
-                "Consolas" 	// pointer to typeface name string
+                sMonospace.c_str() 	// pointer to typeface name string
             );
             HFONT hFont2 = CreateFont(
                 14,  //Height
@@ -255,6 +261,20 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if(Model.bXbox) sUpdate = "XBOX";
             else sUpdate = "PC";
             SetWindowText(hPlatform, sUpdate.c_str());
+
+            MENUITEMINFO mii;
+            mii.cbSize = sizeof(MENUITEMINFO);
+            mii.fMask = MIIM_STATE;
+
+            if(bShowGroup) mii.fState = MFS_CHECKED;
+            else mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_GROUP, false, &mii);
+
+            if(bShowDataStruct) mii.fState = MFS_CHECKED;
+            else mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DATASTRUCT, false, &mii);
+
+            if(!bAnalyze) RemoveMenu(GetMenu(hwnd), IDM_MASS_ANALYZE, MF_BYCOMMAND);
         }
         break;
         case WM_NOTIFY:
@@ -318,7 +338,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                                 mla.nIndex++;
                             }
                             else if(bHasChild){
-                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD, "Fold");
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD, "Collapse");
                                 mla.nIndex++;
                             }
                             else if(mla.nIndex == 0){
@@ -327,11 +347,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                             }
 
                             if(bExpandedChild && bExpanded){
-                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD_CHILDREN, "Fold Children");
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD_CHILDREN, "Collapse children");
                                 mla.nIndex++;
                             }
                             else if(bChildHasChild && bExpanded){
-                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_EXPAND_CHILDREN, "Expand Children");
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_EXPAND_CHILDREN, "Expand children");
                                 mla.nIndex++;
                             }
 
@@ -363,6 +383,45 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 {
                     SendMessage(hwnd, WM_DESTROY, NULL, NULL);
                 }
+                break;
+                case IDM_HELP:
+                {
+                    OpenHelpDlg();
+                }
+                break;
+                case IDM_SHOW_REPORT:
+                {
+                    OpenReportDlg(Model);
+                }
+                break;
+                case IDM_SHOW_GROUP:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_GROUP, false, &mii);
+                    bShowGroup = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                    if(bShowGroup) mii.fState = MFS_CHECKED;
+                    else mii.fState = MFS_UNCHECKED;
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_GROUP, false, &mii);
+                    Edit1.UpdateEdit();
+                    ManageIni(INI_WRITE);
+                }
+                break;
+                case IDM_SHOW_DATASTRUCT:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DATASTRUCT, false, &mii);
+                    bShowDataStruct = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                    if(bShowDataStruct) mii.fState = MFS_CHECKED;
+                    else mii.fState = MFS_UNCHECKED;
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DATASTRUCT, false, &mii);
+                    Edit1.UpdateEdit();
+                    ManageIni(INI_WRITE);
+                }
+                break;
                 break;
                 case IDM_MASS_TO_ASCII:
                 case IDM_MASS_TO_BIN:
@@ -398,6 +457,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         else mii.fState = MFS_GRAYED;
                         SetMenuItemInfo(GetSubMenu(GetMenu(hwnd), 0), 1, true, &mii);
                         SetMenuItemInfo(GetMenu(hwnd), IDM_BIN_COMPARE, false, &mii);
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_REPORT, false, &mii);
                         GetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
                         if(!Model.GetCompareData().empty()) mii.fState = MFS_ENABLED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
                         else mii.fState = MFS_GRAYED | (mii.fState & MFS_CHECKED ? MFS_CHECKED : MFS_UNCHECKED);
@@ -405,7 +465,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
                         ManageIni(INI_WRITE);
                     }
-                    std::string sNewName = "MDLedit";
+                    std::string sNewName = "MDLedit "+version.Print();
                     if(!Model.empty()) sNewName += " (" + Model.GetFilename() + ")";
                     SetWindowText(hwnd, sNewName.c_str());
                 }
@@ -560,7 +620,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                 }
                 break;
-                case IDM_HELP_ABOUT:
+                case IDM_MDLEDIT:
                 {
                     DialogBox(NULL, MAKEINTRESOURCE(DLG_ABOUT), hwnd, AboutProc);
                 }
@@ -600,6 +660,11 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDPM_OPEN_EDITOR:
                 {
                     ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_OPEN_EDITOR, NULL);
+                }
+                break;
+                case IDPM_SCROLL:
+                {
+                    ProcessTreeAction(TreeView_GetSelection(hTree), ACTION_SCROLL, NULL);
                 }
                 break;
             }
@@ -802,7 +867,7 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
         SetWindowText(hDisplayEdit, sPrint.str().c_str());
     }
     else if(nAction == ACTION_ADD_MENU_LINES){
-        AddMenuLines(cItem, lParam, (MenuLineAdder*) Pointer, nFile);
+        AddMenuLines(Model, cItem, lParam, (MenuLineAdder*) Pointer, nFile);
     }
     else if(nAction == ACTION_OPEN_VIEWER){
         OpenViewer(Model, cItem, lParam);
@@ -810,20 +875,33 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     else if(nAction == ACTION_OPEN_EDITOR){
         OpenEditorDlg(Model, cItem, lParam, nFile);
     }
+    else if(nAction == ACTION_SCROLL){
+        ScrollToData(Model, cItem, lParam, nFile);
+    }
 }
 
+#define nl "\r\n"
 INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
     switch(message){
         case WM_INITDIALOG:
         {
             std::string sText;
-            sText = "MDLedit version 1.0\nDeveloped by bead-v.";
-            sText += "\n\nThis application was made with the knowledge from other MDL-related tools and the discoveries talked about on deadlystream.com forums. ";
-            sText += "A big thank you goes out to all the people who contributed to this knowledge, including:";
-            sText += "\nCChargin, Magnusll, JdNoa, ndix UR, VarsityPuppet, FairStrides, DarthSapiens";
-            sText += "\n\nI would also like to thank the kind people who were very helpful in answering the bunch of questions I had while making this application:";
-            sText += "\nDarthParametric, JCarter42, Quanon, FairStrides";
-            sText += "\n\nA very special thanks goes to ndix UR, both for sharing his very complete knowledge of the format and his advice and support while making this application.";
+            sText =  "MDLedit " + version.Print();
+            SetWindowText(hwnd, sText.c_str());
+            sText +=
+            nl "by bead-v"
+            nl
+            nl "This application was based on the knowledge of the MDL format from CChargin's MDLOps, later discoveries "
+               "on deadlystream.com forums and also largely on ndix UR's work on the new MDLOps. "
+            nl "A big thank you goes out to all the people who contributed to this knowledge, including:"
+            nl "CChargin, Magnusll, JdNoa, ndix UR, VarsityPuppet, FairStrides, DarthSapiens and others"
+            nl
+            nl "I would also like to thank these people for their tremendous help with testing, feedback and suggestions:"
+            nl "DarthParametric, JCarter426, Quanon, VarsityPuppet, FairStrides"
+            nl
+            nl "A very special thanks goes to ndix UR, both for sharing his very complete knowledge of the format and his "
+               "advice, support and encouragement during the development of this program."
+               "";
             SetWindowText(GetDlgItem(hwnd, DLG_ID_STATIC), sText.c_str());
         }
         break;
@@ -860,6 +938,16 @@ void ManageIni(IniConst Action){
         Ini.AddIniOption("UseDotAscii", DT_bool, &bDotAsciiDefault);
         Ini.AddIniOption("KOTOR2", DT_bool, &Model.bK2);
         Ini.AddIniOption("XBOX", DT_bool, &Model.bXbox);
+        Ini.AddIniOption("ShowGroup", DT_bool, &bShowGroup);
+        Ini.AddIniOption("ShowDataStruct", DT_bool, &bShowDataStruct);
+        Ini.AddIniOption("HexLocation", DT_bool, &bHexLocation);
+        Ini.AddIniOption("SaveReport", DT_bool, &bSaveReport);
+        Ini.AddIniOption("MinimizeVerts", DT_bool, &Model.bMinimizeVerts);
+        Ini.AddIniOption("UseCreaseAngle", DT_bool, &Model.bCreaseAngle);
+        Ini.AddIniOption("CreaseAngle", DT_uint, &Model.nCreaseAngle);
+        if(Model.bDebug || Action == INI_READ) Ini.AddIniOption("Debug", DT_bool, &Model.bDebug);
+        if(Model.bWriteSmoothing || Action == INI_READ) Ini.AddIniOption("WriteSmoothingArray", DT_bool, &Model.bWriteSmoothing);
+        if(bAnalyze || Action == INI_READ) Ini.AddIniOption("Analyze", DT_bool, &bAnalyze);
         try{
             if(Action == INI_READ) Ini.ReadIni(sIni);
             else if(Action == INI_WRITE) Ini.WriteIni(sIni);

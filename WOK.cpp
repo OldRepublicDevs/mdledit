@@ -38,6 +38,7 @@ void BWM::ProcessBWM(){
         Data.nOffsetToEdges = ReadInt(&nPos, 6);
         Data.nNumberOfPerimeters = ReadInt(&nPos, 1);
         Data.nOffsetToPerimeters = ReadInt(&nPos, 6);
+        MarkDataBorder(nPos - 1);
     }
     catch(const std::exception & e){
         throw mdlexception(std::string("Reading BWM header: ") + e.what());
@@ -51,6 +52,7 @@ void BWM::ProcessBWM(){
             Data.verts.at(n).fX = ReadFloat(&nPos, 2);
             Data.verts.at(n).fY = ReadFloat(&nPos, 2);
             Data.verts.at(n).fZ = ReadFloat(&nPos, 2);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -64,6 +66,7 @@ void BWM::ProcessBWM(){
             Data.faces.at(n).nIndexVertex[0] = ReadInt(&nPos, 4);
             Data.faces.at(n).nIndexVertex[1] = ReadInt(&nPos, 4);
             Data.faces.at(n).nIndexVertex[2] = ReadInt(&nPos, 4);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -74,6 +77,7 @@ void BWM::ProcessBWM(){
         for(int n = 0; n < Data.nNumberOfFaces; n++){
             //Collect materials
             Data.faces.at(n).nMaterialID = ReadInt(&nPos, 4);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -86,6 +90,7 @@ void BWM::ProcessBWM(){
             Data.faces.at(n).vNormal.fX = ReadFloat(&nPos, 2);
             Data.faces.at(n).vNormal.fY = ReadFloat(&nPos, 2);
             Data.faces.at(n).vNormal.fZ = ReadFloat(&nPos, 2);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -96,6 +101,7 @@ void BWM::ProcessBWM(){
         for(int n = 0; n < Data.nNumberOfFaces; n++){
             //Collect distances
             Data.faces.at(n).fDistance = ReadFloat(&nPos, 2);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -117,6 +123,7 @@ void BWM::ProcessBWM(){
             Data.aabb.at(n).nProperty = ReadInt(&nPos, 4);
             Data.aabb.at(n).nChild1 = ReadInt(&nPos, 4);
             Data.aabb.at(n).nChild2 = ReadInt(&nPos, 4);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -129,6 +136,7 @@ void BWM::ProcessBWM(){
                 Data.faces.at(n).nAdjacentFaces[0] = ReadInt(&nPos, 4);
                 Data.faces.at(n).nAdjacentFaces[1] = ReadInt(&nPos, 4);
                 Data.faces.at(n).nAdjacentFaces[2] = ReadInt(&nPos, 4);
+                MarkDataBorder(nPos - 1);
             }
             else Error("More adjacent faces than faces!");
         }
@@ -142,6 +150,7 @@ void BWM::ProcessBWM(){
         for(int n = 0; n < Data.nNumberOfEdges; n++){
             Data.edges.at(n).nIndex = ReadInt(&nPos, 4);
             Data.edges.at(n).nTransition = ReadInt(&nPos, 4);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -152,6 +161,7 @@ void BWM::ProcessBWM(){
         nPos = Data.nOffsetToPerimeters;
         for(int n = 0; n < Data.nNumberOfPerimeters; n++){
             Data.perimeters.at(n) = ReadInt(&nPos, 4);
+            MarkDataBorder(nPos - 1);
         }
     }
     catch(const std::exception & e){
@@ -172,7 +182,7 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
     for(int f = 0; f < node.Mesh.Faces.size(); f++){
         Face & face = node.Mesh.Faces.at(f);
         Vector v1 = node.Mesh.Vertices.at(face.nIndexVertex[0]).vFromRoot + vLytPos;
-        if(face.nMaterialID != 7){
+        if(IsMaterialWalkable(face.nMaterialID)){
             Data.faces.push_back(face);
             Data.faces.back().bProcessed[0] = false;
             Data.faces.back().bProcessed[1] = false;
@@ -210,11 +220,11 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
         // Skip if none is -1
         if((face.nAdjacentFaces[0]==-1 ||
            face.nAdjacentFaces[1]==-1 ||
-           face.nAdjacentFaces[2]==-1 ) && face.nMaterialID != 7){
+           face.nAdjacentFaces[2]==-1 ) && IsMaterialWalkable(face.nMaterialID)){
             //Go through all the faces coming after this one
             for(int f2 = f+1; f2 < Data.faces.size(); f2++){
                 Face & compareface = Data.faces.at(f2);
-                if(compareface.nMaterialID != 7){
+                if(IsMaterialWalkable(compareface.nMaterialID)){
                     std::vector<bool> VertMatches(3, false);
                     std::vector<bool> VertMatchesCompare(3, false);
                     for(int i = 0; i < 3; i++){
@@ -279,7 +289,7 @@ void WOK::WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile){
     int nAdjacent = -1;
     for(int f = 0; f < Data.faces.size() && nFace == -1; f++){
         for(int i = 0; i < 3 && nEdge == -1; i++){
-            if(Data.faces.at(f).nAdjacentFaces.at(i) == -1 && !Data.faces.at(f).bProcessed.at(i) && Data.faces.at(f).nMaterialID != 7){
+            if(Data.faces.at(f).nAdjacentFaces.at(i) == -1 && !Data.faces.at(f).bProcessed.at(i) && IsMaterialWalkable(Data.faces.at(f).nMaterialID)){
                 //std::cout << "Found starting point at face " << f << ", edge " << i << ".\n";
                 nFace = f;
                 nEdge = i;
@@ -788,6 +798,80 @@ void MDL::BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, 
                             face.vNormal.fY * v1.fY +
                             face.vNormal.fZ * v1.fZ);
     }
+
+    /*
+    //Calculate adjacent edges
+    for(int f = 0; f < data.faces.size(); f++){
+        Face & face = data.faces.at(f);
+
+        face.nID = f;
+
+        // Skip if none is -1
+        if((face.nAdjacentFaces[0]==-1 ||
+           face.nAdjacentFaces[1]==-1 ||
+           face.nAdjacentFaces[2]==-1 ) && IsMaterialWalkable(face.nMaterialID)){
+            //Go through all the faces coming after this one
+            for(int f2 = f+1; f2 < data.faces.size(); f2++){
+                Face & compareface = data.faces.at(f2);
+                if(IsMaterialWalkable(compareface.nMaterialID)){
+                    std::vector<bool> VertMatches(3, false);
+                    std::vector<bool> VertMatchesCompare(3, false);
+                    for(int i = 0; i < 3; i++){
+                        int nVertIndex = face.nIndexVertex[i];
+                        Vector & ourvect = data.verts.at(nVertIndex);
+                        for(int i2 = 0; i2 < 3; i2++){
+                            Vector & othervect = data.verts.at(compareface.nIndexVertex[i2]);
+                            if(ourvect.Compare(othervect)){
+                                VertMatches.at(i) = true;
+                                VertMatchesCompare.at(i2) = true;
+                                i2 = 3; // we can only have one matching vert in a face per vert. Once we find a match, we're done.
+                            }
+                        }
+                    }
+                    int vertmatch = -1;
+                    int comparevertmatch = -1;
+                    if(VertMatches.at(0) && VertMatches.at(1)) vertmatch = 0;
+                    else if(VertMatches.at(1) && VertMatches.at(2)) vertmatch = 1;
+                    else if(VertMatches.at(2) && VertMatches.at(0)) vertmatch = 2;
+                    if(VertMatchesCompare.at(0) && VertMatchesCompare.at(1)) comparevertmatch = 0;
+                    else if(VertMatchesCompare.at(1) && VertMatchesCompare.at(2)) comparevertmatch = 1;
+                    else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)) comparevertmatch = 2;
+                    if(vertmatch != -1 && comparevertmatch != -1){
+                        if(VertMatches.at(0) && VertMatches.at(1)){
+                            if(face.nAdjacentFaces[0] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 0...\n";
+                            else face.nAdjacentFaces[0] = f2*3 + comparevertmatch;
+                        }
+                        else if(VertMatches.at(1) && VertMatches.at(2)){
+                            if(face.nAdjacentFaces[1] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 1...\n";
+                            else face.nAdjacentFaces[1] = f2*3 + comparevertmatch;
+                        }
+                        else if(VertMatches.at(2) && VertMatches.at(0)){
+                            if(face.nAdjacentFaces[2] != -1) std::cout << "Well, we found too many adjacent edges (to " << f << ") for edge 2...\n";
+                            else face.nAdjacentFaces[2] = f2*3 + comparevertmatch;
+                        }
+                        if(VertMatchesCompare.at(0) && VertMatchesCompare.at(1)){
+                            if(compareface.nAdjacentFaces[0] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 0...\n";
+                            else compareface.nAdjacentFaces[0] = f*3 + vertmatch;
+                        }
+                        else if(VertMatchesCompare.at(1) && VertMatchesCompare.at(2)){
+                            if(compareface.nAdjacentFaces[1] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 1...\n";
+                            else compareface.nAdjacentFaces[1] = f*3 + vertmatch;
+                        }
+                        else if(VertMatchesCompare.at(2) && VertMatchesCompare.at(0)){
+                            if(compareface.nAdjacentFaces[2] != -1) std::cout << "Well, we found too many adjacent edges (to " << f2 << ") for edge 2...\n";
+                            else compareface.nAdjacentFaces[2] = f*3 + vertmatch;
+                        }
+                    }
+                    if(face.nAdjacentFaces[0]!=-1 &&
+                       face.nAdjacentFaces[1]!=-1 &&
+                       face.nAdjacentFaces[2]!=-1 ){
+                        f2 = data.faces.size(); //Found them all, maybe I finish early?
+                    }
+                }
+            }
+        }
+    }
+    */
 }
 bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
 	if(bPwk){
@@ -1039,7 +1123,7 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
     }
     std::cout << "Done reading walkmesh ascii, checking for errors...\n";
     if(bError){
-        Error("Some kind of error has occured! Check the console! The program will now cleanup what it has read since the data is now broken.");
+        Error("Some kind of error has occured! Check the console! The program will now clean up what it has read since the data is now broken.");
         return false;
     }
 

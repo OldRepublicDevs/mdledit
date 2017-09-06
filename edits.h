@@ -32,6 +32,7 @@ class Edits{
     std::vector<int> * nKnownArray = nullptr;
     std::vector<char> * sCompareBuffer = nullptr;
     std::vector<char> * sBuffer = nullptr;
+    HTREEITEM htHoverItem = NULL;
 
   public:
     static HWND hIntEdit;
@@ -41,6 +42,7 @@ class Edits{
     Edits();
     bool Run(HWND hParent, UINT nID);
     friend LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+    friend void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
 
     int Compare(unsigned nPos){
         if(sCompareBuffer == nullptr || sBuffer == nullptr || sCompareBuffer->size() == 0 || sBuffer->size() == 0 || nPos >= sBuffer->size()) return -1; // Don't mark
@@ -55,17 +57,7 @@ class Edits{
         UpdateEdit();
     }
     void LoadData(){
-        int nSel = TabCtrl_GetCurSel(hTabs);
-        if(nSel != -1){
-            TCITEM tcitem;
-            tcitem.mask = TCIF_TEXT;
-            std::string sName(255, '\0');
-            tcitem.pszText = &sName.front();
-            tcitem.cchTextMax = 255;
-            TabCtrl_GetItem(hTabs, nSel, &tcitem);
-            sSelected = sName.c_str();
-        }
-        else sSelected = "";
+        sSelected = TabCtrl_GetCurSelName(hTabs);
         if(sSelected == "MDL" && !Model.empty()){
             nKnownArray = &Model.GetKnownData();
             sCompareBuffer = &Model.GetCompareData();
@@ -212,15 +204,23 @@ class Edits{
             SetWindowText(hFloatEdit, "");
         }
         else if(nSelectStart == nSelectEnd){
-            sprintf(cString1, "Offset: %i", nSelectStart);
+            if(bHexLocation) sprintf(cString1, "Offset: %X", nSelectStart);
+            else sprintf(cString1, "Offset: %i", nSelectStart);
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) cString1);
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) "");
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) "");
         }
         else{
-            sprintf(cString1, "Offset: %i", nSelectStart);
-            sprintf(cString2, "Block: %i-%i", nSelectStart, nSelectEnd);
-            sprintf(cString3, "Length: %i", nSelectEnd - nSelectStart + 1);
+            if(bHexLocation){
+                sprintf(cString1, "Offset: %X", nSelectStart);
+                sprintf(cString2, "Block: %X-%X", nSelectStart, nSelectEnd);
+                sprintf(cString3, "Length: %X", nSelectEnd - nSelectStart + 1);
+            }
+            else{
+                sprintf(cString1, "Offset: %i", nSelectStart);
+                sprintf(cString2, "Block: %i-%i", nSelectStart, nSelectEnd);
+                sprintf(cString3, "Length: %i", nSelectEnd - nSelectStart + 1);
+            }
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) cString1);
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) cString2);
             SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) cString3);

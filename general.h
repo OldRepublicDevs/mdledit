@@ -13,6 +13,8 @@
 #include <string> //for std::string
 #include <sstream> //for std::stringstream
 #include <exception> //for std::exception
+
+#include "bead_winctrl.h"
 #include "resource.h"
 
 #define DEBUG_LEVEL 0
@@ -31,27 +33,37 @@ void AddSignificantZeroes(char * cInt, int nSignificant);
 void TruncateDec(TCHAR * tcString);
 std::string TruncateDec(std::string sCopy);
 void PrepareCharForDisplay(char * cChar);
-void CopyBuffer(std::vector<char> & cCopyTo, char * cCopyFrom, int nCount);
-int Error(std::string sErrorMessage);
-int WarningCancel(std::string sWarningMessage);
-int WarningYesNoCancel(std::string sWarningMessage);
-int Warning(std::string sWarningMessage);
 int pown(int base, int exp);
 float deg(float rad);
 float rad(float deg);
 double deg(double rad);
 double rad(double deg);
-void QuaternionToAA(double * fQuaternion, double * fAA);
-void AAToQuaternion(double * fAA, double * fQuaternion);
 double RoundDec(double fNumber, int nDecPlaces);
 double RoundDec(float fNumber, int nDecPlaces);
 bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset);
 std::string PrepareFloat(double fFloat, bool bFiniteOnly = true);
 unsigned int stou(std::string const & str, size_t * idx = 0, int base = 10);
+std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = std::string::npos);
+int Error(std::string sErrorMessage);
+int WarningCancel(std::string sWarningMessage);
+int WarningYesNoCancel(std::string sWarningMessage);
+int Warning(std::string sWarningMessage);
+void ClearStringstream(std::stringstream & ssClearMe);
+
 
 struct MenuLineAdder{
     HMENU hMenu;
     int nIndex;
+};
+
+struct Version{
+    unsigned int nMajor;
+    unsigned int nMinor;
+    unsigned int nPatch;
+    Version(unsigned int n1, unsigned int n2, unsigned int n3): nMajor(n1), nMinor(n2), nPatch(n3) {}
+    std::string Print(){
+        return (std::string("v") + std::to_string(nMajor) + "." + std::to_string(nMinor) + "." + std::to_string(nPatch));
+    }
 };
 
 class Timer{
@@ -94,8 +106,5 @@ class mdlexception: public std::exception {
         sException = sNew;
     }
 };
-
-//char * operator&(std::string & sStr);
-std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = std::string::npos);
 
 #endif // GENERAL_H_INCLUDED

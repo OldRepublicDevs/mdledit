@@ -230,13 +230,19 @@ INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
 
 
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    static bool bChange = false;
+    static bool bArea = false;
+    static bool bAngle = false;
+    static bool bCrease = false;
+    static unsigned nCrease = 0;
     switch(message){
         case WM_INITDIALOG:
         {
-            bChange = false;
             SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR) lParam);
             MDL* Mdl = (MDL*) lParam;
+            bArea = Mdl->bSmoothAreaWeighting;
+            bAngle = Mdl->bSmoothAngleWeighting;
+            bCrease = Mdl->bCreaseAngle;
+            nCrease = Mdl->nCreaseAngle;
             if(Mdl->bSmoothAngleWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_ANGLE_WEIGHT), BST_CHECKED);
             if(Mdl->bSmoothAreaWeighting) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_AREA_WEIGHT), BST_CHECKED);
             if(Mdl->bDetermineSmoothing) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_CALC_SMOOTHING), BST_CHECKED);
@@ -246,6 +252,10 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             if(Mdl->bBezierToLinear) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_BEZIER_LINEAR), BST_CHECKED);
             if(Mdl->bExportWok) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_EXPORT_WOK), BST_CHECKED);
             if(bDotAsciiDefault) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_DOT_ASCII), BST_CHECKED);
+            if(bSaveReport) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SAVE_REPORT), BST_CHECKED);
+            if(Mdl->bMinimizeVerts) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_MIN_VERT), BST_CHECKED);
+            if(Mdl->bCreaseAngle) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_CREASE_ANGLE), BST_CHECKED);
+            SetWindowText(GetDlgItem(hwnd, DLG_ID_CREASE_ANGLE_DEG), std::to_string(Mdl->nCreaseAngle).c_str());
         }
         break;
         case WM_COMMAND:
@@ -259,16 +269,14 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                 switch(nID){
                     case DLG_ID_AREA_WEIGHT:
                     {
-                        bChange = true;
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSmoothAreaWeighting = true;
                         else Mdl->bSmoothAreaWeighting = false;
                     }
                     break;
                     case DLG_ID_ANGLE_WEIGHT:
                     {
-                        bChange = true;
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bSmoothAngleWeighting = true;
-                        else Mdl->bSmoothAreaWeighting = false;
+                        else Mdl->bSmoothAngleWeighting = false;
                     }
                     break;
                     case DLG_ID_CALC_SMOOTHING:
@@ -313,8 +321,34 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                         else bDotAsciiDefault = false;
                     }
                     break;
+                    case DLG_ID_SAVE_REPORT:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) bSaveReport = true;
+                        else bSaveReport = false;
+                    }
+                    break;
+                    case DLG_ID_MIN_VERT:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bMinimizeVerts = true;
+                        else Mdl->bMinimizeVerts = false;
+                    }
+                    break;
+                    case DLG_ID_CREASE_ANGLE:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bCreaseAngle = true;
+                        else Mdl->bCreaseAngle = false;
+                    }
+                    break;
+                    case DLG_ID_CREASE_ANGLE_DEG:
+                    {
+                        std::string sBuff (255, 0);
+                        GetWindowText(GetDlgItem(hwnd, DLG_ID_CREASE_ANGLE_DEG), &sBuff.front(), 255);
+                        sBuff = sBuff.c_str();
+                        if(sBuff == "") Mdl->nCreaseAngle = 60;
+                        else Mdl->nCreaseAngle = stou(sBuff);
+                    }
+                    break;
                 }
-                ManageIni(INI_WRITE);
             }
         }
         break;
@@ -323,8 +357,9 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             MDL * Mdl = nullptr;
             if(GetWindowLongPtr(hwnd, GWLP_USERDATA) != 0) Mdl = (MDL*) GetWindowLongPtr(hwnd, GWLP_USERDATA);
             if(Mdl != nullptr){
-                if(bChange && Mdl->GetFileData()) MessageBox(hwnd, "You need to reload the current model for the changes to take effect.", "Note", MB_OK | MB_ICONINFORMATION);
+                if((bArea != Mdl->bSmoothAreaWeighting || bAngle != Mdl->bSmoothAngleWeighting || bCrease != Mdl->bCreaseAngle || nCrease != Mdl->nCreaseAngle) && Mdl->GetFileData()) MessageBox(hwnd, "You need to reload the current model for the changes to take effect.", "Note", MB_OK | MB_ICONINFORMATION);
             }
+            ManageIni(INI_WRITE);
             EndDialog(hwnd, wParam);
         }
         break;

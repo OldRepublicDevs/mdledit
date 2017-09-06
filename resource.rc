@@ -5,36 +5,42 @@
 
 ID_CUR_DRAG CURSOR "cursor.cur"
 
-//IDI_ICON ICON "acdc_icon.ico"
+IDI_ICON ICON "mdleditico4_64_24.ico"
+IDI_ICON2 ICON "mdleditico4_64_16.ico"
+IDI_DLG_ICON ICON "mdleditdlgico.ico"
 
-DLG_SETTINGS DIALOGEX  20, 10, 200, 188
+DLG_SETTINGS DIALOGEX  20, 10, 390, 135
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Settings"
 FONT 8, "MS Shell Dlg"
 BEGIN
-    GROUPBOX "Vertex Normal Calculation", DLG_ID_STATIC, 10, 10, 180, 49 // size is 13 + n * 12
+    GROUPBOX "Vertex Normal Calculation", DLG_ID_STATIC, 10, 10, 180, 61 // size is 13 + n * 12
     AUTOCHECKBOX "Include Area Weighting", DLG_ID_AREA_WEIGHT, 15, 22, 160, 8
     AUTOCHECKBOX "Include Angle Weighting", DLG_ID_ANGLE_WEIGHT, 15, 34, 160, 8
     LTEXT "(Vanilla models only seem to use area weighting)", DLG_ID_STATIC, 15, 46, 160, 8
+    AUTOCHECKBOX "Crease Angle:", DLG_ID_CREASE_ANGLE, 15, 58, 55, 8
+    EDITTEXT DLG_ID_CREASE_ANGLE_DEG, 72, 56, 18, 11, ES_NUMBER
 
-    GROUPBOX "Reading Binary", DLG_ID_STATIC, 10, 64, 180, 25 // y-size (last) is 13 + n * 12
-    AUTOCHECKBOX "Calculate Smoothing Groups", DLG_ID_CALC_SMOOTHING, 15, 76, 160, 8
+    GROUPBOX "Reading Model", DLG_ID_STATIC, 10, 76, 180, 49 // y-size (last) is 13 + n * 12
+    AUTOCHECKBOX "Calculate Smoothing Groups (Binary)", DLG_ID_CALC_SMOOTHING, 15, 88, 160, 8
+    AUTOCHECKBOX "Minimize (weld) vertices (Ascii)", DLG_ID_MIN_VERT, 15, 100, 160, 8
+    AUTOCHECKBOX "Save report automatically", DLG_ID_SAVE_REPORT, 15, 112, 160, 8
 
-    GROUPBOX "Writing Ascii", DLG_ID_STATIC, 10, 94, 180, 85 // y-size (last) is 13 + n * 12
-    AUTOCHECKBOX "Write Animations", DLG_ID_DO_ANIMATIONS, 15, 106, 160, 8
-    AUTOCHECKBOX "Convert Skin to Trimesh", DLG_ID_SKIN_TRIMESH, 15, 118, 160, 8
-    AUTOCHECKBOX "Convert Lightsaber to Trimesh", DLG_ID_SABER_TRIMESH, 15, 130, 160, 8
-    AUTOCHECKBOX "Convert Bezier Controllers to Linear", DLG_ID_BEZIER_LINEAR, 15, 142, 160, 8
-    AUTOCHECKBOX "Export WOK File", DLG_ID_EXPORT_WOK, 15, 154, 160, 8
-    AUTOCHECKBOX "Use .ascii extension by default", DLG_ID_DOT_ASCII, 15, 166, 160, 8
+    GROUPBOX "Writing Ascii Model", DLG_ID_STATIC, 200, 10, 180, 115 // y-size (last) is 13 + n * 12
+    AUTOCHECKBOX "Write Animations", DLG_ID_DO_ANIMATIONS, 205, 22, 160, 8
+    AUTOCHECKBOX "Convert Skin to Trimesh", DLG_ID_SKIN_TRIMESH, 205, 34, 160, 8
+    AUTOCHECKBOX "Convert Lightsaber to Trimesh", DLG_ID_SABER_TRIMESH, 205, 46, 160, 8
+    AUTOCHECKBOX "Convert Bezier Controllers to Linear", DLG_ID_BEZIER_LINEAR, 205, 58, 160, 8
+    AUTOCHECKBOX "Export WOK File", DLG_ID_EXPORT_WOK, 205, 70, 160, 8
+    AUTOCHECKBOX "Use .ascii extension by default", DLG_ID_DOT_ASCII, 205, 82, 160, 8
 END
 
-DLG_ABOUT DIALOGEX  20, 10, 316, 140
+DLG_ABOUT DIALOGEX  20, 10, 350, 120
 STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About MDLedit"
 FONT 8, "MS Shell Dlg"
 BEGIN
-    LTEXT "", DLG_ID_STATIC, 8, 5, 280, 130
+    LTEXT "", DLG_ID_STATIC, 8, 5, 340, 130
 END
 
 DLG_EDIT_TEXTURES DIALOGEX  20, 10, 316, 172
@@ -81,7 +87,7 @@ BEGIN
             BEGIN
             MENUITEM "&Convert to Binary ...", IDM_MASS_TO_BIN
             MENUITEM "&Convert to ASCII ...", IDM_MASS_TO_ASCII
-            //MENUITEM "&Analyze ...", IDM_MASS_ANALYZE
+            MENUITEM "&Analyze ...", IDM_MASS_ANALYZE
             END
         MENUITEM SEPARATOR
         MENUITEM "E&xit", IDM_FILE_EXIT
@@ -107,16 +113,18 @@ BEGIN
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode", IDM_VIEW_HEX
+        MENUITEM "&Group Bytes by Data Type", IDM_SHOW_GROUP
+        MENUITEM "&Show Data Struct Boundaries", IDM_SHOW_DATASTRUCT
         MENUITEM SEPARATOR
         MENUITEM "&Compare to ...", IDM_BIN_COMPARE, GRAYED
         MENUITEM "&Show Differences", IDM_SHOW_DIFF, GRAYED, CHECKED
+        MENUITEM SEPARATOR
+        MENUITEM "&Show Report", IDM_SHOW_REPORT, GRAYED
         END
-    /*
-    POPUP " &Help "
+    POPUP " &About "
         BEGIN
-        //MENUITEM "&Help", IDM_HELP
-        MENUITEM "&About ...", IDM_HELP_ABOUT
+        MENUITEM "&Help", IDM_HELP
+        MENUITEM "&MDLedit", IDM_MDLEDIT
         END
-    */
 END
 

@@ -8,7 +8,7 @@ class DialogWindow{
     static char cClassName [];
     static bool bRegistered;
 
-public:
+  public:
     HWND hMe;
     DialogWindow();
     bool Run();
