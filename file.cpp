@@ -9,10 +9,50 @@ BB2 ByteBlock2;
 BB4 ByteBlock4;
 BB8 ByteBlock8;
 
-void File::SetFilePath(std::string & sPath){
+HANDLE bead_CreateReadFile(const std::string & sFilename){
+    return CreateFileA(sFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+HANDLE bead_CreateReadFile(const std::wstring & sFilename){
+    return CreateFileW(sFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+HANDLE bead_CreateWriteFile(const std::string & sFilename){
+    return CreateFileA(sFilename.c_str(), GENERIC_WRITE, 0x00, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+HANDLE bead_CreateWriteFile(const std::wstring & sFilename){
+    return CreateFileW(sFilename.c_str(), GENERIC_WRITE, 0x00, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+long unsigned bead_GetFileLength(HANDLE hFile){
+    LARGE_INTEGER lnSize;
+    if(GetFileSizeEx(hFile, &lnSize)){
+        return static_cast<long unsigned>(lnSize.QuadPart);
+    }
+    return 0;
+}
+
+DWORD g_BytesTransferred = 0;
+VOID CALLBACK FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped){
+    std::cout << "Error code:\t" << dwErrorCode << "\n";
+    std::cout << "Number of bytes:\t" << dwNumberOfBytesTransfered << "\n";
+    g_BytesTransferred = dwNumberOfBytesTransfered;
+}
+
+bool bead_ReadFile(HANDLE hFile, std::vector<char> & sBuffer, unsigned long nToRead){
+    OVERLAPPED ol = {0};
+    unsigned long length = nToRead;
+    if(nToRead > bead_GetFileLength(hFile)) length = bead_GetFileLength(hFile);
+    return ReadFileEx(hFile, &sBuffer.front(), length, &ol, FileIOCompletionRoutine);
+}
+bool bead_WriteFile(HANDLE hFile, const std::string & sBuffer, unsigned long nToWrite){
+    OVERLAPPED ol = {0};
+    unsigned long length = nToWrite;
+    if(nToWrite > sBuffer.length()) length = sBuffer.length();
+    return WriteFileEx(hFile, &sBuffer.front(), length, &ol, FileIOCompletionRoutine);
+}
+
+void File::SetFilePath(std::wstring & sPath){
     sFullPath = sPath.c_str();
-    sFile = sPath;    PathStripPath(&sFile.front());
-    sFile.resize(strlen(sFile.c_str()));
+    sFile = sPath;    PathStripPathW(&sFile.front());
+    sFile.resize(wcslen(sFile.c_str()));
 }
 
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
@@ -397,7 +437,11 @@ bool TextFile::ReadUInt(unsigned int & nNew, std::string * sGet, bool bPrint){
 }
 
 void TextFile::SkipLine(){
-    if(nPosition + 1 >= sBuffer.size()) throw mdlexception("Error: Trying to skip a line at the end of the file.");
+    if(nPosition + 1 >= sBuffer.size()){
+        /// End of file, set position to eof
+        nPosition = sBuffer.size();
+        //throw mdlexception("Error: Trying to skip a line at the end of the file.");
+    }
 
     bool bStop = false;
     while(nPosition + 1 < sBuffer.size() && !bStop){
@@ -468,20 +512,33 @@ bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStr
     return false;
 }
 
-void IniFile::ReadIni(std::string & sIni){
-    std::ifstream fIni (sIni, std::ios::binary);
+void IniFile::ReadIni(std::wstring & sIni){
+    //std::ifstream fIni (sIni.c_str(), std::ios::binary);
+    HANDLE fIni = bead_CreateReadFile(sIni); //CreateFileW(sIni.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-    if(!fIni.is_open()){
+    //if(!fIni.is_open()){
+    if(fIni == INVALID_HANDLE_VALUE){
         throw mdlexception("Error opening .ini file.");
     }
 
-    fIni.seekg(0, std::ios::end);
-    std::streampos length = fIni.tellg();
-    fIni.seekg(0, std::ios::beg);
+    //fIni.seekg(0, std::ios::end);
+    //std::streampos length = fIni.tellg();
+    //fIni.seekg(0, std::ios::beg);
+    //LARGE_INTEGER lnSize;
+    //if(!GetFileSizeEx(fIni, &lnSize)){
+    //    throw mdlexception("Error: .ini file empty .");
+    //}
+    //long unsigned length = lnSize.QuadPart;
 
-    std::vector<char> & sBufferRef = CreateBuffer(length);
-    fIni.read(&sBufferRef[0], length);
-    fIni.close();
+    std::vector<char> & sBufferRef = CreateBuffer(bead_GetFileLength(fIni));
+
+    //fIni.read(&sBufferRef[0], length);
+    if(!bead_ReadFile(fIni, sBufferRef)){ //if(!ReadFileEx(fIni, &sBufferRef.front(), length, NULL, NULL)){
+        throw mdlexception("Error reading .ini file.");
+    }
+
+    //fIni.close();
+    CloseHandle(fIni);
 
     SetFilePath(sIni);
 
@@ -519,12 +576,12 @@ void IniFile::ReadIni(std::string & sIni){
     }
 }
 
-void IniFile::WriteIni(std::string & sIni){
-    std::ofstream fIni (sIni, std::ios::binary);
-
-    if(!fIni.is_open()){
-        throw mdlexception("Error opening .ini file.");
-    }
+void IniFile::WriteIni(std::wstring & sIni){
+    //std::ofstream fIni (sIni, std::ios::binary);
+    //if(!fIni.is_open()){
+    //    throw mdlexception("Error opening .ini file.");
+    //}
+    std::stringstream fIni;
 
     for(IniOption & option : Options){
         fIni << option.sToken << " ";
@@ -544,4 +601,16 @@ void IniFile::WriteIni(std::string & sIni){
 
         if(&option != &Options.back()) fIni << "\r\n";
     }
+
+    HANDLE hIni = bead_CreateWriteFile(sIni); //CreateFileW(sIni.c_str(), GENERIC_WRITE, 0x00, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if(hIni == INVALID_HANDLE_VALUE){
+        throw mdlexception("Error opening .ini file.");
+    }
+
+    if(!bead_WriteFile(hIni, fIni.str())){ //if(!WriteFileEx(hIni, &fIni.str().front(), fIni.str().length(), NULL, NULL)){
+        throw mdlexception("Error writing .ini file.");
+    }
+
+    CloseHandle(hIni);
 }

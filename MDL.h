@@ -369,19 +369,50 @@ struct VertexData{
     int nNodeNumber = -1;
 
     VertexData(){}
-    VertexData(const Vector & v1, const Vector & v2): vVertex(v1), vUV1(v2) {}
-    VertexData(const Vector & v1, const Vector & v2, const Vector & v3): vVertex(v1), vUV1(v2), vNormal(v3) {}
+    VertexData(const Vector & v1, int nNode = -1): vVertex(v1), nNodeNumber(nNode) {}
+    VertexData(const Vector & v1, const Vector & v2, int nNode = -1): vVertex(v1), vUV1(v2), nNodeNumber(nNode) {}
+    VertexData(const Vector & v1, const Vector & v2, const Vector & v3, int nNode = -1): vVertex(v1), vUV1(v2), vNormal(v3), nNodeNumber(nNode) {}
+    bool operator==(const VertexData & vd){
+        if(vVertex == vd.vVertex &&
+           vNormal == vd.vNormal &&
+           vUV1 == vd.vUV1 &&
+           vUV2 == vd.vUV2 &&
+           vUV3 == vd.vUV3 &&
+           vUV4 == vd.vUV4 &&
+           cColor == vd.cColor &&
+           vTangent1.at(0) == vd.vTangent1.at(0) &&
+           vTangent1.at(1) == vd.vTangent1.at(1) &&
+           vTangent1.at(2) == vd.vTangent1.at(2) &&
+           vTangent2.at(0) == vd.vTangent2.at(0) &&
+           vTangent2.at(1) == vd.vTangent2.at(1) &&
+           vTangent2.at(2) == vd.vTangent2.at(2) &&
+           vTangent3.at(0) == vd.vTangent3.at(0) &&
+           vTangent3.at(1) == vd.vTangent3.at(1) &&
+           vTangent3.at(2) == vd.vTangent3.at(2) &&
+           vTangent4.at(0) == vd.vTangent4.at(0) &&
+           vTangent4.at(1) == vd.vTangent4.at(1) &&
+           vTangent4.at(2) == vd.vTangent4.at(2) &&
+           Weights == vd.Weights
+           ) return true;
+        else return false;
+    }
 };
 
 struct Vertex: public Vector{
     int nOffset = 0;
     VertexData MDXData;
     int nLinkedFacesIndex = -1;
-    Vertex assign(const Vector & v){
+    Vertex assign(const Vector & v, bool bMdx = false){
         fX = v.fX;
         fY = v.fY;
         fZ = v.fZ;
+        //MDXData = VertexData(v, MDXData.nNodeNumber);
+        MDXData.vVertex = v;
         return *this;
+    }
+    bool operator==(const Vertex & v){
+        if(fX == v.fX && fY == v.fY && fZ == v.fZ && MDXData == v.MDXData) return true;
+        else return false;
     }
     Vector vFromRoot;
 };
@@ -402,6 +433,7 @@ struct Face{
     std::array<short, 3> nIndexVertex = {-1, -1, -1};
 
     //Added members
+    std::array<short, 3> nTempIndexVertex = {-1, -1, -1};
     std::array<short, 3> nIndexTvert = {-1, -1, -1};
     std::array<short, 3> nIndexTvert1 = {-1, -1, -1};
     std::array<short, 3> nIndexTvert2 = {-1, -1, -1};
@@ -682,12 +714,14 @@ struct MeshHeader{
     std::vector<Face> Faces;
     std::vector<std::array<short, 3>> VertIndices;
     std::vector<Vertex> Vertices;
+    std::vector<Vertex> TempVertices;
     std::vector<Vector> TempVerts;
     std::vector<Vector> TempTverts;
     std::vector<Vector> TempTverts1;
     std::vector<Vector> TempTverts2;
     std::vector<Vector> TempTverts3;
     std::vector<Color> TempColors;
+    std::array<bool, 4> TangentSpace = {false, false, false, false};
     VertexData MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;
@@ -716,7 +750,7 @@ struct SkinHeader{
     short nPadding2 = 0;
 
     std::vector<Bone> Bones;
-    std::vector<int> BoneNameIndices;
+    std::vector<int> BoneBinaryOrderIndices;
     std::vector<Weight> TempWeights;
 };
 
@@ -860,6 +894,7 @@ struct ModelHeader{
     std::vector<Animation> Animations;
     std::vector<Name> Names;
     std::vector<Node> ArrayOfNodes;
+    std::vector<int> NameIndicesInBinaryOrder;
     //std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
     std::vector<std::vector<Patch>> PatchArrayPointers;
 };
@@ -960,6 +995,7 @@ class MDL: public BinaryFile{
                            std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     void ConsolidateSmoothingGroups(int pg, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
     std::string MakeUniqueName(int nNodeNumber);
+    std::vector<Vertex> GetWokVertData(Node & node);
 
     //Getters
     const std::string GetName(){ return sClassName; }
@@ -1000,6 +1036,7 @@ class MDL: public BinaryFile{
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;
     bool bMinimizeVerts = false;
+    bool bMinimizeVerts2 = false;
     bool bWriteAnimations = true;
     bool bSkinToTrimesh = false;
     bool bLightsaberToTrimesh = false;
@@ -1007,6 +1044,7 @@ class MDL: public BinaryFile{
     bool bExportWok = false;
     bool bCreaseAngle = false;
     unsigned nCreaseAngle = 60;
+    bool bUseWokData = true;
 
     //Getters
     std::unique_ptr<FileHeader> & GetFileData();
@@ -1014,7 +1052,7 @@ class MDL: public BinaryFile{
     Node & GetNodeByNameIndex(int nIndex, int nAnimation = -1);
     bool HeadLinked();
     bool NodeExists(const std::string & sNodeName);
-    int GetNameIndex(std::string sName);
+    int GetNameIndex(const std::string & sName);
     void UpdateTexture(Node & node, const std::string & sNew, int nTex);
     void GetLytPositionFromWok();
     unsigned GetHeaderOffset(const Node & node, unsigned short nHeader);

@@ -572,20 +572,21 @@ bool ASCII::Read(MDL & Mdl){
                         int nBoneIndex = 0;
                         int nNodeNumber = 0;
                         Weight weight;
-                        std::vector<int> & nWeightIndices = node.Skin.BoneNameIndices;
-                        while(bFound && z < 4){
+                        std::vector<int> & nWeightIndices = node.Skin.BoneBinaryOrderIndices;
+                        while(z < 4){
                             //Get first name
-                            bFound = ReadUntilText(sID, false, true);
+                            if(!ReadUntilText(sID, false, true)) break;
                             std::string sCheck (sID);
                             std::transform(sCheck.begin(), sCheck.end(), sCheck.begin(), ::tolower);
+
                             if(sCheck == "root"){
                                 if(!ReadFloat(fConvert)) throw mdlexception("Error reading weight data for node '" + FH->MH.Names.at(node.Head.nNodeNumber).sName + "'. No weight value.");
                             }
                             else{
                                 //if we found a name, loop through the name array to find our name index
-                                for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size() && bFound; nNodeNumber++){
+                                for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size(); nNodeNumber++){
                                     //check if there is a match
-                                    if(FH->MH.Names[nNodeNumber].sName == sID){
+                                    if(StringEqual(FH->MH.Names[nNodeNumber].sName, sID)){
                                         //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
                                         //Check if we already have this name indexed in the skin
                                         bPresent = false;
@@ -613,23 +614,22 @@ bool ASCII::Read(MDL & Mdl){
                                         weight.nWeightIndex[z] = nBoneIndex;
 
                                         //Since we found the name, we don't need to keep looping anymore
-                                        nNodeNumber = FH->MH.Names.size();
+                                        break;
                                     }
                                 }
-                                if(nNodeNumber == FH->MH.Names.size() && bFound){
+                                if(nNodeNumber == FH->MH.Names.size()){
                                     //we failed to find the name in the name array. This data is broken.
                                     ReportMdl << "Reading weights data: failed to find name in name array! Name: " << sID << ".\n";
-                                    bFound = false;
                                     throw mdlexception("Error reading weight data for node '" + FH->MH.Names.at(node.Head.nNodeNumber).sName + "'. Could not find bone '" + sID + "' by name.");
                                 }
-                                else if(bFound){
+                                else{
                                     //We found the name in the name array. We are therefore ready to read the value as well.
                                     if(ReadFloat(fConvert)) weight.fWeightValue[z] = fConvert;
                                 }
                             }
                             z++;
                         }
-                        if(z==1){
+                        if(z < 1){
                             //This means we exited before writing a single piece of data
                             ReportMdl << "Didn't even find one name" << "" << ".\n";
                             ReportMdl << "DataCounter: " << nDataCounter << ". DataMax: " << nDataMax << ".\n";
@@ -921,7 +921,6 @@ bool ASCII::Read(MDL & Mdl){
                         }
                         if(nType & NODE_MESH){
                             node.Mesh.nSaberUnknown1 = 3;
-                            node.Mesh.nMdxDataBitmap = MDX_FLAG_VERTEX | MDX_FLAG_NORMAL;
                         }
 
                         //Finish up
@@ -949,7 +948,7 @@ bool ASCII::Read(MDL & Mdl){
                                 bFound = false;
                                 while(nNodeNumber < FH->MH.Names.size() && !bFound){
                                     //check if there is a match
-                                    if(FH->MH.Names[nNodeNumber].sName == sID){
+                                    if(StringEqual(FH->MH.Names[nNodeNumber].sName, sID)){
                                         //We have found the name index for the current name
                                         bFound = true;
                                     }
@@ -973,7 +972,7 @@ bool ASCII::Read(MDL & Mdl){
                                 bFound = false;
                                 while(nNodeNumber < FH->MH.Names.size() && !bFound){
                                     //check if there is a match
-                                    if(FH->MH.Names[nNodeNumber].sName == sID){
+                                    if(StringEqual(FH->MH.Names[nNodeNumber].sName, sID)){
                                         //We have found the name index for the current name
                                         bFound = true;
                                     }
@@ -1429,7 +1428,16 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
                         if(ReadInt(nConvert)){
-                            if(nConvert != 0) node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_TANGENT1;
+                            node.Mesh.TangentSpace.at(0) = (nConvert != 0);
+                            if(ReadInt(nConvert)){
+                                node.Mesh.TangentSpace.at(1) = (nConvert != 0);
+                                if(ReadInt(nConvert)){
+                                    node.Mesh.TangentSpace.at(2) = (nConvert != 0);
+                                    if(ReadInt(nConvert)){
+                                        node.Mesh.TangentSpace.at(3) = (nConvert != 0);
+                                    }
+                                }
+                            }
                         }
                         SkipLine();
                     }
@@ -1585,7 +1593,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTverts = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV1;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1595,7 +1602,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTexIndices1 = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV2;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1606,7 +1612,6 @@ bool ASCII::Read(MDL & Mdl){
                         bTverts1 = true;
                         if(sID == "lightmaptverts") bMagnusll = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV2;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1616,7 +1621,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTexIndices2 = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV3;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1626,7 +1630,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTverts2 = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV3;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1636,7 +1639,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTexIndices3 = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV4;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1646,7 +1648,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bTverts3 = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_UV4;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1656,7 +1657,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bColorIndices = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_COLOR;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1666,7 +1666,6 @@ bool ASCII::Read(MDL & Mdl){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bColors = true;
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Mesh.nMdxDataBitmap = node.Mesh.nMdxDataBitmap | MDX_FLAG_COLOR;
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
@@ -1738,6 +1737,15 @@ bool ASCII::Read(MDL & Mdl){
                         if(ReadInt(nConvert)) nDataMax = nConvert;
                         else nDataMax = -1;
                         nDataCounter = 0;
+                        SkipLine();
+                    }
+                    /// Extra (controllerless) data
+                    else if(sID == "extra_data" && nAnimation >= 0){
+                        Animation & anim = FH->MH.Animations.back();
+                        Node & node = anim.ArrayOfNodes.back();
+                        int nData = 0;
+                        if(ReadInt(nConvert)) nData = nConvert;
+                        node.Head.ControllerData.resize(nData, 0.0);
                         SkipLine();
                     }
                     /// First, controllerless controller data
@@ -1885,7 +1893,7 @@ bool ASCII::Read(MDL & Mdl){
                         nDataCounter = 0;
                         bFound = true;
                         int nSavePos2;
-                        while(bFound && (nDataMax != 0 || nDataCounter < nDataMax)){
+                        while(bFound && (nDataMax < 0 || nDataCounter < nDataMax)){
                             //ReportMdl << "Looking.. Position=" << nPosition << ".\n";
                             if(EmptyRow()) SkipLine();
                             else{
@@ -1984,7 +1992,7 @@ bool ASCII::Read(MDL & Mdl){
                         nDataCounter = 0;
                         bFound = true;
                         int nSavePos2;
-                        while(bFound && (nDataMax != 0 || nDataCounter < nDataMax)){
+                        while(bFound && (nDataMax < 0 || nDataCounter < nDataMax)){
                             if(EmptyRow()) SkipLine();
                             else{
                                 nSavePos2 = nPosition;
@@ -2420,6 +2428,12 @@ void MDL::AsciiPostProcess(){
         }
     }
 
+    /// Build Array of Indices By Offset Order
+    Data.MH.NameIndicesInBinaryOrder.reserve(Data.MH.ArrayOfNodes.size());
+    for(Node & node : Data.MH.ArrayOfNodes){
+        Data.MH.NameIndicesInBinaryOrder.push_back(node.Head.nNodeNumber);
+    }
+
     /// PART 3 ///
     /// Interpret ascii data
     /// This constructs the Mesh.Vertices, Mesh.VertIndices, Dangly.Data2, Dangly.Constraints and Saber.SaberData structures.
@@ -2496,9 +2510,36 @@ void MDL::AsciiPostProcess(){
             std::vector<Vector> vectorarray;
             vectorarray.reserve(node.Mesh.Faces.size()*3);
             node.Mesh.fTotalArea = 0.0;
+
+            /// Build mdx bitmap
+            if(node.Mesh.TempVerts.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_VERTEX | MDX_FLAG_NORMAL);
+            if(node.Mesh.TempColors.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_COLOR);
+            if(node.Mesh.TempTverts.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_UV1);
+            if(node.Mesh.TempTverts1.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_UV2);
+            if(node.Mesh.TempTverts2.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_UV3);
+            if(node.Mesh.TempTverts3.size() > 0) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_UV4);
+            if(node.Mesh.TangentSpace.at(0)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT1);
+            if(node.Mesh.TangentSpace.at(1)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT2);
+            if(node.Mesh.TangentSpace.at(2)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT3);
+            if(node.Mesh.TangentSpace.at(3)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT4);
+
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
-                face.nID = f;
+                face.nID = f; /// Why is this necessary?
+
+                /// MDLOps may leave out texindicesX arrays, I need to check for unset indices and make them use the diffuse ones instead.
+                for(int i = 0; i < 3; i++){
+                    if(node.Mesh.TempTverts1.size() > 0 && face.nIndexTvert1.at(i) < 0){
+                        for(int i2 = 0; i2 < 3; i2++) face.nIndexTvert1.at(i2) = face.nIndexTvert.at(i2);
+                    }
+                    if(node.Mesh.TempTverts2.size() > 0 && face.nIndexTvert2.at(i) < 0){
+                        for(int i2 = 0; i2 < 3; i2++) face.nIndexTvert2.at(i2) = face.nIndexTvert.at(i2);
+                    }
+                    if(node.Mesh.TempTverts3.size() > 0 && face.nIndexTvert3.at(i) < 0){
+                        for(int i2 = 0; i2 < 3; i2++) face.nIndexTvert3.at(i2) = face.nIndexTvert.at(i2);
+                    }
+                }
+
                 for(int i = 0; i < 3; i++){
                     if(!face.bProcessed[i]){
                         bool bIgnoreVert = true, bIgnoreTvert = true, bIgnoreTvert1 = true, bIgnoreTvert2 = true, bIgnoreTvert3 = true, bIgnoreColor = true;
@@ -2782,10 +2823,10 @@ void MDL::AsciiPostProcess(){
             }
 
             /// Texture count depends on the UVs.
-            node.Mesh.nTextureNumber = node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1 ? 1 : 0 +
-                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2 ? 1 : 0 +
-                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3 ? 1 : 0 +
-                                       node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4 ? 1 : 0;
+            node.Mesh.nTextureNumber = (node.Mesh.nMdxDataBitmap & MDX_FLAG_UV1 ? 1 : 0) +
+                                       (node.Mesh.nMdxDataBitmap & MDX_FLAG_UV2 ? 1 : 0) +
+                                       (node.Mesh.nMdxDataBitmap & MDX_FLAG_UV3 ? 1 : 0) +
+                                       (node.Mesh.nMdxDataBitmap & MDX_FLAG_UV4 ? 1 : 0);
 
             node.Mesh.TempVerts.resize(0);
             node.Mesh.TempTverts.resize(0);
@@ -3026,6 +3067,21 @@ void MDL::AsciiPostProcess(){
                 if(v < node.Saber.SaberData.size()/2) node.Saber.SaberData.at(v).vNormal = vVertNormals.at(v%4);
                 else node.Saber.SaberData.at(v).vNormal = vVertNormals.at(4 + v%4);
             }
+            node.Mesh.Vertices.reserve(node.Saber.SaberData.size());
+            for(VertexData & sd : node.Saber.SaberData) node.Mesh.Vertices.push_back(Vertex().assign(sd.vVertex));
+            node.Mesh.Faces.resize(12);
+            node.Mesh.Faces.at(0).nIndexVertex = {0, 1, 2};
+            node.Mesh.Faces.at(1).nIndexVertex = {3, 4, 5};
+            node.Mesh.Faces.at(2).nIndexVertex = {6, 7, 8};
+            node.Mesh.Faces.at(3).nIndexVertex = {9, 10, 11};
+            node.Mesh.Faces.at(4).nIndexVertex = {12, 13, 14};
+            node.Mesh.Faces.at(5).nIndexVertex = {15, 16, 17};
+            node.Mesh.Faces.at(6).nIndexVertex = {18, 19, 20};
+            node.Mesh.Faces.at(7).nIndexVertex = {21, 22, 23};
+            node.Mesh.Faces.at(8).nIndexVertex = {24, 25, 26};
+            node.Mesh.Faces.at(9).nIndexVertex = {27, 28, 29};
+            node.Mesh.Faces.at(10).nIndexVertex = {30, 31, 32};
+            node.Mesh.Faces.at(11).nIndexVertex = {33, 32, 31};
         }
 
         if(node.Head.nType & NODE_AABB){
@@ -3047,20 +3103,24 @@ void MDL::AsciiPostProcess(){
                 file << file2.str();
 
                 if(bDebug){
-                    std::string sDir = sFullPath;
+                    std::wstring sDir = sFullPath;
                     sDir.reserve(MAX_PATH);
-                    PathRemoveFileSpec(&sDir[0]);
-                    sDir.resize(strlen(sDir.c_str()));
-                    sDir += "\\debug_aabb.txt";
+                    PathRemoveFileSpecW(&sDir[0]);
+                    sDir.resize(wcslen(sDir.c_str()));
+                    sDir += L"\\debug_aabb.txt";
                     ReportMdl << "Will write aabb debug to: " << sDir.c_str() << "\n";
-                    std::ofstream filewrite(sDir.c_str());
+                    //std::ofstream filewrite(sDir.c_str());
+                    HANDLE hFile = bead_CreateWriteFile(sDir);
 
-                    if(!filewrite.is_open()){
+                    //if(!filewrite.is_open()){
+                    if(hFile == INVALID_HANDLE_VALUE){
                         ReportMdl << "'debug_aabb.txt' does not exist. No debug will be written.\n";
                     }
                     else{
-                        filewrite << file.str();
-                        filewrite.close();
+                        //filewrite << file.str();
+                        bead_WriteFile(hFile, file.str());
+                        //filewrite.close();
+                        CloseHandle(hFile);
                     }
                 }
             }

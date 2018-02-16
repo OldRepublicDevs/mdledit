@@ -189,7 +189,7 @@ Vector & Vector::Rotate(const Quaternion & q){
     return *this;
 }
 double Vector::GetLength() const {
-    return sqrtf(powf(fX, 2.0) + powf(fY, 2.0) + powf(fZ, 2.0));
+    return sqrt(pow(fX, 2.0) + pow(fY, 2.0) + pow(fZ, 2.0));
 }
 void Vector::Normalize(){
     double fNorm = GetLength();
@@ -200,10 +200,15 @@ void Vector::Normalize(){
     else *this /= fNorm;
 }
 bool Vector::Compare(const Vector & v1, double fDiff){
+    /*
     if(abs(fX - v1.fX) < fDiff &&
        abs(fY - v1.fY) < fDiff &&
        abs(fZ - v1.fZ) < fDiff ) return true;
-    else return false;
+    */
+
+    /// Alternative:
+    if((*this - v1).GetLength() < fDiff) return true;
+    return false;
 }
 bool Vector::Null(double fDiff){
     if(abs(fX) <= fDiff &&

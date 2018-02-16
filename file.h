@@ -25,18 +25,26 @@ union BB8{
     char bytes [8];
 };
 
+HANDLE bead_CreateReadFile(const std::string & sFilename);
+HANDLE bead_CreateReadFile(const std::wstring & sFilename);
+HANDLE bead_CreateWriteFile(const std::string & sFilename);
+HANDLE bead_CreateWriteFile(const std::wstring & sFilename);
+long unsigned bead_GetFileLength(HANDLE hFile);
+bool bead_ReadFile(HANDLE hFile, std::vector<char> & sBuffer, unsigned long nToRead = ~0);
+bool bead_WriteFile(HANDLE hFile, const std::string & sBuffer, unsigned long nToWrite = ~0);
+
 class File{
   protected:
     bool bLoaded = false;
-    std::string sFile;
-    std::string sFullPath;
+    std::wstring sFile;
+    std::wstring sFullPath;
     std::vector<char> sBuffer;
     unsigned int nPosition = 0;
   public:
     //Getters
     std::vector<char> & GetBuffer(){ return sBuffer; }
-    const std::string & GetFilename(){ return sFile; }
-    const std::string & GetFullPath(){ return sFullPath; }
+    const std::wstring & GetFilename(){ return sFile; }
+    const std::wstring & GetFullPath(){ return sFullPath; }
     virtual const std::string GetName(){ return ""; }
     bool empty(){ return !bLoaded; }
     void Export(std::string &sExport){
@@ -44,10 +52,10 @@ class File{
     }
 
     //Setters
-    void SetFilePath(std::string & sPath);
+    void SetFilePath(std::wstring & sPath);
 
     //Loaders/Unloaders
-    virtual std::vector<char> & CreateBuffer(int nSize){
+    virtual std::vector<char> & CreateBuffer(long unsigned nSize){
         bLoaded = true;
         sBuffer.resize(nSize, 0);
         return sBuffer;
@@ -96,13 +104,13 @@ class BinaryFile: public File{
     std::vector<char> & GetCompareData(){ return sCompareBuffer; }
 
     //Loaders/Unloaders
-    std::vector<char> & CreateBuffer(int nSize){
+    std::vector<char> & CreateBuffer(long unsigned nSize) override {
         bLoaded = true;
         sBuffer.resize(nSize, 0);
         bKnown.resize(nSize, 0);
         return sBuffer;
     }
-    void FlushAll(){
+    void FlushAll() override {
         sBuffer.clear();
         sCompareBuffer.clear();
         bKnown.clear();
@@ -150,8 +158,8 @@ class IniFile: public TextFile{
     void ClearIniOptions(){
         Options.clear();
     }
-    void ReadIni(std::string &);
-    void WriteIni(std::string &);
+    void ReadIni(std::wstring &);
+    void WriteIni(std::wstring &);
 };
 
 //Convert unions

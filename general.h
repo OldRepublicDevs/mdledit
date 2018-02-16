@@ -44,12 +44,19 @@ bool bCursorOnLine(POINT pt, POINT ptLine1, POINT ptLine2, int nOffset);
 std::string PrepareFloat(double fFloat, bool bFiniteOnly = true);
 unsigned int stou(std::string const & str, size_t * idx = 0, int base = 10);
 std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = std::string::npos);
+std::wstring safesubstr(const std::wstring & sParam, size_t nStart, size_t nLen = std::wstring::npos);
 int Error(std::string sErrorMessage);
 int WarningCancel(std::string sWarningMessage);
 int WarningYesNoCancel(std::string sWarningMessage);
 int Warning(std::string sWarningMessage);
+int Error(std::wstring sErrorMessage);
+int WarningCancel(std::wstring sWarningMessage);
+int WarningYesNoCancel(std::wstring sWarningMessage);
+int Warning(std::wstring sWarningMessage);
 void ClearStringstream(std::stringstream & ssClearMe);
-
+std::string to_ansi(const std::wstring & wString);
+std::wstring to_wide(const std::string & sString);
+bool StringEqual(const std::string & s1, const std::string & s2, bool bCaseSensitive = false);
 
 struct MenuLineAdder{
     HMENU hMenu;

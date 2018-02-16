@@ -58,8 +58,9 @@ void MDL::ExportWokAscii(std::string &sExport){
     sExport = ss.str();
 }
 
+std::string nl = "\r\n";
 void RecursiveAabb(Aabb * AABB, std::stringstream &str){
-    str << "\n    " << PrepareFloat(AABB->vBBmin.fX) <<
+    str << nl << "    " << PrepareFloat(AABB->vBBmin.fX) <<
                 " " << PrepareFloat(AABB->vBBmin.fY) <<
                 " " << PrepareFloat(AABB->vBBmin.fZ) <<
                 " " << PrepareFloat(AABB->vBBmax.fX) <<
@@ -74,9 +75,64 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
     }
 }
 
+
+
+/// Here we need another pass at the meshes to weld the vertices if the option is turned on
+void BuildWeldedArrays(Node & node){
+    if(!(node.Head.nType & NODE_MESH) || (node.Head.nType & NODE_SABER) || (node.Head.nType & NODE_AABB)) return;
+
+    /// Get temp vertex and constraint arrays
+    std::vector<Vertex> & vertices = node.Mesh.TempVertices;
+    std::vector<double> * p_constraints = nullptr;
+    if(node.Head.nType & NODE_DANGLY) p_constraints = &node.Dangly.TempConstraints;
+
+    /// Clear the target arrays
+    vertices.clear();
+    if(p_constraints) p_constraints->clear();
+
+    /// Reset all the processed flags to false
+    for(Face & face : node.Mesh.Faces){
+            face.bProcessed = {false, false, false};
+    }
+
+    for(int f = 0; f < node.Mesh.Faces.size(); f++){
+        Face & face = node.Mesh.Faces.at(f);
+        for(int i = 0; i < 3; i++){
+            if(face.bProcessed.at(i)) continue;
+
+            /// Copy the vertex struct
+            Vertex vert = node.Mesh.Vertices.at(face.nIndexVertex.at(i));
+
+            for(int f2 = f; f2 < node.Mesh.Faces.size(); f2++){
+                Face & face2 = node.Mesh.Faces.at(f2);
+                for(int i2 = 0; i2 < 3; i2++){
+                    //Make sure that we're only changing what's past our current position if we are in the same face.
+                    if(f2 == f && i2 <= i) continue;
+
+                    Vertex & vert2 = node.Mesh.Vertices.at(face2.nIndexVertex.at(i2));
+                    if(vert.fX == vert2.fX &&
+                       vert.fY == vert2.fY &&
+                       vert.fZ == vert2.fZ &&
+                       (!(node.Head.nType & NODE_SKIN) || vert.MDXData.Weights == vert2.MDXData.Weights) &&
+                       (!p_constraints || (node.Dangly.Constraints.at(face.nIndexVertex.at(i)) == node.Dangly.Constraints.at(face2.nIndexVertex.at(i2))))
+                       ){
+                        face2.nTempIndexVertex.at(i2) = node.Mesh.TempVertices.size();
+                        face2.bProcessed.at(i2) = true;
+                    }
+                }
+            }
+            face.nTempIndexVertex.at(i) = node.Mesh.TempVertices.size();
+            face.bProcessed.at(i) = true;
+            if(p_constraints) node.Dangly.TempConstraints.push_back(node.Dangly.Constraints.at(face.nIndexVertex.at(i)));
+            node.Mesh.TempVertices.push_back(std::move(vert));
+        }
+    }
+}
+
 void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data){
     ReportObject ReportMdl(*this);
     //ReportMdl << "Converting to ascii, data type: " << nDataType << "\n";
+    std::string nl = "\r\n";
     std::stringstream sTimestamp;
     SYSTEMTIME st;
     GetLocalTime(&st);
@@ -92,27 +148,27 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(src == BinarySource) sReturn << "from binary source ";
         else std::cout << "Error: Source neither ascii nor binary!\n";
         sReturn << "at " << sTimestamp.str();
-        sReturn << "\n# MODEL ASCII";
-        sReturn << "\nnewmodel " << mh->GH.sName.c_str();
-        sReturn << "\nsetsupermodel " << mh->GH.sName.c_str() << " " << mh->cSupermodelName.c_str();
-        sReturn << "\nclassification " << ReturnClassificationName(mh->nClassification).c_str();
-        sReturn << "\nclassification_unk1 " << (int) mh->nSubclassification;
-        sReturn << "\nignorefog " << (mh->nAffectedByFog ? 0 : 1);
-        sReturn << "\nsetanimationscale " << PrepareFloat(mh->fScale);
-        sReturn << "\nheadlink " << (HeadLinked() ? 1 : 0);
-        sReturn << "\ncompress_quaternions " << (mh->bCompressQuaternions ? 1 : 0);
-        sReturn << "\n";
-        sReturn << "\n# GEOM ASCII";
-        sReturn << "\nbeginmodelgeom " << mh->GH.sName.c_str();
+        sReturn << nl << "# MODEL ASCII";
+        sReturn << nl << "newmodel " << mh->GH.sName.c_str();
+        sReturn << nl << "setsupermodel " << mh->GH.sName.c_str() << " " << mh->cSupermodelName.c_str();
+        sReturn << nl << "classification " << ReturnClassificationName(mh->nClassification).c_str();
+        sReturn << nl << "classification_unk1 " << (int) mh->nSubclassification;
+        sReturn << nl << "ignorefog " << (mh->nAffectedByFog ? 0 : 1);
+        sReturn << nl << "setanimationscale " << PrepareFloat(mh->fScale);
+        sReturn << nl << "compress_quaternions " << (mh->bCompressQuaternions ? 1 : 0);
+        sReturn << nl << "headlink " << (HeadLinked() ? 1 : 0);
+        sReturn << nl;
+        sReturn << nl << "# GEOM ASCII";
+        sReturn << nl << "beginmodelgeom " << mh->GH.sName.c_str();
         if(Wok)
-            sReturn << "\n  layoutposition " << PrepareFloat(mh->vLytPosition.fX) << " " << PrepareFloat(mh->vLytPosition.fY) << " " << PrepareFloat(mh->vLytPosition.fZ);
-        sReturn     << "\n  bmin " << PrepareFloat(mh->vBBmin.fX) << " " << PrepareFloat(mh->vBBmin.fY) << " " << PrepareFloat(mh->vBBmin.fZ);
-        sReturn     << "\n  bmax " << PrepareFloat(mh->vBBmax.fX) << " " << PrepareFloat(mh->vBBmax.fY) << " " << PrepareFloat(mh->vBBmax.fZ);
-        sReturn     << "\n  radius " << PrepareFloat(mh->fRadius);
+            sReturn << nl << "  layoutposition " << PrepareFloat(mh->vLytPosition.fX) << " " << PrepareFloat(mh->vLytPosition.fY) << " " << PrepareFloat(mh->vLytPosition.fZ);
+        sReturn     << nl << "  bmin " << PrepareFloat(mh->vBBmin.fX) << " " << PrepareFloat(mh->vBBmin.fY) << " " << PrepareFloat(mh->vBBmin.fZ);
+        sReturn     << nl << "  bmax " << PrepareFloat(mh->vBBmax.fX) << " " << PrepareFloat(mh->vBBmax.fY) << " " << PrepareFloat(mh->vBBmax.fZ);
+        sReturn     << nl << "  radius " << PrepareFloat(mh->fRadius);
         for(int n = 0; n < mh->ArrayOfNodes.size(); n++){
             ConvertToAscii(CONVERT_NODE, sReturn, (void*) &n);
         }
-        sReturn << "\nendmodelgeom " << mh->GH.sName.c_str() << "\n";
+        sReturn << nl << "endmodelgeom " << mh->GH.sName.c_str() << nl;
 
         if(bWriteAnimations){
             for(int n = 0; n < mh->Animations.size(); n++){
@@ -120,40 +176,41 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
         }
 
-        sReturn << "\n\ndonemodel " << mh->GH.sName.c_str() << "\n";
+        sReturn << nl << nl << "donemodel " << mh->GH.sName.c_str() << nl;
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
-        sReturn << "\nnewanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
-        sReturn << "\n  length " << PrepareFloat(anim->fLength);
-        sReturn << "\n  transtime " << PrepareFloat(anim->fTransition);
-        sReturn << "\n  animroot " << anim->sAnimRoot.c_str();
+        sReturn << nl << "newanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
+        sReturn << nl << "  length " << PrepareFloat(anim->fLength);
+        sReturn << nl << "  transtime " << PrepareFloat(anim->fTransition);
+        sReturn << nl << "  animroot " << anim->sAnimRoot.c_str();
         if(anim->Events.size() > 0){
             for(int s = 0; s < anim->Events.size(); s++){
-                sReturn << "\n  event " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
+                sReturn << nl << "  event " << anim->Events.at(s).fTime << " " << anim->Events.at(s).sName.c_str();
             }
         }
         for(int n = 0; n < anim->ArrayOfNodes.size(); n++){
             Node & node = anim->ArrayOfNodes.at(n);
             ConvertToAscii(CONVERT_ANIMATION_NODE, sReturn, (void*) &node);
         }
-        sReturn << "\ndoneanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
+        sReturn << nl << "doneanim " << anim->sName.c_str() << " " << FH->MH.GH.sName.c_str();
     }
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
-        sReturn << "\n    node dummy ";
+        sReturn << nl << "    node dummy ";
         sReturn << MakeUniqueName(node->Head.nNodeNumber);
-        //ReportMdl << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << "\n";
-        sReturn << "\n      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
+        //ReportMdl << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << nl;
+        sReturn << nl << "      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers.at(n)));
             }
         }
         else if(node->Head.ControllerData.size() > 0){
+            sReturn << nl << "      extra_data " << node->Head.ControllerData.size();
             //ConvertToAscii(CONVERT_CONTROLLERLESS_DATA, sReturn, (void*) node);
         }
-        sReturn << "\n    endnode";
+        sReturn << nl << "    endnode";
     }
     else if(nDataType == CONVERT_NODE){
         if(!FH) return;
@@ -165,8 +222,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
         }
         else{
-            //ReportMdl << "Writing ASCII WARNING: Headerless (ghost?) node! Offset: " << node.nOffset << "\n";
-            sReturn << "\nname " << mh->Names.at(n).sName;
+            //ReportMdl << "Writing ASCII WARNING: Headerless (ghost?) node! Offset: " << node.nOffset << nl;
+            sReturn << nl << "name " << mh->Names.at(n).sName;
         }
         if(node.Head.nType & NODE_AABB){
             ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
@@ -176,14 +233,17 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             ConvertToAscii(CONVERT_SABER, sReturn, (void*) &node);
         }
         else if(node.Head.nType & NODE_DANGLY){
+            if(bMinimizeVerts2) BuildWeldedArrays(node);
             ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
             ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
         }
         else if(node.Head.nType & NODE_SKIN && !bSkinToTrimesh){
+            if(bMinimizeVerts2) BuildWeldedArrays(node);
             ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
             ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
         }
         else if(node.Head.nType & NODE_MESH){
+            if(bMinimizeVerts2) BuildWeldedArrays(node);
             ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
         }
         else if(node.Head.nType & NODE_REFERENCE){
@@ -195,11 +255,11 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node.Head.nType & NODE_LIGHT){
             ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
         }
-        if(node.Head.nType != 0) sReturn << "\nendnode";
+        if(node.Head.nType != 0) sReturn << nl << "endnode";
     }
     else if(nDataType == CONVERT_HEADER){
         Node * node = (Node*) Data;
-        sReturn << "\nnode ";
+        sReturn << nl << "node ";
         if(     node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_AABB)) sReturn << "aabb";
         else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_DANGLY)) sReturn << "danglymesh";
         else if(node->Head.nType == (NODE_HEADER | NODE_MESH | NODE_SKIN)) sReturn << (!bSkinToTrimesh ? "skin" : "trimesh");
@@ -212,7 +272,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else sReturn << "dummy"; /// A catch-all
         sReturn << " ";
         sReturn << MakeUniqueName(node->Head.nNodeNumber);
-        sReturn << "\n  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
+        sReturn << nl << "  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers.at(n)));
@@ -221,117 +281,128 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_LIGHT){
         Node * node = (Node*) Data;
-        sReturn << "\n  lightpriority " << node->Light.nLightPriority;
-        sReturn << "\n  ndynamictype " << node->Light.nDynamicType;
-        sReturn << "\n  ambientonly " << node->Light.nAmbientOnly;
-        sReturn << "\n  affectdynamic " << node->Light.nAffectDynamic;
-        sReturn << "\n  shadow " << node->Light.nShadow;
-        sReturn << "\n  flare " << node->Light.nFlare;
-        sReturn << "\n  fadinglight " << node->Light.nFadingLight;
-        sReturn << "\n  flareradius " << PrepareFloat(node->Light.fFlareRadius);
-        sReturn << "\n  texturenames " << node->Light.FlareTextureNames.size();
+        sReturn << nl << "  lightpriority " << node->Light.nLightPriority;
+        sReturn << nl << "  ndynamictype " << node->Light.nDynamicType;
+        sReturn << nl << "  ambientonly " << node->Light.nAmbientOnly;
+        sReturn << nl << "  affectdynamic " << node->Light.nAffectDynamic;
+        sReturn << nl << "  shadow " << node->Light.nShadow;
+        sReturn << nl << "  flare " << node->Light.nFlare;
+        sReturn << nl << "  fadinglight " << node->Light.nFadingLight;
+        sReturn << nl << "  flareradius " << PrepareFloat(node->Light.fFlareRadius);
+        sReturn << nl << "  texturenames " << node->Light.FlareTextureNames.size();
         for(int n = 0; n < node->Light.FlareTextureNames.size(); n++){
-            sReturn << "\n    " << node->Light.FlareTextureNames.at(n).sName;
+            sReturn << nl << "    " << node->Light.FlareTextureNames.at(n).sName;
         }
-        sReturn << "\n  flaresizes " << node->Light.FlareSizes.size();
+        sReturn << nl << "  flaresizes " << node->Light.FlareSizes.size();
         for(int n = 0; n < node->Light.FlareSizes.size(); n++){
-            sReturn << "\n    " << node->Light.FlareSizes.at(n);
+            sReturn << nl << "    " << node->Light.FlareSizes.at(n);
         }
-        sReturn << "\n  flarepositions " << node->Light.FlarePositions.size();
+        sReturn << nl << "  flarepositions " << node->Light.FlarePositions.size();
         for(int n = 0; n < node->Light.FlarePositions.size(); n++){
-            sReturn << "\n    " << node->Light.FlarePositions.at(n);
+            sReturn << nl << "    " << node->Light.FlarePositions.at(n);
         }
-        sReturn << "\n  flarecolorshifts " << node->Light.FlareColorShifts.size();
+        sReturn << nl << "  flarecolorshifts " << node->Light.FlareColorShifts.size();
         for(int n = 0; n < node->Light.FlareColorShifts.size(); n++){
-            sReturn << "\n    " << node->Light.FlareColorShifts.at(n).fR << " " << node->Light.FlareColorShifts.at(n).fG << " " << node->Light.FlareColorShifts.at(n).fB;
+            sReturn << nl << "    " << node->Light.FlareColorShifts.at(n).fR << " " << node->Light.FlareColorShifts.at(n).fG << " " << node->Light.FlareColorShifts.at(n).fB;
         }
     }
     else if(nDataType == CONVERT_EMITTER){
         Node * node = (Node*) Data;
-        sReturn << "\n  deadspace " << PrepareFloat(node->Emitter.fDeadSpace);
-        sReturn << "\n  blastRadius " << PrepareFloat(node->Emitter.fBlastRadius);
-        sReturn << "\n  blastLength " << PrepareFloat(node->Emitter.fBlastLength);
-        sReturn << "\n  numBranches " << node->Emitter.nBranchCount;
-        sReturn << "\n  controlptsmoothing " << node->Emitter.fControlPointSmoothing;
-        sReturn << "\n  xgrid " << node->Emitter.nxGrid;
-        sReturn << "\n  ygrid " << node->Emitter.nyGrid;
-        sReturn << "\n  spawntype " << node->Emitter.nSpawnType;
-        sReturn << "\n  update " << node->Emitter.cUpdate.c_str();
-        sReturn << "\n  render " << node->Emitter.cRender.c_str();
-        sReturn << "\n  blend " << node->Emitter.cBlend.c_str();
-        sReturn << "\n  texture " << node->Emitter.cTexture.c_str();
-        sReturn << "\n  chunkname " << node->Emitter.cChunkName.c_str();
-        sReturn << "\n  twosidedtex " << node->Emitter.nTwosidedTex;
-        sReturn << "\n  loop " << node->Emitter.nLoop;
-        sReturn << "\n  renderorder " << node->Emitter.nRenderOrder;
-        sReturn << "\n  m_bFrameBlending " << (int) node->Emitter.nFrameBlending;
-        sReturn << "\n  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
+        sReturn << nl << "  deadspace " << PrepareFloat(node->Emitter.fDeadSpace);
+        sReturn << nl << "  blastRadius " << PrepareFloat(node->Emitter.fBlastRadius);
+        sReturn << nl << "  blastLength " << PrepareFloat(node->Emitter.fBlastLength);
+        sReturn << nl << "  numBranches " << node->Emitter.nBranchCount;
+        sReturn << nl << "  controlptsmoothing " << node->Emitter.fControlPointSmoothing;
+        sReturn << nl << "  xgrid " << node->Emitter.nxGrid;
+        sReturn << nl << "  ygrid " << node->Emitter.nyGrid;
+        sReturn << nl << "  spawntype " << node->Emitter.nSpawnType;
+        sReturn << nl << "  update " << node->Emitter.cUpdate.c_str();
+        sReturn << nl << "  render " << node->Emitter.cRender.c_str();
+        sReturn << nl << "  blend " << node->Emitter.cBlend.c_str();
+        sReturn << nl << "  texture " << node->Emitter.cTexture.c_str();
+        sReturn << nl << "  chunkname " << node->Emitter.cChunkName.c_str();
+        sReturn << nl << "  twosidedtex " << node->Emitter.nTwosidedTex;
+        sReturn << nl << "  loop " << node->Emitter.nLoop;
+        sReturn << nl << "  renderorder " << node->Emitter.nRenderOrder;
+        sReturn << nl << "  m_bFrameBlending " << (int) node->Emitter.nFrameBlending;
+        sReturn << nl << "  m_sDepthTextureName " << node->Emitter.cDepthTextureName.c_str();
 
-        sReturn << "\n  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);
-        sReturn << "\n  p2p_sel " << (node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0);
-        sReturn << "\n  affectedByWind " << (node->Emitter.nFlags & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0);
-        sReturn << "\n  m_isTinted " << (node->Emitter.nFlags & EMITTER_FLAG_TINTED ? 1 : 0);
-        sReturn << "\n  bounce " << (node->Emitter.nFlags & EMITTER_FLAG_BOUNCE ? 1 : 0);
-        sReturn << "\n  random " << (node->Emitter.nFlags & EMITTER_FLAG_RANDOM ? 1 : 0);
-        sReturn << "\n  inherit " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT ? 1 : 0);
-        sReturn << "\n  inheritvel " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_VEL ? 1 : 0);
-        sReturn << "\n  inherit_local " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0);
-        sReturn << "\n  splat " << (node->Emitter.nFlags & EMITTER_FLAG_SPLAT ? 1 : 0);
-        sReturn << "\n  inherit_part " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
-        sReturn << "\n  depth_texture " << (node->Emitter.nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
-        sReturn << "\n  emitterflag13 " << (node->Emitter.nFlags & EMITTER_FLAG_13 ? 1 : 0);
+        sReturn << nl << "  p2p " << (node->Emitter.nFlags & EMITTER_FLAG_P2P ? 1 : 0);
+        sReturn << nl << "  p2p_sel " << (node->Emitter.nFlags & EMITTER_FLAG_P2P_SEL ? 1 : 0);
+        sReturn << nl << "  affectedByWind " << (node->Emitter.nFlags & EMITTER_FLAG_AFFECTED_WIND ? 1 : 0);
+        sReturn << nl << "  m_isTinted " << (node->Emitter.nFlags & EMITTER_FLAG_TINTED ? 1 : 0);
+        sReturn << nl << "  bounce " << (node->Emitter.nFlags & EMITTER_FLAG_BOUNCE ? 1 : 0);
+        sReturn << nl << "  random " << (node->Emitter.nFlags & EMITTER_FLAG_RANDOM ? 1 : 0);
+        sReturn << nl << "  inherit " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT ? 1 : 0);
+        sReturn << nl << "  inheritvel " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_VEL ? 1 : 0);
+        sReturn << nl << "  inherit_local " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_LOCAL ? 1 : 0);
+        sReturn << nl << "  splat " << (node->Emitter.nFlags & EMITTER_FLAG_SPLAT ? 1 : 0);
+        sReturn << nl << "  inherit_part " << (node->Emitter.nFlags & EMITTER_FLAG_INHERIT_PART ? 1 : 0);
+        sReturn << nl << "  depth_texture " << (node->Emitter.nFlags & EMITTER_FLAG_DEPTH_TEXTURE ? 1 : 0);
+        sReturn << nl << "  emitterflag13 " << (node->Emitter.nFlags & EMITTER_FLAG_13 ? 1 : 0);
     }
     else if(nDataType == CONVERT_REFERENCE){
         Node * node = (Node*) Data;
-        sReturn << "\n  refModel " << node->Reference.sRefModel.c_str();
-        sReturn << "\n  reattachable " << node->Reference.nReattachable;
+        sReturn << nl << "  refModel " << node->Reference.sRefModel.c_str();
+        sReturn << nl << "  reattachable " << node->Reference.nReattachable;
     }
     else if(nDataType == CONVERT_MESH){
         Node * node = (Node*) Data;
-        sReturn << "\n  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) << " " << PrepareFloat(node->Mesh.fDiffuse.fB);
-        sReturn << "\n  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) << " " << PrepareFloat(node->Mesh.fAmbient.fB);
-        sReturn << "\n  transparencyhint " << node->Mesh.nTransparencyHint;
-        sReturn << "\n  animateuv " << node->Mesh.nAnimateUV;
+        sReturn << nl << "  diffuse " << PrepareFloat(node->Mesh.fDiffuse.fR) << " " << PrepareFloat(node->Mesh.fDiffuse.fG) << " " << PrepareFloat(node->Mesh.fDiffuse.fB);
+        sReturn << nl << "  ambient " << PrepareFloat(node->Mesh.fAmbient.fR) << " " << PrepareFloat(node->Mesh.fAmbient.fG) << " " << PrepareFloat(node->Mesh.fAmbient.fB);
+        sReturn << nl << "  transparencyhint " << node->Mesh.nTransparencyHint;
+        sReturn << nl << "  animateuv " << node->Mesh.nAnimateUV;
         if(node->Mesh.nAnimateUV == 0){
-            sReturn << "\n  uvdirectionx 0.0";
-            sReturn << "\n  uvdirectiony 0.0";
-            sReturn << "\n  uvjitter 0.0";
-            sReturn << "\n  uvjitterspeed 0.0";
+            sReturn << nl << "  uvdirectionx 0.0";
+            sReturn << nl << "  uvdirectiony 0.0";
+            sReturn << nl << "  uvjitter 0.0";
+            sReturn << nl << "  uvjitterspeed 0.0";
         }
         else{
-            sReturn << "\n  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
-            sReturn << "\n  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY);
-            sReturn << "\n  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
-            sReturn << "\n  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
+            sReturn << nl << "  uvdirectionx " << PrepareFloat(node->Mesh.fUVDirectionX);
+            sReturn << nl << "  uvdirectiony " << PrepareFloat(node->Mesh.fUVDirectionY);
+            sReturn << nl << "  uvjitter " << PrepareFloat(node->Mesh.fUVJitter);
+            sReturn << nl << "  uvjitterspeed " << PrepareFloat(node->Mesh.fUVJitterSpeed);
         }
-        sReturn << "\n  lightmapped " << (int) node->Mesh.nHasLightmap;
-        sReturn << "\n  rotatetexture " << (int) node->Mesh.nRotateTexture;
-        sReturn << "\n  m_bIsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
-        sReturn << "\n  shadow " << (int) node->Mesh.nShadow;
-        sReturn << "\n  beaming " << (int) node->Mesh.nBeaming;
-        sReturn << "\n  render " << (int) node->Mesh.nRender;
-        sReturn << "\n  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
-        sReturn << "\n  dirt_texture " << node->Mesh.nDirtTexture;
-        sReturn << "\n  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
-        sReturn << "\n  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
-        sReturn << "\n  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0);
-        sReturn << "\n" << "  inv_count " << node->Mesh.nMeshInvertedCounter;
-        if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n  bitmap " << node->Mesh.GetTexture(1);
-        if(node->Mesh.cTexture2.c_str() != std::string()) sReturn << "\n  bitmap2 " << node->Mesh.GetTexture(2);
-        if(node->Mesh.cTexture3.c_str() != std::string()) sReturn << "\n  texture0 " << node->Mesh.GetTexture(3);
-        if(node->Mesh.cTexture4.c_str() != std::string()) sReturn << "\n  texture1 " << node->Mesh.GetTexture(4);
-        sReturn << "\n  verts " << node->Mesh.Vertices.size();
-        for(int n = 0; n < node->Mesh.Vertices.size(); n++){
+        sReturn << nl << "  lightmapped " << (int) node->Mesh.nHasLightmap;
+        sReturn << nl << "  rotatetexture " << (int) node->Mesh.nRotateTexture;
+        sReturn << nl << "  m_bIsBackgroundGeometry " << (int) node->Mesh.nBackgroundGeometry;
+        sReturn << nl << "  shadow " << (int) node->Mesh.nShadow;
+        sReturn << nl << "  beaming " << (int) node->Mesh.nBeaming;
+        sReturn << nl << "  render " << (int) node->Mesh.nRender;
+        sReturn << nl << "  dirt_enabled " << (int) node->Mesh.nDirtEnabled;
+        sReturn << nl << "  dirt_texture " << node->Mesh.nDirtTexture;
+        sReturn << nl << "  dirt_worldspace " << node->Mesh.nDirtCoordSpace;
+        sReturn << nl << "  hologram_donotdraw " << (int) node->Mesh.nHideInHolograms;
+        sReturn << nl << "  tangentspace " << (node->Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1 ? 1 : 0);
+        sReturn << nl << "  inv_count " << node->Mesh.nMeshInvertedCounter;
+        if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << nl << "  bitmap " << node->Mesh.GetTexture(1);
+        if(node->Mesh.cTexture2.c_str() != std::string()) sReturn << nl << "  bitmap2 " << node->Mesh.GetTexture(2);
+        if(node->Mesh.cTexture3.c_str() != std::string()) sReturn << nl << "  texture0 " << node->Mesh.GetTexture(3);
+        if(node->Mesh.cTexture4.c_str() != std::string()) sReturn << nl << "  texture1 " << node->Mesh.GetTexture(4);
+
+        /// If the Wok is present, we may want to put out the wok verts instead.
+        std::vector<Vertex> * ptr_verts = &node->Mesh.Vertices;
+        std::vector<Vertex> WokVerts = GetWokVertData(*node);
+        if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
+            ptr_verts = &node->Mesh.TempVertices;
+        }
+        else if(bUseWokData && (node->Head.nType & NODE_AABB) && WokVerts.size() > 0){
+            ptr_verts = &WokVerts;
+        }
+
+        sReturn << nl << "  verts " << ptr_verts->size();
+        for(int n = 0; n < ptr_verts->size(); n++){
             //Two possibilities - I put MDX if MDX is present, otherwise MDL
-            if(!Mdx) sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).fX) << " " << PrepareFloat(node->Mesh.Vertices.at(n).fY) << " " << PrepareFloat(node->Mesh.Vertices.at(n).fZ);
-            else sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fX) << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fY) << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vVertex.fZ);
+            if(!Mdx) sReturn << nl << "    " << PrepareFloat(ptr_verts->at(n).fX) << " " << PrepareFloat(ptr_verts->at(n).fY) << " " << PrepareFloat(ptr_verts->at(n).fZ);
+            else if(!bXbox) sReturn << nl << "    " << PrepareFloat(ptr_verts->at(n).MDXData.vVertex.fX) << " " << PrepareFloat(ptr_verts->at(n).MDXData.vVertex.fY) << " " << PrepareFloat(ptr_verts->at(n).MDXData.vVertex.fZ);
         }
-        sReturn << "\n  faces " << node->Mesh.Faces.size();
+        sReturn << nl << "  faces " << node->Mesh.Faces.size();
         for(int n = 0; n < node->Mesh.Faces.size(); n++){
-            sReturn << "\n    ";
-            sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
-            sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
-            sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
+            sReturn << nl << "    ";
+            sReturn << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(0) : node->Mesh.Faces.at(n).nTempIndexVertex.at(0));
+            sReturn << " " << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(1) : node->Mesh.Faces.at(n).nTempIndexVertex.at(1));
+            sReturn << " " << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(2) : node->Mesh.Faces.at(n).nTempIndexVertex.at(2));
             sReturn << "  " << std::to_string((node->Mesh.Faces.at(n).nSmoothingGroup == 0) ? 1 : node->Mesh.Faces.at(n).nSmoothingGroup);
             if(node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                 sReturn << "  " << node->Mesh.Faces.at(n).nIndexVertex.at(0);
@@ -342,80 +413,86 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             sReturn << "  " << node->Mesh.Faces.at(n).nMaterialID;
         }
         if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
-            sReturn << "\n  tverts " << node->Mesh.Vertices.size();
+            sReturn << nl << "  tverts " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
+                sReturn << nl << "    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fX);
                 sReturn << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV1.fY);
             }
         }
         if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV2){
-            sReturn << "\n  texindices1 " << node->Mesh.Faces.size();
+            sReturn << nl << "  texindices1 " << node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
-                sReturn << "\n    ";
+                sReturn << nl << "    ";
                 sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
-            sReturn << "\n  tverts1 " << node->Mesh.Vertices.size();
+            sReturn << nl << "  tverts1 " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fX);
+                sReturn << nl << "    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fX);
                 sReturn << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV2.fY);
             }
         }
         if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV3){
-            sReturn << "\n  texindices2 " << node->Mesh.Faces.size();
+            sReturn << nl << "  texindices2 " << node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
-                sReturn << "\n    ";
+                sReturn << nl << "    ";
                 sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
-            sReturn << "\n  tverts2 " << node->Mesh.Vertices.size();
+            sReturn << nl << "  tverts2 " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fX);
+                sReturn << nl << "    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fX);
                 sReturn << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV3.fY);
             }
         }
         if(Mdx && !Mdx->sBuffer.empty() && node->Mesh.nMdxDataBitmap & MDX_FLAG_UV4){
-            sReturn << "\n  texindices3 " << node->Mesh.Faces.size();
+            sReturn << nl << "  texindices3 " << node->Mesh.Faces.size();
             for(int n = 0; n < node->Mesh.Faces.size(); n++){
-                sReturn << "\n    ";
+                sReturn << nl << "    ";
                 sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
                 sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
             }
-            sReturn << "\n  tverts3 " << node->Mesh.Vertices.size();
+            sReturn << nl << "  tverts3 " << node->Mesh.Vertices.size();
             for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV4.fX);
+                sReturn << nl << "    " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV4.fX);
                 sReturn << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.vUV4.fY);
             }
         }
     }
     else if(nDataType == CONVERT_SKIN){
         Node * node = (Node*) Data;
+        ModelHeader & data = FH->MH;
         if(!Mdx->sBuffer.empty()){
-            sReturn << "\n  weights " << node->Mesh.Vertices.size();
-            for(int n = 0; n < node->Mesh.Vertices.size(); n++){
-                sReturn << "\n    ";
+            std::vector<Vertex> * ptr_verts = &node->Mesh.Vertices;
+            if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
+                ptr_verts = &node->Mesh.TempVertices;
+            }
+            sReturn << nl << "  weights " << ptr_verts->size();
+            for(int n = 0; n < ptr_verts->size(); n++){
+                sReturn << nl << "    ";
                 int i = 0;
-                signed short nBoneNumber; // = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
-                //ReportMdl << "Bone name index array size: " << node->Skin.BoneNameIndices.size() << "\n";
+                signed short nBoneNumber; // = (int) round(ptr_verts->at(n).MDXData.Weights.fWeightIndex.at(i));
+                //ReportMdl << "Bone name index array size: " << node->Skin.BoneBinaryOrderIndices.size() << nl;
                 bool bDependentVert = false;
                 while(i < 4){
-                    nBoneNumber = node->Mesh.Vertices.at(n).MDXData.Weights.nWeightIndex.at(i);
-                    //ReportMdl << "Reading bone number " << nBoneNumber << "\n";
-                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
-                        int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
+                    nBoneNumber = ptr_verts->at(n).MDXData.Weights.nWeightIndex.at(i);
+                    //ReportMdl << "Reading bone number " << nBoneNumber << nl;
+                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneBinaryOrderIndices.size()){
+                        int nNodeNumber = node->Skin.BoneBinaryOrderIndices.at(nBoneNumber);
+                        //if (nNodeNumber > -1) nNodeNumber = data.NameIndicesInBinaryOrder.at(nNodeNumber);
                         //ReportMdl << "Reading bone number " << nBoneNumber;
-                        //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str() << ".\n";
-                        //sReturn << " " << FH->MH.Names.at(nNodeNumber).sName.c_str() << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
-                        if(nNodeNumber > -1 && nNodeNumber < FH->MH.ArrayOfNodes.size()){
+                        //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneBinaryOrderIndices.at(nBoneNumber)).sName.c_str() << ".\n";
+                        //sReturn << " " << FH->MH.Names.at(nNodeNumber).sName.c_str() << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
+                        if(nNodeNumber > -1 && nNodeNumber < FH->MH.Names.size()){
                             if(!bDependentVert) bDependentVert = true;
-                            sReturn << " " << MakeUniqueName(nNodeNumber) << " " << PrepareFloat(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightValue.at(i));
+                            sReturn << " " << MakeUniqueName(nNodeNumber) << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
                         }
                     }
                     i++;
-                    //if(i < 4) nBoneNumber = (int) round(node->Mesh.Vertices.at(n).MDXData.Weights.fWeightIndex.at(i));
+                    //if(i < 4) nBoneNumber = (int) round(ptr_verts->at(n).MDXData.Weights.fWeightIndex.at(i));
                 }
                 if(!bDependentVert){
                     sReturn << " root 1.0";
@@ -425,26 +502,32 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     }
     else if(nDataType == CONVERT_DANGLY){
         Node * node = (Node*) Data;
-        sReturn << "\n  displacement " << PrepareFloat(node->Dangly.fDisplacement);
-        sReturn << "\n  tightness " << PrepareFloat(node->Dangly.fTightness);
-        sReturn << "\n  period " << PrepareFloat(node->Dangly.fPeriod);
-        sReturn << "\n  constraints " << node->Dangly.Constraints.size();
-        for(int n = 0; n < node->Dangly.Constraints.size(); n++){
-            sReturn << "\n    " << PrepareFloat(node->Dangly.Constraints.at(n));
+        sReturn << nl << "  displacement " << PrepareFloat(node->Dangly.fDisplacement);
+        sReturn << nl << "  tightness " << PrepareFloat(node->Dangly.fTightness);
+        sReturn << nl << "  period " << PrepareFloat(node->Dangly.fPeriod);
+
+        std::vector<double> * ptr_constraints = &node->Dangly.Constraints;
+        if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
+            ptr_constraints = &node->Dangly.TempConstraints;
+        }
+
+        sReturn << nl << "  constraints " << ptr_constraints->size();
+        for(int n = 0; n < ptr_constraints->size(); n++){
+            sReturn << nl << "    " << PrepareFloat(ptr_constraints->at(n));
         }
     }
     else if(nDataType == CONVERT_AABB){
         Node * node = (Node*) Data;
 
         /// Write out aabb tree
-        sReturn << "\n  aabb";
+        sReturn << nl << "  aabb";
         RecursiveAabb(&node->Walkmesh.RootAabb, sReturn);
 
         /// Write out room links
         if(Wok){
             if(Wok->GetData()){
                 BWMHeader & data = *Wok->GetData();
-                sReturn << "\n  roomlinks";
+                sReturn << nl << "  roomlinks";
                 Vector vLyt;
                 if(FH) vLyt = FH->MH.vLytPosition;
                 for(int l = 0; l < data.edges.size(); l++){
@@ -459,116 +542,116 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                             Vector v4 (node->Mesh.Vertices.at(mdlface.nIndexVertex.at(0)).vFromRoot + vLyt);
                             Vector v5 (node->Mesh.Vertices.at(mdlface.nIndexVertex.at(1)).vFromRoot + vLyt);
                             Vector v6 (node->Mesh.Vertices.at(mdlface.nIndexVertex.at(2)).vFromRoot + vLyt);
-                            if(v1.Compare(v4, 0.01) && v2.Compare(v5, 0.01) && v3.Compare(v6, 0.01)){
+                            if(v1.Compare(v4, 0.1) && v2.Compare(v5, 0.1) && v3.Compare(v6, 0.1)){
                                 mdlface.nEdgeTransitions.at(nIndex%3) = data.edges.at(l).nTransition;
-                                sReturn << "\n    " << (3*f + nIndex%3) << " " << data.edges.at(l).nTransition;
-                                f = node->Mesh.Faces.size();
+                                sReturn << nl << "    " << (3*f + nIndex%3) << " " << data.edges.at(l).nTransition;
+                                break;
                             }
                         }
                     }
                 }
-                sReturn << "\n  endlist";
+                sReturn << nl << "  endlist";
             }
         }
     }
     else if(nDataType == CONVERT_SABER){
         Node * node = (Node*) Data;
-        sReturn << "\n" << "  inv_count " << node->Saber.nInvCount1 << " " << node->Saber.nInvCount2;
-        if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << "\n" << "  bitmap " << node->Mesh.GetTexture(1);
+        sReturn << nl << "  inv_count " << node->Saber.nInvCount1 << " " << node->Saber.nInvCount2;
+        if(node->Mesh.cTexture1.c_str() != std::string()) sReturn << nl << "  bitmap " << node->Mesh.GetTexture(1);
 
         if(node->Saber.SaberData.size() == 176){
             Vector vDiff;
             Vector vOut;
             vDiff = node->Saber.SaberData.at(4).vVertex - node->Saber.SaberData.at(0).vVertex;
 
-            sReturn << "\n  verts 16";
+            sReturn << nl << "  verts 16";
             vOut = node->Saber.SaberData.at(0).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(1).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(2).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(3).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
 
             vOut = node->Saber.SaberData.at(0).vVertex + vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(1).vVertex + vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(2).vVertex + vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(3).vVertex + vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
 
             vOut = node->Saber.SaberData.at(88).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(89).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(90).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(91).vVertex;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
 
             vOut = node->Saber.SaberData.at(88).vVertex - vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(89).vVertex - vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(90).vVertex - vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
             vOut = node->Saber.SaberData.at(91).vVertex - vDiff;
-            sReturn << "\n    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
+            sReturn << nl << "    " << PrepareFloat(vOut.fX) << " " << PrepareFloat(vOut.fY) << " " << PrepareFloat(vOut.fZ);
 
-            sReturn << "\n  faces 12";
+            sReturn << nl << "  faces 12";
             /// SIDE 1
-            sReturn << "\n    5 4 0  1  5 4 0  0";
-            sReturn << "\n    0 1 5  1  0 1 5  0";
-            sReturn << "\n    13 8 12  1  13 8 12  0";
-            sReturn << "\n    8 13 9  1  8 13 9  0";
-            sReturn << "\n    6 5 1  1  6 5 1  0";
-            //sReturn << "\n    2 6 5  1  2 6 5  0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    1 2 6  1  1 2 6  0";
-            //sReturn << "\n    1 2 5  1  1 2 5  0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    10 9 13  1  10 9 13  0";
-            sReturn << "\n    13 14 10  1  13 14 10  0";
-            sReturn << "\n    3 6 2  1  3 6 2  0";
-            sReturn << "\n    6 3 7  1  6 3 7  0";
-            sReturn << "\n    15 11 14  1  15 11 14  0";
-            sReturn << "\n    10 14 11  1  10 14 11  0";
+            sReturn << nl << "    5 4 0  1  5 4 0  0";
+            sReturn << nl << "    0 1 5  1  0 1 5  0";
+            sReturn << nl << "    13 8 12  1  13 8 12  0";
+            sReturn << nl << "    8 13 9  1  8 13 9  0";
+            sReturn << nl << "    6 5 1  1  6 5 1  0";
+            //sReturn << nl << "    2 6 5  1  2 6 5  0"; //Correct faces, but not what they are in the game
+            sReturn << nl << "    1 2 6  1  1 2 6  0";
+            //sReturn << nl << "    1 2 5  1  1 2 5  0"; //Correct faces, but not what they are in the game
+            sReturn << nl << "    10 9 13  1  10 9 13  0";
+            sReturn << nl << "    13 14 10  1  13 14 10  0";
+            sReturn << nl << "    3 6 2  1  3 6 2  0";
+            sReturn << nl << "    6 3 7  1  6 3 7  0";
+            sReturn << nl << "    15 11 14  1  15 11 14  0";
+            sReturn << nl << "    10 14 11  1  10 14 11  0";
             /// SIDE 2
             /*
-            sReturn << "\n    4 5 0  1  4 5 0  0";
-            sReturn << "\n    1 0 5  1  1 0 5  0";
-            sReturn << "\n    8 13 12  1  8 13 12  0";
-            sReturn << "\n    13 8 9  1  13 8 9  0";
-            sReturn << "\n    5 6 1  1  5 6 1  0";
-            //sReturn << "\n    6 2 5  1  6 2 5  0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    2 1 6  1  2 1 6  0";
-            //sReturn << "\n    2 1 5  1  2 1 5  0"; //Correct faces, but not what they are in the game
-            sReturn << "\n    9 10 13  1  9 10 13  0";
-            sReturn << "\n    14 13 10  1  14 13 10  0";
-            sReturn << "\n    6 3 2  1  6 3 2  0";
-            sReturn << "\n    3 6 7  1  3 6 7  0";
-            sReturn << "\n    11 15 14  1  11 15 14  0";
-            sReturn << "\n    14 10 11  1  14 10 11  0";
+            sReturn << nl << "    4 5 0  1  4 5 0  0";
+            sReturn << nl << "    1 0 5  1  1 0 5  0";
+            sReturn << nl << "    8 13 12  1  8 13 12  0";
+            sReturn << nl << "    13 8 9  1  13 8 9  0";
+            sReturn << nl << "    5 6 1  1  5 6 1  0";
+            //sReturn << nl << "    6 2 5  1  6 2 5  0"; //Correct faces, but not what they are in the game
+            sReturn << nl << "    2 1 6  1  2 1 6  0";
+            //sReturn << nl << "    2 1 5  1  2 1 5  0"; //Correct faces, but not what they are in the game
+            sReturn << nl << "    9 10 13  1  9 10 13  0";
+            sReturn << nl << "    14 13 10  1  14 13 10  0";
+            sReturn << nl << "    6 3 2  1  6 3 2  0";
+            sReturn << nl << "    3 6 7  1  3 6 7  0";
+            sReturn << nl << "    11 15 14  1  11 15 14  0";
+            sReturn << nl << "    14 10 11  1  14 10 11  0";
             */
 
-            sReturn << "\n  tverts 16";
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(0).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(0).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(1).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(1).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(2).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(2).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(3).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(3).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(4).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(4).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(5).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(5).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(6).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(6).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(7).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(7).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(88).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(88).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(89).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(89).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(90).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(90).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(91).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(91).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(92).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(92).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(93).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(93).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(94).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(94).vUV1.fY);
-            sReturn << "\n    " << PrepareFloat(node->Saber.SaberData.at(95).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(95).vUV1.fY);
+            sReturn << nl << "  tverts 16";
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(0).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(0).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(1).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(1).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(2).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(2).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(3).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(3).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(4).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(4).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(5).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(5).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(6).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(6).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(7).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(7).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(88).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(88).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(89).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(89).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(90).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(90).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(91).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(91).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(92).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(92).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(93).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(93).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(94).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(94).vUV1.fY);
+            sReturn << nl << "    " << PrepareFloat(node->Saber.SaberData.at(95).vUV1.fX) << " " << PrepareFloat(node->Saber.SaberData.at(95).vUV1.fY);
         }
     }
     /// TODO: cases where num(controllers) == 0 but num(controller data) > 0
@@ -580,57 +663,57 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         std::cout << "Converting controllerless data " << node.Head.ControllerData.size() << ".\n";
         if(node.Head.ControllerData.size() == 4){
-            sReturn << "\n      controllerless_orientationkey";
+            sReturn << nl << "      controllerless_orientationkey";
             //Compressed orientation
             Quaternion qCurrent;
             AxisAngle aaCurrent;
             for(int n = 0; n < 2; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
                 ByteBlock4.f = node.Head.ControllerData.at(2 + n);
                 qCurrent = DecompressQuaternion(ByteBlock4.ui);
                 aaCurrent = AxisAngle(qCurrent);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
-            sReturn << "\n      endlist";
+            sReturn << nl << "      endlist";
         }
         else if(node.Head.ControllerData.size() == 8){
-            sReturn << "\n      controllerless_positionkey";
+            sReturn << nl << "      controllerless_positionkey";
             //normal position
             for(int n = 0; n < 2; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
                 sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(2 + n*3 + 0));
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(2 + n*3 + 1));
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(2 + n*3 + 2));
             }
-            sReturn << "\n      endlist";
+            sReturn << nl << "      endlist";
         }
         else if(node.Head.ControllerData.size() == 12){
-            sReturn << "\n      controllerless_positionkey";
+            sReturn << nl << "      controllerless_positionkey";
             //normal position
             for(int n = 0; n < 2; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
+                sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
                 sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(2 + n*3 + 0));
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(2 + n*3 + 1));
                 sReturn << " ";
                 sReturn << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(2 + n*3 + 2));
             }
-            sReturn << "\n      endlist";
+            sReturn << nl << "      endlist";
 
-            sReturn << "\n      controllerless_orientationkey";
+            sReturn << nl << "      controllerless_orientationkey";
             //Compressed orientation
             Quaternion qCurrent;
             AxisAngle aaCurrent;
             for(int n = 0; n < 2; n++){
-                sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(8 + n)) << " ";
+                sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(8 + n)) << " ";
                 ByteBlock4.f = node.Head.ControllerData.at(8 + 2 + n);
                 qCurrent = DecompressQuaternion(ByteBlock4.ui);
                 aaCurrent = AxisAngle(qCurrent);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
-            sReturn << "\n      endlist";
+            sReturn << nl << "      endlist";
         }
         else std::cout << "Found a new type of controllerless animation data: " << node.Head.ControllerData.size() << "floats!\n";
     }
@@ -654,7 +737,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         Node & node = *tempNode;
         //ReportMdl << "Node does not crash\n";
 
-        sReturn << "\n      ";
+        sReturn << nl << "      ";
         sReturn << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
         if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn << "bezier";
         sReturn << "key";
@@ -664,7 +747,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 Quaternion qCurrent, qPrevious;
                 AxisAngle aaCurrent, aaDiff;
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
                     ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
                     qCurrent = DecompressQuaternion(ByteBlock4.ui);
                     aaCurrent = AxisAngle(qCurrent);
@@ -677,7 +760,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 Quaternion qCurrent, qPrevious;
                 AxisAngle aaCurrent, aaDiff;
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
                     qCurrent = Quaternion(node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 0),
                                           node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 1),
                                           node.Head.ControllerData.at(ctrl->nDataStart + n*4 + 2),
@@ -688,27 +771,29 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 }
             }
             /// positionbezierkey
-            else if(ctrl->nColumnCount & 16 && !bBezierToLinear && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
+            else if((ctrl->nColumnCount & 16) && ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
                 //positionbezierkey
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n));
                     sReturn << " " << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (0)));
                     sReturn << " " << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (1)));
                     sReturn << " " << PrepareFloat(loc.vPosition.fZ + node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (2)));
-                    sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
-                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
-                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
-                    sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
-                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
-                    sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
+                    if(!bBezierToLinear){
+                        sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (3)));
+                        sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (4)));
+                        sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (5)));
+                        sReturn << "  " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (6)));
+                        sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (7)));
+                        sReturn << " " << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*9 + (8)));
+                    }
                 }
             }
             /// regular bezierkey
-            else if(ctrl->nColumnCount & 16 && !bBezierToLinear){
+            else if((ctrl->nColumnCount & 16)){
                 //bezierkey
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                    for(int i = 0; i < (ctrl->nColumnCount & 15) * 3; i++){
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    for(int i = 0; i < (ctrl->nColumnCount & 15) * (!bBezierToLinear ? 3 : 1); i++){
                         sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount & 15) * 3) + i));
                         if(i < (ctrl->nColumnCount & 15) * 3 - 1) sReturn << " ";
                         if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sReturn << " ";
@@ -719,7 +804,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else if(ctrl->nControllerType == CONTROLLER_HEADER_POSITION){
                 //normal position
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
                     sReturn << PrepareFloat(loc.vPosition.fX + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 0));
                     sReturn << " ";
                     sReturn << PrepareFloat(loc.vPosition.fY + node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + 1));
@@ -731,7 +816,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             else if(ctrl->nColumnCount == 1 || ctrl->nColumnCount == 3){
                 //default parser
                 for(int n = 0; n < ctrl->nValueCount; n++){
-                    sReturn << "\n        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
+                    sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
                     for(int i = 0; i < ctrl->nColumnCount; i++){
                         sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*ctrl->nColumnCount + i));
                         if(i < ctrl->nColumnCount - 1) sReturn << " ";
@@ -758,7 +843,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             Error("An unknown exception occurred on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
                                "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.");
         }
-        sReturn << "\n      endlist";
+        sReturn << nl << "      endlist";
     }
     else if(nDataType == CONVERT_CONTROLLER_SINGLE){
         Controller * ctrl = (Controller*) Data;
@@ -767,7 +852,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             return;
         }
         Node & node = GetNodeByNameIndex(ctrl->nNodeNumber);
-        sReturn << "\n  " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " ";
+        sReturn << nl << "  " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
             ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart);
@@ -815,20 +900,20 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(src == BinarySource) sReturn << "from binary source ";
         else std::cout << "Error: Source neither ascii nor binary!\n";
         sReturn << "at " << sTimestamp.str();
-        sReturn << "\n" << "# WOKMESH  ASCII";
-        sReturn << "\n" << "node trimesh WALKMESH";
-        sReturn << "\n" << "  parent " << sModel;
-        sReturn << "\n" << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
-        sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
+        sReturn << nl << "# WOKMESH  ASCII";
+        sReturn << nl << "node trimesh WALKMESH";
+        sReturn << nl << "  parent " << sModel;
+        sReturn << nl << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
+        sReturn << nl << "  orientation 1.0 0.0 0.0 0.0";
 
-        sReturn << "\n  verts " << data.verts.size();
+        sReturn << nl << "  verts " << data.verts.size();
         for(int n = 0; n < data.verts.size(); n++){
-            sReturn << "\n    " << PrepareFloat(data.verts.at(n).fX) << " " << PrepareFloat(data.verts.at(n).fY) << " " << PrepareFloat(data.verts.at(n).fZ);
+            sReturn << nl << "    " << PrepareFloat(data.verts.at(n).fX) << " " << PrepareFloat(data.verts.at(n).fY) << " " << PrepareFloat(data.verts.at(n).fZ);
         }
 
-        sReturn << "\n  faces " << data.faces.size();
+        sReturn << nl << "  faces " << data.faces.size();
         for(int n = 0; n < data.faces.size(); n++){
-            sReturn << "\n    ";
+            sReturn << nl << "    ";
             sReturn << data.faces.at(n).nIndexVertex.at(0);
             sReturn << " " << data.faces.at(n).nIndexVertex.at(1);
             sReturn << " " << data.faces.at(n).nIndexVertex.at(2);
@@ -841,13 +926,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         std::stringstream ssRoomlinks;
         for(int n = 0; n < data.edges.size(); n++){
             if(data.edges.at(n).nTransition != -1){
-                ssRoomlinks << "\n    " << data.edges.at(n).nIndex << " " << data.edges.at(n).nTransition;
+                ssRoomlinks << nl << "    " << data.edges.at(n).nIndex << " " << data.edges.at(n).nTransition;
                 nRoomLinkSize++;
             }
         }
-        sReturn << "\n  roomlinks " << data.edges.size() << ssRoomlinks.str();
+        sReturn << nl << "  roomlinks " << data.edges.size() << ssRoomlinks.str();
 
-        sReturn << "\nendnode";
+        sReturn << nl << "endnode";
     }
     else if(nDataType == CONVERT_PWK){
         BWM * bwm = (BWM*) Data;
@@ -886,33 +971,33 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(src == BinarySource) sReturn << "from binary source ";
         else std::cout << "Error: Source neither ascii nor binary!\n";
         sReturn << "at " << sTimestamp.str();
-        sReturn << "\n" << "# PWKMESH  ASCII";
-        sReturn << "\n" << "node dummy " << sRoot;
-        sReturn << "\n" << "  parent " << sModel;
-        sReturn << "\n" << "endnode";
-        sReturn << "\n" << "node trimesh " << sMesh;
-        sReturn << "\n" << "  parent " << sRoot;
-        sReturn << "\n" << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
-        sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
-        sReturn << "\n" << "  verts " << data.verts.size();
+        sReturn << nl << "# PWKMESH  ASCII";
+        sReturn << nl << "node dummy " << sRoot;
+        sReturn << nl << "  parent " << sModel;
+        sReturn << nl << "endnode";
+        sReturn << nl << "node trimesh " << sMesh;
+        sReturn << nl << "  parent " << sRoot;
+        sReturn << nl << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
+        sReturn << nl << "  orientation 1.0 0.0 0.0 0.0";
+        sReturn << nl << "  verts " << data.verts.size();
         for(int v = 0; v < data.verts.size(); v++){
             Vector & vert = data.verts.at(v);
-            sReturn << "\n" << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
+            sReturn << nl << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
         }
-        sReturn << "\n" << "  faces " << data.faces.size();
+        sReturn << nl << "  faces " << data.faces.size();
         for(int v = 0; v < data.faces.size(); v++){
             Face & face = data.faces.at(v);
-            sReturn << "\n" << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
+            sReturn << nl << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
         }
-        sReturn << "\n" << "endnode";
-        sReturn << "\n" << "node dummy " << sUse1;
-        sReturn << "\n" << "  parent " << sMesh;
-        sReturn << "\n" << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
-        sReturn << "\n" << "endnode";
-        sReturn << "\n" << "node dummy " << sUse2;
-        sReturn << "\n" << "  parent " << sMesh;
-        sReturn << "\n" << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
-        sReturn << "\n" << "endnode";
+        sReturn << nl << "endnode";
+        sReturn << nl << "node dummy " << sUse1;
+        sReturn << nl << "  parent " << sMesh;
+        sReturn << nl << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
+        sReturn << nl << "endnode";
+        sReturn << nl << "node dummy " << sUse2;
+        sReturn << nl << "  parent " << sMesh;
+        sReturn << nl << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
+        sReturn << nl << "endnode";
     }
     else if(nDataType == CONVERT_DWK){
         if(!Dwk0 && !Dwk1 && !Dwk2) return;
@@ -970,90 +1055,90 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(src == BinarySource) sReturn << "from binary source ";
         else std::cout << "Error: Source neither ascii nor binary!\n";
         sReturn << "at " << sTimestamp.str();
-        sReturn << "\n" << "# DWKMESH  ASCII";
-        sReturn << "\n" << "node dummy " << sRoot;
-        sReturn << "\n" << "  parent " << sModel;
-        sReturn << "\n" << "endnode";
+        sReturn << nl << "# DWKMESH  ASCII";
+        sReturn << nl << "node dummy " << sRoot;
+        sReturn << nl << "  parent " << sModel;
+        sReturn << nl << "endnode";
         if(Dwk0){
             BWMHeader & data = *Dwk0->GetData();
-            sReturn << "\n" << "node trimesh " << sClosedMesh;
-            sReturn << "\n" << "  parent " << sRoot;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
-            sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
-            sReturn << "\n" << "  verts " << data.verts.size();
+            sReturn << nl << "node trimesh " << sClosedMesh;
+            sReturn << nl << "  parent " << sRoot;
+            sReturn << nl << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
+            sReturn << nl << "  orientation 1.0 0.0 0.0 0.0";
+            sReturn << nl << "  verts " << data.verts.size();
             for(int v = 0; v < data.verts.size(); v++){
                 Vector & vert = data.verts.at(v);
-                sReturn << "\n" << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
+                sReturn << nl << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
             }
-            sReturn << "\n" << "  faces " << data.faces.size();
+            sReturn << nl << "  faces " << data.faces.size();
             for(int v = 0; v < data.faces.size(); v++){
                 Face & face = data.faces.at(v);
-                sReturn << "\n" << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
+                sReturn << nl << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
             }
-            sReturn << "\n" << "endnode";
-            sReturn << "\n" << "node dummy " << sClosedUse1;
-            sReturn << "\n" << "  parent " << sClosedMesh;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
-            sReturn << "\n" << "endnode";
-            sReturn << "\n" << "node dummy " << sClosedUse2;
-            sReturn << "\n" << "  parent " << sClosedMesh;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
-            sReturn << "\n" << "endnode";
+            sReturn << nl << "endnode";
+            sReturn << nl << "node dummy " << sClosedUse1;
+            sReturn << nl << "  parent " << sClosedMesh;
+            sReturn << nl << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
+            sReturn << nl << "endnode";
+            sReturn << nl << "node dummy " << sClosedUse2;
+            sReturn << nl << "  parent " << sClosedMesh;
+            sReturn << nl << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
+            sReturn << nl << "endnode";
         }
         if(Dwk1){
             BWMHeader & data = *Dwk1->GetData();
-            sReturn << "\n" << "node trimesh " << sOpen1Mesh;
-            sReturn << "\n" << "  parent " << sRoot;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
-            sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
-            sReturn << "\n" << "  verts " << data.verts.size();
+            sReturn << nl << "node trimesh " << sOpen1Mesh;
+            sReturn << nl << "  parent " << sRoot;
+            sReturn << nl << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
+            sReturn << nl << "  orientation 1.0 0.0 0.0 0.0";
+            sReturn << nl << "  verts " << data.verts.size();
             for(int v = 0; v < data.verts.size(); v++){
                 Vector & vert = data.verts.at(v);
-                sReturn << "\n" << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
+                sReturn << nl << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
             }
-            sReturn << "\n" << "  faces " << data.faces.size();
+            sReturn << nl << "  faces " << data.faces.size();
             for(int v = 0; v < data.faces.size(); v++){
                 Face & face = data.faces.at(v);
-                sReturn << "\n" << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
+                sReturn << nl << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
             }
-            sReturn << "\n" << "endnode";
-            sReturn << "\n" << "node dummy " << sOpen1Use1;
-            sReturn << "\n" << "  parent " << sOpen1Mesh;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
-            sReturn << "\n" << "endnode";
+            sReturn << nl << "endnode";
+            sReturn << nl << "node dummy " << sOpen1Use1;
+            sReturn << nl << "  parent " << sOpen1Mesh;
+            sReturn << nl << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
+            sReturn << nl << "endnode";
             if(bOpen1Use2){
-                sReturn << "\n" << "node dummy " << sOpen1Use2;
-                sReturn << "\n" << "  parent " << sOpen1Mesh;
-                sReturn << "\n" << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
-                sReturn << "\n" << "endnode";
+                sReturn << nl << "node dummy " << sOpen1Use2;
+                sReturn << nl << "  parent " << sOpen1Mesh;
+                sReturn << nl << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
+                sReturn << nl << "endnode";
             }
         }
         if(Dwk2){
             BWMHeader & data = *Dwk2->GetData();
-            sReturn << "\n" << "node trimesh " << sOpen2Mesh;
-            sReturn << "\n" << "  parent " << sRoot;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
-            sReturn << "\n" << "  orientation 1.0 0.0 0.0 0.0";
-            sReturn << "\n" << "  verts " << data.verts.size();
+            sReturn << nl << "node trimesh " << sOpen2Mesh;
+            sReturn << nl << "  parent " << sRoot;
+            sReturn << nl << "  position " << PrepareFloat(data.vPosition.fX) << " " << PrepareFloat(data.vPosition.fY) << " " << PrepareFloat(data.vPosition.fZ);
+            sReturn << nl << "  orientation 1.0 0.0 0.0 0.0";
+            sReturn << nl << "  verts " << data.verts.size();
             for(int v = 0; v < data.verts.size(); v++){
                 Vector & vert = data.verts.at(v);
-                sReturn << "\n" << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
+                sReturn << nl << "    " << PrepareFloat(vert.fX) << " " << PrepareFloat(vert.fY) << " " << PrepareFloat(vert.fZ);
             }
-            sReturn << "\n" << "  faces " << data.faces.size();
+            sReturn << nl << "  faces " << data.faces.size();
             for(int v = 0; v < data.faces.size(); v++){
                 Face & face = data.faces.at(v);
-                sReturn << "\n" << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
+                sReturn << nl << "    " << face.nIndexVertex.at(0) << " " << face.nIndexVertex.at(1) << " " << face.nIndexVertex.at(2) << "  1  0 0 0  " << face.nMaterialID;
             }
-            sReturn << "\n" << "endnode";
-            sReturn << "\n" << "node dummy " << sOpen2Use1;
-            sReturn << "\n" << "  parent " << sOpen2Mesh;
-            sReturn << "\n" << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
-            sReturn << "\n" << "endnode";
+            sReturn << nl << "endnode";
+            sReturn << nl << "node dummy " << sOpen2Use1;
+            sReturn << nl << "  parent " << sOpen2Mesh;
+            sReturn << nl << "  position " << PrepareFloat(data.vUse1.fX) << " " << PrepareFloat(data.vUse1.fY) << " " << PrepareFloat(data.vUse1.fZ);
+            sReturn << nl << "endnode";
             if(bOpen2Use2){
-                sReturn << "\n" << "node dummy " << sOpen2Use2;
-                sReturn << "\n" << "  parent " << sOpen2Mesh;
-                sReturn << "\n" << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
-                sReturn << "\n" << "endnode";
+                sReturn << nl << "node dummy " << sOpen2Use2;
+                sReturn << nl << "  parent " << sOpen2Mesh;
+                sReturn << nl << "  position " << PrepareFloat(data.vUse2.fX) << " " << PrepareFloat(data.vUse2.fY) << " " << PrepareFloat(data.vUse2.fZ);
+                sReturn << nl << "endnode";
             }
         }
     }

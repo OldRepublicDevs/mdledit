@@ -122,7 +122,7 @@ LRESULT CALLBACK ReportDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
             std::string sContents (reportdlg->MdlPtr->GetReport().str());
             std::regex e ("\n");
             sContents = std::regex_replace(sContents, e, "\r\n");
-            SetWindowText(hwnd, ("Report for " + reportdlg->MdlPtr->GetFilename()).c_str());
+            SetWindowTextW(hwnd, (L"Report for " + reportdlg->MdlPtr->GetFilename()).c_str());
             SetWindowText(hEdit, sContents.c_str());
         }
         break;
@@ -137,36 +137,40 @@ LRESULT CALLBACK ReportDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPA
                     /// Get the mdl path, remove .ascii and .mdl extensions, add "_report.txt".
                     if(reportdlg == nullptr) break;
                     if(reportdlg->MdlPtr == nullptr) break;
-                    std::string sFile = reportdlg->MdlPtr->GetFullPath();
-                    if(safesubstr(sFile, sFile.size() - 6, 6) == ".ascii") sFile = safesubstr(sFile, 0, sFile.size() - 6);
-                    if(safesubstr(sFile, sFile.size() - 4, 4) == ".mdl") sFile = safesubstr(sFile, 0, sFile.size() - 4);
-                    sFile += "_report.txt";
+                    std::wstring sFile = reportdlg->MdlPtr->GetFullPath();
+                    if(safesubstr(sFile, sFile.size() - 6, 6) == L".ascii") sFile = safesubstr(sFile, 0, sFile.size() - 6);
+                    if(safesubstr(sFile, sFile.size() - 4, 4) == L".mdl") sFile = safesubstr(sFile, 0, sFile.size() - 4);
+                    sFile += L"_report.txt";
 
-                    OPENFILENAME ofn;                    ZeroMemory(&ofn, sizeof(ofn));                    ofn.lStructSize = sizeof(ofn);                    ofn.hwndOwner = hwnd;                    ofn.nMaxFile = MAX_PATH;                    ofn.lpstrFile = &sFile.front(); //The open dialog will update sFile with the file path                    ofn.lpstrFilter = "Text file (*.txt)\0*.txt\0";                    ofn.nFilterIndex = 1;                    ofn.Flags = OFN_PATHMUSTEXIST;
-                    while(true){                        if(GetSaveFileName(&ofn)){
+                    OPENFILENAMEW ofn;                    ZeroMemory(&ofn, sizeof(ofn));                    ofn.lStructSize = sizeof(ofn);                    ofn.hwndOwner = hwnd;                    ofn.nMaxFile = MAX_PATH;                    ofn.lpstrFile = &sFile.front(); //The open dialog will update sFile with the file path                    ofn.lpstrFilter = L"Text file (*.txt)\0*.txt\0";                    ofn.nFilterIndex = 1;                    ofn.Flags = OFN_PATHMUSTEXIST;
+                    while(true){                        if(GetSaveFileNameW(&ofn)){
                             /// Now we check if this file exists already
-                            if(PathFileExists(sFile.c_str())){
-                                int nDecision = WarningYesNoCancel("The file '" + std::string(PathFindFileName(sFile.c_str())) + "' already exists! Do you want to overwrite?");
+                            if(PathFileExistsW(sFile.c_str())){
+                                int nDecision = WarningYesNoCancel(L"The file '" + std::wstring(PathFindFileNameW(sFile.c_str())) + L"' already exists! Do you want to overwrite?");
                                 if(nDecision == IDCANCEL) break;
                                 else if(nDecision == IDNO) continue; /// This will run the file selection dialog a second time
                             }
 
-                            std::cout << "Writing file:\n" << sFile << "\n";
+                            std::cout << "Writing file:\n" << sFile.c_str() << "\n";
 
                             /// Start timer
                             Timer t1;
 
                             /// Create file
-                            std::ofstream file(sFile, std::fstream::out);
+                            //std::ofstream file(sFile, std::fstream::out);
+                            HANDLE hFile = bead_CreateWriteFile(sFile);
 
-                            if(!file.is_open()){
-                                std::cout << "File creation failed for " << sFile << ". Aborting.\n";
+                            //if(!file.is_open()){
+                            if(hFile == INVALID_HANDLE_VALUE){
+                                std::cout << "File creation failed for " << sFile.c_str() << ". Aborting.\n";
                                 break;
                             }
 
                             /// Write and close file
-                            file << reportdlg->MdlPtr->GetReport().str();
-                            file.close();
+                            //file << reportdlg->MdlPtr->GetReport().str();
+                            bead_WriteFile(hFile, reportdlg->MdlPtr->GetReport().str());
+                            //file.close();
+                            CloseHandle(hFile);
 
                             /// Report time
                             std::cout << "Wrote file in: " << t1.GetTime() << "\n";

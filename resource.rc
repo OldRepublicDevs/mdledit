@@ -22,8 +22,8 @@ BEGIN
     EDITTEXT DLG_ID_CREASE_ANGLE_DEG, 72, 56, 18, 11, ES_NUMBER
 
     GROUPBOX "Reading Model", DLG_ID_STATIC, 10, 76, 180, 49 // y-size (last) is 13 + n * 12
-    AUTOCHECKBOX "Calculate Smoothing Groups (Binary)", DLG_ID_CALC_SMOOTHING, 15, 88, 160, 8
-    AUTOCHECKBOX "Minimize (weld) vertices (Ascii)", DLG_ID_MIN_VERT, 15, 100, 160, 8
+    AUTOCHECKBOX "Calculate Smoothing Groups (Reading binary)", DLG_ID_CALC_SMOOTHING, 15, 88, 160, 8
+    AUTOCHECKBOX "Minimize (weld) vertices (Reading ascii)", DLG_ID_MIN_VERT, 15, 100, 160, 8
     AUTOCHECKBOX "Save report automatically", DLG_ID_SAVE_REPORT, 15, 112, 160, 8
 
     GROUPBOX "Writing Ascii Model", DLG_ID_STATIC, 200, 10, 180, 115 // y-size (last) is 13 + n * 12
@@ -31,8 +31,10 @@ BEGIN
     AUTOCHECKBOX "Convert Skin to Trimesh", DLG_ID_SKIN_TRIMESH, 205, 34, 160, 8
     AUTOCHECKBOX "Convert Lightsaber to Trimesh", DLG_ID_SABER_TRIMESH, 205, 46, 160, 8
     AUTOCHECKBOX "Convert Bezier Controllers to Linear", DLG_ID_BEZIER_LINEAR, 205, 58, 160, 8
-    AUTOCHECKBOX "Export WOK File", DLG_ID_EXPORT_WOK, 205, 70, 160, 8
-    AUTOCHECKBOX "Use .ascii extension by default", DLG_ID_DOT_ASCII, 205, 82, 160, 8
+    AUTOCHECKBOX "Export WOK file", DLG_ID_EXPORT_WOK, 205, 70, 160, 8
+    AUTOCHECKBOX "Use coordinates from WOK file", DLG_ID_WOK_COORDS, 205, 82, 160, 8
+    AUTOCHECKBOX "Use .ascii extension by default", DLG_ID_DOT_ASCII, 205, 94, 160, 8
+    AUTOCHECKBOX "Weld geometry", DLG_ID_MIN_VERT2, 205, 106, 160, 8
 END
 
 DLG_ABOUT DIALOGEX  20, 10, 350, 120
@@ -94,22 +96,9 @@ BEGIN
         END
     POPUP " &Edit "
         BEGIN
-        //MENUITEM "&Link to 'neck_g'", IDM_LINK_HEAD, GRAYED
         MENUITEM "&Textures ...", IDM_EDIT_TEXTURES
         MENUITEM "&Settings ...", IDM_SETTINGS
         END
-    /*
-    POPUP " &Game "
-        BEGIN
-        MENUITEM "&K1", IDM_GAME_K1
-        MENUITEM "&K2", IDM_GAME_K2, CHECKED
-        END
-    POPUP " &Platform "
-        BEGIN
-        MENUITEM "&PC", IDM_PLATFORM_PC, CHECKED
-        MENUITEM "&XBOX", IDM_PLATFORM_XBOX
-        END
-    */
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode", IDM_VIEW_HEX

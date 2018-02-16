@@ -1031,7 +1031,7 @@ void Edits::UpdateStatusPositionBwm(const std::string & sType){
     if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for " << sType << ".\n";
     std::stringstream ssPrint;
     BWMHeader * ptr_bwm = nullptr;
-    std::string sFilename;
+    std::wstring sFilename;
     if(sType == "WOK"){
         ptr_bwm = Model.Wok->GetData().get();
         sFilename = Model.Wok->GetFilename();

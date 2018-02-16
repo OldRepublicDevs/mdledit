@@ -7,6 +7,7 @@
 
 HTREEITEM TreeView_GetNthChild(HWND hwndTree, HTREEITEM htiParent, int nChild = 0);
 HTREEITEM TreeView_GetChildByText(HWND hwndTree, HTREEITEM htiParent, const std::string & sText);
+HTREEITEM TreeView_GetChildByText(HWND hwndTree, HTREEITEM htiParent, const std::wstring & sText);
 int TabCtrl_GetTabIndexByText(HWND hwndTabs, const std::string & sText);
 bool TabCtrl_AppendTab(HWND hTabControl, const std::string & sName);
 std::string TabCtrl_GetCurSelName(HWND hTabcontrol);

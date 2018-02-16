@@ -876,7 +876,7 @@ void MDL::BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, 
 bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
 	if(bPwk){
 		Mdl.Pwk.reset(new PWK);
-		std::string sPwk = GetFilename();
+		std::wstring sPwk = GetFilename();
 		Mdl.Pwk->SetFilePath(sPwk);
 		Mdl.Pwk->GetData().reset(new BWMHeader);
 	}
@@ -884,12 +884,12 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
 		Mdl.Dwk0.reset(new DWK);
 		Mdl.Dwk1.reset(new DWK);
 		Mdl.Dwk2.reset(new DWK);
-		std::string sDwk;
-		sDwk =  GetFilename()+" (closed)";
+		std::wstring sDwk;
+		sDwk =  GetFilename()+L" (closed)";
 		Mdl.Dwk0->SetFilePath(sDwk);
-		sDwk =  GetFilename()+" (open1)";
+		sDwk =  GetFilename()+L" (open1)";
 		Mdl.Dwk1->SetFilePath(sDwk);
-		sDwk =  GetFilename()+" (open2)";
+		sDwk =  GetFilename()+L" (open2)";
 		Mdl.Dwk2->SetFilePath(sDwk);
 		Mdl.Dwk0->GetData().reset(new BWMHeader);
 		Mdl.Dwk1->GetData().reset(new BWMHeader);

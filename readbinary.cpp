@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iomanip>
 #include <Shlwapi.h>
+#include <algorithm>
 
 /**
     Functions:
@@ -16,6 +17,15 @@
 /**/
 
 bool bReadSmoothing = false;
+
+struct NodeIndex{
+    int nIndex = 0;
+    int nOffset = 0;
+    bool operator<(const NodeIndex & nodeind){
+        return (nOffset < nodeind.nOffset);
+    }
+    NodeIndex(int n1, int n2) : nIndex(n1), nOffset(n2) {}
+};
 
 void MDL::DecompileModel(bool bMinimal){
     if(sBuffer.empty()) return;
@@ -235,6 +245,33 @@ void MDL::DecompileModel(bool bMinimal){
         //Data.MH.ArrayOfNodes.clear();
         Data.MH.ArrayOfNodes.resize(Data.MH.Names.size());
         LinearizeGeometry(Data.MH.RootNode, Data.MH.ArrayOfNodes);
+
+        /// Build Array of Indices By Offset Order
+        std::vector<NodeIndex> nodeinds;
+        nodeinds.reserve(Data.MH.ArrayOfNodes.size());
+        Data.MH.NameIndicesInBinaryOrder.reserve(Data.MH.ArrayOfNodes.size());
+        for(Node & node : Data.MH.ArrayOfNodes){
+            nodeinds.emplace_back(node.Head.nNodeNumber, node.nOffset);
+        }
+        sort(nodeinds.begin(), nodeinds.end());
+        for(NodeIndex & nodeind : nodeinds){
+            Data.MH.NameIndicesInBinaryOrder.push_back(nodeind.nIndex);
+        }
+
+        // Immediately fix all the skin bone->name maps
+        for(Node & node : Data.MH.ArrayOfNodes){
+            if(node.Head.nType & NODE_SKIN){
+                for(int & index : node.Skin.BoneBinaryOrderIndices){
+                    for(int n = 0; n < Data.MH.NameIndicesInBinaryOrder.size(); n++){
+                        if(Data.MH.NameIndicesInBinaryOrder.at(n) == index){
+                            index = n;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
     }
     //if(!bMinimal) ReportMdl << "Geometry read.\n";
 
@@ -792,7 +829,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         }
         if(NODE->Skin.nNumberOfBonemap > 0){
             NODE->Skin.Bones.resize(NODE->Skin.nNumberOfBonemap);
-            NODE->Skin.BoneNameIndices.resize(NODE->Mesh.nNumberOfVerts, -1);
+            NODE->Skin.BoneBinaryOrderIndices.resize(NODE->Mesh.nNumberOfVerts, -1);
             int n = 0;
             nPosData = MDL_OFFSET + NODE->Skin.nOffsetToBonemap;
             unsigned int nPosData2 = MDL_OFFSET + NODE->Skin.QBoneArray.nOffset;
@@ -804,7 +841,7 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
                 else NODE->Skin.Bones[n].nBonemap = (short) ReadFloat(&nPosData, 2);
                 MarkDataBorder(nPosData - 1);
                 if(NODE->Skin.Bones[n].nBonemap != -1){
-                    NODE->Skin.BoneNameIndices[NODE->Skin.Bones[n].nBonemap] = n;
+                    NODE->Skin.BoneBinaryOrderIndices[NODE->Skin.Bones[n].nBonemap] = n;
                 }
 
                 double fQW = ReadFloat(&nPosData2, 2);
@@ -1170,6 +1207,8 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
     }
 }
 
+extern bool bCancelSG;
+
 /// This function will become the main binary decompilation post-processing function
 void MDL::DetermineSmoothing(){
     FileHeader & Data = *FH;
@@ -1306,8 +1345,17 @@ void MDL::DetermineSmoothing(){
         }
     }
 
+    bCancelSG = false; /// Reset the cancel here, we can only cancel if we're creating patches, recalculating vectors or calculating smoothing groups.
+
     //Create patches
     CreatePatches();
+
+    if(bCancelSG){
+        /// Canceled during CreatePatches(), clean up the patches and return this function
+        Data.MH.PatchArrayPointers.clear();
+        Data.MH.PatchArrayPointers.shrink_to_fit();
+        return;
+    }
 
     int nNumOfFoundNormals = 0;
     int nNumOfFoundTS = 0;
@@ -1816,32 +1864,40 @@ void MDL::DetermineSmoothing(){
     Data.MH.PatchArrayPointers.shrink_to_fit();
 
     if(bDebug){
-        std::string sDir = sFullPath;
+        std::wstring sDir = sFullPath;
         sDir.reserve(MAX_PATH);
-        PathRemoveFileSpec(&sDir[0]);
-        sDir.resize(strlen(sDir.c_str()));
-        std::string sDir2 (sDir);
-        sDir += "\\debug.txt";
-        sDir2 += "\\debug_aabb_comp.txt";
+        PathRemoveFileSpecW(&sDir[0]);
+        sDir.resize(wcslen(sDir.c_str()));
+        std::wstring sDir2 (sDir);
+        sDir += L"\\debug.txt";
+        sDir2 += L"\\debug_aabb_comp.txt";
         ReportMdl << "Writing smoothing debug: " << sDir.c_str() << "\n";
         ReportMdl << "Writing aabb debug: " << sDir2.c_str() << "\n";
-        std::ofstream filewrite(sDir.c_str());
-        std::ofstream filewrite2(sDir2.c_str());
+        //std::ofstream filewrite(sDir.c_str());
+        HANDLE hFile = bead_CreateWriteFile(sDir);
+        //std::ofstream filewrite2(sDir2.c_str());
+        HANDLE hFile2 = bead_CreateWriteFile(sDir2);
 
-        if(!filewrite.is_open()){
+        //if(!filewrite.is_open()){
+        if(hFile == INVALID_HANDLE_VALUE){
             ReportMdl << "'debug.txt' does not exist. No debug will be written.\n";
         }
         else{
-            filewrite << file.str();
-            filewrite.close();
+            //filewrite << file.str();
+            bead_WriteFile(hFile, file.str());
+            //filewrite.close();
+            CloseHandle(hFile);
         }
 
-        if(!filewrite2.is_open()){
+        //if(!filewrite2.is_open()){
+        if(hFile2 == INVALID_HANDLE_VALUE){
             ReportMdl << "'debug_aabb_comp.txt' does not exist. No debug will be written.\n";
         }
         else{
-            filewrite2 << fileaabb.str();
-            filewrite2.close();
+            //filewrite2 << fileaabb.str();
+            bead_WriteFile(hFile2, fileaabb.str());
+            //filewrite2.close();
+            CloseHandle(hFile2);
         }
     }
 
@@ -1857,6 +1913,7 @@ void MDL::DetermineSmoothing(){
   4. now we go through the processed faces and apply the same algorithm
 /**/
 void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups){
+    if(bCancelSG) return;
     FileHeader & Data = *FH;
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(nPatchGroup).size(); p++){
         Patch & patch = Data.MH.PatchArrayPointers.at(nPatchGroup).at(p);
@@ -1870,7 +1927,7 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
                 }
 
                 /// Now find the first unused one and use it.
-                for(int n = 0; *patch.SmoothingGroupNumbers.front() == 0; n++){
+                for(int n = 0; *patch.SmoothingGroupNumbers.front() == 0 && n < 32; n++){
                     if(!(nBitflag & pown(2, n))) *patch.SmoothingGroupNumbers.front() = pown(2, n);
                 }
             }
@@ -1893,13 +1950,14 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
                     std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.at(vert.nLinkedFacesIndex);
                     bool bFound = false;
                     int p2 = 0;
-                    while(!bFound){
+                    while(!bFound && p2 < PatchVector.size()){
                         /// Find the patch with the same vert index as stored with the face
                         if(node.Head.nNodeNumber == PatchVector.at(p2).nNodeNumber && PatchVector.at(p2).nVertex == face.nIndexVertex[v]){
                             bFound = true;
                         }
                         else p2++;
                     }
+                    if(p2 == PatchVector.size()) break;
                     /// We get the patch that contains the current vert
                     Patch & vertpatch = PatchVector.at(p2);
                     if(vertpatch.SmoothingGroupNumbers.size() == 1){
@@ -1937,6 +1995,7 @@ void MDL::ConsolidateSmoothingGroups(int nPatchGroup, std::vector<std::vector<un
 }
 
 void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothedPatchesGroup, const std::vector<unsigned long int> & nSmoothingGroupNumbers, const int & nSmoothingGroupCounter, const int & pg, std::stringstream & file){
+    if(bCancelSG) return;
     FileHeader & Data = *FH;
 
     for(int p = 0; p < Data.MH.PatchArrayPointers.at(pg).size(); p++){
@@ -1990,6 +2049,7 @@ void MDL::GenerateSmoothingNumber(std::vector<int> & SmoothedPatchesGroup, const
 }
 
 bool MDL::FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file){
+    if(bCancelSG) return false;
     FileHeader & Data = *FH;
     for(int nCount = nPatchCount - 1; nCount >= nCheckFrom; nCount--){
         if(nCount != nCurrentPatch){

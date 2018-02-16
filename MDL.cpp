@@ -13,12 +13,12 @@ void MDL::ProgressPos(int nPos){
     if(PtrProgressPos != nullptr) PtrProgressPos(nPos);
 }
 
-int MDL::GetNameIndex(std::string sName){
+int MDL::GetNameIndex(const std::string & sName){
     if(!FH) return -1;
     std::vector<Name> & Names = FH->MH.Names;
     int n = 0;
     while(n < Names.size()){
-        if(Names[n].sName == sName) return n;
+        if(StringEqual(Names[n].sName, sName)) return n;
         n++;
     }
     //throw mdlexception("Node name not found: " + sName);
@@ -105,6 +105,35 @@ unsigned int MDL::FunctionPointer2(unsigned int FN_PTR){
     return GetFunctionPointer(FN_PTR, 2, bXbox, bK2);
 }
 
+std::vector<Vertex> MDL::GetWokVertData(Node & node){
+    std::vector<Vertex> verts_wok;
+    if(!(Wok && Wok->GetData())) return verts_wok;
+    BWMHeader & data = *Wok->GetData();
+    Vector vLyt;
+    if(FH) vLyt = FH->MH.vLytPosition;
+    if(data.faces.size() != node.Mesh.Faces.size()) return verts_wok;
+
+    /// All the checks have passed, get to business. First, build a vector of Faces in the order of the wok.
+    std::vector<Face> faces_wok;
+    std::vector<Face> unwalkable;
+    for(int f = 0; f < node.Mesh.Faces.size(); f++){
+        Face & face = node.Mesh.Faces.at(f);
+        if(IsMaterialWalkable(face.nMaterialID)) faces_wok.push_back(face);
+        else unwalkable.push_back(face);
+    }
+    for(int f = 0; f < unwalkable.size(); f++){
+        faces_wok.push_back(unwalkable.at(f));
+    }
+    /// Now go through these faces and the wok faces simultaneously and copy the vert positions.
+    verts_wok.resize(node.Mesh.Vertices.size());
+    for(int f = 0; f < node.Mesh.Faces.size(); f++){
+        for(int i = 0; i < 3; i++){
+            verts_wok.at(faces_wok.at(f).nIndexVertex.at(i)).assign(data.verts.at(data.faces.at(f).nIndexVertex.at(i)) - vLyt - node.Head.vFromRoot, true);
+        }
+    }
+    return verts_wok;
+}
+
 void MDL::GetLytPositionFromWok(){
     if(!Wok) return;
     if(!FH) return;
@@ -146,7 +175,7 @@ void MDL::LinearizeAnimation(Node & NODE, std::vector<Node> & ArrayOfNodes, int 
     for(Node & node2 : ArrayOfNodes){
         if(node2.Head.nSupernodeNumber == NODE.Head.nSupernodeNumber){
             int nReturn = WarningYesNoCancel("The animation node '" + FH->MH.Names.at(NODE.Head.nNodeNumber).sName + "' in animation '" +
-                                             Data.Animations.at(n).sName.c_str() + "' in " + GetFilename() + " appears several times in "
+                                             Data.Animations.at(n).sName.c_str() + "' in " + to_ansi(GetFilename()) + " appears several times in "
                                              "the node hierarchy. Do you want to remove the second occurrence?\n\n"
                                              "(Pressing Cancel will abort the loading.)");
             if(nReturn == IDYES){
@@ -186,6 +215,7 @@ std::string MDL::MakeUniqueName(int nNodeNumber){
 
 Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
     if(nAnimation == -1){
+        if(nIndex < 0 || nIndex > FH->MH.ArrayOfNodes.size()) throw mdlexception("Cannot get geometry node with index " + std::to_string(nIndex) + ".");
         return FH->MH.ArrayOfNodes.at(nIndex);
     }
     else{
@@ -220,22 +250,26 @@ std::stringstream & MDL::GetReport(){
 }
 
 void MDL::SaveReport(){
-    std::string sFile = GetFullPath();
-    if(safesubstr(sFile, sFile.size() - 6, 6) == ".ascii") sFile = safesubstr(sFile, 0, sFile.size() - 6);
-    if(safesubstr(sFile, sFile.size() - 4, 4) == ".mdl") sFile = safesubstr(sFile, 0, sFile.size() - 4);
-    sFile += "_report.txt";
+    std::wstring sFile = GetFullPath();
+    if(safesubstr(sFile, sFile.size() - 6, 6) == L".ascii") sFile = safesubstr(sFile, 0, sFile.size() - 6);
+    if(safesubstr(sFile, sFile.size() - 4, 4) == L".mdl") sFile = safesubstr(sFile, 0, sFile.size() - 4);
+    sFile += L"_report.txt";
 
     /// Create file
-    std::ofstream file(sFile, std::fstream::out);
+    //std::ofstream file(sFile, std::fstream::out);
+    HANDLE hFile = bead_CreateWriteFile(sFile);
 
-    if(!file.is_open()){
-        std::cout << "File creation failed for " << sFile << ". Aborting.\n";
+    //if(!file.is_open()){
+    if(hFile == INVALID_HANDLE_VALUE){
+        std::cout << "File creation failed for " << sFile.c_str() << ". Aborting.\n";
         return;
     }
 
     /// Write and close file
-    file << ssReport.str();
-    file.close();
+    //file << ssReport.str();
+    bead_WriteFile(hFile, ssReport.str());
+    //file.close();
+    CloseHandle(hFile);
 }
 
 void MDL::FlushData(){
@@ -399,32 +433,41 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
     ReportObject ReportMdl(curmdl);
     std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName.c_str();
     if(sSMname != "NULL" && sSMname != ""){
-        std::string sNewMdl = curmdl.GetFullPath().c_str();
+        std::wstring sNewMdl = curmdl.GetFullPath().c_str();
         sNewMdl.reserve(MAX_PATH);
-        PathRemoveFileSpec(&sNewMdl[0]);
-        sNewMdl.resize(strlen(sNewMdl.c_str()));
-        sNewMdl += "\\";
-        sNewMdl += curmdl.GetFileData()->MH.cSupermodelName.c_str();
-        sNewMdl += ".mdl";
+        PathRemoveFileSpecW(&sNewMdl[0]);
+        sNewMdl.resize(wcslen(sNewMdl.c_str()));
+        sNewMdl += L"\\";
+        sNewMdl += to_wide(curmdl.GetFileData()->MH.cSupermodelName);
+        sNewMdl += L".mdl";
 
         //Create file
-        std::ifstream file(sNewMdl, std::ios::binary);
+        //std::ifstream file(sNewMdl, std::ios::binary);
+        HANDLE hFile = bead_CreateReadFile(sNewMdl);
 
         //Check for problems
         bool bOpen = true;
         bool bWrongGame = false;
-        if(!file.is_open()) bOpen = false;
+        //if(!file.is_open())
+        if(hFile == INVALID_HANDLE_VALUE)
+            bOpen = false;
         if(bOpen){
-            file.seekg(0, std::ios::beg);
-            char cBinary [4];
-            file.read(cBinary, 4);
-            //Make sure that what we've read is a binary .mdl as far as we can tell
+            //file.seekg(0, std::ios::beg);
+            //char cBinary [4];
+            std::vector<char> cBinary(4,0);
+            //file.read(cBinary, 4);
+            bead_ReadFile(hFile, cBinary, 4);
+            /// Make sure that what we've read is a binary .mdl as far as we can tell
             if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
-            //If we pass, then the file is definitely ready to be read.
+
         }
+        /// If we pass, then the file is definitely ready to be read.
         if(bOpen){
-            file.seekg(12);
-            file.read(ByteBlock4.bytes, 4);
+            //file.seekg(12);
+            std::vector<char> cBinary(17,0);
+            //file.read(ByteBlock4.bytes, 4);
+            bead_ReadFile(hFile, cBinary, 16);
+            for(int n = 0; n < 4; n++) ByteBlock4.bytes[n] = cBinary.at(12 + n);
             if(!((ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K2_MODEL_1) && curmdl.bK2) && !((ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K1_MODEL_1) && !curmdl.bK2)){
                 bOpen = false;
                 bWrongGame = true;
@@ -433,22 +476,26 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         bool bReturn = true;
         if(bOpen){
             Supermodel.reset(new MDL);
-            ReportMdl << "Reading supermodel: \n" << sNewMdl << "\n";
-            file.seekg(0, std::ios::end);
-            std::streampos length = file.tellg();
-            file.seekg(0, std::ios::beg);
+            ReportMdl << "Reading supermodel: \n" << sNewMdl.c_str() << "\n";
+            //file.seekg(0, std::ios::end);
+            //std::streampos length = file.tellg();
+            //file.seekg(0, std::ios::beg);
+            unsigned long length = bead_GetFileLength(hFile);
             std::vector<char> & sBufferRef = Supermodel->CreateBuffer(length);
-            file.read(&sBufferRef[0], length);
+            //file.read(&sBufferRef[0], length);
+            bead_ReadFile(hFile, sBufferRef);
             Supermodel->SetFilePath(sNewMdl);
-            file.close();
+            //file.close();
+            CloseHandle(hFile);
 
             Supermodel->DecompileModel(true);
             return true;
         }
         else{
-            file.close();
-            if(bWrongGame) Warning("Binary supermodel " + std::string(sNewMdl.c_str()) + " belongs to the wrong game and couldn't be read! The supernode numbers will be wrong!");
-            else Warning("Could not find binary supermodel " + std::string(sNewMdl.c_str()) + " in the directory! The supernodes numbers will be wrong!");
+            //file.close();
+            CloseHandle(hFile);
+            if(bWrongGame) Warning(L"Binary supermodel " + std::wstring(sNewMdl.c_str()) + L" belongs to the wrong game and couldn't be read! The supernode numbers will be wrong!");
+            else Warning(L"Could not find binary supermodel " + std::wstring(sNewMdl.c_str()) + L" in the directory! The supernodes numbers will be wrong!");
             return false;
         }
     }
@@ -526,6 +573,7 @@ void MDL::CreatePatches(){
     FileHeader & Data = *FH;
     ReportObject ReportMdl(*this);
     Timer tPatches;
+    extern bool bCancelSG;
 
     ProgressSize(0, Data.MH.ArrayOfNodes.size());
     Report("Building Patch array... (this may take a while)");
@@ -583,6 +631,9 @@ void MDL::CreatePatches(){
                                                 OtherPatch.FaceIndices.push_back(f);
                                                 OtherPatch.nSmoothingGroups = OtherPatch.nSmoothingGroups | face.nSmoothingGroup;
                                             }
+
+                                            /// This is the most embedded level, if ESC then abort here
+                                            if(bCancelSG) return;
                                         }
                                     }
                                     CurrentPatchGroup.push_back(std::move(OtherPatch));
@@ -747,7 +798,7 @@ bool IsMaterialWalkable(int nMat){
        nMat == MATERIAL_OBSCURING ||
        nMat == MATERIAL_TRANSPARENT ||
        nMat == MATERIAL_LAVA ||
-       nMat == MATERIAL_BOTTOMLESSPIT ||
+       //nMat == MATERIAL_BOTTOMLESSPIT ||
        nMat == MATERIAL_DEEPWATER ||
        nMat == MATERIAL_SNOW) return false;
     return true;

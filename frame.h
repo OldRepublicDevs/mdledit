@@ -135,7 +135,7 @@ enum IniConst {
 void ManageIni(IniConst Action);
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
-bool FileEditor(HWND hwnd, int nID, std::string & cFile);
+bool FileEditor(HWND hwnd, int nID, std::wstring & cFile);
 INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

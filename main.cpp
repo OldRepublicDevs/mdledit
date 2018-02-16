@@ -8,9 +8,11 @@
 
 int WINAPI WinMain(HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
-                     LPSTR lpszArgument,
+                     LPSTR lpszArgument, /// This string contains any CLI arguments that were used to run the .exe
                      int nCmdShow){
     MSG messages;            /* Here messages to the application are saved */
+
+    //std::cout << "These are the arguments: " << lpszArgument << std::endl;
 
     //Creation of window
     Frame *winMain = new Frame(hThisInstance);

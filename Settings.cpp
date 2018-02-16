@@ -251,9 +251,11 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
             if(Mdl->bLightsaberToTrimesh) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SABER_TRIMESH), BST_CHECKED);
             if(Mdl->bBezierToLinear) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_BEZIER_LINEAR), BST_CHECKED);
             if(Mdl->bExportWok) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_EXPORT_WOK), BST_CHECKED);
+            if(Mdl->bUseWokData) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_WOK_COORDS), BST_CHECKED);
             if(bDotAsciiDefault) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_DOT_ASCII), BST_CHECKED);
             if(bSaveReport) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_SAVE_REPORT), BST_CHECKED);
             if(Mdl->bMinimizeVerts) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_MIN_VERT), BST_CHECKED);
+            if(Mdl->bMinimizeVerts2) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_MIN_VERT2), BST_CHECKED);
             if(Mdl->bCreaseAngle) Button_SetCheck(GetDlgItem(hwnd, DLG_ID_CREASE_ANGLE), BST_CHECKED);
             SetWindowText(GetDlgItem(hwnd, DLG_ID_CREASE_ANGLE_DEG), std::to_string(Mdl->nCreaseAngle).c_str());
         }
@@ -315,6 +317,12 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                         else Mdl->bExportWok = false;
                     }
                     break;
+                    case DLG_ID_WOK_COORDS:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bUseWokData = true;
+                        else Mdl->bUseWokData = false;
+                    }
+                    break;
                     case DLG_ID_DOT_ASCII:
                     {
                         if(Button_GetCheck(hControl) == BST_CHECKED) bDotAsciiDefault = true;
@@ -331,6 +339,12 @@ INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
                     {
                         if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bMinimizeVerts = true;
                         else Mdl->bMinimizeVerts = false;
+                    }
+                    break;
+                    case DLG_ID_MIN_VERT2:
+                    {
+                        if(Button_GetCheck(hControl) == BST_CHECKED) Mdl->bMinimizeVerts2 = true;
+                        else Mdl->bMinimizeVerts2 = false;
                     }
                     break;
                     case DLG_ID_CREASE_ANGLE:

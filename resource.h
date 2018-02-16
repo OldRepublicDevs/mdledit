@@ -110,8 +110,10 @@
 #define DLG_ID_DOT_ASCII        415
 #define DLG_ID_SAVE_REPORT      416
 #define DLG_ID_MIN_VERT         417
-#define DLG_ID_CREASE_ANGLE     418
-#define DLG_ID_CREASE_ANGLE_DEG 419
+#define DLG_ID_MIN_VERT2        418
+#define DLG_ID_CREASE_ANGLE     419
+#define DLG_ID_CREASE_ANGLE_DEG 420
+#define DLG_ID_WOK_COORDS       421
 
 
 #define IDDB_EDIT               500

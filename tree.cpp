@@ -156,12 +156,12 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
         }
     }
     if(node.Head.nType & NODE_SKIN){
-        char cBone [255];
+        FileHeader & Data = *Mdl.GetFileData();
         HTREEITEM Skin = Append("Skin", (LPARAM) &node, Prev);
         HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
         if(node.Skin.Bones.size() > 0){
             for(int n = 0; n < node.Skin.Bones.size(); n++){
-                std::string sBone = "Bone " + Names[n].sName;
+                std::string sBone = "Bone: " + Names.at(Data.MH.NameIndicesInBinaryOrder.at(n)).sName;
                 Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
             }
         }
@@ -194,7 +194,7 @@ void BuildTree(MDL & Mdl){
     }
     FileHeader & Data = *Mdl.GetFileData();
 
-    HTREEITEM Root = Append(Mdl.GetFilename(), NULL, TVI_ROOT);
+    HTREEITEM Root = Append(to_ansi(Mdl.GetFilename()), NULL, TVI_ROOT);
     HTREEITEM Header = Append("Header", (LPARAM) &(Data.MH), Root);
 
     HTREEITEM Animations = Append("Animations", NULL, Root);
@@ -281,7 +281,7 @@ void BuildTree(BWM & Bwm){
     if(!Bwm.GetData()) return;
     BWMHeader & Walkmesh = *Bwm.GetData();
 
-    HTREEITEM Root = Append(Bwm.GetFilename(), NULL, TVI_ROOT);
+    HTREEITEM Root = Append(to_ansi(Bwm.GetFilename()), NULL, TVI_ROOT);
     Append("Header", NULL, Root);
     HTREEITEM Verts = Append("Vertices", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.verts.size(); n++){
@@ -313,17 +313,17 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
     if(DEBUG_LEVEL > 1000) std::cout << "Updating Display!";
     bool bMdl = false, bWok = false, bPwk = false, bDwk0 = false, bDwk1 = false, bDwk2 = false;
     for(int j = 0; !bMdl && !bWok && !bPwk && !bDwk0 && !bDwk1 && !bDwk2; j++){
-        if(cItem.at(j) == Model.GetFilename()) bMdl = true;
+        if(cItem.at(j) == to_ansi(Model.GetFilename())) bMdl = true;
         if(!Model.Wok) {}
-        else if(cItem.at(j) == Model.Wok->GetFilename()) bWok = true;
+        else if(cItem.at(j) == to_ansi(Model.Wok->GetFilename())) bWok = true;
         if(!Model.Pwk) {}
-        else if(cItem.at(j) == Model.Pwk->GetFilename()) bPwk = true;
+        else if(cItem.at(j) == to_ansi(Model.Pwk->GetFilename())) bPwk = true;
         if(!Model.Dwk0) {}
-        else if(cItem.at(j) == Model.Dwk0->GetFilename()) bDwk0 = true;
+        else if(cItem.at(j) == to_ansi(Model.Dwk0->GetFilename())) bDwk0 = true;
         if(!Model.Dwk1) {}
-        else if(cItem.at(j) == Model.Dwk1->GetFilename()) bDwk1 = true;
+        else if(cItem.at(j) == to_ansi(Model.Dwk1->GetFilename())) bDwk1 = true;
         if(!Model.Dwk2) {}
-        else if(cItem.at(j) == Model.Dwk2->GetFilename()) bDwk2 = true;
+        else if(cItem.at(j) == to_ansi(Model.Dwk2->GetFilename())) bDwk2 = true;
     }
 
     if(bMdl){

@@ -1,5 +1,6 @@
 #include "general.h"
 #include <limits>
+#include <algorithm>
 #include "strsafe.h"
 
 double PI = 3.141592653589793;
@@ -263,6 +264,12 @@ std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen){
     return sParam.substr(nStart, nLen);
 }
 
+std::wstring safesubstr(const std::wstring & sParam, size_t nStart, size_t nLen){
+    if(nStart >= sParam.length() || nLen <= 0) return std::wstring();
+    if(nStart < 0) nStart = 0;
+    return sParam.substr(nStart, nLen);
+}
+
 std::string PrepareFloat(double fFloat, bool bFiniteOnly){
     std::stringstream ssReturn;
     ssReturn.precision(6);
@@ -284,7 +291,7 @@ unsigned int stou(std::string const & str, size_t * idx, int base){
 }
 
 int Error(std::string sErrorMessage){
-    return MessageBox(hFrame, sErrorMessage.c_str(), "Error", MB_OK | MB_ICONERROR);
+    return MessageBox(hFrame, sErrorMessage.c_str(), "Error!", MB_OK | MB_ICONERROR);
 }
 
 int WarningCancel(std::string sWarningMessage){
@@ -299,7 +306,48 @@ int Warning(std::string sWarningMessage){
     return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OK | MB_ICONWARNING);
 }
 
+int Error(std::wstring sErrorMessage){
+    return MessageBoxW(hFrame, sErrorMessage.c_str(), L"Error!", MB_OK | MB_ICONERROR);
+}
+
+int WarningCancel(std::wstring sWarningMessage){
+    return MessageBoxW(hFrame, sWarningMessage.c_str(), L"Warning!", MB_OKCANCEL | MB_ICONWARNING);
+}
+
+int WarningYesNoCancel(std::wstring sWarningMessage){
+    return MessageBoxW(hFrame, sWarningMessage.c_str(), L"Warning!", MB_YESNOCANCEL | MB_ICONWARNING);
+}
+
+int Warning(std::wstring sWarningMessage){
+    return MessageBoxW(hFrame, sWarningMessage.c_str(), L"Warning!", MB_OK | MB_ICONWARNING);
+}
+
 void ClearStringstream(std::stringstream & ssClearMe){
     ssClearMe.str(std::string());
     ssClearMe.clear();
+}
+
+std::string to_ansi(const std::wstring & wString){
+    std::string sReturn (0xFFFF, 0);
+    wcstombs(&sReturn.front(), &wString.front(), wString.length());
+    return sReturn.c_str();
+}
+
+std::wstring to_wide(const std::string & sString){
+    std::wstring wReturn (0xFFFF, L'\0');
+    mbstowcs(&wReturn.front(), &sString.front(), sString.length());
+    return wReturn.c_str();
+}
+
+bool StringEqual(const std::string & s1, const std::string & s2, bool bCaseSensitive){
+    if(bCaseSensitive){
+        if(s1 == s2) return true;
+    }
+    else{
+        std::string s1copy(s1), s2copy(s2);
+        std::transform(s1copy.begin(), s1copy.end(), s1copy.begin(), ::tolower);
+        std::transform(s2copy.begin(), s2copy.end(), s2copy.begin(), ::tolower);
+        if(s1copy == s2copy) return true;
+    }
+    return false;
 }

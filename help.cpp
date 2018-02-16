@@ -145,6 +145,8 @@ LRESULT CALLBACK HelpDlgWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARA
             TabCtrl_AppendTab(hTabs, "Batch Processing");
             TabCtrl_AppendTab(hTabs, "Model Editing");
             TabCtrl_AppendTab(hTabs, "Hex View");
+            TabCtrl_AppendTab(hTabs, "Vertex Normals");
+            TabCtrl_AppendTab(hTabs, "Head Link");
 
             SetWindowText(hwnd, "Help");
             SetWindowText(hEdit, GetHelpData(TabCtrl_GetCurSelName(hTabs)).c_str());
@@ -234,27 +236,28 @@ std::string GetHelpData(const std::string & sTab){
         nl " - Star Wars Knights of the Old Republic II - the Sith Lords"
         nl "for both the PC and XBOX version of the games, as well as to directly edit them to a certain extent."
         nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl "";
+        nl "It is possible for MDLedit to remember your settings. To enable that create a new empty file in the same directory as MDLedit's executable and "
+           "name it 'mdledit.ini'."
+        ;
     }
     else if(sTab == "File Types"){
         ssHelp <<
-           "MDLedit handles the following types of binary files:"
+           "The model files that the games use are in the binary format. This means that if you open them with a text editor you won't be able to read them "
+           "because they are meant to be read by the engine. "
+           "To be able to do anything with a model, we need to convert it to the ascii format first. An ascii file can be read with a text editor. "
+           "The ascii format is the one that is required by KOTORmax and KotorBlender. It is also the format that these tools produce when you export "
+           "your model. "
+           "The process of converting binary to ascii is called decompilation and the process of converting ascii to binary is called compilation. "
+           "After you're done editing a model with a 3D editor you always need to compile it so the game can read it."
+        nl ""
+        nl "MDLedit handles the following types of binary files:"
         nl " * model files (.mdl): This is the file that contains most of the information about the model."
         nl " * model extension files (.mdx): This file contains information about the vertices of all meshes in the model."
         nl " * area walkmesh files (.wok): This file contains information about the area walkmesh."
         nl " * placeable walkmesh files (.pwk): This file contains information about the placeable walkmesh."
         nl " * door walkmesh files (.dwk): This file contains information about the door walkmesh. These files always come in triplets, because the "
-           "engine supports or once supported swinging doors. The three .dwks represent the possible states: closed, open to one side, open to the other side."
+           "engine supports swinging doors that open to either side. "
+           "The three .dwks represent the possible states: closed, open to one side, open to the other side."
         nl ""
         nl "MDLedit handles the following types of ascii files:"
         nl " * model files (.mdl or .mdl.ascii): This is the file that contains most of the information about the model, including vertex information."
@@ -264,16 +267,14 @@ std::string GetHelpData(const std::string & sTab){
         nl " * area walkmesh files (.wok or .wok.ascii): This file contains information about the area walkmesh. MDLedit can output this file, but it does "
            "not read it because the information it contains is already contained in the .mdl."
         nl ""
+        nl "MDLedit will automatically determine whether the file is binary or ascii when it is loaded. "
         nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl "";
+        nl "MDLedit is always able to load and save both .XXX and .XXX.ascii files in the ascii format. There is an option under Edit -> Settings that will allow you to "
+           "set the .XXX.ascii-type extension as the default. This will have the effect that files are saved as .XXX.ascii and not .XXX when batch converting "
+           "to ascii and that the default extension that MDLedit will suggest to save a loaded model as will be .XXX.ascii. It also affects the order in which "
+           "MDLedit checks for the extensions when loading ascii dwk and pwk files. If .ascii as default is set, then it will first try to find an ascii "
+           "FILENAME.XXX.ascii and if it doesn't find it, it will check for a FILENAME.XXX. If the .ascii default option is not set, then the order will be reversed."
+        ;
     }
     else if(sTab == "Model Loading"){
         ssHelp <<
@@ -281,24 +282,36 @@ std::string GetHelpData(const std::string & sTab){
            "a binary or ascii .mdl file."
         nl ""
         nl "If the model file is in ascii format, then MDLedit will also search the same directory for files with the same name and a .pwk(.ascii) or "
-           ".dwk(.ascii) extension. It will only load them if they are in the right format."
+           ".dwk(.ascii) extension. It will only load them if they are in the right format. The .ascii by default option in Edit -> Settings determines "
+           "the order in which MDLedit checks for the files (either .XXX first or .XXX.ascii first)."
         nl "Note: MDLedit will not look for a .wok(.ascii) file. MDLedit assumes that any model with a binary .wok file also has an aabb node in the "
-           ".mdl. The two meshes are always compatible, so MDLedit will use the aabb node data to construct the binary .wok file; hence, it does not "
+           ".mdl. The two meshes should always be compatible, so MDLedit will use the aabb node data to construct the binary .wok file; hence, it does not "
            "need to load an ascii .wok(.ascii) file."
         nl ""
         nl "Ascii files are not specified for game (K1 vs K2) or platform (PC vs XBOX), so when they are loaded, the binary code is written according "
            "to the current game and platform setting. The binary code will be updated automatically when these settings are changed."
         nl ""
+        nl "When loading an ascii file, the option 'Minimize (weld) vertices' becomes relevant. If turned on, MDLedit will weld any vertices it can without "
+           "leaving any visual effect on the model. In other words, it will use the minimum number of vertices necessary, lowering the size of the "
+           "binary files."
+        nl ""
         nl "If the model file is in binary format, then MDLedit will also search the same directory for files with the same name and a .mdx, .pwk and "
-           ".wok extension, as well as three .dwk files, each named the same as the .mdl file plus a digit (0, 1 or 2) representing the three states."
+           ".wok extension, as well as three .dwk files, each named the same as the .mdl file plus a digit (0, 1 or 2) representing the three states of "
+           "a swinging door that opens to either side."
         nl ""
-        nl "Binary files are specific to a game and platform, the settings will therefore change to reflect that."
+        nl "Binary files are specific to a game and platform, the settings will therefore change automatically to reflect that."
         nl ""
-        nl "Once all the files are loaded the model is read and processed. MDLedit will show a progress bar for the duration of the processing. When "
+        nl "Once all the files are loaded the model is read and processed. MDLedit will show a progress bar for the duration of the processing. At certain "
+           "points during the processing that can take a while it is possible to cancel it by pressing ESC."
+        nl "When "
            "loading binary files, the processing only consists of the smoothing group calculation algorithm, but this algorithm may end up taking a LOT "
-           "of time. Therefore, there is an option under Edit -> Settings that will let you turn this algorithm off. Of course, if you turn it off, the "
-           "ascii file will not contain any smoothing information."
-        nl "The processing is much more extensive in the case of .ascii files, but will never take a really long time."
+           "of time. The progress window will say 'Recalculating Vectors...' at that point. This may seem as though the application hung, but "
+           "the application is actually working and will finish, it just may take a REALLY LONG time. Do not try to wait it out, press the ESC key to abort "
+           "the smoothing group calculation."
+        nl "Because of this possibility, there is an option under Edit -> Settings that will let you turn the smoothing group calculation algorithm off. "
+           "Of course, if you turn it off the ascii file will not contain any smoothing information."
+        nl ""
+        nl "The processing is much more extensive in the case of .ascii files, but will never take a REALLY long time."
         nl ""
         nl "After the model has been processed the data is loaded into the Tree View and the Hex View. You may now proceed to explore the model, edit it, "
            "or export it again."
@@ -306,13 +319,7 @@ std::string GetHelpData(const std::string & sTab){
         nl "If an error occurs during reading or processing, MDLedit will either let you know immediately (if it is a potentially fatal error) or just "
            "write it into its report, which you can view by clicking View -> Show Report. If you turn on automatic report writing under Edit -> Settings "
            "then the report will automatically be written as MODELNAME_report.txt to the model's directory."
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl "";
+        ;
     }
     else if(sTab == "Model Saving"){
         ssHelp <<
@@ -321,38 +328,34 @@ std::string GetHelpData(const std::string & sTab){
            "this for the .mdl file itself! It will automatically overwrite .mdx, .pwk, .dwk, etc. files whose names happen to match."
         nl ""
         nl "There are several options related to saving ascii files under Edit -> Settings."
-        nl "One is for whether you want to use the extra .ascii extension by default when exporting ascii files."
         nl ""
+        nl "'Write Animations' - MDLedit will only write the geometry into the ascii file."
         nl ""
+        nl "'Export WOK file' - MDLedit will also export a .wok(.ascii) file, which will be needed by KotorBlender and MDLOps."
         nl ""
+        nl "'Use coordinates from WOK file' - Sometimes the geometries of the aabb mesh and the wok mesh will be different in vanilla files. "
+           "This option will allow you to make use of either one or the other. To avoid problems with the walkmesh this should be turned on by default."
         nl ""
-        nl ""
-        nl ""
-        nl "";
+        nl "'Use .ascii extension by default' - See the 'File Types' tab."
+        ;
     }
     else if(sTab == "Batch Processing"){
         ssHelp <<
            "Under File -> Batch it is possible to convert several files at once to either binary or ascii. With this option, all selected files are "
            "loaded whether they are binary or ascii, then they are saved according to the current settings as FILENAME-mdledit.mdl(.ascii). "
-           "It also possible to convert only a single file, which is the quickest way of simply converting a file."
+           "Whether MDLedit saves ascii files as .XXX or .XXX.ascii depends on the .ascii default setting under Edit -> Settings."
+           "It also possible to do this with only a single file; this is the quickest way of simply converting a file to ascii or binary."
         nl ""
-        nl "There is a shortcoming to this method - it is impossible for the program to determine whether it should make a head link or not. "
-           "Therefore, when converting heads from ascii to binary, you need to load them up, manually enable the head link and then save them as binary."
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl "";
+        nl "During batch processing, you may press the escape key and the process will halt once it finishes converting the current model."
+        ;
     }
     else if(sTab == "Model Editing"){
         ssHelp <<
            "It is possible to edit the model to some extent with MDLedit."
         nl ""
         nl "Under Edit -> Textures, MDLedit will list all the textures in the current model. By clicking on a selected texture name, you will be "
-           "able to edit it and the change will be applied to all occurrences of that texture name. There is also a checkbox next to the texture "
-           "names, which controls whether those textures are bumpmappable."
+           "able to edit its name and the change will apply to all occurrences of that texture name. There is also a checkbox next to every texture "
+           "name, which controls whether those textures are bumpmappable."
         nl ""
         nl "On some nodes in the Tree View, right-clicking will show the option 'Edit values'. When clicked, a new window will appear listing the "
            "values in an ascii-like format. The values that can be edited are generally the ones that cannot break the structure of the file itself, "
@@ -363,13 +366,7 @@ std::string GetHelpData(const std::string & sTab){
         nl ""
         nl "Currently it is not possible to edit all the values that could possibly be edited, though a lot of them will be added in the future. "
            "While it is possible to edit most controller values, it is currently not possible to edit compressed quaternions."
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl ""
-        nl "";
+        ;
     }
     else if(sTab == "Hex View"){
         ssHelp <<
@@ -396,9 +393,63 @@ std::string GetHelpData(const std::string & sTab){
         nl ""
         nl "Highlighting bytes will show their int, uint and float values in the top right, where such values are representable by the highlighted bytes."
         nl ""
+        nl "The 'Group Bytes by Data Type' option under View will use underlining to group together the bytes that form the same piece of data. "
         nl ""
+        nl "The 'Show Data Struct Boundaries' option under View will use a mark to indicate borders between data structures. "
+           "It is also used to delimit the elements inside an array. "
         nl ""
-        nl "";
+        nl "The 'Compare to ...' option under View will allow you to pick a binary file. MDLedit will then load its contents and compare its binary code to the one "
+           "of the currently open model. The result is only visible in Hex Mode and only if View -> Show Differences is turned on. "
+           "If there is a difference in a byte between the open model and the one it's being compared to, then the relevant bytes will be displayed as white text on "
+           "a shaded background, the color of which is the one the text would otherwise have."
+        ;
+    }
+    else if(sTab == "Vertex Normals"){
+        ssHelp <<
+           "Every vertex in an MDL file has a normal vector associated with it. This vector determines how light interacts with the object's surface. "
+           "Through these vectors it is possible to achieve smoothing. MDLedit has several options related to Vertex Normals under Edit -> Settings."
+        nl ""
+           "Vertex normals are calculated by putting together the face normals vectors of all the faces that the vertex either belongs to or smooths to "
+           "(the faces the vertex smooths to maybe be in other elements or meshes as well). "
+           "Whether the vertex smooths to that face is determined from the smoothing groups that are given for every face. If a face the vertex belongs to "
+           "has at least one matching smoothing group with another face, then this other face's normal is calculated in as well. Provided the other face has "
+           "a vertex in the same position as our vertex under consideration, of course."
+        nl ""
+        nl "There are "
+           "three options that affect the vertex normal calculation at this point. They can be found in Edit -> Settings."
+        nl ""
+        nl "If area weighting is turned on then the face normals are multiplied by "
+           "the face's area before they are incorporated into the vertex normal. This means that bigger faces will have a greater influence on the vertex "
+           "normal than smaller faces."
+        nl ""
+        nl "If angle weighting is turned on then the face normals are multiplied by the angle of the corner of the face touching that vertex. Faces with a "
+           "bigger angle in that corner have a greater influence on the vertex normal."
+        nl ""
+        nl "If the crease angle is set, then MDLedit will perform a check based on the angle between the emerging vertex normal and the face normal "
+           "currently under consideration. If the angle is greater than the set crease angle MDLedit will ignore that face normal."
+        nl ""
+        nl "Angle and area weighting should be used based on what looks best in the game. The crease angle, on the other hand, is supposed to correct the model if "
+           "because of it's smoothing group setup the vertex normal may be unwantedly affected by certain faces which may cause it to point in a wrong direction. "
+           "In the game, this will appear as a black or shaded spot around the problematic vertex."
+        nl ""
+        nl "When loading a binary model, MDLedit will try to calculate the smoothing groups from the vertex normals (if this is enabled under Edit -> Settings). "
+           "It does that by calculating the vertex normal "
+           "based on every possible combination of smoothing groups on the surrounding faces and looks for a match. "
+           "Since this vertex normal calculation also uses the options under "
+           "Edit -> Settings, those options need to match the options that were used to compile the binary model for the smoothing group calculation to be "
+           "successful. Therefore, you may need to try a few different options before you get the right results if you do not know how the model was compiled. "
+           "Vanilla models always have just the area weighting enabled, so this is only really a problem when decompiling custom models. The results may be bad "
+           "regardless, though, if the model was compiled with a version of MDLOps older than v1.0."
+        ;
+    }
+    else if(sTab == "Head Link"){
+        ssHelp <<
+           "The head link needs to be enabled for heads to work properly in the game. This functionality is also provided by VarsityPuppet's Head Fixer. "
+        nl ""
+        nl "There is a pointer in the model header that either points to the root node or the neck bone node. If head link is enabled then that means that "
+           "the pointer points to the neck bone node. If a model is used as a head and the head link is not enabled, then the head may appear to be detached "
+           "from the body. The head link is preserved in the ascii files and may also be toggled in both KOTORmax and KotorBlender."
+        ;
     }
     return ssHelp.str();
 }

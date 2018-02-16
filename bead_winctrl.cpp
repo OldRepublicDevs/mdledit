@@ -29,6 +29,23 @@ HTREEITEM TreeView_GetChildByText(HWND hwndTree, HTREEITEM htiParent, const std:
     return NULL;
 }
 
+HTREEITEM TreeView_GetChildByText(HWND hwndTree, HTREEITEM htiParent, const std::wstring & sText){
+    HTREEITEM htiChild = TreeView_GetChild(hwndTree, htiParent);
+    if(htiParent == NULL) htiChild = TreeView_GetRoot(hwndTree);
+    TVITEMW tvi;
+    tvi.mask = TVIF_TEXT;
+    std::wstring sBuffer (L'0', 255);
+    while(htiChild != NULL){
+        tvi.hItem = htiChild;
+        tvi.pszText = &sBuffer.front();
+        tvi.cchTextMax = 255;
+        TreeView_GetItem(hwndTree, &tvi);
+        if(tvi.pszText == sText) return htiChild;
+        htiChild = TreeView_GetNextSibling(hwndTree, htiChild);
+    }
+    return NULL;
+}
+
 int TabCtrl_GetTabIndexByText(HWND hwndTabs, const std::string & sText){
     TCITEM tci;
     tci.mask = TCIF_TEXT;
