@@ -83,7 +83,7 @@ bool ASCII::Read(MDL & Mdl){
     bool bColors = false;
     bool bColorIndices = false;
     bool bMagnusll = false;
-    unsigned int nNodeCounter = 0;
+    unsigned int nNodeCount = 0;
     Node * PreviousNode;
     unsigned int nDataMax;
     unsigned int nDataCounter;
@@ -113,7 +113,10 @@ bool ASCII::Read(MDL & Mdl){
             }
             if(nPosition < sBuffer.size() && !bStop){
                 //Once we get here, we have found a node. The name is only a keyword's strlen away!
-                if(sID == "node") ReadUntilText(sID); //Get keyword
+                if(sID == "node"){
+                    ReadUntilText(sID); //Get keyword
+                    nNodeCount++;//Also record the number of actual nodes
+                }
                 ReadUntilText(sID, false); //Get name
 
                 //Got it! Now to save it the name array.
@@ -196,7 +199,9 @@ bool ASCII::Read(MDL & Mdl){
                             Orientation NewOrientKey;
                             NewOrientKey.SetAxisAngle(fX, fY, fZ, fA);
                             if(FH->MH.bCompressQuaternions){
-                                ByteBlock4.ui = CompressQuaternion(NewOrientKey.GetQuaternion());
+                                Quaternion q = NewOrientKey.GetQuaternion();
+                                if(q.fW < 0.0) q.vAxis *= -1.0;
+                                ByteBlock4.ui = CompressQuaternion(q);
                                 node.Head.ControllerData.push_back(ByteBlock4.f);
                             }
                             else{
@@ -565,14 +570,14 @@ bool ASCII::Read(MDL & Mdl){
                     else if(bWeights){
                         //if(DEBUG_LEVEL > 3) ReportMdl << "Reading weights data" << "" << ".\n";
                         Node & node = FH->MH.ArrayOfNodes.at(nCurrentIndex);
-                        node.Skin.Bones[nCurrentIndex].nNodeNumber = nCurrentIndex;
+                        //node.Skin.Bones[nCurrentIndex].nNodeNumber = nCurrentIndex;
                         bFound = true;
                         bool bPresent = false;
                         int z = 0;
                         int nBoneIndex = 0;
                         int nNodeNumber = 0;
                         Weight weight;
-                        std::vector<int> & nWeightIndices = node.Skin.BoneBinaryOrderIndices;
+                        //std::vector<int> & nWeightIndices = node.Skin.BoneNameIndices;
                         while(z < 4){
                             //Get first name
                             if(!ReadUntilText(sID, false, true)) break;
@@ -585,37 +590,42 @@ bool ASCII::Read(MDL & Mdl){
                             else{
                                 //if we found a name, loop through the name array to find our name index
                                 for(nNodeNumber = 0; nNodeNumber < FH->MH.Names.size(); nNodeNumber++){
-                                    //check if there is a match
-                                    if(StringEqual(FH->MH.Names[nNodeNumber].sName, sID)){
-                                        //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
-                                        //Check if we already have this name indexed in the skin
-                                        bPresent = false;
-                                        for(nBoneIndex = 0; nBoneIndex < nWeightIndices.size() && !bPresent; ){
-                                            if(nWeightIndices[nBoneIndex] == nNodeNumber){
-                                                bPresent = true;
-                                            }
-                                            else nBoneIndex++;
+                                    //check if there is a match, if not, skip to next iteration
+                                    if(!StringEqual(FH->MH.Names[nNodeNumber].sName, sID)) continue;
+
+                                    //We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
+                                    //Check if we already have this name indexed in the skin
+                                    /*
+                                    bPresent = false;
+                                    for(nBoneIndex = 0; nBoneIndex < nWeightIndices.size() && !bPresent; ){
+                                        if(nWeightIndices[nBoneIndex] == nNodeNumber){
+                                            bPresent = true;
                                         }
-                                        if(!bPresent){
-                                            //This is a new name index, so we need to add it to the skin's index list
-                                            nWeightIndices.push_back(nNodeNumber);
-                                            nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
-
-                                            //We also add it to the bonemap.
-                                            node.Skin.Bones[nNodeNumber].nBonemap = nBoneIndex;
-
-                                            //We can just add it into the mdl's bone index list as well, what the heck
-                                            if(nBoneIndex < 16){
-                                                node.Skin.nBoneIndices[nBoneIndex] = nNodeNumber;
-                                            }
-                                            else Warning("Warning! A skin has more than 16 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
-                                        }
-                                        //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
-                                        weight.nWeightIndex[z] = nBoneIndex;
-
-                                        //Since we found the name, we don't need to keep looping anymore
-                                        break;
+                                        else nBoneIndex++;
                                     }
+                                    if(!bPresent){
+                                        //This is a new name index, so we need to add it to the skin's index list
+                                        nWeightIndices.push_back(nNodeNumber);
+                                        nBoneIndex = nWeightIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
+
+                                        //We also add it to the bonemap.
+                                        node.Skin.Bones[nNodeNumber].nBonemap = nBoneIndex;
+
+                                        //We can just add it into the mdl's bone index list as well, what the heck
+                                        if(nBoneIndex < 16){
+                                            node.Skin.nBoneIndices[nBoneIndex] = nNodeNumber;
+                                        }
+                                        else Warning("Warning! A skin has more than 16 bones, which is the number of available slots in one of the lists. I do not know how this affects the game.");
+                                    }
+                                    */
+                                    //By here, we have gotten our nNodeNumber and nBoneIndex, and everything is indexed properly
+                                    weight.nWeightIndex[z] = nNodeNumber; //nBoneIndex;
+                                    /// Realized this is problematic because bone order is different from name order. So, instead of pretending
+                                    /// we're able to write down the bone order at this point, we'll stick in the node number for now, for unique identification
+                                    /// and figure out the rest later
+
+                                    //Since we found the name, we don't need to keep looping anymore
+                                    break;
                                 }
                                 if(nNodeNumber == FH->MH.Names.size()){
                                     //we failed to find the name in the name array. This data is broken.
@@ -754,7 +764,7 @@ bool ASCII::Read(MDL & Mdl){
                         FH->MH.fRadius = 7.0;
                         FH->MH.fScale = 1.0;
                         FH->MH.cSupermodelName = "NULL";
-                        FH->MH.ArrayOfNodes.resize(FH->MH.Names.size());
+                        FH->MH.ArrayOfNodes.resize(nNodeCount);
 
                         SkipLine();
                     }
@@ -930,10 +940,15 @@ bool ASCII::Read(MDL & Mdl){
                             FH->MH.ArrayOfNodes.at(node.Head.nNodeNumber) = std::move(node);
                         }
                         else if(bAnimation){
+                            /// But, in case of animations, we need to compare the name to the names in geometry, which should be done already.
+                            for(const Node & node2 : FH->MH.ArrayOfNodes) if(node2.Head.nNodeNumber == node.Head.nNodeNumber){
+                                nNode = node2.Head.nType;
+                                break;
+                            }
+
                             Animation & anim = FH->MH.Animations.back();
                             anim.ArrayOfNodes.push_back(std::move(node));
                         }
-                        nNodeCounter++;
                         SkipLine();
                     }
                     else if(sID == "parent" && nNode & NODE_HEADER){
@@ -1820,7 +1835,9 @@ bool ASCII::Read(MDL & Mdl){
                                 else throw mdlexception("Error reading animation key data for node '" + FH->MH.Names.at(node.Head.nNodeNumber).sName + "'.");
                                 Orientation NewOrientKey;
                                 NewOrientKey.SetAxisAngle(fX, fY, fZ, fA);
-                                ByteBlock4.ui = CompressQuaternion(NewOrientKey.GetQuaternion());
+                                Quaternion q = NewOrientKey.GetQuaternion();
+                                if(q.fW < 0.0) q.vAxis *= -1.0;
+                                ByteBlock4.ui = CompressQuaternion(q);
                                 node.Head.ControllerData.push_back(ByteBlock4.f);
                             }
                             else if(nControllerType == CONTROLLER_HEADER_POSITION){
@@ -2107,8 +2124,7 @@ bool ASCII::Read(MDL & Mdl){
                     else if(sID == "endmodelgeom"){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bGeometry = false;
-                        FH->MH.nNodeCount = nNodeCounter;
-                        nNodeCounter = 0;
+                        FH->MH.nNodeCount = nNodeCount;
                         SkipLine();
 
                     }
@@ -2206,7 +2222,6 @@ bool ASCII::Read(MDL & Mdl){
                     else if(sID == "doneanim" && bAnimation){
                         if(DEBUG_LEVEL > 3) ReportMdl << "Reading " << sID << ".\n";
                         bAnimation = false;
-                        nNodeCounter = 0;
                         SkipLine();
                     }
                     else if(sID == "donemodel"){
@@ -2237,6 +2252,8 @@ bool ASCII::Read(MDL & Mdl){
                     else if(sID == "average") SkipLine();
                     else{
                         ReportMdl << "ReadUntilText() has found some text that we cannot interpret: " << sID << "\n";
+                        //ReportMdl << "nNode = " << nNode << "\n";
+                        //throw mdlexception("An exception that shouldn't be here!");
                         SkipLine();
                     }
                 }
@@ -2399,11 +2416,15 @@ void MDL::AsciiPostProcess(){
     /// Do supernodes
     /// This loads up all the supermodels and calculates the supernode numbers
     Data.MH.GH.nTotalNumberOfNodes = Data.MH.nNodeCount;
+    nSupermodel = 0; // As far as we're concerned, supermodel not loaded (yet).
     if(Data.MH.cSupermodelName != "NULL" && Data.MH.cSupermodelName != ""){
         std::unique_ptr<MDL> Supermodel;
         LoadSupermodel(*this, Supermodel);
         //First, update the TotalNodeCount
         if(Supermodel){
+            /// Supernode loaded, record its status
+            nSupermodel = bK2 ? 2 : 1;
+
             int nTotalSupermodelNodes = Supermodel->GetFileData()->MH.GH.nTotalNumberOfNodes;
             ReportMdl << "Total Supermodel Nodes: " << nTotalSupermodelNodes << "\n";
             if(nTotalSupermodelNodes > 0)
@@ -2429,10 +2450,14 @@ void MDL::AsciiPostProcess(){
     }
 
     /// Build Array of Indices By Offset Order
-    Data.MH.NameIndicesInBinaryOrder.reserve(Data.MH.ArrayOfNodes.size());
+    Data.MH.NameIndicesInOffsetOrder.reserve(Data.MH.ArrayOfNodes.size());
     for(Node & node : Data.MH.ArrayOfNodes){
-        Data.MH.NameIndicesInBinaryOrder.push_back(node.Head.nNodeNumber);
+        Data.MH.NameIndicesInOffsetOrder.push_back(node.Head.nNodeNumber);
     }
+
+    /// Build Array of Indices By Tree Order
+    Data.MH.NameIndicesInTreeOrder.reserve(Data.MH.ArrayOfNodes.size());
+    Data.MH.BuildTreeOrderArray(Data.MH.ArrayOfNodes.front());
 
     /// PART 3 ///
     /// Interpret ascii data
@@ -2441,7 +2466,11 @@ void MDL::AsciiPostProcess(){
     Report("Interpreting ascii data...");
     ProgressSize(0, Data.MH.ArrayOfNodes.size());
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        //ReportMdl << "n = " << n << "\n";
         Node & node = Data.MH.ArrayOfNodes.at(n);
+        //ReportMdl << "Analyzing node " << Data.MH.Names.at(node.Head.nNodeNumber).sName << " (" << n << "/" << Data.MH.ArrayOfNodes.size() << ")\n";
+
+        //ReportMdl << "PART 3 - stage 1" << "\n";
         if(node.Head.nType & NODE_SABER){
             /// Saber interpretation goes here.
             if((node.Mesh.TempVerts.size() == 16 && node.Mesh.TempTverts.size() == 16) ||
@@ -2505,6 +2534,7 @@ void MDL::AsciiPostProcess(){
                 node.Head.nType = NODE_HEADER | NODE_MESH;
             }
         }
+        //ReportMdl << "PART 3 - stage 2" << "\n";
 
         if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
             std::vector<Vector> vectorarray;
@@ -2522,6 +2552,71 @@ void MDL::AsciiPostProcess(){
             if(node.Mesh.TangentSpace.at(1)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT2);
             if(node.Mesh.TangentSpace.at(2)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT3);
             if(node.Mesh.TangentSpace.at(3)) node.Mesh.nMdxDataBitmap |= (MDX_FLAG_TANGENT4);
+
+            /// If this a skin, we need to build the bonemap, the bone indices and convert the name indices in the weights to bone indices
+            if(node.Head.nType & NODE_SKIN){
+                /// First, get the correct name index to all the bones
+                for(int nb = 0; nb < node.Skin.Bones.size(); nb++){
+                    Bone & bone = node.Skin.Bones.at(nb);
+                    bone.nNodeNumber = Data.MH.NameIndicesInTreeOrder.at(nb);
+                }
+
+                /// Next, go through the weights and build the actual bones
+                std::vector<int> nBoneIndices;
+                nBoneIndices.reserve(16);
+                for(Weight & w : node.Skin.TempWeights){
+                    for(signed short & ind : w.nWeightIndex){
+                        // We have found the name index for the current name, now we need to make sure this name has been indexed in the skin
+                        // Check if we already have this name indexed in the skin
+
+                        /// If the index is -1, we may just skip
+                        if(ind == -1) continue;
+
+                        /// First, convert the name index into the tree order index
+                        int nNodeIndex = 0;
+                        for(int ind2 = 0; ind2 < Data.MH.NameIndicesInTreeOrder.size(); ind2++)
+                            if(Data.MH.NameIndicesInTreeOrder.at(ind2) == ind)
+                                nNodeIndex = ind2;
+
+                        /// nNodeIndex is now the index of the bone node in tree order, now let's see if there is already a bone index for it
+                        bool bPresent = false;
+                        int nBoneIndex = 0;
+                        while(nBoneIndex < nBoneIndices.size() && !bPresent){
+                            if(nBoneIndices.at(nBoneIndex) == nNodeIndex){
+                                bPresent = true;
+                            }
+                            else nBoneIndex++;
+                        }
+
+                        /// If this is a new bone index:
+                        if(!bPresent){
+                            /// Add it to the list of bone node indices. Here the value is the node index and the order is the bone index.
+                            /// This is used in the skin. It is the same as the one in the skin header, but this one is not limited to 16 bones, in case that happens.
+                            nBoneIndices.push_back(nNodeIndex);
+
+                            /// Add it to the list of bone name indices. Here the value is the name index and the order is the bone index
+                            /// This is used for getting the name index from the bone index.
+                            node.Skin.BoneNameIndices.push_back(ind);
+
+                            //std::cout << "Saving node index " << nNodeIndex << " (name index " << ind << " - " << (ind > 0 && ind < Data.MH.Names.size() ? Data.MH.Names.at(ind).sName : std::string("None")) << ") under bone index " << nBoneIndex << std::endl;
+                            //nBoneIndex = nBoneIndices.size() - 1; //Update nBoneIndex so it always points to the correct bone
+
+                            /// Add it to the bonemap. The value is the bone index and the order is the node index.
+                            node.Skin.Bones.at(nNodeIndex).nBonemap = nBoneIndex;
+
+                            /// Add it to the skin header's bone list if there are less than 16 bones. Here the value is the node index and the order is the bone index.
+                            if(nBoneIndex < 16){
+                                node.Skin.nBoneIndices.at(nBoneIndex) = nNodeIndex;
+                            }
+                            else Warning(std::string("Warning! The skin node '") + Data.MH.Names.at(node.Head.nNodeNumber).sName + "' has more than 16 bones, which is the number of available slots in one of the lists. "
+                                         "The extra bones will simply not be included in that list, but I do not know how this will affect the game.");
+                        }
+
+                        /// Now that we have a bone index, update the one in the weights
+                        ind = nBoneIndex;
+                    }
+                }
+            }
 
             for(int f = 0; f < node.Mesh.Faces.size(); f++){
                 Face & face = node.Mesh.Faces.at(f);
@@ -2843,6 +2938,7 @@ void MDL::AsciiPostProcess(){
             node.Dangly.TempConstraints.shrink_to_fit();
             node.Skin.TempWeights.shrink_to_fit();
         }
+        //ReportMdl << "PART 3 - stage 3" << "\n";
 
         if(node.Head.nType & NODE_MESH &&
            !(node.Head.nType & NODE_SABER) &&
@@ -3011,6 +3107,7 @@ void MDL::AsciiPostProcess(){
                 }
             }
         }
+        //ReportMdl << "PART 3 - stage 4" << "\n";
 
         if(node.Head.nType & NODE_SABER){
             std::array<std::array<int, 3>, 12> FaceIndices = {{{0,4,5},{1,0,5},{1,5,2},
@@ -3083,6 +3180,7 @@ void MDL::AsciiPostProcess(){
             node.Mesh.Faces.at(10).nIndexVertex = {30, 31, 32};
             node.Mesh.Faces.at(11).nIndexVertex = {33, 32, 31};
         }
+        //ReportMdl << "PART 3 - stage 5" << "\n";
 
         if(node.Head.nType & NODE_AABB){
             if(Wok) Warning("Found an aabb node, but Wok already exists! Skipping this node...");
@@ -3125,8 +3223,10 @@ void MDL::AsciiPostProcess(){
                 }
             }
         }
+        //ReportMdl << "PART 3 - stage 6" << "\n";
         ProgressPos(n);
     }
+    //ReportMdl << "Done with PART 3\n";
     ProgressPos(Data.MH.ArrayOfNodes.size());
 
     /// PART 4 ///
@@ -3246,12 +3346,20 @@ void MDL::AsciiPostProcess(){
                     vRecord.Rotate(qRecord);
 
                     //By now, lRecord holds the base loc + the path for this node. This should now be exactly what gets written in T and Q Bones!
-                    node.Skin.Bones.at(n).TBone = vRecord;
-                    node.Skin.Bones.at(n).QBone.SetQuaternion(qRecord);
+
+                    /// But first, convert the name index into the tree order index
+                    int nNodeIndex = 0;
+                    for(int ind2 = 0; ind2 < Data.MH.NameIndicesInTreeOrder.size(); ind2++)
+                        if(Data.MH.NameIndicesInTreeOrder.at(ind2) == n)
+                            nNodeIndex = ind2;
+
+                    node.Skin.Bones.at(nNodeIndex).TBone = vRecord;
+                    node.Skin.Bones.at(nNodeIndex).QBone.SetQuaternion(qRecord);
                 }
             }
         }
     }
+    //ReportMdl << "Done with PART 4\n";
 
     /// PART 5 ///
     /// Create patches through linked faces

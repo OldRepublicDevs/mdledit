@@ -298,6 +298,10 @@ int WarningCancel(std::string sWarningMessage){
     return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_OKCANCEL | MB_ICONWARNING);
 }
 
+int WarningYesNo(std::string sWarningMessage){
+    return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_YESNO | MB_ICONWARNING);
+}
+
 int WarningYesNoCancel(std::string sWarningMessage){
     return MessageBox(hFrame, sWarningMessage.c_str(), "Warning!", MB_YESNOCANCEL | MB_ICONWARNING);
 }
@@ -312,6 +316,10 @@ int Error(std::wstring sErrorMessage){
 
 int WarningCancel(std::wstring sWarningMessage){
     return MessageBoxW(hFrame, sWarningMessage.c_str(), L"Warning!", MB_OKCANCEL | MB_ICONWARNING);
+}
+
+int WarningYesNo(std::wstring sWarningMessage){
+    return MessageBoxW(hFrame, sWarningMessage.c_str(), L"Warning!", MB_YESNO | MB_ICONWARNING);
 }
 
 int WarningYesNoCancel(std::wstring sWarningMessage){

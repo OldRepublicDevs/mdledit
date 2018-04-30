@@ -47,10 +47,12 @@ std::string safesubstr(const std::string & sParam, size_t nStart, size_t nLen = 
 std::wstring safesubstr(const std::wstring & sParam, size_t nStart, size_t nLen = std::wstring::npos);
 int Error(std::string sErrorMessage);
 int WarningCancel(std::string sWarningMessage);
+int WarningYesNo(std::string sWarningMessage);
 int WarningYesNoCancel(std::string sWarningMessage);
 int Warning(std::string sWarningMessage);
 int Error(std::wstring sErrorMessage);
 int WarningCancel(std::wstring sWarningMessage);
+int WarningYesNo(std::wstring sWarningMessage);
 int WarningYesNoCancel(std::wstring sWarningMessage);
 int Warning(std::wstring sWarningMessage);
 void ClearStringstream(std::stringstream & ssClearMe);

@@ -249,25 +249,34 @@ void MDL::DecompileModel(bool bMinimal){
         /// Build Array of Indices By Offset Order
         std::vector<NodeIndex> nodeinds;
         nodeinds.reserve(Data.MH.ArrayOfNodes.size());
-        Data.MH.NameIndicesInBinaryOrder.reserve(Data.MH.ArrayOfNodes.size());
+        Data.MH.NameIndicesInOffsetOrder.reserve(Data.MH.ArrayOfNodes.size());
         for(Node & node : Data.MH.ArrayOfNodes){
             nodeinds.emplace_back(node.Head.nNodeNumber, node.nOffset);
         }
         sort(nodeinds.begin(), nodeinds.end());
         for(NodeIndex & nodeind : nodeinds){
-            Data.MH.NameIndicesInBinaryOrder.push_back(nodeind.nIndex);
+            Data.MH.NameIndicesInOffsetOrder.push_back(nodeind.nIndex);
         }
 
-        // Immediately fix all the skin bone->name maps
+        /// Build Array of Indices By Tree Order
+        Data.MH.NameIndicesInTreeOrder.reserve(Data.MH.ArrayOfNodes.size());
+        Data.MH.BuildTreeOrderArray(Data.MH.ArrayOfNodes.front());
+
+
+        /// Immediately fix all the skin bone->name maps
         for(Node & node : Data.MH.ArrayOfNodes){
             if(node.Head.nType & NODE_SKIN){
-                for(int & index : node.Skin.BoneBinaryOrderIndices){
-                    for(int n = 0; n < Data.MH.NameIndicesInBinaryOrder.size(); n++){
-                        if(Data.MH.NameIndicesInBinaryOrder.at(n) == index){
-                            index = n;
-                            break;
-                        }
+                int nBoneCount = 0;
+                for(Bone & bone : node.Skin.Bones){
+                    if(bone.nBonemap > -1) nBoneCount++;
+                }
+                node.Skin.BoneNameIndices.resize(nBoneCount);
+                for(int n = 0; n < node.Skin.Bones.size(); n++){
+                    Bone & bone = node.Skin.Bones.at(n);
+                    if(bone.nBonemap > -1){
+                        node.Skin.BoneNameIndices.at(bone.nBonemap) = Data.MH.NameIndicesInTreeOrder.at(n);
                     }
+                    bone.nNodeNumber = Data.MH.NameIndicesInTreeOrder.at(n);
                 }
             }
         }
@@ -825,24 +834,26 @@ void MDL::ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMin
         MarkDataBorder(nPos - 1);
 
         if(NODE->Skin.nNumberOfBonemap != NODE->Skin.QBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.TBoneArray.nCount || NODE->Skin.nNumberOfBonemap != NODE->Skin.Array8Array.nCount){
-            Error("Unexpected Error! The bone numbers do not match up for " + FH->MH.Names.at(NODE->Head.nNodeNumber).sName + "! I will try to load the data anyway. ");
+            Error("Unexpected Error! The bone numbers do not match up for " + FH->MH.Names.at(NODE->Head.nNodeNumber).sName + "! Will try to load the data anyway. ");
         }
         if(NODE->Skin.nNumberOfBonemap > 0){
             NODE->Skin.Bones.resize(NODE->Skin.nNumberOfBonemap);
-            NODE->Skin.BoneBinaryOrderIndices.resize(NODE->Mesh.nNumberOfVerts, -1);
+            NODE->Skin.BoneNameIndices.resize(NODE->Mesh.nNumberOfVerts, -1);
             int n = 0;
             nPosData = MDL_OFFSET + NODE->Skin.nOffsetToBonemap;
             unsigned int nPosData2 = MDL_OFFSET + NODE->Skin.QBoneArray.nOffset;
             unsigned int nPosData3 = MDL_OFFSET + NODE->Skin.TBoneArray.nOffset;
             unsigned int nPosData4 = MDL_OFFSET + NODE->Skin.Array8Array.nOffset;
             while(n < NODE->Skin.nNumberOfBonemap){
-                NODE->Skin.Bones.at(n).nNodeNumber = NODE->Head.nNodeNumber;
+                //NODE->Skin.Bones.at(n).nNodeNumber = NODE->Head.nNodeNumber; // This is wrong, the order of the bones is not according to the name index
                 if(bXbox) NODE->Skin.Bones[n].nBonemap = ReadInt(&nPosData, 5, 2);
                 else NODE->Skin.Bones[n].nBonemap = (short) ReadFloat(&nPosData, 2);
                 MarkDataBorder(nPosData - 1);
+                /* // This is wrong, the order of the bones is not according to the name index
                 if(NODE->Skin.Bones[n].nBonemap != -1){
-                    NODE->Skin.BoneBinaryOrderIndices[NODE->Skin.Bones[n].nBonemap] = n;
+                    NODE->Skin.BoneNameIndices[NODE->Skin.Bones[n].nBonemap] = n;
                 }
+                */
 
                 double fQW = ReadFloat(&nPosData2, 2);
                 double fQX = ReadFloat(&nPosData2, 2);

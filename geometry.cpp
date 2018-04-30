@@ -317,20 +317,23 @@ Quaternion DecompressQuaternion(unsigned int nCompressed){
     /// Subtract from 1.0 so we get values in range from 1.0 to -1.0
     /// This also seems to invert it, previously the highest number
     /// is now the lowest.
-    q.vAxis.fX = 1.0 - ((double) (nCompressed&0x07FF) / 1023.0);
+    q.vAxis.fX = ((double) (nCompressed&0x07FF) / 1023.0) - 1.0;
     /// Move the bits by 11 and repeat
-    q.vAxis.fY = 1.0 - ((double) ((nCompressed>>11)&0x07FF) / 1023.0);
+    q.vAxis.fY = ((double) ((nCompressed>>11)&0x07FF) / 1023.0) - 1.0;
     /// Move the bits again and repeat
     /// This time, there are only 10 bits left, so our division number
     /// is smaller (511). Also since these are the only bits left
     /// there is no need to use & to clear higher bits,
     /// because they're 0 anyway, per >>.
-    q.vAxis.fZ = 1.0 - ((double) (nCompressed>>22) / 511.0);
+    q.vAxis.fZ = ((double) (nCompressed>>22) / 511.0) - 1.0;
     /// Now we get the w from the other three through the formula:
     /// x^2 + y^2 + z^2 + w^2 == 1 (unit)
     double fSquares = pow(q.vAxis.fX, 2.0) + pow(q.vAxis.fY, 2.0) + pow(q.vAxis.fZ, 2.0);
-    if(fSquares <= 1.0) q.fW = sqrt(1.0 - fSquares) * -1.0;
+    if(fSquares < 1.0) q.fW = sqrt(1.0 - fSquares);
     else{
+        /// Apprently we dimply need to set q.fW to 0.0
+        q.fW = 0.0;
+        /*
         /// If the sum is more than 1.0, we'd get a complex number for w
         /// Instead, set w to 0.0, then recalculate the vector (renormalize the quaternion?) accordingly
         q.fW = 0.0;
@@ -339,6 +342,7 @@ Quaternion DecompressQuaternion(unsigned int nCompressed){
         /// (x / sqrt(fSq))^2 + (y / sqrt(fSq))^2 + (z / sqrt(fSq))^2 + 0.0^2 == 1
         /// x^2 / fSq + y^2 / fSq + z^2 / fSq + 0.0 == 1
         /// x^2 + y^2 + z^2 == fSq (which is the definition of fSquare)
+        */
     }
     //std::cout << "Decompressed Q: " << q.vAxis.Print() << ", " << q.fW << "\n";
     return q;
@@ -347,11 +351,11 @@ Quaternion DecompressQuaternion(unsigned int nCompressed){
 unsigned int CompressQuaternion(Quaternion q){
     unsigned int nReturn = 0;
     unsigned int nCurrent;
-    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fZ) * 511.0);
+    nCurrent = static_cast<unsigned>((1.0 + q.vAxis.fZ) * 511.0);
     nReturn = nReturn | nCurrent;
-    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fY) * 1023.0);
+    nCurrent = static_cast<unsigned>((1.0 + q.vAxis.fY) * 1023.0);
     nReturn = (nReturn << 11) | nCurrent;
-    nCurrent = static_cast<unsigned>((1.0 - q.vAxis.fX) * 1023.0);
+    nCurrent = static_cast<unsigned>((1.0 + q.vAxis.fX) * 1023.0);
     nReturn = (nReturn << 11) | nCurrent;
     return nReturn;
 }

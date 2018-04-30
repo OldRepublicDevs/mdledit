@@ -400,9 +400,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn << nl << "  faces " << node->Mesh.Faces.size();
         for(int n = 0; n < node->Mesh.Faces.size(); n++){
             sReturn << nl << "    ";
-            sReturn << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(0) : node->Mesh.Faces.at(n).nTempIndexVertex.at(0));
-            sReturn << " " << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(1) : node->Mesh.Faces.at(n).nTempIndexVertex.at(1));
-            sReturn << " " << ((bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)) ? node->Mesh.Faces.at(n).nIndexVertex.at(2) : node->Mesh.Faces.at(n).nTempIndexVertex.at(2));
+            if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
+                sReturn << node->Mesh.Faces.at(n).nTempIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nTempIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nTempIndexVertex.at(2);
+            }
+            else{
+                sReturn << node->Mesh.Faces.at(n).nIndexVertex.at(0);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(1);
+                sReturn << " " << node->Mesh.Faces.at(n).nIndexVertex.at(2);
+            }
             sReturn << "  " << std::to_string((node->Mesh.Faces.at(n).nSmoothingGroup == 0) ? 1 : node->Mesh.Faces.at(n).nSmoothingGroup);
             if(node->Mesh.nMdxDataBitmap & MDX_FLAG_UV1){
                 sReturn << "  " << node->Mesh.Faces.at(n).nIndexVertex.at(0);
@@ -475,16 +482,16 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 sReturn << nl << "    ";
                 int i = 0;
                 signed short nBoneNumber; // = (int) round(ptr_verts->at(n).MDXData.Weights.fWeightIndex.at(i));
-                //ReportMdl << "Bone name index array size: " << node->Skin.BoneBinaryOrderIndices.size() << nl;
+                //ReportMdl << "Bone name index array size: " << node->Skin.BoneNameIndices.size() << nl;
                 bool bDependentVert = false;
                 while(i < 4){
                     nBoneNumber = ptr_verts->at(n).MDXData.Weights.nWeightIndex.at(i);
                     //ReportMdl << "Reading bone number " << nBoneNumber << nl;
-                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneBinaryOrderIndices.size()){
-                        int nNodeNumber = node->Skin.BoneBinaryOrderIndices.at(nBoneNumber);
-                        //if (nNodeNumber > -1) nNodeNumber = data.NameIndicesInBinaryOrder.at(nNodeNumber);
+                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
+                        int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
+                        //if (nNodeNumber > -1) nNodeNumber = data.NameIndicesInOffsetOrder.at(nNodeNumber);
                         //ReportMdl << "Reading bone number " << nBoneNumber;
-                        //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneBinaryOrderIndices.at(nBoneNumber)).sName.c_str() << ".\n";
+                        //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str() << ".\n";
                         //sReturn << " " << FH->MH.Names.at(nNodeNumber).sName.c_str() << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
                         if(nNodeNumber > -1 && nNodeNumber < FH->MH.Names.size()){
                             if(!bDependentVert) bDependentVert = true;

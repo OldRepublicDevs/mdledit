@@ -161,7 +161,7 @@ HTREEITEM AppendChildren(Node & node, HTREEITEM Prev, std::vector<Name> & Names,
         HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
         if(node.Skin.Bones.size() > 0){
             for(int n = 0; n < node.Skin.Bones.size(); n++){
-                std::string sBone = "Bone: " + Names.at(Data.MH.NameIndicesInBinaryOrder.at(n)).sName;
+                std::string sBone = "Bone: " + Names.at(node.Skin.Bones.at(n).nNodeNumber).sName;
                 Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
             }
         }

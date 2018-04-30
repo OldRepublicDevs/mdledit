@@ -245,6 +245,14 @@ bool MDL::NodeExists(const std::string & sNodeName){
     return false;
 }
 
+void ModelHeader::BuildTreeOrderArray(Node & node){
+    NameIndicesInTreeOrder.push_back(node.Head.nNodeNumber);
+    for(auto n : node.Head.ChildIndices){
+        if(n >= ArrayOfNodes.size()) throw mdlexception("BuildTreeOrderArray() error, child name index out of scope!");
+        BuildTreeOrderArray(ArrayOfNodes.at(n));
+    }
+}
+
 std::stringstream & MDL::GetReport(){
     return ssReport;
 }
@@ -468,6 +476,7 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
             //file.read(ByteBlock4.bytes, 4);
             bead_ReadFile(hFile, cBinary, 16);
             for(int n = 0; n < 4; n++) ByteBlock4.bytes[n] = cBinary.at(12 + n);
+
             if(!((ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K2_MODEL_1) && curmdl.bK2) && !((ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K1_MODEL_1) && !curmdl.bK2)){
                 bOpen = false;
                 bWrongGame = true;
@@ -494,7 +503,8 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         else{
             //file.close();
             CloseHandle(hFile);
-            if(bWrongGame) Warning(L"Binary supermodel " + std::wstring(sNewMdl.c_str()) + L" belongs to the wrong game and couldn't be read! The supernode numbers will be wrong!");
+            if(bWrongGame) Warning(L"Binary supermodel " + std::wstring(sNewMdl.c_str()) + L" belongs to " + (curmdl.bK2 ? L"K1" : L"K2") + L", while the model is being loaded for " + (curmdl.bK2 ? L"K2" : L"K1") + L", so it could not be used! "
+                                   L"The supernode numbers will be wrong!");
             else Warning(L"Could not find binary supermodel " + std::wstring(sNewMdl.c_str()) + L" in the directory! The supernodes numbers will be wrong!");
             return false;
         }

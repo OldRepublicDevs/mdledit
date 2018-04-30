@@ -750,7 +750,7 @@ struct SkinHeader{
     short nPadding2 = 0;
 
     std::vector<Bone> Bones;
-    std::vector<int> BoneBinaryOrderIndices;
+    std::vector<int> BoneNameIndices;
     std::vector<Weight> TempWeights;
 };
 
@@ -894,9 +894,11 @@ struct ModelHeader{
     std::vector<Animation> Animations;
     std::vector<Name> Names;
     std::vector<Node> ArrayOfNodes;
-    std::vector<int> NameIndicesInBinaryOrder;
+    std::vector<int> NameIndicesInOffsetOrder, NameIndicesInTreeOrder;
     //std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
     std::vector<std::vector<Patch>> PatchArrayPointers;
+
+    void BuildTreeOrderArray(Node& node);
 };
 
 struct FileHeader{
@@ -1029,6 +1031,7 @@ class MDL: public BinaryFile{
 
     //Options
     bool bK2 = true;
+    int nSupermodel = 0; /// 0=not present, 1=K1, 2=K2
     bool bXbox = false;
     bool bDebug = false;
     bool bWriteSmoothing = false;

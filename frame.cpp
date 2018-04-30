@@ -29,7 +29,7 @@ const int nCompactOffsetBottom = 1;
 const int nCompactOffsetLeft = 1;
 const int nCompactOffsetRight = 1;
 std::wstring sExePath;
-Version version (1,0,3);
+Version version (1,0,4);
 WNDPROC MainTreeProc = NULL;
 WNDPROC MainDisplayProc = NULL;
 LRESULT APIENTRY TreeSubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -572,18 +572,23 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDC_BTN_GAME:
                 {
-                    Model.bK2 = !Model.bK2;
-                    if(Model.GetFileData()){
-                        Model.Compile();
-                        FixHead();
-                        Edit1.LoadData();
-                    }
+                    bool bConfirm = true;
+                    if(Model.nSupermodel == 2 && Model.bK2 || Model.nSupermodel == 1 && !Model.bK2)
+                        bConfirm = IDYES == WarningYesNo("This model was loaded with a supermodel from the currently selected game. Are you sure you want to change the target game?");
+                    if(bConfirm){
+                        Model.bK2 = !Model.bK2;
+                        if(Model.GetFileData()){
+                            Model.Compile();
+                            FixHead();
+                            Edit1.LoadData();
+                        }
 
-                    std::string sUpdate;
-                    if(Model.bK2) sUpdate = "KOTOR2";
-                    else sUpdate = "KOTOR1";
-                    SetWindowText(hGame, sUpdate.c_str());
-                    ManageIni(INI_WRITE);
+                        std::string sUpdate;
+                        if(Model.bK2) sUpdate = "KOTOR2";
+                        else sUpdate = "KOTOR1";
+                        SetWindowText(hGame, sUpdate.c_str());
+                        ManageIni(INI_WRITE);
+                    }
                 }
                 break;
                 case IDC_BTN_PLATFORM:
