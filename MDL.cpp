@@ -1,7 +1,15 @@
 #include "MDL.h"
 #include <fstream>
+#include <algorithm>
 #include <Shlwapi.h>
 /// This file should be a general initializer/implementor of MDL.h
+
+double Patch::fDiff = 0.0;
+MDL * Patch::ptr_mdl = nullptr;
+
+const unsigned short INVALID_SHORT = 0xFFFF;
+const unsigned int INVALID_INT = 0xFFFFFFFF;
+bool bReportValidness = false;
 
 void MDL::Report(std::string sMessage){
     if(PtrReport != nullptr) PtrReport(sMessage);
@@ -12,17 +20,32 @@ void MDL::ProgressSize(int nMin, int nMax){
 void MDL::ProgressPos(int nPos){
     if(PtrProgressPos != nullptr) PtrProgressPos(nPos);
 }
+void MDL::ProgressSetStep(int nStep){
+    if(PtrProgressSetStep != nullptr) PtrProgressSetStep(nStep);
+}
+void MDL::ProgressStepIt(){
+    if(PtrProgressStepIt != nullptr) PtrProgressStepIt();
+}
 
-int MDL::GetNameIndex(const std::string & sName){
-    if(!FH) return -1;
+MdlInteger<unsigned short> MDL::GetNameIndex(const std::string & sName){
+    if(!FH) throw mdlexception("MDL::GetNameIndex() ERROR: File header is not available.");
     std::vector<Name> & Names = FH->MH.Names;
-    int n = 0;
-    while(n < Names.size()){
-        if(StringEqual(Names[n].sName, sName)) return n;
-        n++;
+    MdlInteger<unsigned short> nReturn;
+    for(int n = 0; n < Names.size(); n++){
+        if(StringEqual(Names[n].sName, sName)){
+            nReturn = n;
+            break;
+        }
     }
-    //throw mdlexception("Node name not found: " + sName);
-    return -1;
+    return nReturn;
+}
+
+
+std::string & MDL::GetNodeName(Node & node){
+    if(!FH) throw mdlexception("MDL::GetNodeName() ERROR: File header is not available.");
+    if(!node.Head.nNameIndex.Valid()) throw mdlexception("MDL::GetNodeName() ERROR: Name index (" + node.Head.nNameIndex.Print() + ") is invalid.");
+    else if(node.Head.nNameIndex >= FH->MH.Names.size()) throw mdlexception("MDL::GetNodeName() ERROR: Name index (" + node.Head.nNameIndex.Print() + ") is too large to find a name.");
+    return FH->MH.Names.at(node.Head.nNameIndex).sName;
 }
 
 unsigned int GetFunctionPointer(unsigned int FN_PTR, int n, bool bXbox, bool bK2){
@@ -131,6 +154,7 @@ std::vector<Vertex> MDL::GetWokVertData(Node & node){
             verts_wok.at(faces_wok.at(f).nIndexVertex.at(i)).assign(data.verts.at(data.faces.at(f).nIndexVertex.at(i)) - vLyt - node.Head.vFromRoot, true);
         }
     }
+    for(Vertex & vert : verts_wok) std::cout << vert.Print() << "\n";
     return verts_wok;
 }
 
@@ -143,11 +167,9 @@ void MDL::GetLytPositionFromWok(){
     if(data.faces.size() == 0) return;
 
     int nSearchMaterial = data.faces.front().nMaterialID;
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        Node & node = Data.MH.ArrayOfNodes.at(n);
+    for(Node & node : Data.MH.ArrayOfNodes){
         if(node.Head.nType & NODE_AABB){
-            for(int f = 0; f < node.Mesh.Faces.size(); f++){
-                Face & face = node.Mesh.Faces.at(f);
+            for(Face & face : node.Mesh.Faces){
                 if(face.nMaterialID == nSearchMaterial){
                     Data.MH.vLytPosition =
                         Vector(data.verts.at(data.faces.front().nIndexVertex.at(0)).fX - node.Mesh.Vertices.at(face.nIndexVertex.at(0)).vFromRoot.fX,
@@ -161,95 +183,70 @@ void MDL::GetLytPositionFromWok(){
     }
 }
 
-void MDL::LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes){
-    for(int n = 0; n < NODE.Head.Children.size(); n++){
-        LinearizeGeometry(NODE.Head.Children[n], ArrayOfNodes);
-    }
-    ArrayOfNodes.at(NODE.Head.nNodeNumber) = std::move(NODE);
-}
-
-void MDL::LinearizeAnimation(Node & NODE, std::vector<Node> & ArrayOfNodes, int n){
-    ModelHeader & Data = FH->MH;
-
-    /// This bit should make sure that nodes don't loop
-    for(Node & node2 : ArrayOfNodes){
-        if(node2.Head.nSupernodeNumber == NODE.Head.nSupernodeNumber){
-            int nReturn = WarningYesNoCancel("The animation node '" + FH->MH.Names.at(NODE.Head.nNodeNumber).sName + "' in animation '" +
-                                             Data.Animations.at(n).sName.c_str() + "' in " + to_ansi(GetFilename()) + " appears several times in "
-                                             "the node hierarchy. Do you want to remove the second occurrence?\n\n"
-                                             "(Pressing Cancel will abort the loading.)");
-            if(nReturn == IDYES){
-                NODE.Head.Children.resize(0);
-                return;
-            }
-            else if(nReturn == IDCANCEL){
-                throw mdlexception("The user aborted the process.");
-            }
-        }
-    }
-
-    ArrayOfNodes.push_back(std::move(NODE));
-    Node & node = ArrayOfNodes.back();
-    for(int n = 0; n < node.Head.Children.size(); n++){
-        LinearizeAnimation(node.Head.Children[n], ArrayOfNodes, n);
-    }
-}
-
 std::unique_ptr<FileHeader> & MDL::GetFileData(){
     return FH;
 }
 
-std::string MDL::MakeUniqueName(int nNodeNumber){
+std::string MDL::MakeUniqueName(MdlInteger<unsigned short> nNameIndex){
     if(!FH) throw mdlexception("MDL::MakeUniqueName() failed because we're running it on a model without FileHeader data.");
+    if(!nNameIndex.Valid()) throw mdlexception("MDL::MakeUniqueName() failed because nNameIndex is invalid (-1).");
     std::vector<Name> & Names = FH->MH.Names;
-    std::string sReturn = Names.at(nNodeNumber).sName.c_str();
+    std::string sReturn = Names.at(nNameIndex).sName.c_str();
     std::vector<Node> & Nodes = FH->MH.ArrayOfNodes;
-    if(Nodes.size() > nNodeNumber){
-        if(Nodes.at(nNodeNumber).Head.nType & NODE_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
+    if(Nodes.size() > nNameIndex){
+        if(Nodes.at(nNameIndex).Head.nType & NODE_SABER && bLightsaberToTrimesh) sReturn = "2081__" + sReturn;
     }
-    for(int n = 0; n < nNodeNumber; n++){
-        if(std::string(Names.at(n).sName.c_str()) == sReturn) return sReturn + "__dpl" + std::to_string(nNodeNumber);
+    for(int n = 0; n < nNameIndex; n++){
+        if(StringEqual(Names.at(n).sName, sReturn)) return sReturn + "__dpl" + std::to_string(nNameIndex);
     }
     return sReturn;
 }
 
-Node & MDL::GetNodeByNameIndex(int nIndex, int nAnimation){
-    if(nAnimation == -1){
-        if(nIndex < 0 || nIndex > FH->MH.ArrayOfNodes.size()) throw mdlexception("Cannot get geometry node with index " + std::to_string(nIndex) + ".");
-        return FH->MH.ArrayOfNodes.at(nIndex);
-    }
-    else{
-        std::vector<Node> & Array = FH->MH.Animations[nAnimation].ArrayOfNodes;
-        for(int n = 0; n < Array.size(); n++){
-            //std::cout << "Looping through animation nodes for our node\n";
-            if(Array[n].Head.nNodeNumber == nIndex) return Array[n];
+MdlInteger<unsigned short> MDL::GetNodeIndexByNameIndex(MdlInteger<unsigned short> nNameIndex, MdlInteger<unsigned int> nAnimation){
+    if(!FH)
+        throw mdlexception("MDL::GetNodeIndexByNameIndex() ERROR: File header not available.");
+    FileHeader & Data = *FH;
+
+    if(!nNameIndex.Valid() || nNameIndex >= Data.MH.Names.size())
+        throw mdlexception("MDL::GetNodeIndexByNameIndex() ERROR: The name index " + std::to_string(nNameIndex) + " lies outside the range of valid indices (0-" + std::to_string(Data.MH.Names.size()-1) + ").");
+
+    MdlInteger<unsigned short> nReturn;
+    if(!nAnimation.Valid()){
+        for(unsigned short n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+            if(Data.MH.ArrayOfNodes.at(n).Head.nNameIndex == nNameIndex){
+                nReturn = n;
+                break;
+            }
         }
     }
+    else{
+        for(unsigned short n = 0; n < Data.MH.Animations.at(nAnimation).ArrayOfNodes.size(); n++){
+            if(Data.MH.Animations.at(nAnimation).ArrayOfNodes.at(n).Head.nNameIndex == nNameIndex){
+                nReturn = n;
+                break;
+            }
+        }
+    }
+    return nReturn;
 }
 
 bool MDL::HeadLinked(){
-    /*
-    for(int n = 0; n < FH->MH.ArrayOfNodes.size(); n++){
-        if(FH->MH.ArrayOfNodes.at(n).nOffset == FH->MH.nOffsetToHeadRootNode){
-            if(FH->MH.Names.at(FH->MH.ArrayOfNodes.at(n).Head.nNodeNumber).sName == "neck_g") return true;
-            else return false;
-        }
-    }
-    */
     if(FH->MH.GH.nOffsetToRootNode != FH->MH.nOffsetToHeadRootNode) return true;
     return false;
 }
 
 bool MDL::NodeExists(const std::string & sNodeName){
-    if(GetNameIndex(sNodeName) != -1) return true;
+    if(GetNameIndex(sNodeName).Valid()) return true;
     return false;
 }
 
 void ModelHeader::BuildTreeOrderArray(Node & node){
-    NameIndicesInTreeOrder.push_back(node.Head.nNodeNumber);
+    NameIndicesInTreeOrder.push_back(node.Head.nNameIndex);
     for(auto n : node.Head.ChildIndices){
-        if(n >= ArrayOfNodes.size()) throw mdlexception("BuildTreeOrderArray() error, child name index out of scope!");
-        BuildTreeOrderArray(ArrayOfNodes.at(n));
+        if(n >= Names.size()) throw mdlexception("BuildTreeOrderArray() error, child name index out of scope!");
+        for(Node & child : ArrayOfNodes){
+            if(child.Head.nNameIndex == n) BuildTreeOrderArray(child);
+        }
     }
 }
 
@@ -264,19 +261,15 @@ void MDL::SaveReport(){
     sFile += L"_report.txt";
 
     /// Create file
-    //std::ofstream file(sFile, std::fstream::out);
     HANDLE hFile = bead_CreateWriteFile(sFile);
 
-    //if(!file.is_open()){
     if(hFile == INVALID_HANDLE_VALUE){
         std::cout << "File creation failed for " << sFile.c_str() << ". Aborting.\n";
         return;
     }
 
     /// Write and close file
-    //file << ssReport.str();
     bead_WriteFile(hFile, ssReport.str());
-    //file.close();
     CloseHandle(hFile);
 }
 
@@ -293,18 +286,22 @@ void MDL::FlushData(){
     DwkAscii.reset();
     FlushAll();
     ClearStringstream(ssReport);
+
+    src = NoSource;
 }
 
 //Setters/general
 bool MDL::LinkHead(bool bLink){
     unsigned int nOffset;
     if(bLink){
-        int nNodeNumber = -1;
-        for(int n = 0; n < FH->MH.Names.size() && nNodeNumber == -1; n++){
-            if(FH->MH.Names.at(n).sName == "neck_g") nNodeNumber = n;
+        MdlInteger<unsigned short> nNameIndex;
+        for(unsigned short n = 0; n < FH->MH.Names.size() && !nNameIndex.Valid(); n++){
+            if(StringEqual(FH->MH.Names.at(n).sName, "neck_g")) nNameIndex = n;
         }
-        if(nNodeNumber != -1){
-            nOffset = GetNodeByNameIndex(nNodeNumber).nOffset;
+        if(nNameIndex.Valid()){
+            MdlInteger<unsigned short> nNodeIndex = GetNodeIndexByNameIndex(nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("MDL::LinkHead() error: dealing with a name index that does not have a node in geometry.");
+            nOffset = FH->MH.ArrayOfNodes.at(nNodeIndex).nOffset;
         }
         else return false;
     }
@@ -312,7 +309,8 @@ bool MDL::LinkHead(bool bLink){
         nOffset = FH->MH.GH.nOffsetToRootNode;
     }
     FH->MH.nOffsetToHeadRootNode = nOffset;
-    WriteIntToPH(nOffset, 180, nOffset);
+    unsigned nHeadLinkOffset = 180;
+    WriteNumber(&nOffset, 0, "", &nHeadLinkOffset);
     return true;
 }
 
@@ -352,12 +350,12 @@ void MDL::UpdateTexture(Node & node, const std::string & sNew, int nTex){
     }
 }
 
-void MDL::WriteUintToPlaceholder(unsigned int nUint, int nOffset){
-    WriteIntToPH(nUint, nOffset, nUint);
+void MDL::WriteUintToPlaceholder(unsigned int nUint, unsigned nOffset){
+    WriteNumber(&nUint, 0, "", &nOffset);
 }
 
-void MDL::WriteByteToPlaceholder(unsigned char nByte, int nOffset){
-    sBuffer.at(nOffset) = nByte;
+void MDL::WriteByteToPlaceholder(unsigned char nByte, unsigned nOffset){
+    WriteNumber(&nByte, 0, "", &nOffset);
 }
 
 //ascii
@@ -373,21 +371,21 @@ bool MDL::ReadAscii(){
     ReportObject ReportMdl(*this);
     if(Ascii){
         if(!Ascii->Read(*this)){
-            FlushData();
+            //FlushData();
             return false;
         }
         else ReportMdl << "Mdl ascii read succesfully!\n";
     }
     if(PwkAscii){
         if(!PwkAscii->ReadWalkmesh(*this, true)){
-            FlushData();
+            //FlushData();
             return false;
         }
         else ReportMdl << "Pwk ascii read succesfully!\n";
     }
     if(DwkAscii){
         if(!DwkAscii->ReadWalkmesh(*this, false)){
-            FlushData();
+            //FlushData();
             return false;
         }
         else ReportMdl << "Dwk ascii read succesfully!\n";
@@ -398,9 +396,9 @@ bool MDL::ReadAscii(){
 Location Node::GetLocation(){
     Location location;
 
-    int nCtrlPos = -1;
-    int nCtrlOri = -1;
-    for(int c = 0; c < Head.Controllers.size(); c++){
+    MdlInteger<unsigned short> nCtrlPos;
+    MdlInteger<unsigned short> nCtrlOri;
+    for(unsigned short c = 0; c < Head.Controllers.size(); c++){
         if(Head.Controllers.at(c).nControllerType == CONTROLLER_HEADER_POSITION){
             nCtrlPos = c;
         }
@@ -409,13 +407,13 @@ Location Node::GetLocation(){
         }
     }
 
-    if(nCtrlPos != -1){
+    if(nCtrlPos.Valid()){
         Controller & posctrl = Head.Controllers.at(nCtrlPos);
         location.vPosition = Vector(Head.ControllerData.at(posctrl.nDataStart + 0),
                                     Head.ControllerData.at(posctrl.nDataStart + 1),
                                     Head.ControllerData.at(posctrl.nDataStart + 2));
     }
-    if(nCtrlOri != -1){
+    if(nCtrlOri.Valid()){
         Controller & orictrl = Head.Controllers.at(nCtrlOri);
         if(orictrl.nColumnCount == 4){
             location.oOrientation = Orientation(Head.ControllerData.at(orictrl.nDataStart + 0),
@@ -450,34 +448,29 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         sNewMdl += L".mdl";
 
         //Create file
-        //std::ifstream file(sNewMdl, std::ios::binary);
         HANDLE hFile = bead_CreateReadFile(sNewMdl);
 
         //Check for problems
         bool bOpen = true;
         bool bWrongGame = false;
-        //if(!file.is_open())
         if(hFile == INVALID_HANDLE_VALUE)
             bOpen = false;
         if(bOpen){
-            //file.seekg(0, std::ios::beg);
-            //char cBinary [4];
             std::vector<char> cBinary(4,0);
-            //file.read(cBinary, 4);
             bead_ReadFile(hFile, cBinary, 4);
             /// Make sure that what we've read is a binary .mdl as far as we can tell
             if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
 
         }
+
         /// If we pass, then the file is definitely ready to be read.
         if(bOpen){
-            //file.seekg(12);
             std::vector<char> cBinary(17,0);
-            //file.read(ByteBlock4.bytes, 4);
             bead_ReadFile(hFile, cBinary, 16);
-            for(int n = 0; n < 4; n++) ByteBlock4.bytes[n] = cBinary.at(12 + n);
+            unsigned nFunctionPointer = * (unsigned *) &cBinary.at(12);
 
-            if(!((ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K2_MODEL_1) && curmdl.bK2) && !((ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 || ByteBlock4.ui == FN_PTR_XBOX_K1_MODEL_1) && !curmdl.bK2)){
+            if(!((nFunctionPointer == FN_PTR_PC_K2_MODEL_1 || nFunctionPointer == FN_PTR_XBOX_K2_MODEL_1) && curmdl.bK2) &&
+               !((nFunctionPointer == FN_PTR_PC_K1_MODEL_1 || nFunctionPointer == FN_PTR_XBOX_K1_MODEL_1) && !curmdl.bK2)){
                 bOpen = false;
                 bWrongGame = true;
             }
@@ -485,111 +478,118 @@ bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel){
         bool bReturn = true;
         if(bOpen){
             Supermodel.reset(new MDL);
-            ReportMdl << "Reading supermodel: \n" << sNewMdl.c_str() << "\n";
-            //file.seekg(0, std::ios::end);
-            //std::streampos length = file.tellg();
-            //file.seekg(0, std::ios::beg);
+            ReportMdl << "Reading supermodel: \n" << to_ansi(sNewMdl.c_str()) << "\n";
             unsigned long length = bead_GetFileLength(hFile);
             std::vector<char> & sBufferRef = Supermodel->CreateBuffer(length);
-            //file.read(&sBufferRef[0], length);
             bead_ReadFile(hFile, sBufferRef);
             Supermodel->SetFilePath(sNewMdl);
-            //file.close();
             CloseHandle(hFile);
 
             Supermodel->DecompileModel(true);
             return true;
         }
         else{
-            //file.close();
             CloseHandle(hFile);
-            if(bWrongGame) Warning(L"Binary supermodel " + std::wstring(sNewMdl.c_str()) + L" belongs to " + (curmdl.bK2 ? L"K1" : L"K2") + L", while the model is being loaded for " + (curmdl.bK2 ? L"K2" : L"K1") + L", so it could not be used! "
-                                   L"The supernode numbers will be wrong!");
-            else Warning(L"Could not find binary supermodel " + std::wstring(sNewMdl.c_str()) + L" in the directory! The supernodes numbers will be wrong!");
+            if(bWrongGame) Warning(L"Binary supermodel " + std::wstring(sNewMdl.c_str()) + L" belongs to " + (curmdl.bK2 ? L"K1" : L"K2") + L", while the model is being loaded for " + (curmdl.bK2 ? L"K2" : L"K1") + L". "
+                                   L"The supermodel must belong to the game you are targeting, otherwise the supermodel animations will not work on the new model! The model will now be loaded without its supermodel.");
+            else Warning(L"Could not find binary supermodel " + std::wstring(sNewMdl.c_str()) + L" in the directory! "
+                         L"The new model must be compiled with access to its supermodel, otherwise the supermodel animations will not work on the new model! The model will now be loaded without its supermodel.");
             return false;
         }
     }
     return false;
 }
 
-/*
-bool LoadSupermodel(MDL & curmdl, std::vector<MDL> & Supermodels){
-    std::string sSMname = curmdl.GetFileData()->MH.cSupermodelName;
-    sSMname.resize(strlen(sSMname.c_str()));
-    if(sSMname != "NULL"){
-        MDL newmdl;
-        std::string sNewMdl = curmdl.GetFullPath().c_str();
-        sNewMdl.reserve(MAX_PATH);
-        PathRemoveFileSpec(&sNewMdl[0]);
-        sNewMdl.resize(strlen(sNewMdl.c_str()));
-        sNewMdl += "\\";
-        sNewMdl += curmdl.GetFileData()->MH.cSupermodelName.c_str();
-        sNewMdl += ".mdl";
-
-        //Create file
-        std::ifstream file(sNewMdl, std::ios::binary);
-
-        //Check for problems
-        bool bOpen = true;
-        bool bWrongGame = false;
-        if(!file.is_open()) bOpen = false;
-        if(bOpen){
-            file.seekg(0, std::ios::beg);
-            char cBinary [4];
-            file.read(cBinary, 4);
-            //Make sure that what we've read is a binary .mdl as far as we can tell
-            if(cBinary[0]!='\0' || cBinary[1]!='\0' || cBinary[2]!='\0' || cBinary[3]!='\0') bOpen = false;
-            //If we pass, then the file is definitely ready to be read.
-        }
-        if(bOpen){
-            file.seekg(12);
-            file.read(ByteBlock4.bytes, 4);
-            //if(ByteBlock4.ui != curmdl.GetFileData()->MH.GH.nFunctionPointer0){
-            if(!(ByteBlock4.ui == FN_PTR_PC_K2_MODEL_1 && curmdl.bK2) && !(ByteBlock4.ui == FN_PTR_PC_K1_MODEL_1 && !curmdl.bK2)){
-                bOpen = false;
-                bWrongGame = true;
-            }
-        }
-        bool bReturn = true;
-        if(bOpen){
-            std::cout << "Reading supermodel: \n" << sNewMdl << "\n";
-            file.seekg(0, std::ios::end);
-            std::streampos length = file.tellg();
-            file.seekg(0, std::ios::beg);
-            std::vector<char> & sBufferRef = newmdl.CreateBuffer(length);
-            file.read(&sBufferRef[0], length);
-            newmdl.SetFilePath(sNewMdl);
-            file.close();
-
-            Supermodels.push_back(std::move(newmdl));
-            Supermodels.back().DecompileModel(true);
-
-            bReturn = LoadSupermodel(Supermodels.back(), Supermodels); //Go recursive
-        }
-        else{
-            file.close();
-            if(bWrongGame) Warning("Binary supermodel " + std::string(sNewMdl.c_str()) + " belongs to the wrong game and couldn't be read! The supernode numbers will be wrong!");
-            else Warning("Could not find binary supermodel " + std::string(sNewMdl.c_str()) + " in the directory! The supernodes numbers will be wrong!");
-            return false;
-        }
-        return bReturn;
-    }
-    else return true;
-}
-*/
 /// This function is to be used both when compiling and decompiling (to determine smoothing groups)
 /// It is very expensive, so modify with care to keep it efficient. Any calculations that can be performed outside, should be.
 void MDL::CreatePatches(){
     FileHeader & Data = *FH;
+    Patch::ptr_mdl = this;
     ReportObject ReportMdl(*this);
     Timer tPatches;
     extern bool bCancelSG;
 
-    ProgressSize(0, Data.MH.ArrayOfNodes.size());
-    Report("Building Patch array... (this may take a while)");
+    Report("Building Patch array...");
     ReportMdl << "Building Patch array...";
-    std::cout << " (this may take a while)";
+    //std::cout << " (this may take a while)";
     ReportMdl << "\n";
+
+    /// Start algorithm
+    /** KOTORMAX STYLE **/
+    /// First record number of verts
+    for(Node & node : Data.MH.ArrayOfNodes) if(node.Head.nType & NODE_MESH) {
+        /// Record vert and tvert sizes
+        Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
+        if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
+    }
+    std::vector<Vector> DoneVerts;
+    DoneVerts.reserve(Data.MH.nTotalVertCount);
+    Data.MH.PatchArrayPointers.reserve(Data.MH.nTotalVertCount);
+
+    ProgressSize(0, 100);
+    unsigned long nStepper = 0;
+    unsigned nUnit = std::max(1, Data.MH.nTotalVertCount / 100);
+    ProgressPos(0);
+    /// Currently, this takes all meshes, including skins, danglymeshes and walkmeshes, with render on or off
+    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
+        Node & node = Data.MH.ArrayOfNodes.at(n);
+        if(node.Head.nType & NODE_MESH && !(node.Head.nType & NODE_SABER)){
+
+            /// For every vertex of every mesh
+            for(int v = 0; v < node.Mesh.Vertices.size(); v++){
+                Vertex & vert = node.Mesh.Vertices.at(v);
+                Vector & vCoords = vert.vFromRoot;
+
+                /// Get the index of the vert in DoneVerts, in case it's already done.
+                auto iter = std::find_if(DoneVerts.begin(), DoneVerts.end(), [&](Vector vComp){ return vComp.Compare(vCoords, 0.0005); });
+                long nIndex = std::distance(DoneVerts.begin(), iter);
+                bool bFound = !(iter == DoneVerts.end());
+
+                /// If the vert location hasn't been processed yet, then we need a new patchGroup
+                if(!bFound){
+                    /// Record group
+                    Data.MH.PatchArrayPointers.resize(Data.MH.PatchArrayPointers.size() + 1);
+                    Data.MH.PatchArrayPointers.back().reserve(50);
+                    DoneVerts.push_back(vCoords);
+                }
+                /// Get the patch group we are currently working on
+                std::vector<Patch> & CurrentPatchGroup = (!bFound ? Data.MH.PatchArrayPointers.back() : Data.MH.PatchArrayPointers.at(nIndex));
+                vert.nLinkedFacesIndex = nIndex;
+
+                /// Create a new patch for this vert
+                Patch CurrentPatch;
+                CurrentPatch.nNodeArrayIndex = n;
+                CurrentPatch.nVertex = v;
+                CurrentPatch.nPatchGroup = (int) nIndex;
+
+                /// For every face, check if it references our vertex, if it does, add its index and SGs to the patch being created.
+                for(int f = 0; f < node.Mesh.Faces.size(); f++){
+                    Face & face = node.Mesh.Faces.at(f);
+                    for(MdlInteger<unsigned short> & fv : face.nIndexVertex) if(fv == v){
+                        CurrentPatch.FaceIndices.push_back(f);
+                        CurrentPatch.nSmoothingGroups = (CurrentPatch.nSmoothingGroups | face.nSmoothingGroup);
+                        break;
+                    }
+                    /// This is the most embedded level, if ESC then abort here
+                    if(bCancelSG) return;
+                }
+
+                /// Record the patch
+                CurrentPatchGroup.push_back(std::move(CurrentPatch));
+
+                nStepper++;
+                //std::cout << "About to progress... nUnit: " << nUnit << "\n";
+                if(nStepper % nUnit == 0){
+                    //std::cout << "Progressing\n";
+                    ProgressStepIt();
+                }
+            }
+        }
+    }
+    /** MDLEDIT STYLE
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
         /// Currently, this takes all meshes, including skins, danglymeshes and walkmeshes, with render on or off
         if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
@@ -624,13 +624,13 @@ void MDL::CreatePatches(){
 
                                 /// Check if vertices are equal (enough)
                                 Vector & vCoords2 = node2.Mesh.Vertices.at(v2).vFromRoot;
-                                if(vCoords.Compare(vCoords2)){
+                                if(vCoords.Compare(vCoords2, 0.0001)){ /// 20180623bead-v: changed precision to four places.
                                     /// Update reference to new vector
                                     node2.Mesh.Vertices.at(v2).nLinkedFacesIndex = Data.MH.PatchArrayPointers.size();
 
                                     /// Build patch and add it to the group
                                     Patch OtherPatch;
-                                    OtherPatch.nNodeNumber = n2;
+                                    OtherPatch.nNodeArrayIndex = n2;
                                     OtherPatch.nVertex = v2;
                                     for(int f = 0; f < node2.Mesh.Faces.size(); f++){
                                         Face & face = node2.Mesh.Faces.at(f);
@@ -659,121 +659,247 @@ void MDL::CreatePatches(){
             ProgressPos(n);
         }
     }
-    ProgressPos(Data.MH.ArrayOfNodes.size());
+    **/
+
+    /// Algorithm done
+    ProgressPos(Data.MH.nTotalVertCount);
     int nPatches = 0;
     for(std::vector<Patch> & patch : Data.MH.PatchArrayPointers) nPatches += patch.size();
-    ReportMdl << "Done creating patches in " << tPatches.GetTime() << ".\n"; //"! Total: " << nPatches << ", vs " << Data.MH.nTotalVertCount << " verts \n";
-    /*
-    Report("Building LinkedFaces array... (this may take a while)");
-    std::cout << "Building LinkedFaces array... (this may take a while)\n";
-    for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
-        //std::cout << "Linking faces for node " << n+1 << "/" << Data.MH.ArrayOfNodes.size() << ".\n";
-        //Currently, this takes all meshes, including skins, danglymeshes and walkmeshes
-        if(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n).Head.nType & NODE_SABER)){
-            Node & node = Data.MH.ArrayOfNodes.at(n);
-            Data.MH.nTotalVertCount += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT1) Data.MH.nTotalTangent1Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
-            if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
+    ReportMdl << "Done creating patches in " << tPatches.GetTime() << ". Found " << nPatches << " patches!\n"; //"! Total: " << nPatches << ", vs " << Data.MH.nTotalVertCount << " verts \n";
+}
 
-            for(int v = 0; v < node.Mesh.Vertices.size(); v++){
-                //For every vertex of every mesh
+std::vector<Patch> & Patch::GetPatchGroup(){
+    if(!ptr_mdl || !nPatchGroup.Valid()) throw mdlexception("Patch::GetPatchGroup() error: either the model pointer is null or the patch group index is -1.");
+    if(!ptr_mdl->GetFileData()) throw mdlexception("Patch::GetPatchGroup() error: the file data is null.");
+    FileHeader & Data = *ptr_mdl->GetFileData();
+    return Data.MH.PatchArrayPointers.at(nPatchGroup);
+}
 
-                //Proceed only if this vertex group hasn't been processed yet
-                if(node.Mesh.Vertices.at(v).nLinkedFacesIndex == -1){
-                    Vertex & vert = node.Mesh.Vertices.at(v); // Make life easier
-                    vert.nLinkedFacesIndex = Data.MH.LinkedFacesPointers.size(); // Update reference to new vector that is about to be created
-                    Data.MH.LinkedFacesPointers.push_back(std::vector<LinkedFace>()); // Create new vector
-                    std::vector<LinkedFace> & LinkedFaceArray = Data.MH.LinkedFacesPointers.back(); // Get reference to the new vector
+Node & Patch::GetNode(){
+    if(!ptr_mdl || !nNodeArrayIndex.Valid()) throw mdlexception("Patch::GetNode() error: either the model pointer is null or the node array index is -1.");
+    if(!ptr_mdl->GetFileData()) throw mdlexception("Patch::GetPatchGroup() error: the file data is null.");
+    FileHeader & Data = *ptr_mdl->GetFileData();
+    return Data.MH.ArrayOfNodes.at(nNodeArrayIndex);
+}
 
-                    Vector & vCoords = vert.vFromRoot;
+bool Patch::CompareNormal(){
+    Node & node = GetNode();
+    Vertex & vert = node.Mesh.Vertices.at(nVertex);
+    if(fDiff == 0.0) throw mdlexception("Patch::CompareNormal() error: fDiff is still 0.0!");
+    if(vVertexNormal.Compare(vert.MDXData.vNormal, fDiff)) return true;
+    return false;
+}
 
-                    //We've already gone through the nodes up to n and linked any vertices, so we can skip those
-                    for(int n2 = n; n2 < Data.MH.ArrayOfNodes.size(); n2++){
+bool Patch::CompareTangentSpace(char cVec){
+    Node & node = GetNode();
+    Vertex & vert = node.Mesh.Vertices.at(nVertex);
+    if(fDiff == 0.0) throw mdlexception("Patch::CompareNormal() error: fDiff is still 0.0!");
+    if(cVec == TS_BITANGENT && vVertexB.Compare(vert.MDXData.vTangent1.at(0), fDiff)) return true;
+    if(cVec == TS_TANGENT && vVertexT.Compare(vert.MDXData.vTangent1.at(1), fDiff)) return true;
+    if(cVec == TS_NORMAL && vVertexN.Compare(vert.MDXData.vTangent1.at(2), fDiff)) return true;
+    return false;
+}
 
-                        if(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_MESH && !(Data.MH.ArrayOfNodes.at(n2).Head.nType & NODE_SABER)){
-                            Node & node2 = Data.MH.ArrayOfNodes.at(n2);
+void Patch::CalculateWorld(bool bNormal, bool bTangent){
+    if(!bNormal && !bTangent) return;
+    Node & patch_node = GetNode();
+    Vertex & patch_vert = patch_node.Mesh.Vertices.at(nVertex);
 
-                            //Loop through all the faces in the mesh and look for matching vertices - theoretically there is no way to optimize this part
-                            for(int f = 0; f < node2.Mesh.Faces.size(); f++){
-                                Face & face = node2.Mesh.Faces.at(f);
+    /// Go through all faces in this patch and add up their face normals and face tangent space vectors.
+    /// They will form the base vectors that will later be used to calculate the actual vectors.
+    /// The faces within the same patch will always smooth between each other
+    /// and must therefore all be included. The face normals will be freshly calculated.
+    for(int face_ind : FaceIndices){
+        Face & face = patch_node.Mesh.Faces.at(face_ind);
 
-                                //We are now checking the three vertices
-                                for(int i = 0; i < 3; i++){
-                                    //Check if vertices are equal (enough)
-                                    Vector & vCoords2 = node2.Mesh.Vertices.at(face.nIndexVertex[i]).vFromRoot;
-                                    if(vCoords.Compare(vCoords2)){
+        /// Get the verts
+        Vertex & v1 = patch_node.Mesh.Vertices.at(face.nIndexVertex[0]);
+        Vertex & v2 = patch_node.Mesh.Vertices.at(face.nIndexVertex[1]);
+        Vertex & v3 = patch_node.Mesh.Vertices.at(face.nIndexVertex[2]);
 
-                                        //If they are equal, regardless of weldedness, add the face to the linked faces array
-                                        LinkedFaceArray.push_back(LinkedFace(n2, f, face.nIndexVertex[i]));
+        /// Definitely use world space coordinates
+        Vector Edge1 = v2.vFromRoot - v1.vFromRoot;
+        Vector Edge2 = v3.vFromRoot - v1.vFromRoot;
+        Vector Edge3 = v3.vFromRoot - v2.vFromRoot;
 
-                                        //Also update the other vert's linked face array reference index, so we can skip processing it later.
-                                        node2.Mesh.Vertices.at(face.nIndexVertex[i]).nLinkedFacesIndex = vert.nLinkedFacesIndex;
+        /// Mark bad patch
+        if(face.fAreaUV <= 0.0) bBadUV = true;
+        if(face.fArea <= 0.0) bBadGeo = true;
 
-                                        //Only one vertex in a face can match our vertex, so exit this small loop
-                                        ///Well, it turns out that's not true <_< *swears*
-                                        //i = 3;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+        /// Prepare face normal candidate
+        Vector vAdd = cross(Edge1, Edge2); //Cross product, unnormalized
+        vAdd.Normalize();
+
+        /// Area Weighting
+        if(ptr_mdl->bSmoothAreaWeighting) vAdd *= (face.fArea > 0.0 ? face.fArea : 0.0);
+
+        /// Angle Weighting
+        if(ptr_mdl->bSmoothAngleWeighting){
+            if(nVertex == face.nIndexVertex[0]){
+                vAdd *= Angle(Edge1, Edge2);
             }
-            ProgressPos(n);
-        }
-    }
-    std::cout << "Done building LinkedFaces array!\n";
-    ProgressPos(Data.MH.ArrayOfNodes.size());
-    std::cout << "Creating patches... \n";
-    Report("Building patches...");
-    for(int v = 0; v < Data.MH.LinkedFacesPointers.size(); v++){
-        //For every vector of linked faces, create a vector of patches
-        std::vector<LinkedFace> & LinkedFaceVector = Data.MH.LinkedFacesPointers.at(v);
-        //Data.MH.PatchArrayPointers.push_back(std::vector<Patch>());
-        //std::vector<Patch> & PatchVector = Data.MH.PatchArrayPointers.back();
-        std::vector<Patch> PatchVector;
-
-        for(int lf = 0; lf < LinkedFaceVector.size(); lf++){
-            if(!LinkedFaceVector.at(lf).bAssignedToPatch){
-                Patch newpatch;
-                LinkedFace & patchhead = LinkedFaceVector.at(lf);
-                newpatch.nNodeNumber = patchhead.nNodeNumber;
-                newpatch.nVertex = patchhead.nVertex;
-                patchhead.bAssignedToPatch = true;
-                newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(patchhead.nNodeNumber).Mesh.Faces.at(patchhead.nFace).nSmoothingGroup;
-                newpatch.FaceIndices.push_back(patchhead.nFace); //Assign first linked face index to the patch
-
-                Node & node = Data.MH.ArrayOfNodes.at(newpatch.nNodeNumber);
-                Vertex & vert = node.Mesh.Vertices.at(newpatch.nVertex);
-                vert.nLinkedFacesIndex = Data.MH.PatchArrayPointers.size(); // Update reference to new vector that is about to be created
-
-                for(int plf = lf+1; plf < LinkedFaceVector.size(); plf++){
-                    if(!LinkedFaceVector.at(plf).bAssignedToPatch){
-                        //The following check is the whole point of this whole patch business
-                        //The patch only contains those faces which are welded, ie. they have one and the same vertex, ie.
-                        //they have the same mesh index and vert index as the point we are constructing this patch for
-                        if(LinkedFaceVector.at(plf).nNodeNumber == newpatch.nNodeNumber &&
-                           LinkedFaceVector.at(plf).nVertex == newpatch.nVertex){
-                            LinkedFace & linked = LinkedFaceVector.at(plf);
-                            linked.bAssignedToPatch = true;
-                            newpatch.nSmoothingGroups = newpatch.nSmoothingGroups | GetNodeByNameIndex(linked.nNodeNumber).Mesh.Faces.at(linked.nFace).nSmoothingGroup;
-                            newpatch.FaceIndices.push_back(linked.nFace); //Assign linked face index to the patch
-                            //ssReport << linked.nFace << " ";
-                        }
-                    }
-                }
-                //file << "   patch " << PatchVector.size() << " (" << Data.MH.Names.at(newpatch.nNodeNumber).sName.c_str() << ", vert " << newpatch.nVertex << ") contains faces: " << ssReport.str() << "\n";
-                PatchVector.push_back(std::move(newpatch));
+            else if(nVertex == face.nIndexVertex[1]){
+                vAdd *= Angle(Edge1, Edge3);
+            }
+            else if(nVertex == face.nIndexVertex[2]){
+                vAdd *= Angle(Edge2, Edge3);
             }
         }
-        if(PatchVector.size() > 0) Data.MH.PatchArrayPointers.push_back(std::move(PatchVector));
+
+        /// Crease Angle Test
+        /// if enabled, and the angle between the current normal and our candidate is greater than the crease angle, skip it
+        /** THIS IS POSSIBLY NOT A GOOD IDEA, BECAUSE THE NORMALS WITHIN THE SAME PATCH SHOULD ALL BE REPRESENTED, NO? **/
+        if(ptr_mdl->bCreaseAngle && Angle(vWorldNormal, vAdd) > static_cast<double>(ptr_mdl->nCreaseAngle)) continue;
+
+        /// Normal incorporation
+        if(bNormal) vWorldNormal += vAdd;
+        //if(bDebug) file << "\r\n    Added component for face " << face_ind << ": " << vAdd.Print();
+
+        /// Normalize the normal candidate for use in further calculations
+        vAdd.Normalize();
+
+        if(bTangent){
+            /// Also incorporate tangent space vectors
+            Vector & v1UV = v1.MDXData.vUV1;
+            Vector & v2UV = v2.MDXData.vUV1;
+            Vector & v3UV = v3.MDXData.vUV1;
+            Vector EUV1 = v2UV - v1UV;
+            Vector EUV2 = v3UV - v1UV;
+            Vector EUV3 = v3UV - v2UV;
+
+            /// Tangent and Bitangent calculation
+            /// Now comes the calculation. Will be using edges 1 and 2
+            double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
+
+            if(r != 0){ /// This is division, need to check for 0
+                r = 1.0 / r;
+            }
+            else{
+                /**
+                It can be 0 in several ways.
+                1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
+                2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
+                3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
+                4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
+
+                Pretty much the only one relevant to us is the first case.
+                /**/
+
+                /// ndix UR's magic factor
+                r = 2406.6388;
+            }
+            Vector vAddT = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
+            Vector vAddB = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
+            vAddT.Normalize();
+            vAddB.Normalize();
+            if(vAddT.Null()){
+                vAddT = Vector(1.0, 0.0, 0.0);
+            }
+            if(vAddB.Null()){
+                vAddB = Vector(1.0, 0.0, 0.0);
+            }
+
+            /// Handedness
+            Vector vCross = cross(vAdd, vAddT);
+            double fDot = dot(vCross, vAddB);
+            if(fDot > 0.0000000001){
+                vAddT *= -1.0;
+            }
+
+            /// Now check if we need to invert  T and B. But first we need a UV normal
+            Vector vNormalUV = cross(EUV1, EUV2); //cross product
+            if(vNormalUV.fZ < 0.0){
+                vAddT *= -1.0;
+                vAddB *= -1.0;
+            }
+
+            vWorldT += vAddT;
+            vWorldB += vAddB;
+            vWorldN += cross(vAddB, vAddT);
+        }
     }
-    Data.MH.LinkedFacesPointers.resize(0);
-    Data.MH.LinkedFacesPointers.shrink_to_fit();
-    std::cout << "Done creating patches! LinkedFace array deleted!\n";
-    */
+}
+
+void Patch::Calculate(bool bNormal, bool bTangent, std::vector<MdlInteger<unsigned int>> * patches){
+    if(!bNormal && !bTangent) return;
+    if(!patches) patches = &SmoothedPatches;
+
+    std::vector<Patch> & patch_group = GetPatchGroup();
+    std::vector<MdlInteger<unsigned int>> & smoothed_patches = *patches;
+    Node & node = GetNode();
+
+    /// Define our candidates
+    Vector vWorking, vWorkingTST, vWorkingTSB, vWorkingTSN;
+
+    /// Reset group flags
+    bGroupBadGeo = false;
+    bGroupBadUV = false;
+
+    /// The new algorithm
+    /// Go through our patches
+    std::vector<int> CheckedPatches;
+    CheckedPatches.reserve(smoothed_patches.size());
+    for(int n = 0; n < smoothed_patches.size(); n++){
+        Patch & curpatch = patch_group.at(smoothed_patches.at(n));
+
+        /// If we have done this patch already, continue
+        if(std::find(CheckedPatches.begin(), CheckedPatches.end(), curpatch.nNodeArrayIndex) != CheckedPatches.end()) continue;
+
+        /// Add the node index to checked patches
+        CheckedPatches.push_back(curpatch.nNodeArrayIndex);
+
+        /// The counter of patch normals that will be united in this step.
+        /// The counter does not yet include the current patch, it will be added later.
+        int nNormals = 0;
+
+        /// Define the vectors to get the mesh normal and TS vectors for this step
+        Vector vMeshNormal, vMeshTST, vMeshTSB, vMeshTSN;
+
+        /// Go through the remaining patches (including this one!)
+        for(int n2 = n; n2 < smoothed_patches.size(); n2++){
+            Patch & curpatch2 = patch_group.at(smoothed_patches.at(n2));
+
+            /// If this patch belongs to a different node, continue
+            if(curpatch.nNodeArrayIndex != curpatch2.nNodeArrayIndex) continue;
+
+            /// Make sure to set the group flags if necessary
+            if(!bGroupBadGeo && curpatch2.bBadGeo) bGroupBadGeo = true;
+            if(!bGroupBadUV && curpatch2.bBadUV) bGroupBadUV = true;
+
+            /// Once we get to this point, we have to collect the normal and TS vectors. Increase the counter.
+            nNormals++;
+
+            /// Collect the normal and TS vectors
+            if(bNormal) vMeshNormal += curpatch2.vWorldNormal;
+            if(bTangent) vMeshTSB += curpatch2.vWorldB;
+            if(bTangent) vMeshTST += curpatch2.vWorldT;
+            if(bTangent) vMeshTSN += curpatch2.vWorldN;
+        }
+
+        /// Once we have gone through all the patches in the current setup, pack them up and add them to the working normal
+        if(bNormal) vWorking += (nNormals * vMeshNormal / vMeshNormal.GetLength());
+        if(bTangent) vWorkingTSB += (vMeshTSB / vMeshTSB.GetLength());
+        if(bTangent) vWorkingTST += (vMeshTST / vMeshTST.GetLength());
+        if(bTangent) vWorkingTSN += (vMeshTSN / vMeshTSN.GetLength());
+    }
+
+    /// Rotate the normal to object space
+    if(bNormal) vWorking.Rotate(node.Head.qFromRoot.inverse());
+    if(bTangent) vWorkingTSB.Rotate(node.Head.qFromRoot.inverse());
+    if(bTangent) vWorkingTST.Rotate(node.Head.qFromRoot.inverse());
+    if(bTangent) vWorkingTSN.Rotate(node.Head.qFromRoot.inverse());
+
+    /// Normalize the vectors
+    if(bNormal) vWorking.Normalize();
+    if(bTangent) vWorkingTSB.Normalize();
+    if(bTangent) vWorkingTST.Normalize();
+    if(bTangent) vWorkingTSN.Normalize();
+
+    /// Apply the candidates
+    if(bNormal) vVertexNormal = vWorking;
+    if(bTangent) vVertexB = vWorkingTSB;
+    if(bTangent) vVertexT = vWorkingTST;
+    if(bTangent) vVertexN = vWorkingTSN;
 }
 
 unsigned MDL::GetHeaderOffset(const Node & node, unsigned short nHeader){
@@ -901,7 +1027,7 @@ void MDL::CheckPeculiarities(){
     MessageBox(NULL, ssReturn.str().c_str(), "Notification", MB_OK);
 }
 
-bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, int nAnimation){
+bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn, MdlInteger<unsigned int> nAnimation){
     bool bMasterUpdate = false;
     for(int b = 0; b < NodeArray.size(); b++){
         if(NodeArray.at(b).Head.nType == 0){
@@ -924,9 +1050,9 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
             bool bUpdate = false;
             std::stringstream ssAdd;
             std::string sCont;
-            if(nAnimation == -1) sCont = "geometry";
+            if(!nAnimation.Valid()) sCont = "geometry";
             else sCont = FH->MH.Animations.at(nAnimation).sName.c_str();
-            ssAdd << "\r\n - " << FH->MH.Names.at(NodeArray.at(b).Head.nNodeNumber).sName << " (" << sCont << ")";
+            ssAdd << "\r\n - " << FH->MH.Names.at(NodeArray.at(b).Head.nNameIndex).sName << " (" << sCont << ")";
             if(NodeArray.at(b).Head.nType & NODE_HEADER){
                 if(NodeArray.at(b).Head.nPadding1 != 0){
                     ssAdd << "\r\n     - Header: Unknown short after NameIndex has a value!";
@@ -949,17 +1075,17 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
 
                     if( (ctrl.nControllerType == CONTROLLER_HEADER_POSITION ||
                          ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION) &&
-                        ctrl.nAnimation != -1 &&
+                        ctrl.nAnimation.Valid() &&
                         ctrl.nUnknown2 == ctrl.nControllerType + 8){}
-                    else if(ctrl.nUnknown2 == -1 &&
+                    else if(!ctrl.nUnknown2.Valid() &&
                             ( (ctrl.nControllerType != CONTROLLER_HEADER_POSITION &&
                                ctrl.nControllerType != CONTROLLER_HEADER_ORIENTATION) ||
-                              ctrl.nAnimation == -1) ){}
+                              !ctrl.nAnimation.Valid()) ){}
                     else{
                         std::string sLoc;
-                        if(ctrl.nAnimation == -1) sLoc = "geometry";
+                        if(!ctrl.nAnimation.Valid()) sLoc = "geometry";
                         else sLoc = FH->MH.Animations.at(ctrl.nAnimation).sName.c_str();
-                        ssAdd << "\r\n     - Header: New controller unknown2 value! (" << ctrl.nUnknown2 << " - " << ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNodeNumber).Head.nType) << " controller in node " << FH->MH.Names.at(ctrl.nNodeNumber).sName << " in " << sLoc << ")";
+                        ssAdd << "\r\n     - Header: New controller unknown2 value! (" << ctrl.nUnknown2 << " - " << ReturnControllerName(ctrl.nControllerType, FH->MH.ArrayOfNodes.at(ctrl.nNameIndex).Head.nType) << " controller in node " << FH->MH.Names.at(ctrl.nNameIndex).sName << " in " << sLoc << ")";
                         bUpdate = true;
                     }
                     /***
@@ -968,7 +1094,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                         In keyed controllers, light and emitter seem to group together against header and mesh.
                         Selfillumcolor usually has the same padding values as scale, but they are different
                         in for example: n_admrlsaulkar or 003ebof
-                    /**/
+                    /** /
                     if(ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
                        ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
                        ctrl.nControllerType==CONTROLLER_HEADER_SCALING && ctrl.nAnimation == -1 &&
@@ -991,7 +1117,7 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                     else if( (ctrl.nControllerType==CONTROLLER_HEADER_POSITION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_ORIENTATION ||
                               ctrl.nControllerType==CONTROLLER_HEADER_SCALING ||
-                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_MESH) && ctrl.nAnimation != -1 &&
+                              GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_MESH) && ctrl.nAnimation != -1 &&
                              (ctrl.nPadding[0] == 50 &&
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
@@ -1000,13 +1126,14 @@ bool MDL::CheckNodes(std::vector<Node> & NodeArray, std::stringstream & ssReturn
                               ctrl.nPadding[1] == 18 &&
                               ctrl.nPadding[2] == 0   )){}
                     /// the following are all emitter and mesh single controllers (as long as the last value is non-0)
-                    else if( (GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_EMITTER ||
-                              GetNodeByNameIndex(ctrl.nNodeNumber).Head.nType & NODE_MESH) &&
+                    else if( (GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_EMITTER ||
+                              GetNodeByNameIndex(ctrl.nNameIndex).Head.nType & NODE_MESH) &&
                               ctrl.nPadding[2] > 0 && ctrl.nAnimation == -1 ){}
                     else{
                         //ssAdd << "\r\n     - Header: Previously unseen controller padding! (" << (int)ctrl.nPadding[0] << ", " << (int)ctrl.nPadding[1] << ", " << (int)ctrl.nPadding[2] << ")";
                         //bUpdate = true;
                     }
+                    /**/
                 }
             }
             if(NodeArray.at(b).Head.nType & NODE_LIGHT){

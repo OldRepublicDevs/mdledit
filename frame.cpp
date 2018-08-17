@@ -19,23 +19,28 @@ ReportObject ReportModel(Model);
 bool bSaveReport = false;
 bool bShowHex = false;
 bool bShowDiff = true;
+bool bShowCmpHilite = true;
 bool bShowGroup = false;
 bool bShowDataStruct = false;
 bool bHexLocation = false;
 bool bAnalyze = false;
+bool bModelHierarchy = false;
 unsigned nEditSize = ME_DISPLAY_SIZE_Y;
 const int nCompactOffsetTop = 1;
 const int nCompactOffsetBottom = 1;
 const int nCompactOffsetLeft = 1;
 const int nCompactOffsetRight = 1;
 std::wstring sExePath;
-Version version (1,0,4);
+Version version (1,1,0, false);
 WNDPROC MainTreeProc = NULL;
 WNDPROC MainDisplayProc = NULL;
 LRESULT APIENTRY TreeSubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT APIENTRY DisplaySubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 bool bEditDrag = false;
 HHOOK hMessageHook = NULL;
+RECT rcWindowHex, rcWindowNonHex;
+bool bNoSaveWindowPos = false;
+HFONT hMonospace = NULL, hShell = NULL, hTimes = NULL;
 
 void FixHead(){
     bool bLinkHead = Button_GetCheck(hNeck) == BST_CHECKED;
@@ -103,8 +108,19 @@ bool Frame::Run(int nCmdShow){
     InitCommonControlsEx(&icx); // Load the common control DLL
     /**/
 
+    /// Define window rects
+    rcWindowNonHex.left = 0;
+    rcWindowNonHex.top = 0;
+    rcWindowNonHex.right = 368;
+    rcWindowNonHex.bottom = 610;
+
+    rcWindowHex.left = 0;
+    rcWindowHex.top = 0;
+    rcWindowHex.right = 980;
+    rcWindowHex.bottom = 610;
+
     hFrame = CreateWindowEx(NULL, cClassName, std::string("MDLedit "+version.Print()).c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                        CW_USEDEFAULT, CW_USEDEFAULT, 368, 610,
+                        CW_USEDEFAULT, CW_USEDEFAULT, rcWindowNonHex.right, rcWindowNonHex.bottom,
                         HWND_DESKTOP, NULL, hInstance, NULL);
     hMe = hFrame;
     if(!hMe) return false;
@@ -153,6 +169,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_CREATE:
         {
             GetClientRect(hwnd, &rcClient);
+
             std::string sMonospace = "Consolas";
             if(!Font_IsInstalled(sMonospace)){
                 std::cout << "Consolas font not installed! Switching to Courier New...\n";
@@ -162,7 +179,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 }
             }
 
-            HFONT hFont1 = CreateFont(
+            hMonospace = CreateFont(
                 14, //Size
                 0,  //??
                 0,  //??
@@ -178,7 +195,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 DEFAULT_PITCH | FF_MODERN	,	// pitch and family
                 sMonospace.c_str() 	// pointer to typeface name string
             );
-            HFONT hFont2 = CreateFont(
+            hShell = CreateFont(
                 14,  //Height
                 0,  //Width
                 0,  //??
@@ -194,7 +211,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
                 "MS Shell Dlg" //"Segoe UI" 	// pointer to typeface name string
             );
-            HFONT hFont4 = CreateFont(
+            hTimes = CreateFont(
                 14,  //Height
                 4,  //Width
                 0,  //??
@@ -224,9 +241,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             hFloatLabel = CreateWindowEx(NULL, "STATIC", "Float:", WS_VISIBLE | WS_CHILD | SS_RIGHT,
                                         nLabelOffsetX, nDataOffsetY[2] + ME_DATA_LABEL_ROW_OFFSET_Y, ME_DATA_LABEL_SIZE_X, ME_DATA_LABEL_SIZE_Y,
                                         hwnd, (HMENU) IDC_LBL_FLOAT, GetModuleHandle(NULL), NULL);
-            SendMessage(hIntLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
-            SendMessage(hUIntLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
-            SendMessage(hFloatLabel, WM_SETFONT, (WPARAM) hFont2, MAKELPARAM(TRUE, 0));
+            SendMessage(hIntLabel, WM_SETFONT, (WPARAM) hShell, MAKELPARAM(TRUE, 0));
+            SendMessage(hUIntLabel, WM_SETFONT, (WPARAM) hShell, MAKELPARAM(TRUE, 0));
+            SendMessage(hFloatLabel, WM_SETFONT, (WPARAM) hShell, MAKELPARAM(TRUE, 0));
             ShowWindow(hIntLabel, false);
             ShowWindow(hUIntLabel, false);
             ShowWindow(hFloatLabel, false);
@@ -240,9 +257,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             Edits::hFloatEdit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", WS_VISIBLE | WS_CHILD | ES_READONLY, // | ES_RIGHT,
                                         nEditOffsetX, nDataOffsetY[2], ME_DATA_EDIT_SIZE_X, ME_DATA_EDIT_SIZE_Y,
                                         hwnd, (HMENU) IDC_EDIT_FLOAT, GetModuleHandle(NULL), NULL);
-            SendMessage(Edits::hIntEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
-            SendMessage(Edits::hUIntEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
-            SendMessage(Edits::hFloatEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            SendMessage(Edits::hIntEdit, WM_SETFONT, (WPARAM) hMonospace, MAKELPARAM(TRUE, 0));
+            SendMessage(Edits::hUIntEdit, WM_SETFONT, (WPARAM) hMonospace, MAKELPARAM(TRUE, 0));
+            SendMessage(Edits::hFloatEdit, WM_SETFONT, (WPARAM) hMonospace, MAKELPARAM(TRUE, 0));
             ShowWindow(Edits::hIntEdit, false);
             ShowWindow(Edits::hUIntEdit, false);
             ShowWindow(Edits::hFloatEdit, false);
@@ -259,9 +276,9 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             hNeck = CreateWindowEx(NULL, "BUTTON", "Head Link", WS_VISIBLE | WS_CHILD | BS_CHECKBOX | BS_PUSHLIKE | WS_DISABLED,
                                    nButtonOffsetX[2], nDataOffsetY[3], nButtonSizeX, ME_DATA_EDIT_SIZE_Y,
                                    hwnd, (HMENU) IDC_BTN_NECK, GetModuleHandle(NULL), NULL);
-            SendMessage(hGame, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
-            SendMessage(hPlatform, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
-            SendMessage(hNeck, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
+            SendMessage(hGame, WM_SETFONT, (WPARAM) hTimes, MAKELPARAM(TRUE, 0));
+            SendMessage(hPlatform, WM_SETFONT, (WPARAM) hTimes, MAKELPARAM(TRUE, 0));
+            SendMessage(hNeck, WM_SETFONT, (WPARAM) hTimes, MAKELPARAM(TRUE, 0));
 
             hStatusBar = CreateStatusWindow(WS_CHILD | WS_VISIBLE, "", hwnd, IDC_STATUSBAR);
             int nBorders [4];
@@ -278,14 +295,14 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             hDisplayEdit = CreateWindowEx(WS_EX_CLIENTEDGE, "EDIT", "", WS_VISIBLE | WS_CHILD | ES_READONLY | ES_AUTOVSCROLL | ES_MULTILINE | WS_VSCROLL,
                                         ME_TREE_OFFSET_X, nDataOffsetY[4], ME_TREE_SIZE_X, nEditSize,
                                         hwnd, (HMENU) IDC_EDIT_DISPLAY, GetModuleHandle(NULL), NULL);
-            SendMessage(hDisplayEdit, WM_SETFONT, (WPARAM) hFont1, MAKELPARAM(TRUE, 0));
+            SendMessage(hDisplayEdit, WM_SETFONT, (WPARAM) hMonospace, MAKELPARAM(TRUE, 0));
             //MainTreeProc = (WNDPROC) SetWindowLong(hTree, GWLP_WNDPROC, (LONG) TreeSubclassProc);
             //MainDisplayProc = (WNDPROC) SetWindowLong(hDisplayEdit, GWLP_WNDPROC, (LONG) DisplaySubclassProc);
 
             hTabs = CreateWindowEx(NULL, WC_TABCONTROL, "", WS_VISIBLE | WS_CHILD | TCS_FOCUSNEVER | TCS_FIXEDWIDTH,
                                    ME_HEX_WIN_OFFSET_X, 0, ME_HEX_WIN_OFFSET_X + ME_TABS_SIZE_X, rcClient.bottom - ME_STATUSBAR_Y,
                                    hwnd, (HMENU) IDC_TABS, GetModuleHandle(NULL), NULL);
-            SendMessage(hTabs, WM_SETFONT, (WPARAM) hFont4, MAKELPARAM(TRUE, 0));
+            SendMessage(hTabs, WM_SETFONT, (WPARAM) hTimes, MAKELPARAM(TRUE, 0));
             ShowWindow(hTabs, false);
 
             if(!Edit1.Run(hwnd, IDC_MAIN_EDIT)){
@@ -315,6 +332,14 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             if(bShowDataStruct) mii.fState = MFS_CHECKED;
             else mii.fState = MFS_UNCHECKED;
             SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DATASTRUCT, false, &mii);
+
+            if(bModelHierarchy) mii.fState = MFS_CHECKED;
+            else mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_HIE, false, &mii);
+
+            if(!bModelHierarchy) mii.fState = MFS_CHECKED;
+            else mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_LIN, false, &mii);
 
             if(!bAnalyze) RemoveMenu(GetMenu(hwnd), IDM_MASS_ANALYZE, MF_BYCOMMAND);
         }
@@ -388,12 +413,21 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                                 mla.nIndex++;
                             }
 
+                            if(bHasChild){
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_EXPAND_ALL, "Expand all");
+                                mla.nIndex++;
+                                if(bExpanded){
+                                    InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD_ALL, "Collapse all");
+                                    mla.nIndex++;
+                                }
+                            }
+
                             if(bExpandedChild && bExpanded){
-                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD_CHILDREN, "Collapse children");
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_FOLD_CHILDREN, "Collapse children only");
                                 mla.nIndex++;
                             }
                             else if(bChildHasChild && bExpanded){
-                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_EXPAND_CHILDREN, "Expand children");
+                                InsertMenu(mla.hMenu, mla.nIndex, MF_BYPOSITION | MF_STRING, IDPM_TV_EXPAND_CHILDREN, "Expand children only");
                                 mla.nIndex++;
                             }
 
@@ -434,6 +468,64 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_SHOW_REPORT:
                 {
                     OpenReportDlg(Model);
+                }
+                break;
+                case IDM_TREE_SORT_LIN:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_LIN, false, &mii);
+                    if(!(mii.fState & MFS_CHECKED)){
+                        bModelHierarchy = false;
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_LIN, false, &mii);
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_HIE, false, &mii);
+
+                        /// Update tree view
+                        HTREEITEM htiRoot = TreeView_GetRoot(hTree);
+                        HTREEITEM htiAnimations = TreeView_GetChildByText(hTree, htiRoot, "Animations");
+                        if(htiAnimations != NULL){
+                            BuildAnimationTree(htiAnimations, Model);
+                        }
+                        HTREEITEM htiGeometry = TreeView_GetChildByText(hTree, htiRoot, "Geometry");
+                        if(htiGeometry != NULL){
+                            BuildGeometryTree(htiGeometry, Model);
+                        }
+
+                        /// Update .ini
+                        ManageIni(INI_WRITE);
+                    }
+                }
+                break;
+                case IDM_TREE_SORT_HIE:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_HIE, false, &mii);
+                    if(!(mii.fState & MFS_CHECKED)){
+                        bModelHierarchy = true;
+                        mii.fState = MFS_CHECKED;
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_HIE, false, &mii);
+                        mii.fState = MFS_UNCHECKED;
+                        SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_LIN, false, &mii);
+
+                        /// Update tree view
+                        HTREEITEM htiRoot = TreeView_GetRoot(hTree);
+                        HTREEITEM htiAnimations = TreeView_GetChildByText(hTree, htiRoot, "Animations");
+                        if(htiAnimations != NULL){
+                            BuildAnimationTree(htiAnimations, Model);
+                        }
+                        HTREEITEM htiGeometry = TreeView_GetChildByText(hTree, htiRoot, "Geometry");
+                        if(htiGeometry != NULL){
+                            BuildGeometryTree(htiGeometry, Model);
+                        }
+
+                        /// Update .ini
+                        ManageIni(INI_WRITE);
+                    }
                 }
                 break;
                 case IDM_SHOW_GROUP:
@@ -536,6 +628,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     else mii.fState = MFS_UNCHECKED;
                     SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DIFF, false, &mii);
                     Edit1.UpdateEdit();
+                    Edit1.PrintValues();
                 }
                 break;
                 case IDM_BIN_SAVE:
@@ -633,6 +726,17 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
                 case IDM_VIEW_HEX:
                 {
+                    bNoSaveWindowPos = true;
+
+                    /// If our window is maximized, then we need to un-maximize it first.
+                    WINDOWPLACEMENT wp;
+                    wp.length = sizeof(WINDOWPLACEMENT);
+                    GetWindowPlacement(hwnd, &wp);
+                    if(wp.showCmd == SW_SHOWMAXIMIZED){
+                        wp.showCmd = SW_RESTORE;
+                        SetWindowPlacement(hwnd, &wp);
+                    }
+
                     MENUITEMINFO mii;
                     mii.cbSize = sizeof(MENUITEMINFO);
                     mii.fMask = MIIM_STATE;
@@ -641,6 +745,7 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     if(bShowHex) mii.fState = MFS_CHECKED;
                     else mii.fState = MFS_UNCHECKED;
                     SetMenuItemInfo(GetMenu(hwnd), IDM_VIEW_HEX, false, &mii);
+
                     Edit1.ShowHideEdit();
                     if(bShowHex){
                         ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), true);
@@ -652,7 +757,8 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         ShowWindow(hTabs, true);
                         ShowWindow(hStatusBar, true);
                         Edit1.UpdateEdit();
-                        SetWindowPos(hwnd, NULL, 0, 0, 980, 610, SWP_NOMOVE | SWP_NOZORDER);
+                        SetWindowPos(hwnd, NULL, 0, 0, rcWindowHex.right, rcWindowHex.bottom, SWP_NOMOVE | SWP_NOZORDER);
+
                     }
                     else{
                         ShowWindow(GetDlgItem(hwnd, IDC_LBL_INT), false);
@@ -663,8 +769,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                         ShowWindow(GetDlgItem(hwnd, IDC_EDIT_FLOAT), false);
                         ShowWindow(hTabs, false);
                         ShowWindow(hStatusBar, false);
-                        SetWindowPos(hwnd, NULL, 0, 0, 368, 610, SWP_NOMOVE | SWP_NOZORDER);
+                        SetWindowPos(hwnd, NULL, 0, 0, rcWindowNonHex.right, rcWindowNonHex.bottom, SWP_NOMOVE | SWP_NOZORDER);
                     }
+
+                    bNoSaveWindowPos = false;
                 }
                 break;
                 case IDM_MDLEDIT:
@@ -677,6 +785,13 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 {
                     HTREEITEM hSel = TreeView_GetSelection(hTree);
                     TreeView_Expand(hTree, hSel, TVE_TOGGLE);
+                }
+                break;
+                case IDPM_TV_FOLD_ALL:
+                case IDPM_TV_EXPAND_ALL:
+                {
+                    HTREEITEM hSel = TreeView_GetSelection(hTree);
+                    if(!TreeView_ExpandAll(hTree, hSel, (IDPM_TV_FOLD_ALL == nID ? TVE_COLLAPSE : TVE_EXPAND))) std::cout << "Expand/Collapse All failed!\n";
                 }
                 break;
                 case IDPM_TV_FOLD_CHILDREN:
@@ -770,8 +885,21 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
         case WM_SIZE:
         {
             GetClientRect(hwnd, &rcClient);
+            RECT rcWindow;
+            GetWindowRect(hwnd, &rcWindow);
+
+            /// When saving the new window position, we must make sure we are not saving the maximized position.
+            WINDOWPLACEMENT wp;
+            wp.length = sizeof(WINDOWPLACEMENT);
+            GetWindowPlacement(hwnd, &wp);
 
             if(bShowHex){
+                if(wp.showCmd == SW_NORMAL && !bNoSaveWindowPos){
+                    /// Store new hex dimension
+                    rcWindowHex.right = rcWindow.right - rcWindow.left;
+                    rcWindowHex.bottom = rcWindow.bottom - rcWindow.top;
+                }
+
                 SetWindowPos(hDisplayEdit, NULL,
                              ME_TREE_OFFSET_X,
                              ME_DISPLAY_OFFSET_Y,
@@ -826,6 +954,12 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                              NULL);
             }
             else{
+                if(wp.showCmd == SW_NORMAL && !bNoSaveWindowPos){
+                    /// Store new hex dimension
+                    rcWindowNonHex.right = rcWindow.right - rcWindow.left;
+                    rcWindowNonHex.bottom = rcWindow.bottom - rcWindow.top;
+                }
+
                 SetWindowPos(hDisplayEdit, NULL,
                               nCompactOffsetLeft,
                               ME_DATA_EDIT_SIZE_Y,
@@ -962,7 +1096,8 @@ LRESULT APIENTRY DisplaySubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPA
 
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     if(DEBUG_LEVEL > 1000) std::cout << "Processing Tree Action!";
-    std::vector<std::string> cItem(15);
+    std::vector<std::string> cItem;
+    cItem.reserve(40);
     LPARAM lParam;
 
     //Get our selected item
@@ -975,7 +1110,7 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     TreeView_GetItem(hTree, &tvNewSelect);
 
     //Get pointer to data and name
-    cItem[0] = cGet;
+    cItem.push_back(cGet);
     lParam = tvNewSelect.lParam;
 
     //Fill cItem with all the ancestors of our item
@@ -989,18 +1124,18 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     std::string FilenameDwk1 = to_ansi(Model.Dwk1 ? Model.Dwk1->GetFilename() : L"");
     std::string FilenameDwk2 = to_ansi(Model.Dwk2 ? Model.Dwk2->GetFilename() : L"");
     int nFile = -1;
-    while(!bStop && !(cItem[0] == FilenameModel) && !(cItem[0] == FilenameWalkmesh) && !(cItem[0] == FilenamePwk) && !(cItem[0] == FilenameDwk0) && !(cItem[0] == FilenameDwk1) && !(cItem[0] == FilenameDwk2)){
+    while(!bStop && !(cItem.front() == FilenameModel) && !(cItem.front() == FilenameWalkmesh) && !(cItem.front() == FilenamePwk) && !(cItem.front() == FilenameDwk0) && !(cItem.front() == FilenameDwk1) && !(cItem.front() == FilenameDwk2)){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
         tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
-        cItem[n] = cGet;
+        cItem.push_back(cGet);
 
-        if(cItem[n] == FilenameModel) nFile = 0;
-        else if(cItem[n] == FilenameWalkmesh) nFile = 1;
-        else if(cItem[n] == FilenamePwk) nFile = 2;
-        else if(cItem[n] == FilenameDwk0) nFile = 3;
-        else if(cItem[n] == FilenameDwk1) nFile = 4;
-        else if(cItem[n] == FilenameDwk2) nFile = 5;
+        if(cItem.back() == FilenameModel) nFile = 0;
+        else if(cItem.back() == FilenameWalkmesh) nFile = 1;
+        else if(cItem.back() == FilenamePwk) nFile = 2;
+        else if(cItem.back() == FilenameDwk0) nFile = 3;
+        else if(cItem.back() == FilenameDwk1) nFile = 4;
+        else if(cItem.back() == FilenameDwk2) nFile = 5;
         else{
             n++;
             continue;
@@ -1031,42 +1166,6 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     }
 }
 
-#define nl "\r\n"
-INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
-    switch(message){
-        case WM_INITDIALOG:
-        {
-            std::string sText;
-            sText =  "MDLedit " + version.Print();
-            SetWindowText(hwnd, sText.c_str());
-            sText +=
-            nl "by bead-v"
-            nl
-            nl "This application was based on the knowledge of the MDL format from CChargin's MDLOps, later discoveries "
-               "on deadlystream.com forums and also largely on ndix UR's work on the new MDLOps. "
-            nl "A big thank you goes out to all the people who contributed to this knowledge, including:"
-            nl "CChargin, Magnusll, JdNoa, ndix UR, VarsityPuppet, FairStrides, DarthSapiens and others"
-            nl
-            nl "I would also like to thank these people for their tremendous help with testing, feedback and suggestions:"
-            nl "DarthParametric, JCarter426, Quanon, VarsityPuppet, FairStrides"
-            nl
-            nl "A very special thanks goes to ndix UR, both for sharing his very complete knowledge of the format and his "
-               "advice, support and encouragement during the development of this program."
-               "";
-            SetWindowText(GetDlgItem(hwnd, DLG_ID_STATIC), sText.c_str());
-        }
-        break;
-        case WM_CLOSE:
-        {
-            EndDialog(hwnd, wParam);
-        }
-        break;
-        default:
-            return FALSE;
-    }
-    return TRUE;
-}
-
 void ManageIni(IniConst Action){
     std::wstring sIni = sExePath;
     PathRemoveFileSpecW(&sIni.front());
@@ -1080,7 +1179,7 @@ void ManageIni(IniConst Action){
         IniFile Ini;
         Ini.AddIniOption("AreaWeighting", DT_bool, &Model.bSmoothAreaWeighting);
         Ini.AddIniOption("AngleWeighting", DT_bool, &Model.bSmoothAngleWeighting);
-        Ini.AddIniOption("DetermineSmoothing", DT_bool, &Model.bDetermineSmoothing);
+        Ini.AddIniOption("BinaryPostProcess", DT_bool, &Model.bBinaryPostProcess);
         Ini.AddIniOption("WriteAnimations", DT_bool, &Model.bWriteAnimations);
         Ini.AddIniOption("SkinToTrimesh", DT_bool, &Model.bSkinToTrimesh);
         Ini.AddIniOption("LightsaberToTrimesh", DT_bool, &Model.bLightsaberToTrimesh);
@@ -1098,6 +1197,7 @@ void ManageIni(IniConst Action){
         Ini.AddIniOption("WeldGeometry", DT_bool, &Model.bMinimizeVerts2);
         Ini.AddIniOption("UseCreaseAngle", DT_bool, &Model.bCreaseAngle);
         Ini.AddIniOption("CreaseAngle", DT_uint, &Model.nCreaseAngle);
+        Ini.AddIniOption("TreeHierarchy", DT_bool, &bModelHierarchy);
         if(Model.bDebug || Action == INI_READ) Ini.AddIniOption("Debug", DT_bool, &Model.bDebug);
         if(Model.bWriteSmoothing || Action == INI_READ) Ini.AddIniOption("WriteSmoothingArray", DT_bool, &Model.bWriteSmoothing);
         if(bAnalyze || Action == INI_READ) Ini.AddIniOption("Analyze", DT_bool, &bAnalyze);

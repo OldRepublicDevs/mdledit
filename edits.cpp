@@ -209,15 +209,10 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             }
 
             if(bThreshold){
-                if(nArea > 0 && Edit->sSelected == "MDL") Edit->UpdateStatusPositionModel();
-                else if(nArea > 0 && Edit->sSelected == "MDX") Edit->UpdateStatusPositionMdx();
-                else if(nArea > 0 && Edit->sSelected == "WOK") Edit->UpdateStatusPositionBwm(Edit->sSelected);
-                else if(nArea > 0 && Edit->sSelected == "PWK") Edit->UpdateStatusPositionBwm(Edit->sSelected);
-                else if(nArea > 0 && Edit->sSelected == "DWK 0") Edit->UpdateStatusPositionBwm(Edit->sSelected);
-                else if(nArea > 0 && Edit->sSelected == "DWK 1") Edit->UpdateStatusPositionBwm(Edit->sSelected);
-                else if(nArea > 0 && Edit->sSelected == "DWK 2") Edit->UpdateStatusPositionBwm(Edit->sSelected);
+                if(nArea > 0) Edit->UpdateStatusPosition();
 
                 if(bDrag){
+                    Edit->bSelection = true; /// If we are dragging, we are also selecting.
                     Edit->DetermineSelection();
                     Edit->UpdateStatusBar();
                     InvalidateRect(hwnd, &Edit->rcClient, false);
@@ -234,12 +229,14 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
 
             if(nArea == 1){ //We are in the byte view region
                 nClickArea = nArea;
+
                 bDblClick = true;
+
+                Edit->ptPrevious = Edit->ptHover;
+                Edit->bSelection = true; /// true because we select by double clicking
                 Edit->DetermineSelection();
-                Edit->bSelection = true;
                 Edit->UpdateStatusBar();
                 InvalidateRect(hwnd, &Edit->rcClient, false);
-                Edit->ptPrevious = Edit->ptHover;
                 Edit->PrintValues();
 
                 if(Edit->htHoverItem != NULL) TreeView_Select(hTree, Edit->htHoverItem, TVGN_CARET);
@@ -259,16 +256,35 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             if(nArea == 1 || nArea == 2){ //We are in the byte or chAR view region
                 nClickArea = nArea;
                 SetCapture(hwnd); //Capture the mouse even if it leaves the window
-                if(Edit->bSelection || bDrag){
-                    Edit->bSelection = false;
-                    bDrag = false;
-                    InvalidateRect(hwnd, &Edit->rcClient, false);
-                    Edit->UpdateStatusBar(false);
+
+                /// User pressed shift. Do not take this as a new click and a cancellation of the previous selection,
+                /// but as if by doing this, we are actually proceeding with a dragging operation.
+                /// The user must have selected something beforehand.
+                if(wParam & MK_SHIFT && Edit->bSelection){
+                    bDrag = true; /// Make it as if we were dragging
+
+                    /// I forgot what this does - it probably doesn't matter because if click was undefined, bSelection wouldn't be on anyway,
+                    /// we would skip this if anyway.
+                    if(Edit->ptClick.x == -1 || Edit->ptClick.y == -1)
+                        Edit->ptClick = Edit->ptHover;
                 }
-                bClick = true;
-                Edit->ptPrevious = Edit->ptHover;
-                if(!(wParam & MK_SHIFT) || Edit->ptClick.x == -1 || Edit->ptClick.y == -1) Edit->ptClick = Edit->ptHover;
-                Edit->PrintValues(bDrag || Edit->bSelection);
+                else{
+                    if(Edit->bSelection){ /// If there was a previous selection (or we were dragging)
+                        Edit->bSelection = false; /// by clicking we clear the selection
+                        bDrag = false; /// we stop dragging
+                    }
+
+                    bClick = true;
+
+                    Edit->ptPrevious = Edit->ptHover;
+                    Edit->ptClick = Edit->ptHover;
+                }
+
+                Edit->DetermineSelection();
+                InvalidateRect(hwnd, &Edit->rcClient, false);
+                Edit->UpdateStatusBar();
+                Edit->PrintValues();
+
                 if(DEBUG_LEVEL > 20) std::cout << "WM_LBUTTONDOWN: bSelection: " << Edit->bSelection << " bDrag: " << bDrag << "\n";
             }
         }
@@ -277,19 +293,27 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
         {
             if(Edit->sBuffer == nullptr) return DefWindowProc(hwnd, message, wParam, lParam);
             if(Edit->sBuffer->empty()) return DefWindowProc(hwnd, message, wParam, lParam);
+
             ReleaseCapture(); //Release mouse
-            if(bDrag){
-                Edit->ptRelease = Edit->ptHover;
-                if((Edit->ptRelease.x != Edit->ptClick.x || Edit->ptRelease.y != Edit->ptClick.y) && Edit->ptClick.x != -1 && Edit->ptClick.y != -1) Edit->bSelection = true;
-                else if(bDblClick) Edit->bSelection = true;
-                else Edit->bSelection = false;
+
+            if(bDrag){ /// If we are dragging
+                Edit->ptRelease = Edit->ptHover; /// The current hover point is our release point
+                if((Edit->ptRelease.x != Edit->ptClick.x || Edit->ptRelease.y != Edit->ptClick.y) && Edit->ptClick.x != -1 && Edit->ptClick.y != -1)
+                    Edit->bSelection = true; /// If the drag selection is valid, selection is true
+                else if(bDblClick) Edit->bSelection = true; /// If we just double-clicked, selection is true
+                else Edit->bSelection = false; /// If we simply clicked and released, selection is false
             }
+
             bDrag = false;
             bDblClick = false;
             bClick = false;
+
+            //Edit->DetermineSelection();
             InvalidateRect(hwnd, &Edit->rcClient, false);
+            Edit->UpdateStatusBar();
+            Edit->PrintValues();
+
             if(DEBUG_LEVEL > 20) std::cout << "WM_LBUTTONUP: bSelection: " << Edit->bSelection << " bDrag: " << bDrag << "\n";
-            Edit->PrintValues(bDrag || Edit->bSelection);
         }
         break;
         case WM_PAINT:
@@ -303,23 +327,6 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             HBITMAP memBM = CreateCompatibleBitmap(hdcReal, ME_HEX_WIN_SIZE_X, Edit->rcClient.bottom);
             HBITMAP hBMold = (HBITMAP) SelectObject(hdc, memBM);
 
-            HFONT hFont1 = CreateFont(
-                14, //Size
-                0,  //??
-                0,  //??
-                0,  //??
-                FW_REGULAR, // font weight
-                FALSE,	    // italic attribute flag
-                FALSE,	    // underline attribute flag
-                FALSE,	    // strikeout attribute flag
-                DEFAULT_CHARSET,	    // character set identifier
-                OUT_DEFAULT_PRECIS	,	// output precision
-                CLIP_DEFAULT_PRECIS	,	// clipping precision
-                DEFAULT_QUALITY	,	    // output quality
-                DEFAULT_PITCH | FF_DONTCARE	,	// pitch and family
-                "Consolas" 	// pointer to typeface name string
-            );
-
             HBRUSH hFill = CreateSolidBrush(RGB(255, 255, 255));
             Edit->UpdateClientRect();
             RECT rcFile = Edit->rcClient;
@@ -330,226 +337,251 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
             DeleteObject(hFill);
 
             /**/
-        if(!(Edit->sBuffer == nullptr)){
-        if(!Edit->sBuffer->empty()){
+            if(Edit->sBuffer && !Edit->sBuffer->empty()){
 
-            HPEN hPenLine = CreatePen(PS_SOLID, 1, RGB(120, 120, 120));
-            SelectObject(hdc, hPenLine);
-            MoveToEx(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, 0, NULL);
-            LineTo(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, Edit->rcClient.bottom);
-            MoveToEx(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_2_OFFSET, 0, NULL);
-            LineTo(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_2_OFFSET, Edit->rcClient.bottom);
-            DeleteObject(hPenLine);
+                /// Draw the two separator lines
+                HPEN hPenLine = CreatePen(PS_SOLID, 1, RGB(120, 120, 120));
+                SelectObject(hdc, hPenLine);
+                MoveToEx(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, 0, NULL);
+                LineTo(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_OFFSET, Edit->rcClient.bottom);
+                MoveToEx(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_2_OFFSET, 0, NULL);
+                LineTo(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_SEPARATOR_2_OFFSET, Edit->rcClient.bottom);
+                DeleteObject(hPenLine);
 
-            SetTextColor(hdc, RGB(50, 50, 50));
-            //SetBkColor(hdc, GetSysColor(COLOR_MENU));
-            SelectObject(hdc, hFont1);
+                SetTextColor(hdc, RGB(50, 50, 50));
+                //SetBkColor(hdc, GetSysColor(COLOR_MENU));
+                SelectObject(hdc, hMonospace);
 
-            int nRowMin;
-            int nRowMax;
-            int nCharMin;
-            int nCharMax;
-            bool bHilite = false;
-            POINT ptEnd;
-            if(bDrag) ptEnd = Edit->ptHover;
-            else ptEnd = Edit->ptRelease;
-            if(Edit->bSelection || bDrag){
-                    bHilite = true;
-                    //std::cout << string_format("bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
-            }
-            if(ptEnd.y < Edit->ptClick.y || (ptEnd.y == Edit->ptClick.y && ptEnd.x < Edit->ptClick.x)){
-                nRowMin = ptEnd.y;
-                nCharMin = ptEnd.x;
-                nRowMax = Edit->ptClick.y;
-                nCharMax = Edit->ptClick.x;
-            }
-            else{
-                nRowMin = Edit->ptClick.y;
-                nCharMin = Edit->ptClick.x;
-                nRowMax = ptEnd.y;
-                nCharMax = ptEnd.x;
-            }
+                int nRowMin;
+                int nRowMax;
+                int nCharMin;
+                int nCharMax;
 
-            int n = 0;
-            n = Edit->yCurrentScroll / ME_EDIT_NEXT_ROW;
-            int nMaxRowsInScreen = (Edit->rcClient.bottom) / ME_EDIT_NEXT_ROW + 2;
-            int nMax = n + nMaxRowsInScreen;
-            nMax = std::min(nMax, (int) Edit->sBuffer->size()/16 + 1);
-            int nStrlen;
-            char cIntPrint [255];
-            int i = 0;
-            int nDataKnown;
-            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Beginning data while. Starting position: " << n << ". Max: " << nMax << ".\n";
-            char cHexText [50];
-            while(n < nMax){
-                CharsToHex(cHexText, *Edit->sBuffer, n * 16, 16);
-                nStrlen = std::min(((int) Edit->sBuffer->size() - (n * 16))*3, (int) strlen(cHexText));
-                i = 0;
-                while(i < nStrlen){
+                /// Determine whether we are hiliting.
+                bool bHilite = false;
+                POINT ptEnd;
+                if(bDrag) ptEnd = Edit->ptHover;
+                else ptEnd = Edit->ptRelease;
+                if(Edit->bSelection || bDrag){
+                        bHilite = true;
+                        //std::cout << string_format("bSelection: %i bDrag: %i\n", Edit->bSelection, bDrag);
+                }
+                if(ptEnd.y < Edit->ptClick.y || (ptEnd.y == Edit->ptClick.y && ptEnd.x < Edit->ptClick.x)){
+                    nRowMin = ptEnd.y;
+                    nCharMin = ptEnd.x;
+                    nRowMax = Edit->ptClick.y;
+                    nCharMax = Edit->ptClick.x;
+                }
+                else{
+                    nRowMin = Edit->ptClick.y;
+                    nCharMin = Edit->ptClick.x;
+                    nRowMax = ptEnd.y;
+                    nCharMax = ptEnd.x;
+                }
+
+                int n = Edit->yCurrentScroll / ME_EDIT_NEXT_ROW; /// n is the number of rows that are scrolled away, it will be ++ed later
+                int nMaxRowsInScreen = (Edit->rcClient.bottom) / ME_EDIT_NEXT_ROW + 2; /// Max number of rows the screen may display
+                int nMax = n + nMaxRowsInScreen; /// Max number of rows possible by the current scroll
+                nMax = std::min(nMax, (int) Edit->sBuffer->size()/16 + 1); /// Cap the max number of rows by the actual number of rows of the data
+
+                int nDataKnown;
+                if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Beginning data while. Starting position: " << n << ". Max: " << nMax << ".\n";
+                std::string sHexText, sHexCompareText;
+                sHexText.reserve(50);
+                sHexCompareText.reserve(50);
+                for(; n < nMax; n++){
                     SetTextColor(hdc, RGB(50, 50, 50));
                     SetBkColor(hdc, RGB(255, 255, 255));
-                    if(bHexLocation) sprintf(cIntPrint, "%X", n*16);
-                    else sprintf(cIntPrint, "%i", n*16);
-                    AddSignificantZeroes(cIntPrint, 8);
-                    ExtTextOut(hdc, ME_EDIT_PADDING_LEFT, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cIntPrint, strlen(cIntPrint), NULL);
-                    if(Edit->nKnownArray->size() > n*16 + i / 3) nDataKnown = Edit->nKnownArray->at(n*16 + i / 3) & 0xFFFF;
-                    else nDataKnown = 0;
-                    COLORREF rgbUnderline = RGB(0,0,0);
-                    COLORREF rgbText = RGB(0,0,0);
-                    COLORREF rgbBackground = RGB(255,255,255);
-                    if(bHilite && (
-                       ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
-                       || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16 * 3) <= i && (Edit->nSelectEnd % 16 * 3) >= i - 1)
-                       || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) != n && (Edit->nSelectStart % 16 * 3) <= i)
-                       || ((Edit->nSelectEnd / 16) == n && (Edit->nSelectStart / 16) != n && (Edit->nSelectEnd % 16 * 3) >= i - 1))){
-                        rgbText = RGB(255, 255, 255);
-                        rgbUnderline = RGB(255,255,255);
-                        if(nClickArea == 1) rgbBackground = RGB(135, 135, 255);
-                        else rgbBackground = RGB(185, 185, 255);
-                    }
-                    else{
-                        rgbText = DataColor(nDataKnown, false);
-                        rgbUnderline = DataColor(nDataKnown, false);
+                    std::stringstream ssIntPrint;
+                    ssIntPrint << std::uppercase << (bHexLocation ? std::hex : std::dec) << n * 16;
+                    //if(bHexLocation) sprintf(cIntPrint, "%X", n*16);
+                    //else sprintf(cIntPrint, "%i", n*16);
+                    //AddSignificantZeroes(cIntPrint, 8);
+                    std::string sCounter = ssIntPrint.str();
+                    AddSignificantZeroes(sCounter, 8);
+                    ExtTextOut(hdc, ME_EDIT_PADDING_LEFT, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, sCounter.c_str(), sCounter.size(), NULL);
+
+                    CharsToHex(sHexText, *Edit->sBuffer, n * 16, 16);
+                    CharsToHex(sHexCompareText, *Edit->sCompareBuffer, n * 16, 16);
+                    for(int i = 0; i < sHexText.size(); i++){
+                        if(Edit->nKnownArray->size() > n*16 + i / 3) nDataKnown = Edit->nKnownArray->at(n*16 + i / 3) & 0xFFFF;
+                        else nDataKnown = 0;
+                        COLORREF rgbUnderline = DataColor(nDataKnown, false);// RGB(0,0,0);
+                        COLORREF rgbText = DataColor(nDataKnown, false);// RGB(0,0,0);
+                        COLORREF rgbBackground = RGB(255,255,255);
+                        bool bHighlited = false, bDifferent = false, bOutOfRange = false;
+                        if(bHilite && (
+                           ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
+                           || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16 * 3) <= i && (Edit->nSelectEnd % 16 * 3) >= i - 1)
+                           || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) != n && (Edit->nSelectStart % 16 * 3) <= i)
+                           || ((Edit->nSelectEnd / 16) == n && (Edit->nSelectStart / 16) != n && (Edit->nSelectEnd % 16 * 3) >= i - 1))){
+                            bHighlited = true;
+                        }
+
                         if(bShowDiff && Edit->Compare(n*16 + i / 3) > 0){
                             if(i % 3 < 2 || // ignore the space
                                Edit->Compare(n*16 + i / 3) == Edit->Compare(n*16 + i / 3 + 1) && Edit->Compare(n*16 + i / 3) == 2 || // color the space if out of range
                                Edit->Compare(n*16 + i / 3) == Edit->Compare(n*16 + i / 3 + 1) && (Edit->nKnownArray->at(n*16 + i / 3) & 0xFFFF) == (Edit->nKnownArray->at(n*16 + i / 3 + 1) & 0xFFFF)) //color the space if same known value
                             {
                                 if(Edit->Compare(n*16 + i / 3) == 1){ // Different
-                                    rgbText = RGB(255, 255, 255);
-                                    rgbUnderline = RGB(255,255,255);
-                                    rgbBackground = DataColor(nDataKnown, false);
+                                    bDifferent = true;
                                 }
                                 if(Edit->Compare(n*16 + i / 3) == 2){
-                                    rgbBackground = RGB(230, 180, 230); // Out of range
+                                    bOutOfRange = true;
                                 }
                             }
                         }
-                    }
 
-                    SetTextColor(hdc, rgbText);
-                    SetBkColor(hdc, rgbBackground);
-                    if(*(cHexText + i) != ' ' || rgbBackground != RGB(255,255,255)){
-                        ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, cHexText + i, 1, NULL);
-                    }
-
-                    int nVertical = ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll + 12;
-                    int nHorizontal = ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X;
-                    int nExtra = -1;
-                    if(*(cHexText + i + 1) == '\0' && !(Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)) nExtra = 0;
-
-                    if(bShowGroup && (i % 3 == 0 && (n*16 + i / 3 - 1 < 0 || Edit->nKnownArray->at(n*16 + i / 3 - 1) & 0x00010000))){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
-                        SelectObject(hdc, hPenUnderline);
-                        MoveToEx(hdc, nHorizontal - 1,  nVertical, NULL);
-                        LineTo(hdc, nHorizontal - 1,  nVertical - 3);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-                    if(bShowDataStruct && (i % 3 == 0 && (n*16 + i / 3 - 1 < 0 || Edit->nKnownArray->at(n*16 + i / 3 - 1) & 0x00020000))){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
-                        SelectObject(hdc, hPenUnderline);
-                        MoveToEx(hdc, nHorizontal - 3,  nVertical - 3, NULL);
-                        LineTo(hdc, nHorizontal - 3,  nVertical - 12);
-                        LineTo(hdc, nHorizontal + 5,  nVertical - 12);
-                        //MoveToEx(hdc, nHorizontal - 3,  nVertical - 5, NULL);
-                        //LineTo(hdc, nHorizontal - 3,  nVertical + 2);
-                        //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical + 2);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-
-                    if(bShowGroup && (*(cHexText + i) != ' ' || !(Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000))){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
-                        SelectObject(hdc, hPenUnderline);
-                        MoveToEx(hdc, nHorizontal - 1,  nVertical, NULL);
-                        LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra, nVertical);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-
-                    if(bShowGroup && (i % 3 == 1 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
-                        SelectObject(hdc, hPenUnderline);
-                        MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical, NULL);
-                        LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical - 3);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-                    else if(bShowGroup && (i % 3 == 2 && (*(cHexText + i) != ' ' || rgbBackground != RGB(255,255,255)) && Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
-                        SelectObject(hdc, hPenUnderline);
-                        MoveToEx(hdc, nHorizontal + nExtra,  nVertical, NULL);
-                        LineTo(hdc, nHorizontal + nExtra,  nVertical - 3);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-                    /*
-                    if(i % 3 == 1 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00020000){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
-                        SelectObject(hdc, hPenUnderline);
-                        //MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical - 8, NULL);
-                        //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical - 13);
-                        //LineTo(hdc, nHorizontal - 2,  nVertical - 13);
-                        MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 4,  nVertical - 12, NULL);
-                        LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 4,  nVertical);
-                        //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-                    else if(i % 3 == 2 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00020000){
-                        HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
-                        SelectObject(hdc, hPenUnderline);
-                        //MoveToEx(hdc, nHorizontal + nExtra + 1,  nVertical - 8, NULL);
-                        //LineTo(hdc, nHorizontal + nExtra + 1,  nVertical - 13);
-                        //LineTo(hdc, nHorizontal - ME_EDIT_CHAR_SIZE_X - 2,  nVertical - 13);
-                        MoveToEx(hdc, nHorizontal + nExtra + 4,  nVertical - 12, NULL);
-                        LineTo(hdc, nHorizontal + nExtra + 4,  nVertical);
-                        //LineTo(hdc, nHorizontal + nExtra,  nVertical);
-                        DeleteObject(hPenUnderline);
-                        SelectObject(hdc, hFont1);
-                    }
-                    */
-
-
-                    //Do a completely separate draw for the charset.
-                    if(i <= nStrlen / 3){
-                        if(Edit->nKnownArray->size() > n*16 + i) nDataKnown = Edit->nKnownArray->at(n*16 + i) & 0xFFFF;
-                        else nDataKnown = 0;
-                        if(bHilite && (
-                        ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
-                        || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16) <= i && (Edit->nSelectEnd % 16) >= i)
-                        || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) != n && (Edit->nSelectStart % 16) <= i)
-                        || ((Edit->nSelectEnd / 16) == n && (Edit->nSelectStart / 16) != n && (Edit->nSelectEnd % 16) >= i))){
-                            SetTextColor(hdc, RGB(255, 255, 255));
-                            if(nClickArea == 2) SetBkColor(hdc, RGB(135, 135, 255));
-                            else SetBkColor(hdc, RGB(185, 185, 255));
+                        if(bHighlited){
+                            if(bDifferent){
+                                if(nClickArea == 1){
+                                    rgbText = RGB(255, 170, 70);
+                                    rgbUnderline = RGB(255, 170, 70);
+                                }
+                                else{
+                                    rgbText = RGB(255, 210, 170);
+                                    rgbUnderline = RGB(255, 210, 170);
+                                }
+                            }
+                            else{
+                                rgbText = RGB(255, 255, 255);
+                                rgbUnderline = RGB(255,255,255);
+                            }
+                            if(nClickArea == 1) rgbBackground = RGB(135, 135, 255);
+                            else rgbBackground = RGB(185, 185, 255);
                         }
-                        else{
-                            if(nDataKnown == 3) SetTextColor(hdc, DataColor(nDataKnown, false));
-                            else SetTextColor(hdc, RGB(220, 220, 220));
+                        else if(bDifferent){
+                            rgbText = RGB(255, 255, 255);
+                            rgbUnderline = RGB(255,255,255);
+                            rgbBackground = DataColor(nDataKnown, false);
+                        }
+                        else if(bOutOfRange){
+                            rgbBackground = RGB(230, 180, 230); // Out of range
+                        }
+
+                        SetTextColor(hdc, rgbText);
+                        SetBkColor(hdc, rgbBackground);
+                        if(sHexText.at(i) != ' ' || rgbBackground != RGB(255,255,255)){
+                            ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, (bHighlited && bDifferent ? &sHexCompareText.at(i) : &sHexText.at(i)), 1, NULL);
+                        }
+
+                        int nVertical = ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll + 12;
+                        int nHorizontal = ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X;
+                        int nExtra = -1;
+                        if(sHexText.size() >= i+1 && !(Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)) nExtra = 0;
+
+                        if(bShowGroup && (i % 3 == 0 && (n*16 + i / 3 - 1 < 0 || Edit->nKnownArray->at(n*16 + i / 3 - 1) & 0x00010000))){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
+                            SelectObject(hdc, hPenUnderline);
+                            MoveToEx(hdc, nHorizontal - 1,  nVertical, NULL);
+                            LineTo(hdc, nHorizontal - 1,  nVertical - 3);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+                        if(bShowDataStruct && (i % 3 == 0 && (n*16 + i / 3 - 1 < 0 || Edit->nKnownArray->at(n*16 + i / 3 - 1) & 0x00020000))){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
+                            SelectObject(hdc, hPenUnderline);
+                            MoveToEx(hdc, nHorizontal - 3,  nVertical - 3, NULL);
+                            LineTo(hdc, nHorizontal - 3,  nVertical - 12);
+                            LineTo(hdc, nHorizontal + 5,  nVertical - 12);
+                            //MoveToEx(hdc, nHorizontal - 3,  nVertical - 5, NULL);
+                            //LineTo(hdc, nHorizontal - 3,  nVertical + 2);
+                            //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical + 2);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+
+                        if(bShowGroup && (sHexText.at(i) != ' ' || !(Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000))){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
+                            SelectObject(hdc, hPenUnderline);
+                            MoveToEx(hdc, nHorizontal - 1,  nVertical, NULL);
+                            LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra, nVertical);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+
+                        if(bShowGroup && (i % 3 == 1 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
+                            SelectObject(hdc, hPenUnderline);
+                            MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical, NULL);
+                            LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical - 3);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+                        else if(bShowGroup && (i % 3 == 2 && (sHexText.at(i) != ' ' || rgbBackground != RGB(255,255,255)) && Edit->nKnownArray->at(n*16 + i / 3) & 0x00010000)){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, rgbUnderline);
+                            SelectObject(hdc, hPenUnderline);
+                            MoveToEx(hdc, nHorizontal + nExtra,  nVertical, NULL);
+                            LineTo(hdc, nHorizontal + nExtra,  nVertical - 3);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+                        /*
+                        if(i % 3 == 1 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00020000){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
+                            SelectObject(hdc, hPenUnderline);
+                            //MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical - 8, NULL);
+                            //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 1,  nVertical - 13);
+                            //LineTo(hdc, nHorizontal - 2,  nVertical - 13);
+                            MoveToEx(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 4,  nVertical - 12, NULL);
+                            LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra + 4,  nVertical);
+                            //LineTo(hdc, nHorizontal + ME_EDIT_CHAR_SIZE_X + nExtra,  nVertical);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+                        else if(i % 3 == 2 && Edit->nKnownArray->at(n*16 + i / 3) & 0x00020000){
+                            HPEN hPenUnderline = CreatePen(PS_SOLID, 1, RGB(0,0,0));
+                            SelectObject(hdc, hPenUnderline);
+                            //MoveToEx(hdc, nHorizontal + nExtra + 1,  nVertical - 8, NULL);
+                            //LineTo(hdc, nHorizontal + nExtra + 1,  nVertical - 13);
+                            //LineTo(hdc, nHorizontal - ME_EDIT_CHAR_SIZE_X - 2,  nVertical - 13);
+                            MoveToEx(hdc, nHorizontal + nExtra + 4,  nVertical - 12, NULL);
+                            LineTo(hdc, nHorizontal + nExtra + 4,  nVertical);
+                            //LineTo(hdc, nHorizontal + nExtra,  nVertical);
+                            DeleteObject(hPenUnderline);
+                            SelectObject(hdc, hMonospace);
+                        }
+                        */
+
+
+                        /// Do a completely separate draw for the charset.
+                        if(i % 3 == 0){
+                            SetTextColor(hdc, RGB(220, 220, 220));
                             SetBkColor(hdc, RGB(255, 255, 255));
-                        }
-                        char cToWrite;
-                        if(Edit->sBuffer->size() > n*16 + i){
-                            cToWrite = Edit->sBuffer->at(n * 16 + i);
-                            PrepareCharForDisplay(&cToWrite);
-                            ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_CHARSET_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, &cToWrite, 1, NULL);
+
+                            if(bHighlited){
+                                if(bDifferent){
+                                    if(nClickArea == 2){
+                                        SetTextColor(hdc, RGB(255, 170, 70));
+                                    }
+                                    else{
+                                        SetTextColor(hdc, RGB(255, 210, 170));
+                                    }
+                                }
+                                else{
+                                    SetTextColor(hdc, RGB(255, 255, 255));
+                                }
+                                if(nClickArea == 2) SetBkColor(hdc, RGB(135, 135, 255));
+                                else SetBkColor(hdc, RGB(185, 185, 255));
+                            }
+                            else if(nDataKnown == 3){
+                                SetTextColor(hdc, DataColor(nDataKnown, false));
+                            }
+                            if(Edit->sBuffer->size() > n*16 + (i/3)){
+                                char cToWrite = (bHighlited && bDifferent ? Edit->sCompareBuffer->at(n*16 + (i/3)) : Edit->sBuffer->at(n * 16 + (i/3)));
+                                PrepareCharForDisplay(&cToWrite);
+                                ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_CHARSET_OFFSET + (i/3) * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, &cToWrite, 1, NULL);
+                            }
                         }
                     }
-                    i++;
                 }
-                n++;
+                if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Ending data while. Ending position: " << n << "\n";
             }
-            if(DEBUG_LEVEL > 50) std::cout << "Edits: WM_PAINT. Ending data while. Ending position: " << n << "\n";
-        }
-        }
             /**/
 
             BitBlt(hdcReal, 0, 0, ME_HEX_WIN_SIZE_X, Edit->rcClient.bottom, hdc, 0, 0, SRCCOPY);
 
             SelectObject(hdc, hBMold);
-            DeleteObject(hFont1);
             DeleteObject(memBM);
             DeleteDC(hdc);
 
@@ -693,54 +725,34 @@ void Edits::PrintValues(bool bCheck){
     int nSize = nSelectEnd - nSelectStart + 1;
     if(DEBUG_LEVEL > 70) std::cout << "Selected bytes: " << nSize << ".\n";
     std::string sString;
-    //char * cString = new char [nSize+1];
     char cInt [255];
     char cUInt [255];
     char cFloat [255];
-    int n = 0;
-    while(nSelectStart + n <= nSelectEnd){
+    for(int n = 0; nSelectStart + n <= nSelectEnd; n++){
         if(DEBUG_LEVEL > 70) std::cout << "Extract byte #" << nSelectStart + n << ".\n";
-        sString += sBuffer->at(nSelectStart+n);
-        //if(nSelectStart + n == nSelectEnd) cString[n+1] = '\0';
-        n++;
+        sString += (bShowDiff && Compare(nSelectStart+n) == 1 ? sCompareBuffer->at(nSelectStart+n) : sBuffer->at(nSelectStart+n));
     }
-    char cBlock2 [2];
-    char cBlock4 [4];
-    char cBlock8 [8];
 
-    n = 0;
     if(nSize == 1){
-        sprintf(cInt, "%hhi", (signed int) sString.at(0));
-        sprintf(cUInt, "%hhu", (unsigned int) sString.at(0));
+        sprintf(cInt, "%hhi", (signed int) sString.front());
+        sprintf(cUInt, "%hhu", (unsigned int) sString.front());
         sprintf(cFloat, "");
     }
     else if(nSize == 2){
-        while(n < 2){
-            ByteBlock2.bytes[n] = sString[n];
-            n++;
-        }
-        sprintf(cInt, "%hi", ByteBlock2.i);
-        sprintf(cUInt, "%hu", ByteBlock2.ui);
+        sprintf(cInt, "%hi", * (signed short*) &sString.front());
+        sprintf(cUInt, "%hu", * (unsigned short*) &sString.front());
         sprintf(cFloat, "");
 
     }
     else if(nSize == 4){
-        while(n < 4){
-            ByteBlock4.bytes[n] = sString[n];
-            n++;
-        }
-        sprintf(cInt, "%i", ByteBlock4.i);
-        sprintf(cUInt, "%u", ByteBlock4.ui);
-        sprintf(cFloat, "%.16f", ByteBlock4.f);
+        sprintf(cInt, "%i", * (signed int*) &sString.front());
+        sprintf(cUInt, "%u", * (unsigned int*) &sString.front());
+        sprintf(cFloat, "%.16f", * (float*) &sString.front());
     }
     else if(nSize == 8){
-        while(n < 8){
-            ByteBlock8.bytes[n] = sString[n];
-            n++;
-        }
-        sprintf(cInt, "%li", ByteBlock8.i);
-        sprintf(cUInt, "%lu", ByteBlock8.ui);
-        sprintf(cFloat, "%.16g", ByteBlock8.d);
+        sprintf(cInt, "%li", * (signed long*) &sString.front());
+        sprintf(cUInt, "%lu", * (unsigned long*) &sString.front());
+        sprintf(cFloat, "%.16g", * (double*) &sString.front());
     }
     else{
         sprintf(cInt, "");
@@ -900,7 +912,7 @@ void Edits::DetermineSelection(){
     nSelectStart = ptLow.y * 16 + (ptLow.x + 1) / 3;
     if(ptHigh.x <= 0) nSelectEnd = ptHigh.y * 16 - 1;
     else nSelectEnd = ptHigh.y * 16 + (ptHigh.x - 1) / 3;
-    if(nSelectEnd < nSelectStart){
+    if(nSelectEnd < nSelectStart || !bSelection || (nSelectStart > (int) sBuffer->size() - 1 && nSelectEnd > (int) sBuffer->size() - 1)){
         nSelectStart = -1;
         nSelectEnd = -1;
     }
@@ -913,20 +925,13 @@ void Edits::UpdateStatusBar(bool bCheck){
     char cString1 [255];
     char cString2 [255];
     char cString3 [255];
-    if(nSelectEnd == -1 || nSelectStart == -1 || !bCheck || sBuffer == nullptr){
+    if(nSelectEnd == -1 || nSelectStart == -1 || !bCheck || sBuffer == nullptr || !bSelection){
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) "");
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) "");
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) "");
         SetWindowText(hIntEdit, "");
         SetWindowText(hUIntEdit, "");
         SetWindowText(hFloatEdit, "");
-    }
-    else if(nSelectStart == nSelectEnd){
-        if(bHexLocation) sprintf(cString1, "Offset: %X", nSelectStart);
-        else sprintf(cString1, "Offset: %i", nSelectStart);
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) cString1);
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) "");
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) "");
     }
     else{
         if(bHexLocation){
@@ -940,7 +945,8 @@ void Edits::UpdateStatusBar(bool bCheck){
             sprintf(cString3, "Length: %i", nSelectEnd - nSelectStart + 1);
         }
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(0, 0), NULL), (LPARAM) cString1);
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) cString2);
+        if(nSelectStart == nSelectEnd) SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) "");
+        else SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(1, 0), NULL), (LPARAM) cString2);
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(2, 0), NULL), (LPARAM) cString3);
     }
 }
@@ -974,892 +980,50 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
     return RGB(0, 0, 0);
 }
 
-void Edits::UpdateStatusPositionMdx(){
+void Edits::UpdateStatusPosition(){
     if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for the MDX.\n";
-    std::stringstream ssPrint;
-    FileHeader & FH = *(Model.GetFileData());
-    int nPos = ptHover.y * 16 + (ptHover.x) / 3;
-    int nMin;
-    htHoverItem = TreeView_GetRoot(hTree);
-    htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Geometry");
 
-    //Find position
-    Node * NODE = nullptr;
-    int nNodeIndex = 0;
-    for(int b = 0; b < FH.MH.ArrayOfNodes.size(); b++){
-        Node & node = FH.MH.ArrayOfNodes[b];
-        if(node.Head.nType & NODE_MESH &&
-           node.Mesh.nMdxDataSize > 0 &&
-           (nPos >= node.Mesh.nOffsetIntoMdx &&  nPos < (node.Mesh.nOffsetIntoMdx + (node.Mesh.nNumberOfVerts+1) * node.Mesh.nMdxDataSize))){
-               NODE = &node;
-               nNodeIndex = b;
-           }
-    }
-    if(nPos >= Model.Mdx->GetBuffer().size()){
-        //nothing
-        htHoverItem = NULL;
-    }
-    else if(NODE != nullptr){
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, nNodeIndex);
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Vertices");
-        nMin = NODE->Mesh.nOffsetIntoMdx;
-        if((nPos - nMin) / (NODE->Mesh.nMdxDataSize) == NODE->Mesh.nNumberOfVerts){
-            ssPrint << "MDX > " << FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str() << " > Extra Data";
-        }
-        else{
-            htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin) / (NODE->Mesh.nMdxDataSize));
-            ssPrint << "MDX > " << FH.MH.Names.at(NODE->Head.nNodeNumber).sName.c_str() << " > Vertex " << (nPos - nMin) / (NODE->Mesh.nMdxDataSize);
-        }
-    }
-    else{
-        ssPrint << "MDX > Unknown";
-        htHoverItem = NULL;
-    }
+    std::string sType = TabCtrl_GetCurSelName(hTabs);
+    if(DEBUG_LEVEL > 80)
+        std::cout << "Begin updating status position for " << sType << ".\n";
 
-    //Change text
-    std::string sGet ((size_t) 255, '\0');
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
-    if(std::string(sGet.c_str()) != ssPrint.str()){
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
+    BinaryFile * ptr_binfile = nullptr;
+    if(sType == "MDL"){
+        ptr_binfile = &Model;
     }
-}
-
-void Edits::UpdateStatusPositionBwm(const std::string & sType){
-    if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for " << sType << ".\n";
-    std::stringstream ssPrint;
-    BWMHeader * ptr_bwm = nullptr;
-    std::wstring sFilename;
-    if(sType == "WOK"){
-        ptr_bwm = Model.Wok->GetData().get();
-        sFilename = Model.Wok->GetFilename();
+    else if(sType == "MDX"){
+        ptr_binfile = &*Model.Mdx;
+    }
+    else if(sType == "WOK"){
+        ptr_binfile = &*Model.Wok;
     }
     else if(sType == "PWK"){
-        ptr_bwm = Model.Pwk->GetData().get();
-        sFilename = Model.Pwk->GetFilename();
+        ptr_binfile = &*Model.Pwk;
     }
     else if(sType == "DWK 0"){
-        ptr_bwm = Model.Dwk0->GetData().get();
-        sFilename = Model.Dwk0->GetFilename();
+        ptr_binfile = &*Model.Dwk0;
     }
     else if(sType == "DWK 1"){
-        ptr_bwm = Model.Dwk1->GetData().get();
-        sFilename = Model.Dwk1->GetFilename();
+        ptr_binfile = &*Model.Dwk1;
     }
     else if(sType == "DWK 2"){
-        ptr_bwm = Model.Dwk2->GetData().get();
-        sFilename = Model.Dwk2->GetFilename();
-    }
-    else return;
-    BWMHeader & Bwm = *ptr_bwm;
-    int nPos = ptHover.y * 16 + (ptHover.x) / 3;
-    int nMin;
-    htHoverItem = TreeView_GetChildByText(hTree, NULL, sFilename.c_str());
-
-    //Find position
-    if(sType == "WOK" && nPos >= Model.Wok->GetBuffer().size() ||
-       sType == "PWK" && nPos >= Model.Pwk->GetBuffer().size() ||
-       sType == "DWK 0" && nPos >= Model.Dwk0->GetBuffer().size() ||
-       sType == "DWK 1" && nPos >= Model.Dwk1->GetBuffer().size() ||
-       sType == "DWK 2" && nPos >= Model.Dwk2->GetBuffer().size() )
-    {
-        //nothing
-        htHoverItem = NULL;
-    }
-    else if(nPos < 136){
-        //We are in Header
-        if(nPos < 8){
-            ssPrint << sType << " > Header > Version";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Header");
-        }
-        else if(nPos < 12){
-            ssPrint << sType << " > Header > Walkmesh Type";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Header");
-        }
-        else if(nPos < 60){
-            ssPrint << sType << " > Header > Use Hooks";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Header");
-        }
-        else if(nPos < 72){
-            ssPrint << sType << " > Header > Position";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Header");
-        }
-        else if(nPos < 76){
-            ssPrint << sType << " > Header > Number of Vertices";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Vertices");
-        }
-        else if(nPos < 80){
-            ssPrint << sType << " > Header > Offset to Vertex Coordinates";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Vertices");
-        }
-        else if(nPos < 84){
-            ssPrint << sType << " > Header > Number of Faces";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 88){
-            ssPrint << sType << " > Header > Offset to Vertex Indices";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 92){
-            ssPrint << sType << " > Header > Offset to Material IDs";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 96){
-            ssPrint << sType << " > Header > Offset to Face Normals";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 100){
-            ssPrint << sType << " > Header > Offset to Plane Distances";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 104){
-            ssPrint << sType << " > Header > Number of Aabb Structs";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Aabb");
-        }
-        else if(nPos < 108){
-            ssPrint << sType << " > Header > Offset to Aabb Structs";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Aabb");
-        }
-        else if(nPos < 112){
-            ssPrint << sType << " > Header > Unknown";
-            htHoverItem = NULL;
-        }
-        else if(nPos < 116){
-            ssPrint << sType << " > Header > Number of Adjacent Edges";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 120){
-            ssPrint << sType << " > Header > Offset to Adjacent Edges";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        }
-        else if(nPos < 124){
-            ssPrint << sType << " > Header > Number of Outer Edges";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Edges");
-        }
-        else if(nPos < 128){
-            ssPrint << sType << " > Header > Offset to Outer Edges";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Edges");
-        }
-        else if(nPos < 132){
-            ssPrint << sType << " > Header > Number of Perimeters";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Perimeters");
-        }
-        else if(nPos < 136){
-            ssPrint << sType << " > Header > Offset to Perimeters";
-            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Perimeters");
-        }
-    }
-    else if(nPos < Bwm.nOffsetToVerts + Bwm.nNumberOfVerts * 12){
-        //We are in Header
-        nMin = Bwm.nOffsetToVerts;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Vertices");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-        ssPrint << sType << " > Vertices > Vertex " << (nPos - nMin)/12;
-    }
-    else if(nPos < Bwm.nOffsetToIndices + Bwm.nNumberOfFaces * 12){
-        //We are in Header
-        nMin = Bwm.nOffsetToIndices;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-        ssPrint << sType << " > Vertex Indices > Face " << (nPos - nMin)/12 << " > Index " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
-    }
-    else if(nPos < Bwm.nOffsetToMaterials + Bwm.nNumberOfFaces * 4){
-        //We are in Header
-        nMin = Bwm.nOffsetToMaterials;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-        ssPrint << sType << " > Materials > Material " << (nPos - nMin)/4;
-    }
-    else if(nPos < Bwm.nOffsetToNormals + Bwm.nNumberOfFaces * 12){
-        //We are in Header
-        nMin = Bwm.nOffsetToNormals;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-        ssPrint << sType << " > Face Normals > Normal " << (nPos - nMin)/12;
-    }
-    else if(nPos < Bwm.nOffsetToDistances + Bwm.nNumberOfFaces * 4){
-        //We are in Header
-        nMin = Bwm.nOffsetToDistances;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-        ssPrint << sType << " > Plane Distances > Distance " << (nPos - nMin)/4;
-    }
-    else if(nPos < Bwm.nOffsetToAabb + Bwm.nNumberOfAabb * 44){
-        //We are in Header
-        nMin = Bwm.nOffsetToAabb;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Aabb");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/44);
-        ssPrint << sType << " > Aabb Tree > Aabb Struct " << (nPos - nMin)/44;
-    }
-    else if(nPos < Bwm.nOffsetToAdjacentFaces + Bwm.nNumberOfAdjacentFaces * 12){
-        //We are in Header
-        nMin = Bwm.nOffsetToAdjacentFaces;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-        ssPrint << sType << " > Adjacent Faces > Face " << (nPos - nMin)/12 << " > Edge " << (nPos - nMin)/4 - ((nPos - nMin)/12)*3;
-    }
-    else if(nPos < Bwm.nOffsetToEdges + Bwm.nNumberOfEdges * 8){
-        //We are in Header
-        nMin = Bwm.nOffsetToEdges;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Edges");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/8);
-        ssPrint << sType << " > Edges > Edge " << (nPos - nMin)/8;
-    }
-    else if(nPos < Bwm.nOffsetToPerimeters + Bwm.nNumberOfPerimeters * 4){
-        //We are in Header
-        nMin = Bwm.nOffsetToPerimeters;
-        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Perimeters");
-        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-        ssPrint << sType << " > Perimeters > Perimeter " << (nPos - nMin)/4;
+        ptr_binfile = &*Model.Dwk2;
     }
     else{
-        htHoverItem = NULL;
-        ssPrint << sType << " > Unknown";
+        //std::cout << "No appropriate type for data output...\n";
+        return;
     }
 
-    //Change text
-    std::string sGet ((size_t) 255, '\0');
-    SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
-    if(std::string(sGet.c_str()) != ssPrint.str()){
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
-    }
-}
-
-void Edits::UpdateStatusPositionModel(){
-    if(!Model.GetFileData()) return;
-    if(DEBUG_LEVEL > 80) std::cout << "Begin updating status position for the MDL.\n";
-    //char cPrint [255];
-    std::stringstream ssPrint;
-    FileHeader & FH = *(Model.GetFileData());
     int nPos = ptHover.y * 16 + (ptHover.x) / 3;
-    int nMin;
-    HTREEITEM htMdl = TreeView_GetRoot(hTree);
-    HTREEITEM htHeader = TreeView_GetChild(hTree, htMdl);
-    HTREEITEM htAnimations = TreeView_GetNextSibling(hTree, htHeader);
-    HTREEITEM htGeometry = TreeView_GetNextSibling(hTree, htAnimations);
 
-    if(nPos >= Model.GetBuffer().size()){
-        //nothing
-    }
-    else if(nPos < MDL_OFFSET + FH.MH.NameArray.nOffset){
-        //We are in Header
-        if(nPos < 12){
-            ssPrint << "File Header";
-            if(nPos < 4){
-                ssPrint << " > Padding";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 8){
-                ssPrint << " > MDL File Size";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 12){
-                ssPrint << " > MDX File Size";
-                htHoverItem = htHeader;
-            }
-        }
-        else if(nPos < 92){
-            ssPrint << "Geometry Header";
-            if(nPos < 20){
-                ssPrint << " > Function Pointers";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 52){
-                ssPrint << " > Name";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 56){
-                ssPrint << " > Offset to Root Node";
-                htHoverItem = htGeometry;
-            }
-            else if(nPos < 60){
-                ssPrint << " > Number of Nodes";
-                htHoverItem = htGeometry;
-            }
-            else if(nPos < 84){
-                ssPrint << " > Runtime Arrays";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 88){
-                ssPrint << " > Reference Count";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 89){
-                ssPrint << " > Type";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 92){
-                ssPrint << " > Padding";
-                htHoverItem = NULL;
-            }
-        }
-        else{
-            ssPrint << "Model Header";
-            if(nPos < 93){
-                ssPrint << " > Classification";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 94){
-                ssPrint << " > Unknown1";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 95){
-                ssPrint << " > Padding";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 96){
-                ssPrint << " > Affected By Fog";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 100){
-                ssPrint << " > Number of Child Models";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 104){
-                ssPrint << " > Offset to Animation Array";
-                htHoverItem = htAnimations;
-            }
-            else if(nPos < 112){
-                ssPrint << " > Number of Animations";
-                htHoverItem = htAnimations;
-            }
-            else if(nPos < 116){
-                ssPrint << " > Supermodel Reference";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 128){
-                ssPrint << " > Bounding Box Min";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 140){
-                ssPrint << " > Bounding Box Max";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 144){
-                ssPrint << " > Radius";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 148){
-                ssPrint << " > Animation Scale";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 180){
-                ssPrint << " > Supermodel Name";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 184){
-                ssPrint << " > Offset to Head Root";
-                htHoverItem = htGeometry;
-            }
-            else if(nPos < 188){
-                ssPrint << " > Padding";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 192){
-                ssPrint << " > MDX File Size";
-                htHoverItem = htHeader;
-            }
-            else if(nPos < 196){
-                ssPrint << " > MDX Data Offset";
-                htHoverItem = NULL;
-            }
-            else if(nPos < 200){
-                ssPrint << " > Offset to Name Array";
-                htHoverItem = htGeometry;
-            }
-            else if(nPos < 208){
-                ssPrint << " > Number of Names";
-                htHoverItem = htGeometry;
-            }
-        }
-    }
-    else if(nPos < FH.MH.AnimationArray.nOffset + 12){
-        //We are in Names
-        htHoverItem = NULL;
-        if(nPos < FH.MH.Names.at(0).nOffset + 12){
-            nMin = 208;
-            ssPrint << "Name Array > Pointers > Pointer " << (nPos - nMin)/4;
-        }
-        else{
-            int n = 1;
-            bool bFound = false;
-            while(!bFound){
-                if(nPos < FH.MH.Names.at(n).nOffset + 12) bFound = true;
-                else if(n + 1 == FH.MH.NameArray.nCount2){
-                    bFound = true;
-                    n++;
-                }
-                else if(n == FH.MH.NameArray.nCount2){
-                    bFound = true;
-                }
-                else n++;
-            }
-            int nName = n - 1;
-            ssPrint << "Name Array > Strings > \"" << FH.MH.Names.at(nName).sName.c_str() << "\"";
-        }
-    }
-    else if(nPos < FH.MH.GH.nOffsetToRootNode + 12){
-        //We are in Animations
-        htHoverItem = htAnimations;
-        if(nPos < FH.MH.Animations[0].nOffset + 12){
-            nMin = FH.MH.AnimationArray.nOffset + 12;
-            ssPrint << "Animations > Pointers > Pointer" << (nPos - nMin)/4;
-            htHoverItem = TreeView_GetNthChild(hTree, htAnimations, (nPos - nMin)/4);
-        }
-        else{
-            int n = 1;
-            bool bFound = false;
-            while(!bFound){
-                if(nPos < FH.MH.Animations[n].nOffset + 12) bFound = true;
-                else if(n + 1 == FH.MH.Animations.size()){
-                    bFound = true;
-                    n++;
-                }
-                else if(n == FH.MH.Animations.size()){
-                    bFound = true;
-                }
-                else n++;
-            }
-            int nAnimation = n - 1;
-            htHoverItem = TreeView_GetNthChild(hTree, htAnimations, nAnimation);
-            nMin = FH.MH.Animations.at(nAnimation).nOffset + 12;
-            if(nPos < nMin + ANIM_OFFSET){
-                ssPrint << "Animations > " << FH.MH.Animations.at(nAnimation).sName.c_str();
-                if(nPos < nMin + 80){
-                    ssPrint << " > Geometry Header";
-                    if(nPos < nMin + 8){
-                        ssPrint << " > Function Pointers";
-                    }
-                    else if(nPos < nMin + 40){
-                        ssPrint << " > Name";
-                    }
-                    else if(nPos < nMin + 44){
-                        ssPrint << " > Offset to Root Node";
-                    }
-                    else if(nPos < nMin + 48){
-                        ssPrint << " > Number of Nodes";
-                    }
-                    else if(nPos < nMin + 72){
-                        ssPrint << " > Runtime Arrays";
-                    }
-                    else if(nPos < nMin + 76){
-                        ssPrint << " > Reference Count";
-                    }
-                    else if(nPos < nMin + 77){
-                        ssPrint << " > Type";
-                    }
-                    else if(nPos < nMin + 80){
-                        ssPrint << " > Padding";
-                    }
-                }
-            }
-            else{
-                Node * NODE = nullptr;
-                int nNodeIndex = 0;
-                for(int b = 0; b < FH.MH.Animations[nAnimation].ArrayOfNodes.size() && NODE==nullptr; b++){
-                    Node & node = FH.MH.Animations[nAnimation].ArrayOfNodes[b];
-                    if(nPos >= node.nOffset+12 &&
-                       nPos < node.Head.ChildrenArray.nOffset+12 + 4*node.Head.Children.size()){
-                        NODE = &node;
-                        nNodeIndex = b;
-                    }
-                    else if(node.Head.Controllers.size() > 0 &&
-                            nPos >= node.Head.ControllerArray.nOffset+12 &&
-                            nPos < node.Head.ControllerArray.nOffset+12 + 16*node.Head.Controllers.size()){
-                        NODE = &node;
-                        nNodeIndex = b;
-                    }
-                    else if(node.Head.ControllerData.size() > 0 &&
-                            nPos >= node.Head.ControllerDataArray.nOffset+12 &&
-                            nPos < node.Head.ControllerDataArray.nOffset+12 + 4*node.Head.ControllerData.size()){
-                        NODE = &node;
-                        nNodeIndex = b;
-                    }
-                }
-                if(NODE == nullptr){
-                    ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > Unknown";
-                    htHoverItem = NULL;
-                }
-                else{
-                    int nNode = NODE->Head.nNodeNumber;
-                    htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, nNodeIndex);
-                    nMin += ANIM_OFFSET;
-                    if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
-                        if(nPos < NODE->nOffset + 12 + NODE_SIZE_HEADER){
-                            ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header";
-                            if(nPos < MDL_OFFSET + NODE->nOffset + 2){
-                                ssPrint << " > Node Type";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 4){
-                                ssPrint << " > Supernode Number";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 6){
-                                ssPrint << " > Node Number";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 8){
-                                ssPrint << " > Padding";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 12){
-                                ssPrint << " > Offset to Root";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 16){
-                                ssPrint << " > Offset to Parent";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 28){
-                                ssPrint << " > Position";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 44){
-                                ssPrint << " > Orientation";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 56){
-                                htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Children");
-                                ssPrint << " > Child Array";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 68){
-                                htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                                ssPrint << " > Controller Array";
-                            }
-                            else if(nPos < MDL_OFFSET + NODE->nOffset + 80){
-                                htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                                ssPrint << " > Controller Data Array";
-                            }
-                        }
-                        else{
-                            nMin = NODE->nOffset + 12 + NODE_SIZE_HEADER;
-                            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Children");
-                            htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-                            ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Child Pointers > Pointer " << (nPos - nMin)/4;
-                        }
-                    }
-                    else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
-                        nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Controller Data > Float " << (nPos - nMin)/4;
-                    }
-                    else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
-                        nMin = NODE->Head.ControllerArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/16);
-                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Controllers > Controller " << (nPos - nMin)/16;
-                    }
-                    else{
-                        ssPrint << "Animations > " << FH.MH.Animations[nAnimation].sName.c_str() << " > " << FH.MH.Names.at(nNode).sName.c_str() << " > Unknown";
-                    }
-                }
-            }
-        }
-    }
-    else{
-        //We are in Geometry
-        htHoverItem = htGeometry;
-        Node * NODE = nullptr;
-        int nNodeIndex = 0;
-        for(int b = 0; b < FH.MH.ArrayOfNodes.size() && NODE==nullptr; b++){
-            Node & node = FH.MH.ArrayOfNodes[b];
-            if(nPos >= node.nOffset+12 &&
-               nPos < node.Head.ChildrenArray.nOffset+12 + 4 * node.Head.ChildrenArray.nCount){
-                NODE = &node;
-                nNodeIndex = b;
-            }
-            else if(node.Head.Controllers.size() > 0 &&
-                    nPos >= node.Head.ControllerArray.nOffset+12 &&
-                    nPos < node.Head.ControllerArray.nOffset+12 + 16 * node.Head.ControllerArray.nCount){
-                NODE = &node;
-                nNodeIndex = b;
-            }
-            else if(node.Head.ControllerData.size() > 0 &&
-                    nPos >= node.Head.ControllerDataArray.nOffset+12 &&
-                    nPos < node.Head.ControllerDataArray.nOffset+12 + 4 * node.Head.ControllerDataArray.nCount){
-                NODE = &node;
-                nNodeIndex = b;
-            }
-        }
+    std::string sCaption;
+    if(nPos < ptr_binfile->GetBuffer().size()) sCaption = ptr_binfile->GetPosition(nPos);
 
-        if(NODE == NULL){
-            ssPrint << "Geometry > Unknown";
-            htHoverItem = NULL;
-        }
-        else{
-            htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, nNodeIndex);
-            int nNode = NODE->Head.nNodeNumber;
-            int nType = NODE->Head.nType;
-            if(nPos < NODE->Head.ChildrenArray.nOffset + 12 + 4 * NODE->Head.ChildrenArray.nCount){
-                int nHeaderSize = 12;
-                bool bFound = false;
-                if(nType & NODE_HEADER && !bFound){
-                    nHeaderSize += NODE_SIZE_HEADER;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Basic";
-                        bFound = true;
-                        if(nPos < MDL_OFFSET + NODE->nOffset + 2){
-                            ssPrint << " > Node Type";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 4){
-                            ssPrint << " > Supernode Number";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 6){
-                            ssPrint << " > Node Number";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 8){
-                            ssPrint << " > Padding";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 12){
-                            ssPrint << " > Offset to Root";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 16){
-                            ssPrint << " > Offset to Parent";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 28){
-                            ssPrint << " > Position";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 44){
-                            ssPrint << " > Orientation";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 56){
-                            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Children");
-                            ssPrint << " > Child Array";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 68){
-                            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                            ssPrint << " > Controller Array";
-                        }
-                        else if(nPos < MDL_OFFSET + NODE->nOffset + 80){
-                            htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                            ssPrint << " > Controller Data Array";
-                        }
-                    }
-                }
-                if(nType & NODE_LIGHT && !bFound){
-                    nHeaderSize += NODE_SIZE_LIGHT;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Light");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Light";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_EMITTER && !bFound){
-                    nHeaderSize += NODE_SIZE_EMITTER;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Emitter");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Emitter";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_REFERENCE && !bFound){
-                    nHeaderSize += NODE_SIZE_REFERENCE;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Reference");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Reference";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_MESH && !bFound){
-                    nHeaderSize += NODE_SIZE_MESH;
-                    if(Model.bXbox) nHeaderSize -= 4;
-                    if(!Model.bK2) nHeaderSize -= 8;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Mesh";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_SKIN && !bFound){
-                    nHeaderSize += NODE_SIZE_SKIN;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Skin");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Skin";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_DANGLY && !bFound){
-                    nHeaderSize += NODE_SIZE_DANGLY;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Danglymesh");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Danglymesh";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_AABB && !bFound){
-                    nHeaderSize += NODE_SIZE_AABB;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Aabb");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Aabb";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_SABER && !bFound){
-                    nHeaderSize += NODE_SIZE_SABER;
-                    if(nPos < NODE->nOffset + nHeaderSize){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Lightsaber");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Header > Lightsaber";
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_HEADER && !bFound){
-                    if(nPos >= NODE->Head.ChildrenArray.nOffset + 12){
-                        nMin = NODE->Head.ChildrenArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Children");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Child Array > Pointer " << (nPos - nMin)/4;
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_LIGHT && !bFound){
-                    /// MISSING, ADD LIGHT DATA
-                }
-                if(nType & NODE_EMITTER && !bFound){
-                    //Emitters have no data
-                }
-                if(nType & NODE_REFERENCE && !bFound){
-                    //References have no data
-                }
-                if(nType & NODE_MESH && !bFound){
-                    if(nPos >= NODE->Mesh.nVertIndicesLocation + 12 && NODE->Mesh.IndexLocationArray.nCount > 0){
-                        nMin = NODE->Mesh.nVertIndicesLocation + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Vert Indices > Face " << (nPos - nMin)/6;
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Mesh.MeshInvertedCounterArray.nOffset + 12){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Inverted Counter";
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Mesh.IndexLocationArray.nOffset + 12){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Pointer to Vert Indices";
-                        bFound = true;
-                    }
-                    else if(!Model.bXbox && nPos >= NODE->Mesh.nOffsetToVertArray + 12){
-                        nMin = NODE->Mesh.nOffsetToVertArray + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Vertices");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Vert Coordinates > Vert " << (nPos - nMin)/12;
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Mesh.IndexCounterArray.nOffset + 12){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Pointer to Vert Number";
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Mesh.FaceArray.nOffset + 12){
-                        nMin = NODE->Mesh.FaceArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Mesh");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Faces");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/32);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Mesh > Faces > Face " << (nPos - nMin)/32;
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_SKIN && !bFound){
-                    if(nPos >= NODE->Skin.Array8Array.nOffset + 12){
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Skin");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Bones");
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Array8 (unused)";
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Skin.TBoneArray.nOffset + 12){
-                        nMin = NODE->Skin.TBoneArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Skin");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Bones");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > T-Bones > " << FH.MH.Names.at((nPos - nMin)/12).sName.c_str();
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Skin.QBoneArray.nOffset + 12){
-                        nMin = NODE->Skin.QBoneArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Skin");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Bones");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/16);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Q-Bones > " << FH.MH.Names.at((nPos - nMin)/16).sName.c_str();
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Skin.nOffsetToBonemap + 12){
-                        nMin = NODE->Skin.nOffsetToBonemap + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Skin");
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Bones");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, Model.bXbox ? (nPos - nMin)/2 : (nPos - nMin)/4);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Skin > Bonemap > " << FH.MH.Names.at(Model.bXbox ? (nPos - nMin)/2 : (nPos - nMin)/4).sName.c_str();
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_DANGLY && !bFound){
-                    if(nPos >= NODE->Dangly.nOffsetToData2 + 12){
-                        nMin = NODE->Dangly.nOffsetToData2 + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Danglymesh");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Danglymesh > Data2 > Vertex " << (nPos - nMin)/12;
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Dangly.ConstraintArray.nOffset + 12){
-                        nMin = NODE->Dangly.ConstraintArray.nOffset + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Danglymesh");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/4);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Danglymesh > Constraints > Constraint " << (nPos - nMin)/4;
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_AABB && !bFound){
-                    if(nPos >= NODE->Walkmesh.nOffsetToAabb + 12){
-                        nMin = NODE->Walkmesh.nOffsetToAabb + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Aabb");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/40);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Aabb > Aabb Tree > Aabb Struct " << (nPos - nMin)/40;
-                        bFound = true;
-                    }
-                }
-                if(nType & NODE_SABER && !bFound){
-                    if(nPos >= NODE->Saber.nOffsetToSaberUVs + 12){
-                        nMin = NODE->Saber.nOffsetToSaberUVs + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Lightsaber");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/8);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Lightsaber > UVs > UV " << (nPos - nMin)/8;
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Saber.nOffsetToSaberNormals + 12){
-                        nMin = NODE->Saber.nOffsetToSaberNormals + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Lightsaber");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Lightsaber > Normals > Normal " << (nPos - nMin)/12;
-                        bFound = true;
-                    }
-                    else if(nPos >= NODE->Saber.nOffsetToSaberVerts + 12){
-                        nMin = NODE->Saber.nOffsetToSaberVerts + 12;
-                        htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Lightsaber");
-                        htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/12);
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Lightsaber > Vertices > Vertex " << (nPos - nMin)/12;
-                        bFound = true;
-                    }
-                }
-                if(!bFound){
-                        ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Unknown";
-                }
-            }
-            else if(nPos >= NODE->Head.ControllerDataArray.nOffset + 12 && NODE->Head.ControllerDataArray.nOffset > 0){
-                nMin = NODE->Head.ControllerDataArray.nOffset + 12;
-                htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Controller Data > Float " << (nPos - nMin)/4;
-            }
-            else if(nPos >= NODE->Head.ControllerArray.nOffset + 12 && NODE->Head.ControllerArray.nOffset > 0){
-                nMin = NODE->Head.ControllerArray.nOffset + 12;
-                htHoverItem = TreeView_GetChildByText(hTree, htHoverItem, "Controllers");
-                htHoverItem = TreeView_GetNthChild(hTree, htHoverItem, (nPos - nMin)/16);
-                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Data > Controllers > Controller " << (nPos - nMin)/16;
-            }
-            else{
-                ssPrint << "Geometry > " << FH.MH.Names.at(nNode).sName.c_str() << " > Unknown";
-            }
-        }
-    }
-
+    /// Change text
     std::string sGet ((size_t) 255, '\0');
     SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
-    if(std::string(sGet.c_str()) != ssPrint.str()){
-        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) ssPrint.str().c_str());
+    if(std::string(sGet.c_str()) != sCaption){
+        SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) sCaption.c_str());
     }
 }
 

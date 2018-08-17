@@ -5,9 +5,33 @@
 #include <algorithm>
 #include <Shlwapi.h>
 
-BB2 ByteBlock2;
-BB4 ByteBlock4;
-BB8 ByteBlock8;
+std::wstring Path::GetFullPath(){
+    return sFullPath;
+}
+std::wstring Path::GetDirectory(){
+    std::wstring sReturn = sFullPath;
+    PathRemoveFileSpecW(&sReturn.front());
+    sReturn = sReturn.c_str();
+    sReturn += L"\\";
+    return sReturn;
+}
+std::wstring Path::GetFilename(){
+    std::wstring sReturn = sFullPath;    PathStripPathW(&sReturn.front());
+    sReturn = sReturn.c_str();
+    return sReturn;
+}
+std::wstring Path::GetFilenameNoExt(){
+    std::wstring sReturn = sFullPath;
+    sReturn = PathFindFileNameW(&sReturn.front());
+    PathRemoveExtensionW(&sReturn.front());
+    sReturn = sReturn.c_str();
+    return sReturn;
+}
+std::wstring Path::GetExtension(){
+    std::wstring sReturn = sFullPath;
+    sReturn = PathFindExtensionW(&sReturn.front());
+    return sReturn;
+}
 
 HANDLE bead_CreateReadFile(const std::string & sFilename){
     return CreateFileA(sFilename.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -50,11 +74,26 @@ bool bead_WriteFile(HANDLE hFile, const std::string & sBuffer, unsigned long nTo
 }
 
 void File::SetFilePath(std::wstring & sPath){
-    sFullPath = sPath.c_str();
-    sFile = sPath;    PathStripPathW(&sFile.front());
-    sFile.resize(wcslen(sFile.c_str()));
+    path.Set(sPath);
 }
 
+unsigned char * BinaryFile::ReadBytes(unsigned nBytes, int nMarking, const std::string & sDesc, unsigned * p_insert, bool bAdvancePlaceholder){
+    unsigned nCurPos = p_insert == nullptr ? nPosition : *p_insert;
+
+    if(sDesc.length() && nBytes) positions.emplace_back(nCurPos, nBytes, sDesc);
+
+    if(nCurPos + nBytes > sBuffer.size()){
+        throw mdlexception("Attempting to read in " + GetName() + " at offset " + std::to_string(nCurPos) + ", which would read past the buffer size (" + std::to_string(sBuffer.size()) + ").");
+    }
+
+    MarkBytes(nCurPos, nBytes, nMarking);
+
+    if(p_insert == nullptr) nPosition += nBytes;
+    else if(bAdvancePlaceholder) *p_insert += nBytes;
+
+    return (unsigned char*) &sBuffer.at(nCurPos);
+}
+/*
 int BinaryFile::ReadInt(unsigned int * nCurPos, int nMarking, int nBytes){
     //std::cout << string_format("ReadInt() at position %i.\n", *nCurPos);
     if(*nCurPos+nBytes > sBuffer.size()){
@@ -141,26 +180,48 @@ void BinaryFile::ReadString(std::string & sArray1, unsigned int * nCurPos, int n
     MarkBytes(*nCurPos, nNumber, nMarking);
     *nCurPos += nNumber;
 }
+*/
 
 void BinaryFile::MarkDataBorder(unsigned nOffset){
     bKnown.at(nOffset) = bKnown.at(nOffset) | 0x20000;
 }
 
 void BinaryFile::MarkBytes(unsigned int nOffset, int nLength, int nClass){
-    int n = 0;
-    //std::cout << "Setting known: offset " << nOffset << " length " << nLength << " class " << nClass << "\n.";
-    if(nOffset > 0) bKnown[nOffset - 1] = bKnown[nOffset - 1] | 0x10000;
-    while(n < nLength && n < sBuffer.size()){
-        if(bKnown[nOffset + n] & 0xFFFF != 0){
-            std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown[nOffset + n] << " at offset " << nOffset + n << " in " << GetName() << "! Trying to reinterpret as " << nClass << ".\n";
+    //std::cout << "Setting known: offset " << nOffset << " length " << nLength << " class " << nClass << ".\n";
+    if(nOffset > 0) bKnown.at(nOffset - 1) = bKnown.at(nOffset - 1) | 0x10000;
+    for(unsigned n = 0; n < nLength && n < sBuffer.size(); n++){
+        if((bKnown.at(nOffset + n) & 0xFFFF) != 0){
+            std::cout << "MarkBytes(): Warning! Data already interpreted as " << bKnown.at(nOffset + n) << " at offset " << nOffset + n << " in " << GetName() << "! Trying to reinterpret as " << nClass << ".\n";
             throw mdlexception("Interpreting already interpreted data in " + GetName() + ".");
         }
-        bKnown[nOffset + n] = (nClass & 0xFFFF) + (bKnown[nOffset + n] & 0xFFFF0000);
-        if(n + 1 == nLength) bKnown[nOffset + n] = bKnown[nOffset + n] | 0x10000;
-        n++;
+        bKnown.at(nOffset + n) = (nClass & 0xFFFF) + (bKnown.at(nOffset + n) & 0xFFFF0000);
+        if(n + 1 == nLength) bKnown.at(nOffset + n) = bKnown.at(nOffset + n) | 0x10000;
     }
 }
 
+/**
+    Writes nBytes number of bytes from the pointer p_bytes. If p_insert is nullptr,
+    it appends the bytes to the buffer vector. If p_insert is valid, then it points
+    to a position in the buffer, and that's where the bytes will be written.
+**/
+unsigned BinaryFile::WriteBytes(unsigned char * p_bytes, unsigned nBytes, int nMarking, const std::string & sDesc, unsigned * p_insert){
+    //std::cout << "Writing data " << nBytes << " bytes long to " << (p_insert ? *p_insert : nPosition) << ".\n";
+    unsigned nReturn = nPosition;
+    for(int n = 0; n < nBytes; n++){
+        if(p_insert == nullptr){
+            sBuffer.push_back(*(p_bytes + n));
+            bKnown.push_back(nMarking | (n + 1 == nBytes ? 0x10000 : 0));
+        }
+        else sBuffer.at((*p_insert) + n) = *(p_bytes + n);
+    }
+    //if(nMarking > 0) MarkBytes(nReturn, nBytes, nMarking);
+    if(p_insert == nullptr){
+        if(sDesc.length() && nBytes) positions.emplace_back(nPosition, nBytes, sDesc);
+        nPosition += nBytes;
+    }
+    return nReturn;
+}
+/*
 void BinaryFile::WriteIntToPH(int nInt, int nPH, unsigned int & nContainer){
     ByteBlock4.i = nInt;
     int n = 0;
@@ -264,7 +325,7 @@ void BinaryFile::WriteByte(char cByte, int nKnown){
     bKnown.push_back(nKnown | 0x10000);
     nPosition++;
 }
-
+*/
 bool TextFile::ReadFloat(double & fNew, std::string * sGet, bool bPrint){
     std::string sCheck;
     //First skip all spaces
@@ -443,24 +504,40 @@ void TextFile::SkipLine(){
         //throw mdlexception("Error: Trying to skip a line at the end of the file.");
     }
 
-    bool bStop = false;
-    while(nPosition + 1 < sBuffer.size() && !bStop){
+    while(nPosition + 1 < sBuffer.size()){
         if(sBuffer[nPosition] != 0x0D && sBuffer[nPosition] != 0x0A) nPosition++;
-        else bStop = true;
+        else break;
     }
 
     if(sBuffer[nPosition] == 0x0A){
         nPosition+=1;
+        nLine++;
         return;
     }
     else if(sBuffer[nPosition] == 0x0D && sBuffer[nPosition+1] == 0x0A){
         nPosition+=2;
+        nLine++;
         return;
     }
     else if(sBuffer[nPosition] == 0x0D){
         nPosition+=1;
+        nLine++;
         return;
     }
+}
+
+void File::SavePosition(unsigned n){
+    if(SavedPosition.size() <= n) SavedPosition.resize(n+1);
+    if(SavedLine.size() <= n) SavedLine.resize(n+1);
+    SavedPosition.at(n) = nPosition;
+    SavedLine.at(n) = nLine;
+}
+
+bool File::RestorePosition(unsigned n){
+    if(SavedPosition.size() <= n || SavedLine.size() <= n) return false;
+    nPosition = SavedPosition.at(n);
+    nLine = SavedLine.at(n);
+    return true;
 }
 
 bool TextFile::EmptyRow(){
@@ -477,7 +554,7 @@ bool TextFile::EmptyRow(){
     return true;
 }
 
-bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase, bool bStrictNoNewLine){
+bool TextFile::ReadUntilText(std::string & sHandle, bool bToLowercase){
     sHandle = ""; //Make sure the handle is cleared
     while(nPosition < sBuffer.size() &&
           sBuffer[nPosition] != '#' &&

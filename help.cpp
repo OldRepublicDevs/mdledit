@@ -412,8 +412,8 @@ std::string GetHelpData(const std::string & sTab){
            "Vertex normals are calculated by putting together the face normals vectors of all the faces that the vertex either belongs to or smooths to "
            "(the faces the vertex smooths to maybe be in other elements or meshes as well). "
            "Whether the vertex smooths to that face is determined from the smoothing groups that are given for every face. If a face the vertex belongs to "
-           "has at least one matching smoothing group with another face, then this other face's normal is calculated in as well. Provided the other face has "
-           "a vertex in the same position as our vertex under consideration, of course."
+           "has at least one matching smoothing group with another face, then the other face's normal is calculated in as well, provided the other face has "
+           "a vertex in the same position as our vertex under consideration."
         nl ""
         nl "There are "
            "three options that affect the vertex normal calculation at this point. They can be found in Edit -> Settings."
@@ -432,7 +432,7 @@ std::string GetHelpData(const std::string & sTab){
            "because of it's smoothing group setup the vertex normal may be unwantedly affected by certain faces which may cause it to point in a wrong direction. "
            "In the game, this will appear as a black or shaded spot around the problematic vertex."
         nl ""
-        nl "When loading a binary model, MDLedit will try to calculate the smoothing groups from the vertex normals (if this is enabled under Edit -> Settings). "
+        nl "When loading a binary model, MDLedit will try to calculate the smoothing groups from the vertex normals (if the option 'Recalculate vectors' is enabled under Edit -> Settings). "
            "It does that by calculating the vertex normal "
            "based on every possible combination of smoothing groups on the surrounding faces and looks for a match. "
            "Since this vertex normal calculation also uses the options under "
@@ -452,4 +452,41 @@ std::string GetHelpData(const std::string & sTab){
         ;
     }
     return ssHelp.str();
+}
+
+
+#define nl "\r\n"
+INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam){
+    switch(message){
+        case WM_INITDIALOG:
+        {
+            std::string sText;
+            sText =  "MDLedit " + version.Print();
+            SetWindowText(hwnd, sText.c_str());
+            sText +=
+            nl "by bead-v"
+            nl
+            nl "This application was based on the knowledge of the MDL format from CChargin's MDLOps, later discoveries "
+               "on deadlystream.com forums and also largely on ndix UR's work on the new MDLOps. "
+            nl "A big thank you goes out to all the people who contributed to this knowledge, including:"
+            nl "CChargin, Magnusll, JdNoa, ndix UR, VarsityPuppet, FairStrides, DarthSapiens and others"
+            nl
+            nl "I would also like to thank these people for their tremendous help with testing, feedback and suggestions:"
+            nl "DarthParametric, JCarter426, Quanon, VarsityPuppet, FairStrides"
+            nl
+            nl "A very special thanks goes to ndix UR, both for sharing his very complete knowledge of the format and his "
+               "advice, support and encouragement during the development of this program."
+               "";
+            SetWindowText(GetDlgItem(hwnd, DLG_ID_STATIC), sText.c_str());
+        }
+        break;
+        case WM_CLOSE:
+        {
+            EndDialog(hwnd, wParam);
+        }
+        break;
+        default:
+            return FALSE;
+    }
+    return TRUE;
 }

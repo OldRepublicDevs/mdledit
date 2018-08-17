@@ -219,7 +219,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Geometry" || (sItems.at(3) == "Geometry" && (sItems.at(1) == "Children" || sItems.at(1) == "Parent"))){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str();
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str();
             TokenData.push_back(TokenDatum("position_x", "double", "MDL", (void*) &node.Head.vPos.fX, MDL_OFFSET + node.nOffset + 16));
             TokenData.push_back(TokenDatum("position_y", "double", "MDL", (void*) &node.Head.vPos.fY, MDL_OFFSET + node.nOffset + 20));
             TokenData.push_back(TokenDatum("position_z", "double", "MDL", (void*) &node.Head.vPos.fZ, MDL_OFFSET + node.nOffset + 24));
@@ -230,7 +230,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Light"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Light";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Light";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_LIGHT);
             TokenData.push_back(TokenDatum("lightpriority", "int", "MDL", (void*) &node.Light.nLightPriority, MDL_OFFSET + node.nOffset + nHeaderOffset + 64));
             TokenData.push_back(TokenDatum("ambientonly", "int", "MDL", (void*) &node.Light.nAmbientOnly, MDL_OFFSET + node.nOffset + nHeaderOffset + 68));
@@ -243,10 +243,10 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Lens Flares"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Light > " << sItems.at(0);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Light > " << sItems.at(0);
 
             /// First let's get the number of the bone from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 11) == "Lens Flare "){
                 std::string sNum (safesubstr(sItems.at(0), 11, std::string::npos));
                 try{
@@ -256,7 +256,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     Error("The label of the lens flare in the tree is not properly formatted!");
                 }
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 if(nNum < node.Light.FlareSizes.size()){
                     TokenData.push_back(TokenDatum("size", "double", "MDL", (void*) &node.Light.FlareSizes.at(nNum), MDL_OFFSET + node.Light.FlareSizeArray.nOffset + 4 * nNum + 0));
                 }
@@ -272,7 +272,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Emitter"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Emitter";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Emitter";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_EMITTER);
             TokenData.push_back(TokenDatum("deadspace", "double", "MDL", (void*) &node.Emitter.fDeadSpace, MDL_OFFSET + node.nOffset + nHeaderOffset + 0));
             TokenData.push_back(TokenDatum("blastradius", "double", "MDL", (void*) &node.Emitter.fBlastRadius, MDL_OFFSET + node.nOffset + nHeaderOffset + 4));
@@ -327,7 +327,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Reference"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Reference";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Reference";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_REFERENCE);
             TokenData.push_back(TokenDatum("refmodel", "string", "MDL", (void*) &node.Reference.sRefModel, MDL_OFFSET + node.nOffset + nHeaderOffset + 0));
             TokenData.back().nMaxString = 32;
@@ -335,7 +335,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Mesh"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Mesh";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Mesh";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_MESH);
             TokenData.push_back(TokenDatum("texturenumber", "unsigned short", "MDL", (void*) &node.Mesh.nTextureNumber, MDL_OFFSET + node.nOffset + nHeaderOffset + 306));
             TokenData.push_back(TokenDatum("texture1", "string", "MDL", (void*) &node.Mesh.cTexture1, MDL_OFFSET + node.nOffset + nHeaderOffset + 88));
@@ -385,11 +385,13 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Vertices"){
             Vertex & vert = * (Vertex * ) lParam;
-            Node & node = mdl.GetNodeByNameIndex(vert.MDXData.nNodeNumber);
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Mesh > Vertices > " << sItems.at(0);
+            MdlInteger<unsigned short> nNodeIndex = mdl.GetNodeIndexByNameIndex(vert.MDXData.nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("GetTokenData() error: dealing with a name index that does not have a node in geometry.");
+            Node & node = Data.ArrayOfNodes.at(nNodeIndex);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Mesh > Vertices > " << sItems.at(0);
 
             /// First let's get the number of the vertex from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 7) == "Vertex "){
                 std::string sNum (safesubstr(sItems.at(0), 7, std::string::npos));
                 try{
@@ -399,7 +401,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     Error("The label of the vertex in the tree is not properly formatted!");
                 }
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 if(!mdl.bXbox){
                     TokenData.push_back(TokenDatum("mdl_vertex_x", "double", "MDL", (void*) &vert.fX, MDL_OFFSET + node.Mesh.nOffsetToVertArray + 12 * nNum + 0));
                     TokenData.push_back(TokenDatum("mdl_vertex_y", "double", "MDL", (void*) &vert.fY, MDL_OFFSET + node.Mesh.nOffsetToVertArray + 12 * nNum + 4));
@@ -492,11 +494,13 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Faces"){
             Face & face = * (Face*) lParam;
-            Node & node = mdl.GetNodeByNameIndex(face.nNodeNumber);
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Mesh > Faces > " << sItems.at(0);
+            MdlInteger<unsigned short> nNodeIndex = mdl.GetNodeIndexByNameIndex(face.nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("GetTokenData() error: dealing with a name index that does not have a node in geometry.");
+            Node & node = Data.ArrayOfNodes.at(nNodeIndex);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Mesh > Faces > " << sItems.at(0);
 
             /// First let's get the number of the bone from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 5) == "Face "){
                 std::string sNum (safesubstr(sItems.at(0), 5, std::string::npos));
                 try{
@@ -506,7 +510,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     Error("The label of the face in the tree is not properly formatted!");
                 }
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 TokenData.push_back(TokenDatum("normal_x", "double", "MDL", (void*) &face.vNormal.fX, MDL_OFFSET + node.Mesh.FaceArray.nOffset + 32 * nNum + 0));
                 TokenData.push_back(TokenDatum("normal_y", "double", "MDL", (void*) &face.vNormal.fY, MDL_OFFSET + node.Mesh.FaceArray.nOffset + 32 * nNum + 4));
                 TokenData.push_back(TokenDatum("normal_z", "double", "MDL", (void*) &face.vNormal.fZ, MDL_OFFSET + node.Mesh.FaceArray.nOffset + 32 * nNum + 8));
@@ -516,16 +520,18 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Bones"){
             Bone & bone = * (Bone*) lParam;
-            Node & node = mdl.GetNodeByNameIndex(bone.nNodeNumber);
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Skin > Bones > " << sItems.at(0);
+            MdlInteger<unsigned short> nNodeIndex = mdl.GetNodeIndexByNameIndex(bone.nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("GetTokenData() error: dealing with a name index that does not have a node in geometry.");
+            Node & node = Data.ArrayOfNodes.at(nNodeIndex);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Skin > Bones > " << sItems.at(0);
 
             /// First let's get the number of the bone from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 5) == "Bone "){
                 std::string sNum (safesubstr(sItems.at(0), 5, std::string::npos));
                 nNum = mdl.GetNameIndex(sNum);
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 TokenData.push_back(TokenDatum("tbone_x", "double", "MDL", (void*) &bone.TBone.fX, MDL_OFFSET + node.Skin.TBoneArray.nOffset + 12 * nNum + 0));
                 TokenData.push_back(TokenDatum("tbone_y", "double", "MDL", (void*) &bone.TBone.fY, MDL_OFFSET + node.Skin.TBoneArray.nOffset + 12 * nNum + 4));
                 TokenData.push_back(TokenDatum("tbone_z", "double", "MDL", (void*) &bone.TBone.fZ, MDL_OFFSET + node.Skin.TBoneArray.nOffset + 12 * nNum + 8));
@@ -537,7 +543,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Danglymesh"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Danglymesh";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Danglymesh";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_DANGLY);
             TokenData.push_back(TokenDatum("displacement", "double", "MDL", (void*) &node.Dangly.fDisplacement, MDL_OFFSET + node.nOffset + nHeaderOffset + 12));
             TokenData.push_back(TokenDatum("tightness", "double", "MDL", (void*) &node.Dangly.fTightness, MDL_OFFSET + node.nOffset + nHeaderOffset + 16));
@@ -545,10 +551,10 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Danglymesh"){
             Node & node = * (Node * ) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Danglymesh > " << sItems.at(0);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Danglymesh > " << sItems.at(0);
 
             /// First let's get the number of the vertex from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 14) == "Dangly Vertex "){
                 std::string sNum (safesubstr(sItems.at(0), 14, std::string::npos));
                 try{
@@ -558,7 +564,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     Error("The label of the vertex in the tree is not properly formatted!");
                 }
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 TokenData.push_back(TokenDatum("dangly_vertex_x", "double", "MDL", (void*) &node.Dangly.Data2.at(nNum).fX, MDL_OFFSET + node.Dangly.nOffsetToData2 + 12 * nNum + 0));
                 TokenData.push_back(TokenDatum("dangly_vertex_y", "double", "MDL", (void*) &node.Dangly.Data2.at(nNum).fY, MDL_OFFSET + node.Dangly.nOffsetToData2 + 12 * nNum + 4));
                 TokenData.push_back(TokenDatum("dangly_vertex_z", "double", "MDL", (void*) &node.Dangly.Data2.at(nNum).fZ, MDL_OFFSET + node.Dangly.nOffsetToData2 + 12 * nNum + 8));
@@ -567,18 +573,20 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(0) == "Lightsaber"){
             Node & node = * (Node*) lParam;
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Lightsaber";
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Lightsaber";
             unsigned nHeaderOffset = mdl.GetHeaderOffset(node, NODE_SABER);
             TokenData.push_back(TokenDatum("inv_counter1", "int", "MDL", (void*) &node.Saber.nInvCount1, MDL_OFFSET + node.nOffset + nHeaderOffset + 12));
             TokenData.push_back(TokenDatum("inv_counter2", "int", "MDL", (void*) &node.Saber.nInvCount2, MDL_OFFSET + node.nOffset + nHeaderOffset + 16));
         }
         else if(sItems.at(1) == "Lightsaber"){
             VertexData & vert = * (VertexData * ) lParam;
-            Node & node = mdl.GetNodeByNameIndex(vert.nNodeNumber);
-            ssName << "Geometry > " << Data.Names.at(node.Head.nNodeNumber).sName.c_str() << " > Lightsaber > " << sItems.at(0);
+            MdlInteger<unsigned short> nNodeIndex = mdl.GetNodeIndexByNameIndex(vert.nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("GetTokenData() error: dealing with a name index that does not have a node in geometry.");
+            Node & node = Data.ArrayOfNodes.at(nNodeIndex);
+            ssName << "Geometry > " << Data.Names.at(node.Head.nNameIndex).sName.c_str() << " > Lightsaber > " << sItems.at(0);
 
             /// First let's get the number of the vertex from its name.
-            int nNum = -1;
+            MdlInteger<unsigned int> nNum;
             if(safesubstr(sItems.at(0), 0, 18) == "Lightsaber Vertex "){
                 std::string sNum (safesubstr(sItems.at(0), 18, std::string::npos));
                 try{
@@ -588,7 +596,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                     Error("The label of the vertex in the tree is not properly formatted!");
                 }
             }
-            if(nNum >= 0){
+            if(nNum.Valid()){
                 TokenData.push_back(TokenDatum("lightsaber_vertex_x", "double", "MDL", (void*) &vert.vVertex.fX, MDL_OFFSET + node.Saber.nOffsetToSaberVerts + 12 * nNum + 0));
                 TokenData.push_back(TokenDatum("lightsaber_vertex_y", "double", "MDL", (void*) &vert.vVertex.fY, MDL_OFFSET + node.Saber.nOffsetToSaberVerts + 12 * nNum + 4));
                 TokenData.push_back(TokenDatum("lightsaber_vertex_z", "double", "MDL", (void*) &vert.vVertex.fZ, MDL_OFFSET + node.Saber.nOffsetToSaberVerts + 12 * nNum + 8));
@@ -601,13 +609,15 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
         }
         else if(sItems.at(1) == "Controllers"){
             Controller & ctrl = * (Controller *) lParam;
-            Node & geonode = mdl.GetNodeByNameIndex(ctrl.nNodeNumber);
+            MdlInteger<short unsigned> nNodeIndex = mdl.GetNodeIndexByNameIndex(ctrl.nNameIndex);
+            if(!nNodeIndex.Valid()) throw mdlexception("GetTokenData() error: dealing with a name index that does not have a node in geometry.");
+            Node & geonode = Data.ArrayOfNodes.at(nNodeIndex);
             Node * tempNode = nullptr;
-            if(ctrl.nAnimation >= 0){
+            if(ctrl.nAnimation.Valid()){
                 Animation & anim = Data.Animations.at(ctrl.nAnimation);
                 for(int an = 0; an < anim.ArrayOfNodes.size() && tempNode == nullptr; an++){
                     Node & animNode = anim.ArrayOfNodes.at(an);
-                    if(ctrl.nNodeNumber == animNode.Head.nNodeNumber){
+                    if(ctrl.nNameIndex == animNode.Head.nNameIndex){
                         for(int ac = 0; ac < animNode.Head.Controllers.size() && tempNode == nullptr; ac++){
                             if(&animNode.Head.Controllers.at(ac) == &ctrl) tempNode = &animNode;
                         }
@@ -616,7 +626,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
             }
             else tempNode = &geonode;
             Node & node = *tempNode;
-            ssName << "Geometry > " << Data.Names.at(ctrl.nNodeNumber).sName.c_str() << " > Controllers > " << sItems.at(0);
+            ssName << "Geometry > " << Data.Names.at(ctrl.nNameIndex).sName.c_str() << " > Controllers > " << sItems.at(0);
 
             if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION && ctrl.nColumnCount % 15 == 2){
                 Error("Compressed quaternion values not supported yet!");
@@ -643,7 +653,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                 sComponents.push_back("_z");
                 sComponents.push_back("_w");
             }
-            if(ctrl.nAnimation >= 0){
+            if(ctrl.nAnimation.Valid()){
                 for(int t = 0; t < ctrl.nValueCount; t++){
                     TokenData.push_back(TokenDatum("timekey" + ("_" + std::to_string(t)), "double", "MDL", (void*) &node.Head.ControllerData.at(ctrl.nTimekeyStart + t), MDL_OFFSET + node.Head.ControllerDataArray.nOffset + (ctrl.nTimekeyStart + t) * 4));
                 }
@@ -652,7 +662,7 @@ bool EditorDlgWindow::GetTokenData(MDL & mdl, std::vector<std::string> sItems, L
                 int columns = ctrl.nColumnCount & 15;
                 bool bBezier = ctrl.nColumnCount & 16;
                 for(int n = 0; n < columns; n++){
-                    TokenData.push_back(TokenDatum(sCtrlName + (ctrl.nAnimation >= 0 ? "_" + std::to_string(t) : "") + (columns > 1 ? sComponents.at(n) : ""), "double", "MDL",
+                    TokenData.push_back(TokenDatum(sCtrlName + (ctrl.nAnimation.Valid() ? "_" + std::to_string(t) : "") + (columns > 1 ? sComponents.at(n) : ""), "double", "MDL",
                                                    (void*) &node.Head.ControllerData.at(ctrl.nDataStart + t * (bBezier ? columns * 3 : columns) + n),
                                                    MDL_OFFSET + node.Head.ControllerDataArray.nOffset + (ctrl.nDataStart + t * (bBezier ? columns * 3 : columns) + n) * 4));
                 }
@@ -846,21 +856,22 @@ bool EditorDlgWindow::SaveData(){
                     }
                 }
                 if(bWrite){
-                    if(token.sFile == "MDL") Mdl.WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteAtOffset1(cByte, token.nOffset);
-                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteAtOffset1(cByte, token.nOffset);
+                    if(token.sFile == "MDL") Mdl.WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteNumber(&cByte, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteNumber(&cByte, 0, "", &token.nOffset);
                 }
             }
             if(token.nBytes == 2){
+                unsigned short ph_bb2 = 0;
                 if(token.sDataType == "short"){
                     short * nVariable = (short*) token.data;
                     if(ReadInt(nConvert, &sGet)){
                         *nVariable = nConvert;
-                        ByteBlock2.i = *nVariable;
+                        ph_bb2 = *(unsigned short*)nVariable;
                         bWrite = true;
                     }
                 }
@@ -868,7 +879,7 @@ bool EditorDlgWindow::SaveData(){
                     unsigned short * nVariable = (unsigned short*) token.data;
                     if(ReadUInt(uConvert, &sGet)){
                         *nVariable = uConvert;
-                        ByteBlock2.ui = *nVariable;
+                        ph_bb2 = *(unsigned short*)nVariable;
                         bWrite = true;
                     }
                 }
@@ -876,27 +887,28 @@ bool EditorDlgWindow::SaveData(){
                     signed short * nVariable = (signed short*) token.data;
                     if(ReadInt(nConvert, &sGet)){
                         *nVariable = nConvert;
-                        ByteBlock2.i = *nVariable;
+                        ph_bb2 = *(unsigned short*)nVariable;
                         bWrite = true;
                     }
                 }
 
                 if(bWrite){
-                    if(token.sFile == "MDL") Mdl.WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
-                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteAtOffset2(ByteBlock2.ui, token.nOffset);
+                    if(token.sFile == "MDL") Mdl.WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteNumber(&ph_bb2, 0, "", &token.nOffset);
                 }
             }
             if(token.nBytes == 4){
+                unsigned ph_bb4 = 0;
                 if(token.sDataType == "int"){
                     int * nVariable = (int*) token.data;
                     if(ReadInt(nConvert, &sGet)){
                         *nVariable = nConvert;
-                        ByteBlock4.i = *nVariable;
+                        ph_bb4 = *(unsigned*)nVariable;
                         bWrite = true;
                     }
                 }
@@ -904,7 +916,7 @@ bool EditorDlgWindow::SaveData(){
                     unsigned int * nVariable = (unsigned int*) token.data;
                     if(ReadUInt(uConvert, &sGet)){
                         *nVariable = uConvert;
-                        ByteBlock4.ui = *nVariable;
+                        ph_bb4 = *(unsigned*)nVariable;
                         bWrite = true;
                     }
                 }
@@ -912,7 +924,7 @@ bool EditorDlgWindow::SaveData(){
                     signed int * nVariable = (signed int*) token.data;
                     if(ReadInt(nConvert, &sGet)){
                         *nVariable = nConvert;
-                        ByteBlock4.i = *nVariable;
+                        ph_bb4 = *(unsigned*)nVariable;
                         bWrite = true;
                     }
                 }
@@ -922,7 +934,8 @@ bool EditorDlgWindow::SaveData(){
                         ssCompare << (double*) token.data;
                         if(ssCompare.str() != sGet){
                             *fVariable = fConvert;
-                            ByteBlock4.f = (float) fConvert;
+                            float fPH = (float) fConvert;
+                            ph_bb4 = *(unsigned*)&fPH;
                             bWrite = true;
                         }
                     }
@@ -932,19 +945,19 @@ bool EditorDlgWindow::SaveData(){
                     if(ReadInt(nConvert, &sGet)){
                         if(nConvert != 0) *nVariable = *nVariable | token.nBitflag;
                         else *nVariable = *nVariable & (~token.nBitflag);
-                        ByteBlock4.ui = *nVariable;
+                        ph_bb4 = *(unsigned*)nVariable;
                         bWrite = true;
                     }
                 }
 
                 if(bWrite){
-                    if(token.sFile == "MDL") Mdl.WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
-                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteAtOffset4(ByteBlock4.ui, token.nOffset);
+                    if(token.sFile == "MDL") Mdl.WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "MDX" && Mdl.Mdx) Mdl.Mdx->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "WOK" && Mdl.Wok) Mdl.Wok->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "PWK" && Mdl.Pwk) Mdl.Pwk->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK0" && Mdl.Dwk0) Mdl.Dwk0->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK1" && Mdl.Dwk1) Mdl.Dwk1->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
+                    else if(token.sFile == "DWK2" && Mdl.Dwk2) Mdl.Dwk2->WriteNumber(&ph_bb4, 0, "", &token.nOffset);
                 }
             }
             else if(token.sDataType == "string"){
@@ -952,7 +965,7 @@ bool EditorDlgWindow::SaveData(){
                 if(ReadUntilText(sGet, false)){
                     sGet.resize(token.nMaxString);
                     *sVariable = sGet;
-                    if(token.sFile == "MDL") Mdl.WriteAtOffset(sGet, token.nOffset);
+                    if(token.sFile == "MDL") Mdl.WriteString(&sGet, sGet.size(), 0, "", &token.nOffset);
                 }
             }
           }

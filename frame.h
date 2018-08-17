@@ -63,6 +63,9 @@ class Frame{
     static LRESULT CALLBACK FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
     Frame(HINSTANCE hInstanceCreate);
     bool Run(int nCmdShow);
+    HWND GetHwnd(){
+        return hMe;
+    }
 
 };
 
@@ -111,48 +114,70 @@ class Edits{
     void Resize();
     void DetermineSelection();
     void UpdateStatusBar(bool bCheck = true);
-    void UpdateStatusPositionBwm(const std::string & sType);
-    void UpdateStatusPositionMdx();
-    void UpdateStatusPositionModel();
+    void UpdateStatusPosition();
     void PrintValues(bool bCheck = true);
 };
-
-COLORREF DataColor(int nDataKnown, bool bHilite);
-
-extern bool bShowDiff;
-extern MDL Model;
-extern ReportObject ReportModel;
-extern bool bSaveReport;
-extern bool bDotAsciiDefault;
-extern bool bShowDataStruct;
-extern bool bShowGroup;
-extern bool bHexLocation;
 
 enum IniConst {
     INI_READ,
     INI_WRITE
 };
-void ManageIni(IniConst Action);
 
+/// frame.cpp
+extern MDL Model;
+extern ReportObject ReportModel;
+extern bool bSaveReport;
+extern bool bShowDiff;
+extern bool bShowCmpHilite;
+extern bool bShowDataStruct;
+extern bool bShowGroup;
+extern bool bHexLocation;
+extern bool bModelHierarchy;
+extern HFONT hMonospace, hShell, hTimes;
+void ManageIni(IniConst Action);
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
+
+/// edits.cpp
+COLORREF DataColor(int nDataKnown, bool bHilite);
+void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
+
+/// fileprocessing.cpp
+extern bool bDotAsciiDefault;
 bool FileEditor(HWND hwnd, int nID, std::wstring & cFile);
-INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+void ProgressSize(int nMin, int nMax);
+void ProgressSetStep(int nStep);
+void ProgressStepIt();
+void ProgressPos(int nPos);
+void Report(std::string sMessage);
 INT_PTR CALLBACK ProgressProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK ProgressMassProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+void ProcessCommandLineCall(int argc, LPSTR* argv);
+
+/// Settings.cpp
+INT_PTR CALLBACK SettingsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK TexturesProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+/// treebuilding.cpp
+void BuildGeometryTree(HTREEITEM Nodes, MDL & Mdl);
+void BuildAnimationTree(HTREEITEM Animations, MDL & Mdl);
 void BuildTree(MDL & Mdl);
 void BuildTree(BWM & Bwm);
+
+/// tree.cpp
 void DetermineDisplayText(std::vector<std::string> cItem, std::stringstream & sPrint, LPARAM lParam);
 void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile);
-void OpenGeoViewer(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam);
-void OpenViewer(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam);
-void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
-void OpenReportDlg(MDL & Mdl);
+
+/// help.cpp
 void OpenHelpDlg();
-void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
-void Report(std::string sMessage);
-void ProgressSize(int nMin, int nMax);
-void ProgressPos(int nPos);
+INT_PTR CALLBACK AboutProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+/// reportdlg.cpp
+void OpenReportDlg(MDL & Mdl);
+
+/// editordlg.cpp
+void OpenEditorDlg(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
+
+/// dialog.cpp
+void OpenViewer(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam);
 
 #endif // FRAME_H_INCLUDED

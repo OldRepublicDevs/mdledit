@@ -260,6 +260,15 @@ bool IsMaterialWalkable(int nMat);
 /// ... many controller numbers ... ///
 #define CONTROLLER_EMITTER_DETONATE             502
 
+#define TS_NONE         0x00
+#define TS_TANGENT      0x01
+#define TS_BITANGENT    0x02
+#define TS_NORMAL       0x04
+#define TS_ALL          0x07
+
+extern const unsigned short INVALID_SHORT;
+extern const unsigned int INVALID_INT;
+
 //Data structures
 struct Edge;
 struct Face;
@@ -301,6 +310,140 @@ class Ascii;
 bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel);
 
 /**** DATA STRUCTS ****/
+extern bool bReportValidness;
+template <class IntegerType>
+class MdlInteger{
+    IntegerType nData;
+  public:
+    MdlInteger(){
+        nData = 0;
+        nData = (~nData);
+    }
+    MdlInteger(IntegerType nInit) : nData(nInit) {}
+    MdlInteger(const MdlInteger<IntegerType> & second){
+        nData = second.nData;
+    }
+    void Set(IntegerType nSet) { nData = nSet; }
+    bool Valid() const{
+        IntegerType nMax = 0;
+        if(bReportValidness) std::cout << "Comparing " << nData << " to " << (IntegerType) (~nMax) << " at byte size " << sizeof(nData) << "... Valid: " << (nData != (~nMax) ? "true" : "false") << "\n";
+        return nData != (IntegerType) (~nMax);
+    }/*
+    IntegerType Get() const{
+        if(!Valid()) throw mdlexception("MdlShort::Get(): Getting an invalid value!");
+        return nData;
+    }*/
+    std::string Print(){
+        if(!Valid()) return "-1";
+        return std::to_string(nData);
+    }
+    IntegerType * GetPtr(){
+        return &nData;
+    }
+
+    MdlInteger<IntegerType> & operator+=(const IntegerType & nIncrease){
+        nData+=nIncrease;
+        return *this;
+    }
+    MdlInteger<IntegerType> & operator++();
+    MdlInteger<IntegerType> & operator++(int);
+
+    template <class T>
+    friend bool operator==(const MdlInteger<T> & mdlinteger, const T & integer);
+    template <class T>
+    friend bool operator==(const MdlInteger<T> & mdlinteger, const MdlInteger<T> & mdlinteger2);
+    template <class T>
+    friend bool operator<(const MdlInteger<T> & mdlinteger, const T & integer);
+    template <class T>
+    friend bool operator<(const MdlInteger<T> & mdlinteger, const MdlInteger<T> & mdlinteger2);
+    template <class T>
+    friend bool operator>(const MdlInteger<T> & mdlinteger, const T & integer);
+    template <class T>
+    friend bool operator>(const MdlInteger<T> & mdlinteger, const MdlInteger<T> & mdlinteger2);
+    //friend MdlInteger & operator==(const T & integer, const MdlInteger<IntegerType> & mdlinteger);
+    MdlInteger & operator=(const IntegerType & integer){
+        nData = integer;
+    }
+    //MdlInteger & operator=(const MdlInteger & integer){ nData = integer.nData; }
+    //MdlInteger & operator=(IntegerType & integer){ nData = integer; }
+    //MdlInteger & operator=(MdlInteger & integer){ nData = integer.nData; }
+    //MdlInteger & operator=(IntegerType integer){ nData = integer; }
+    //MdlInteger & operator=(MdlInteger integer){ nData = integer.nData; }
+
+    /// This function should allow implicit conversion, dispensing with the get function.
+    operator IntegerType() const {
+        if(!Valid()) throw mdlexception("MdlInteger::ImplicitConversion: Getting an invalid value!");
+        return nData;
+    }
+};
+
+template <class IntegerType>
+MdlInteger<IntegerType> & MdlInteger<IntegerType>::operator++(){
+    nData++;
+    if(!Valid()) throw mdlexception("MdlInteger::operator++: Reached invalid value by using ++. The limit of the number storage size has been reached!");
+    return *this;
+}
+
+template <class IntegerType>
+MdlInteger<IntegerType> & MdlInteger<IntegerType>::operator++(int){
+    nData++;
+    if(!Valid()) throw mdlexception("MdlInteger::operator++: Reached invalid value by using ++. The limit of the number storage size has been reached!");
+    return *this;
+}
+
+/// Template declarations
+
+template<class IntegerType>
+bool operator==(const MdlInteger<IntegerType> & mdlinteger, const IntegerType & integer){
+    return mdlinteger.nData == integer;
+}
+template <class IntegerType>
+bool operator==(const MdlInteger<IntegerType> & mdlinteger, const MdlInteger<IntegerType> & mdlinteger2){
+    return mdlinteger.nData == mdlinteger2.nData;
+}
+template<class IntegerType>
+bool operator<(const MdlInteger<IntegerType> & mdlinteger, const IntegerType & integer){
+    return mdlinteger.nData < integer;
+}
+template <class IntegerType>
+bool operator<(const MdlInteger<IntegerType> & mdlinteger, const MdlInteger<IntegerType> & mdlinteger2){
+    return mdlinteger.nData < mdlinteger2.nData;
+}
+template<class IntegerType>
+bool operator>(const MdlInteger<IntegerType> & mdlinteger, const IntegerType & integer){
+    return mdlinteger.nData > integer;
+}
+template <class IntegerType>
+bool operator>(const MdlInteger<IntegerType> & mdlinteger, const MdlInteger<IntegerType> & mdlinteger2){
+    return mdlinteger.nData > mdlinteger2.nData;
+}
+template<class IntegerType>
+bool operator!=(const MdlInteger<IntegerType> & mdlinteger, const IntegerType & integer){
+    return !(mdlinteger == integer);
+}
+template <class IntegerType>
+bool operator!=(const MdlInteger<IntegerType> & mdlinteger, const MdlInteger<IntegerType> & mdlinteger2){
+    return !(mdlinteger == mdlinteger2);
+}
+/*
+template<class IntegerType>
+MdlInteger & operator==(const IntegerType & integer, const MdlInteger<IntegerType> & mdlinteger){
+    return mdlinteger.nData == integer;
+}
+*/
+
+/*
+/// Instantiations for unsigned short
+template bool operator== <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
+template bool operator== <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
+template bool operator< <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
+template bool operator< <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
+template bool operator> <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
+template bool operator> <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
+template bool operator!= <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
+template bool operator!= <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
+//bool operator==(const unsigned short & integer, const MdlInteger<unsigned short> & mdlinteger);
+*/
 
 struct Location{
     Vector vPosition;
@@ -340,10 +483,9 @@ struct Color{
 
 struct Weight{
     std::array<double, 4> fWeightValue = {1.0, 0.0, 0.0, 0.0};
-    std::array<signed short, 4> nWeightIndex = {-1, -1, -1, -1};
+    std::array<MdlInteger<unsigned short>, 4> nWeightIndex;
     bool operator==(const Weight & w){
         for(int n = 0; n < 4; n++){
-            //if(fWeightValue.at(n) != w.fWeightValue.at(n) || nWeightIndex.at(n) != w.nWeightIndex.at(n)) return false;
             if(abs(fWeightValue.at(n) - w.fWeightValue.at(n)) >= 0.0001 || nWeightIndex.at(n) != w.nWeightIndex.at(n)) return false;
         }
         return true;
@@ -359,19 +501,19 @@ struct VertexData{
     Vector vUV3;
     Vector vUV4;
     Color cColor;
-    std::array<Vector, 3> vTangent1;
+    std::array<Vector, 3> vTangent1; /// In the order B T N
     std::array<Vector, 3> vTangent2;
     std::array<Vector, 3> vTangent3;
     std::array<Vector, 3> vTangent4;
     Weight Weights;
 
     //Added members
-    int nNodeNumber = -1;
+    MdlInteger<unsigned short> nNameIndex;
 
     VertexData(){}
-    VertexData(const Vector & v1, int nNode = -1): vVertex(v1), nNodeNumber(nNode) {}
-    VertexData(const Vector & v1, const Vector & v2, int nNode = -1): vVertex(v1), vUV1(v2), nNodeNumber(nNode) {}
-    VertexData(const Vector & v1, const Vector & v2, const Vector & v3, int nNode = -1): vVertex(v1), vUV1(v2), vNormal(v3), nNodeNumber(nNode) {}
+    VertexData(const Vector & v1, MdlInteger<unsigned short> nName = -1): vVertex(v1), nNameIndex(nName) {}
+    VertexData(const Vector & v1, const Vector & v2, MdlInteger<unsigned short> nName = -1): vVertex(v1), vUV1(v2), nNameIndex(nName) {}
+    VertexData(const Vector & v1, const Vector & v2, const Vector & v3, MdlInteger<unsigned short> nName = -1): vVertex(v1), vUV1(v2), vNormal(v3), nNameIndex(nName) {}
     bool operator==(const VertexData & vd){
         if(vVertex == vd.vVertex &&
            vNormal == vd.vNormal &&
@@ -401,12 +543,12 @@ struct VertexData{
 struct Vertex: public Vector{
     int nOffset = 0;
     VertexData MDXData;
-    int nLinkedFacesIndex = -1;
+    MdlInteger<unsigned int> nLinkedFacesIndex;
     Vertex assign(const Vector & v, bool bMdx = false){
         fX = v.fX;
         fY = v.fY;
         fZ = v.fZ;
-        //MDXData = VertexData(v, MDXData.nNodeNumber);
+        //MDXData = VertexData(v, MDXData.nNameIndex);
         MDXData.vVertex = v;
         return *this;
     }
@@ -418,32 +560,32 @@ struct Vertex: public Vector{
 };
 
 struct Edge{
-    int nIndex;
-    int nTransition;
+    MdlInteger<unsigned int> nIndex;
+    MdlInteger<unsigned int> nTransition;
 
-    Edge(int nIndex = -1, int nTransition = -1): nIndex(nIndex), nTransition(nTransition) {}
+    Edge(MdlInteger<unsigned int> nIndex = -1, MdlInteger<unsigned int> nTransition = -1): nIndex(nIndex), nTransition(nTransition) {}
 };
 
 struct Face{
     //Binary members
     Vector vNormal;
     double fDistance = 0.0;
-    int nMaterialID = 0;
-    std::array<short, 3> nAdjacentFaces = {-1, -1, -1};
-    std::array<short, 3> nIndexVertex = {-1, -1, -1};
+    MdlInteger<unsigned> nMaterialID = 0;
+    std::array<MdlInteger<unsigned short>, 3> nAdjacentFaces;
+    std::array<MdlInteger<unsigned short>, 3> nIndexVertex;
 
     //Added members
-    std::array<short, 3> nTempIndexVertex = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert1 = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert2 = {-1, -1, -1};
-    std::array<short, 3> nIndexTvert3 = {-1, -1, -1};
-    std::array<short, 3> nIndexColor = {-1, -1, -1};
+    std::array<MdlInteger<unsigned short>, 3> nTempIndexVertex;
+    std::array<MdlInteger<unsigned short>, 3> nIndexTvert;
+    std::array<MdlInteger<unsigned short>, 3> nIndexTvert1;
+    std::array<MdlInteger<unsigned short>, 3> nIndexTvert2;
+    std::array<MdlInteger<unsigned short>, 3> nIndexTvert3;
+    std::array<MdlInteger<unsigned short>, 3> nIndexColor;
     std::array<bool, 3> bProcessed = {false, false, false};
     bool bProcessedSG = false;
-    std::array<short, 3> nEdgeTransitions = {-1, -1, -1};
-    int nTextureCount = 0;
-    int nSmoothingGroup = 0;
+    std::array<MdlInteger<unsigned int>, 3> nEdgeTransitions;
+    MdlInteger<unsigned> nTextureCount = 0;
+    unsigned int nSmoothingGroup = 0;
     double fArea = 0.0;
     double fAreaUV = 0.0;
     Vector vTangent;
@@ -451,8 +593,8 @@ struct Face{
     Vector vBBmin;
     Vector vBBmax;
     Vector vCentroid;
-    short nID = -1;
-    int nNodeNumber = -1;
+    MdlInteger<unsigned short> nID;
+    MdlInteger<unsigned short> nNameIndex;
 };
 
 
@@ -460,31 +602,31 @@ struct Aabb{
     //binary members
     Vector vBBmin;
     Vector vBBmax;
-    unsigned int nChild1 = 0; //Offset (in the mdl) or Index (in the wok)
-    unsigned int nChild2 = 0; //Offset (in the mdl) or Index (in the wok)
-    int nID = -1; //An index to the face of the walkmesh
-    int nProperty = 0; //AABB_* constants, most significant plane for Child 2
+    MdlInteger<unsigned int> nChild1 = 0; //Offset (in the mdl) or Index (in the wok)
+    MdlInteger<unsigned int> nChild2 = 0; //Offset (in the mdl) or Index (in the wok)
+    MdlInteger<unsigned short> nID; //An index to the face of the walkmesh
+    MdlInteger<unsigned> nProperty = 0; //AABB_* constants, most significant plane for Child 2
 
     //Added members
     unsigned int nOffset = 0;
     std::vector<Aabb> Child1;
     std::vector<Aabb> Child2;
-    int nExtra = 0;
+    MdlInteger<unsigned> nExtra = 0;
 };
 
 struct Controller{
     //Binary members
-    int nControllerType = 0;
-    short nUnknown2 = -1;
-    unsigned short nValueCount = 0;
-    unsigned short nTimekeyStart = 0;
-    unsigned short nDataStart = 0;
-    char nColumnCount = 0;
+    MdlInteger<unsigned int> nControllerType = 0;
+    MdlInteger<unsigned short> nUnknown2;
+    MdlInteger<unsigned short> nValueCount = 0;
+    MdlInteger<unsigned short> nTimekeyStart = 0;
+    MdlInteger<unsigned short> nDataStart = 0;
+    MdlInteger<unsigned char> nColumnCount = 0;
     std::array<char, 3> nPadding = {0, 0, 0};
 
     //Added members
-    int nNodeNumber = -1;
-    int nAnimation = -1;
+    MdlInteger<unsigned short> nNameIndex;
+    MdlInteger<unsigned int> nAnimation;
 };
 
 struct Event{
@@ -507,7 +649,7 @@ struct ArrayHead{
         if(nCount == nCount2) return false;
         else return true; //We sure don't expect that!
     }
-    void ResetToSize(int nSize){
+    void ResetToSize(unsigned int nSize){
         nOffset = 0;
         nCount = nSize;
         nCount2 = nSize;
@@ -519,21 +661,41 @@ struct ArrayHead{
 };
 
 struct Patch{
-    unsigned int nNodeNumber = -1;          // This is the index of the mesh with our vert
-    unsigned int nVertex = -1;              // This is the index of the vert
-    std::vector<unsigned int> FaceIndices;  // The faces using this vert
-    unsigned int nSmoothingGroups = 0;      // The combined smoothing groups for the patch.
-    std::vector<int> SmoothedPatches;       // Other patches by num that this patch smooths to.
-    std::vector<unsigned long int*> SmoothingGroupNumbers;
-    bool bUniform = false;
+    static MDL * ptr_mdl;                                       /// A pointer to the current model's file header
+    static double fDiff;                                        /// The diff used for comparing vectors
+    MdlInteger<unsigned int> nPatchGroup;                       /// The number of the patch group this patch belongs to.
+    MdlInteger<unsigned int> nNodeArrayIndex;                   /// This is the index of the mesh with our vert
+    MdlInteger<unsigned int> nVertex;                           /// This is the index of the vert
+    std::vector<unsigned int> FaceIndices;                      /// The faces using this vert
+    unsigned int nSmoothingGroups = 0;                          /// The combined smoothing groups for the patch.
+    std::vector<MdlInteger<unsigned int>> SmoothedPatches;      /// Other patches by num that this patch smooths to.
+    std::vector<unsigned long int*> SmoothingGroupNumbers;      /// Pointers to smoothing group numbers
+    Vector vWorldNormal;
+    Vector vWorldT;
+    Vector vWorldB;
+    Vector vWorldN;
+    Vector vVertexNormal;
+    Vector vVertexT;
+    Vector vVertexB;
+    Vector vVertexN;
+    bool bBadGeo = false, bGroupBadGeo = false;
+    bool bBadUV = false, bGroupBadUV = false;
+    std::vector<Patch> & GetPatchGroup();
+    Node & GetNode();
+    bool CompareNormal();
+    bool CompareTangentSpace(char cVec);
+    void CalculateWorld(bool bNormal = false, bool bTangent = false);
+    void Calculate(bool bNormal = false, bool bTangent = false, std::vector<MdlInteger<unsigned int>> * patches = nullptr);
+    bool FindNormal(unsigned int nCheckFrom, std::vector<MdlInteger<unsigned int>> & OurSmoothedPatches, std::stringstream & file);
+    char FindTangentSpace(unsigned int nCheckFrom, std::vector<MdlInteger<unsigned int>> & OurSmoothedPatches, std::stringstream & file);
 };
 
 struct Bone{
-    signed short nBonemap = -1;
+    MdlInteger<unsigned short> nBonemap;
     Orientation QBone;
     Vector TBone;
     unsigned int nPadding = 0;
-    int nNodeNumber = -1;
+    MdlInteger<unsigned short> nNameIndex;
 };
 
 /**** NODE ELEMENTS ****/
@@ -541,12 +703,12 @@ struct Bone{
 /// NODE_HEADER
 struct Header{
     //Binary members
-    unsigned short nType = 0;
-    short nSupernodeNumber = -1;
-    short nNodeNumber = -1;
+    MdlInteger<unsigned short> nType = 0;
+    MdlInteger<unsigned short> nSupernodeNumber;
+    MdlInteger<unsigned short> nNameIndex;
     unsigned short nPadding1 = 0;
-    unsigned int nOffsetToRoot = 0;
-    unsigned int nOffsetToParent = 0;
+    MdlInteger<unsigned int> nOffsetToRoot = 0;
+    MdlInteger<unsigned int> nOffsetToParent = 0;
     Vector vPos;
     Orientation oOrient;
     ArrayHead ChildrenArray;
@@ -557,27 +719,28 @@ struct Header{
     std::vector<Node> Children;
     std::vector<Controller> Controllers;
     std::vector<double> ControllerData;
-    std::vector<int> ChildIndices;
-    int nParentIndex = -1;
+    std::vector<MdlInteger<unsigned short>> ChildIndices;
+    MdlInteger<unsigned short> nParentIndex;
     Vector vFromRoot;
+    Quaternion qFromRoot;
 };
 
 /// NODE_LIGHT
 struct LightHeader{
     //Binary members
-    double fFlareRadius = 0.0;          /// 0   4B float
-    ArrayHead UnknownArray;             /// 4  12B uint32 (x3)
-    ArrayHead FlareSizeArray;           /// 16 12B uint32 (x3)
-    ArrayHead FlarePositionArray;       /// 28 12B uint32 (x3)
-    ArrayHead FlareColorShiftArray;     /// 40 12B uint32 (x3)
-    ArrayHead FlareTextureNameArray;    /// 52 12B uint32 (x3)
-    int nLightPriority = 0;             /// 64  4B uint32
-    int nAmbientOnly = 0;               /// 68  4B uint32
-    int nDynamicType = 0;               /// 72  4B uint32
-    int nAffectDynamic = 0;             /// 76  4B uint32
-    int nShadow = 0;                    /// 80  4B uint32
-    int nFlare = 0;                     /// 84  4B uint32
-    int nFadingLight = 0;               /// 88  4B uint32
+    double fFlareRadius = 0.0;                      /// 0   4B float
+    ArrayHead UnknownArray;                         /// 4  12B uint32 (x3)
+    ArrayHead FlareSizeArray;                       /// 16 12B uint32 (x3)
+    ArrayHead FlarePositionArray;                   /// 28 12B uint32 (x3)
+    ArrayHead FlareColorShiftArray;                 /// 40 12B uint32 (x3)
+    ArrayHead FlareTextureNameArray;                /// 52 12B uint32 (x3)
+    MdlInteger<unsigned int> nLightPriority = 0;    /// 64  4B uint32
+    MdlInteger<unsigned int> nAmbientOnly = 0;      /// 68  4B uint32
+    MdlInteger<unsigned int> nDynamicType = 0;      /// 72  4B uint32
+    MdlInteger<unsigned int> nAffectDynamic = 0;    /// 76  4B uint32
+    MdlInteger<unsigned int> nShadow = 0;           /// 80  4B uint32
+    MdlInteger<unsigned int> nFlare = 0;            /// 84  4B uint32
+    MdlInteger<unsigned int> nFadingLight = 0;      /// 88  4B uint32
 
     //Added members
     std::vector<Name> FlareTextureNames;
@@ -663,17 +826,17 @@ struct MeshHeader{
 
     unsigned int nMdxDataSize = 0;
     unsigned int nMdxDataBitmap = 0;
-    int nOffsetToMdxVertex = -1;
-    int nOffsetToMdxNormal = -1;
-    int nOffsetToMdxColor = -1; //never present
-    int nOffsetToMdxUV1 = -1;
-    int nOffsetToMdxUV2 = -1;
-    int nOffsetToMdxUV3 = -1; //never present
-    int nOffsetToMdxUV4 = -1; //never present
-    int nOffsetToMdxTangent1  = -1;
-    int nOffsetToMdxTangent2  = -1; //never present
-    int nOffsetToMdxTangent3  = -1; //never present
-    int nOffsetToMdxTangent4  = -1; //never present
+    MdlInteger<unsigned int> nOffsetToMdxVertex;
+    MdlInteger<unsigned int> nOffsetToMdxNormal;
+    MdlInteger<unsigned int> nOffsetToMdxColor; //never present
+    MdlInteger<unsigned int> nOffsetToMdxUV1;
+    MdlInteger<unsigned int> nOffsetToMdxUV2;
+    MdlInteger<unsigned int> nOffsetToMdxUV3; //never present
+    MdlInteger<unsigned int> nOffsetToMdxUV4; //never present
+    MdlInteger<unsigned int> nOffsetToMdxTangent1;
+    MdlInteger<unsigned int> nOffsetToMdxTangent2; //never present
+    MdlInteger<unsigned int> nOffsetToMdxTangent3; //never present
+    MdlInteger<unsigned int> nOffsetToMdxTangent4; //never present
 
     unsigned short nNumberOfVerts = 0;
     unsigned short nTextureNumber = 0;
@@ -712,7 +875,7 @@ struct MeshHeader{
 
     //Added members
     std::vector<Face> Faces;
-    std::vector<std::array<short, 3>> VertIndices;
+    std::vector<std::array<unsigned short, 3>> VertIndices;
     std::vector<Vertex> Vertices;
     std::vector<Vertex> TempVertices;
     std::vector<Vector> TempVerts;
@@ -725,7 +888,7 @@ struct MeshHeader{
     VertexData MDXData;
     unsigned int nVertIndicesCount = 0;
     unsigned int nVertIndicesLocation = 0;
-    int nMeshInvertedCounter = -1;
+    MdlInteger<unsigned int> nMeshInvertedCounter;
     char * GetTexture(int nTex){
         if(nTex == 1) return (char*) cTexture1.c_str();
         if(nTex == 2) return (char*) cTexture2.c_str();
@@ -738,19 +901,19 @@ struct MeshHeader{
 /// NODE_SKIN
 struct SkinHeader{
     ArrayHead UnknownArray; //Always 0
-    int nOffsetToMdxWeightValues = -1;
-    int nOffsetToMdxBoneIndices = -1;
+    MdlInteger<unsigned int> nOffsetToMdxWeightValues;
+    MdlInteger<unsigned int> nOffsetToMdxBoneIndices;
     unsigned int nOffsetToBonemap = 0;
     unsigned int nNumberOfBonemap = 0;
     ArrayHead QBoneArray;
     ArrayHead TBoneArray;
     ArrayHead Array8Array; //empty, data irrelevant
-    std::array<short, 16> nBoneIndices = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    short nPadding1 = 0;
-    short nPadding2 = 0;
+    std::array<unsigned short, 16> nBoneIndices = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    unsigned short nPadding1 = 0;
+    unsigned short nPadding2 = 0;
 
     std::vector<Bone> Bones;
-    std::vector<int> BoneNameIndices;
+    std::vector<MdlInteger<unsigned short>> BoneNameIndices;
     std::vector<Weight> TempWeights;
 };
 
@@ -784,8 +947,8 @@ struct SaberHeader{
     unsigned int nOffsetToSaberVerts = 0;
     unsigned int nOffsetToSaberUVs = 0;
     unsigned int nOffsetToSaberNormals = 0;
-    int nInvCount1 = -1;
-    int nInvCount2 = -1;
+    MdlInteger<unsigned int> nInvCount1;
+    MdlInteger<unsigned int> nInvCount2;
 
     //Added members
     std::vector<VertexData> SaberData;
@@ -793,7 +956,7 @@ struct SaberHeader{
 
 struct Node{
     unsigned int nOffset = 0;
-    int nAnimation = -1;
+    MdlInteger<unsigned int> nAnimation;
 
     Header Head;
     LightHeader Light;
@@ -894,7 +1057,7 @@ struct ModelHeader{
     std::vector<Animation> Animations;
     std::vector<Name> Names;
     std::vector<Node> ArrayOfNodes;
-    std::vector<int> NameIndicesInOffsetOrder, NameIndicesInTreeOrder;
+    std::vector<unsigned short> NameIndicesInTreeOrder;
     //std::vector<std::vector<LinkedFace>> LinkedFacesPointers;
     std::vector<std::vector<Patch>> PatchArrayPointers;
 
@@ -903,7 +1066,7 @@ struct ModelHeader{
 
 struct FileHeader{
     //Binary members
-    unsigned int nZero; //Always 0
+    unsigned int nZero = 0; //Always 0
     unsigned int nMdlLength;
     unsigned int nMdxLength;
 
@@ -964,6 +1127,7 @@ class ASCII: public TextFile{
 };
 
 enum ModelSource {NoSource = 0, AsciiSource, BinarySource};
+enum DuplicateNodeTactic {NoTactic = 0, AlwaysKeep, AlwaysRemove};
 extern Version version;
 
 class MDL: public BinaryFile{
@@ -972,31 +1136,27 @@ class MDL: public BinaryFile{
     ModelSource src = NoSource;
     std::stringstream ssReport;
 
-    //Reading
-    void ParseNode(Node * NODE, int * nNodeCounter, Vector vFromRoot, bool bMinimal = false);
-    void ParseAabb(Aabb * AABB, unsigned int nHighestOffset);
-    void LinearizeGeometry(Node & NODE, std::vector<Node> & ArrayOfNodes);
-    void LinearizeAnimation(Node & NODE, std::vector<Node> & ArrayOfNodes, int n);
+    /// Recursive reading functions
+    void ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFromRoot, Quaternion qFromRoot, const std::string & sPrefix, bool bMinimal = false);
+    void ParseAabb(Aabb & aabb, unsigned int nHighestOffset, const std::string & sPrefix);
+    void LinearizeGeometry(Node & node, std::vector<Node> & ArrayOfNodes);
+    void LinearizeAnimation(Node & node, std::vector<Node> & ArrayOfNodes);
 
-    bool CheckNodes(std::vector<Node> & node, std::stringstream & ssReturn, int nAnimation = -1);
+    bool CheckNodes(std::vector<Node> & nodes, std::stringstream & ssReturn, MdlInteger<unsigned int> nAnimation);
 
     //Writing
-    void WriteNodes(Node & node);
-    void WriteMDX(Node & node);
-    void WriteAabb(Aabb & aabb);
-    void GatherChildren(Node & NODE, std::vector<Node> & ArrayOfNodes, Vector vFromRoot);
+    void WriteNodes(Node & node, std::vector<unsigned int> indices, const std::string & sPrefix);
+    void WriteMDX(Node & node, const std::string & sPrefix);
+    void WriteAabb(Aabb & aabb, const std::string & sPrefix);
+    void GatherChildren(Node & node, std::vector<Node> & ArrayOfNodes, Vector vFromRoot, Quaternion qFromRoot, std::vector<MdlInteger<short unsigned>> indices, unsigned long * nNumVertsFaces = nullptr);
 
     //Calculating
     void CreatePatches();
-    void DetermineSmoothing();
+    void AsciiPostProcess(std::vector<std::string> & sBumpmapped);
+    void BinaryPostProcess();
     void GenerateSmoothingNumber(std::vector<int> & SmoothingGroup, const std::vector<unsigned long int> & nSmoothinGroupNumbers, const int & nSmoothinGroupCounter, const int & pg, std::stringstream & file);
-    bool FindNormal(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup, const Vector & vNormalBase, const Vector & vNormal, std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
-    int FindTangentSpace(int nCheckFrom, const int & nPatchCount, const int & nCurrentPatch, const int & nCurrentPatchGroup,
-                           const Vector & vTangentBase, const Vector & vBitangentBase, const Vector & vNormalBase,
-                           const Vector & vTangent, const Vector & vBitangent, const Vector & vNormal,
-                           std::vector<int> & CurrentlySmoothedPatches, std::stringstream & file);
     void ConsolidateSmoothingGroups(int pg, std::vector<std::vector<unsigned long int>> & Numbers, std::vector<bool> & DoneGroups);
-    std::string MakeUniqueName(int nNodeNumber);
+    std::string MakeUniqueName(MdlInteger<unsigned short> nNameIndex);
     std::vector<Vertex> GetWokVertData(Node & node);
 
     //Getters
@@ -1008,6 +1168,9 @@ class MDL: public BinaryFile{
     void Report(std::string);
     void ProgressSize(int, int);
     void ProgressPos(int);
+    void ProgressSetStep(int);
+    void ProgressStepIt();
+
 
   public:
     std::unique_ptr<ASCII> Ascii;
@@ -1024,6 +1187,8 @@ class MDL: public BinaryFile{
     void (*PtrReport)(std::string) = nullptr;
     void (*PtrProgressSize)(int, int) = nullptr;
     void (*PtrProgressPos)(int) = nullptr;
+    void (*PtrProgressSetStep)(int) = nullptr;
+    void (*PtrProgressStepIt)() = nullptr;
 
     //Friends
     friend ASCII;
@@ -1031,11 +1196,11 @@ class MDL: public BinaryFile{
 
     //Options
     bool bK2 = true;
-    int nSupermodel = 0; /// 0=not present, 1=K1, 2=K2
+    int nSupermodel = 0; /// 0 = not present, 1 = K1, 2 = K2
     bool bXbox = false;
     bool bDebug = false;
     bool bWriteSmoothing = false;
-    bool bDetermineSmoothing = true;
+    bool bBinaryPostProcess = true;
     bool bSmoothAreaWeighting = true;
     bool bSmoothAngleWeighting = false;
     bool bMinimizeVerts = false;
@@ -1052,10 +1217,11 @@ class MDL: public BinaryFile{
     //Getters
     std::unique_ptr<FileHeader> & GetFileData();
     std::vector<char> & GetAsciiBuffer();
-    Node & GetNodeByNameIndex(int nIndex, int nAnimation = -1);
+    MdlInteger<unsigned short> GetNameIndex(const std::string & sName);
+    MdlInteger<unsigned short> GetNodeIndexByNameIndex(MdlInteger<unsigned short> nIndex, MdlInteger<unsigned int> nAnimation = -1);
     bool HeadLinked();
     bool NodeExists(const std::string & sNodeName);
-    int GetNameIndex(const std::string & sName);
+    std::string & GetNodeName(Node & node);
     void UpdateTexture(Node & node, const std::string & sNew, int nTex);
     void GetLytPositionFromWok();
     unsigned GetHeaderOffset(const Node & node, unsigned short nHeader);
@@ -1067,7 +1233,6 @@ class MDL: public BinaryFile{
     //Loaders
     bool Compile();
     void DecompileModel(bool bMinimal = false);
-    void AsciiPostProcess();
     void BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, bool bDwk = true);
     void CheckPeculiarities();
     void FlushData();
@@ -1075,8 +1240,8 @@ class MDL: public BinaryFile{
 
     //Setters/general
     bool LinkHead(bool bLink);
-    void WriteUintToPlaceholder(unsigned int nUint, int nOffset);
-    void WriteByteToPlaceholder(unsigned char nByte, int nOffset);
+    void WriteUintToPlaceholder(unsigned int nUint, unsigned int nOffset);
+    void WriteByteToPlaceholder(unsigned char nByte, unsigned int nOffset);
 
     //ascii
     void ExportAscii(std::string &sExport);
@@ -1088,6 +1253,23 @@ class MDL: public BinaryFile{
     bool ReadAscii();
 };
 
+class ReportObject{
+    MDL * ptr_mdl = nullptr;
+    bool bOpen = true;
+
+  public:
+    ReportObject(const MDL & mdl, bool bOpen = true): ptr_mdl(const_cast<MDL*>(&mdl)), bOpen(bOpen) {}
+    template<class T>
+    ReportObject & operator<<(const T & os){
+        if(bOpen) std::cout << os;
+        if(ptr_mdl != nullptr) ptr_mdl->GetReport() << os;
+        return *this;
+    }
+    void Open(bool bSet = true){
+        bOpen = bSet;
+    }
+};
+
 class BWM: public BinaryFile{
     std::unique_ptr<BWMHeader> Bwm;
 
@@ -1096,7 +1278,7 @@ class BWM: public BinaryFile{
     std::unique_ptr<BWMHeader> & GetData() { return Bwm; }
 
     //Loaders
-    void ProcessBWM();
+    void DecompileBWM(ReportObject &);
     void Compile();
 };
 
@@ -1122,28 +1304,15 @@ class WOK: public BWM{
   public:
     //Getters
     const std::string GetName(){ return sClassName; }
-    void WriteWok(Node & node, Vector vLytPos, std::stringstream * ptrssFile);
-};
-
-class ReportObject{
-    MDL * ptr_mdl = nullptr;
-
-  public:
-    ReportObject(const MDL & mdl): ptr_mdl(const_cast<MDL*>(&mdl)) {}
-    template<class T>
-    ReportObject & operator<<(const T & os){
-        std::cout << os;
-        if(ptr_mdl != nullptr) ptr_mdl->GetReport() << os;
-        return *this;
-    }
+    void CalculateWokData(Node & node, Vector vLytPos, std::stringstream * ptrssFile);
 };
 
 int ReturnController(std::string sController, int nType);
 std::string ReturnClassificationName(int nClassification);
 std::string ReturnControllerName(int, int nType);
 
-void BuildAabb(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream * file = nullptr);
-void LinearizeAabb(Aabb & aabbroot, std::vector<Aabb> & aabbarray);
+void BuildAabbTree(Aabb & aabb, const std::vector<Face*> & faces, std::stringstream * file = nullptr);
+void LinearizeAabbTree(Aabb & aabbroot, std::vector<Aabb> & aabbarray);
 
 
 #endif // MDL_H_INCLUDED

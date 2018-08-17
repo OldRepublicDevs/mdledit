@@ -66,7 +66,7 @@ void RecursiveAabb(Aabb * AABB, std::stringstream &str){
                 " " << PrepareFloat(AABB->vBBmax.fX) <<
                 " " << PrepareFloat(AABB->vBBmax.fY) <<
                 " " << PrepareFloat(AABB->vBBmax.fZ) <<
-                " " << AABB->nID;
+                " " << AABB->nID.Print();
     if(AABB->nChild1 > 0){
         RecursiveAabb(&AABB->Child1[0], str);
     }
@@ -134,6 +134,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     //ReportMdl << "Converting to ascii, data type: " << nDataType << "\n";
     std::string nl = "\r\n";
     std::stringstream sTimestamp;
+    static unsigned nExportedNodes = 0;
     SYSTEMTIME st;
     GetLocalTime(&st);
     sTimestamp << (st.wDay<10? "0" : "") << st.wDay << "/" << (st.wMonth<10? "0" : "") << st.wMonth << "/" << st.wYear;
@@ -143,6 +144,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     if(nDataType == 0) return;
     else if(nDataType == CONVERT_MODEL){
         ModelHeader * mh = (ModelHeader*) Data;
+        nExportedNodes = 0;
         sReturn << "# Exported with MDLedit " << version.Print() << " ";
         if(src == AsciiSource) sReturn << "from ascii source ";
         else if(src == BinarySource) sReturn << "from binary source ";
@@ -165,7 +167,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         sReturn     << nl << "  bmin " << PrepareFloat(mh->vBBmin.fX) << " " << PrepareFloat(mh->vBBmin.fY) << " " << PrepareFloat(mh->vBBmin.fZ);
         sReturn     << nl << "  bmax " << PrepareFloat(mh->vBBmax.fX) << " " << PrepareFloat(mh->vBBmax.fY) << " " << PrepareFloat(mh->vBBmax.fZ);
         sReturn     << nl << "  radius " << PrepareFloat(mh->fRadius);
-        for(int n = 0; n < mh->ArrayOfNodes.size(); n++){
+        for(int n = 0; n < mh->Names.size(); n++){
             ConvertToAscii(CONVERT_NODE, sReturn, (void*) &n);
         }
         sReturn << nl << "endmodelgeom " << mh->GH.sName.c_str() << nl;
@@ -177,6 +179,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
 
         sReturn << nl << nl << "donemodel " << mh->GH.sName.c_str() << nl;
+
+        ReportMdl << "Exported nodes: " << nExportedNodes << "\n";
     }
     else if(nDataType == CONVERT_ANIMATION){
         Animation * anim = (Animation*) Data;
@@ -198,9 +202,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_ANIMATION_NODE){
         Node * node = (Node*) Data;
         sReturn << nl << "    node dummy ";
-        sReturn << MakeUniqueName(node->Head.nNodeNumber);
-        //ReportMdl << "Animation node: " << MakeUniqueName(node->Head.nNodeNumber) << nl;
-        sReturn << nl << "      parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
+        sReturn << MakeUniqueName(node->Head.nNameIndex);
+        //ReportMdl << "Animation node: " << MakeUniqueName(node->Head.nNameIndex) << nl;
+        sReturn << nl << "      parent " << (node->Head.nParentIndex.Valid() ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_KEYED, sReturn, (void*) &(node->Head.Controllers.at(n)));
@@ -216,46 +220,54 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         if(!FH) return;
         ModelHeader * mh = &FH->MH;
         int n = *((int*) Data);
-        Node & node = mh->ArrayOfNodes.at(n);
+        MdlInteger<unsigned short> nNodeIndex = GetNodeIndexByNameIndex(n);
 
-        if(node.Head.nType & NODE_HEADER){
-            ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
-        }
-        else{
-            //ReportMdl << "Writing ASCII WARNING: Headerless (ghost?) node! Offset: " << node.nOffset << nl;
+        if(!nNodeIndex.Valid()){
             sReturn << nl << "name " << mh->Names.at(n).sName;
         }
-        if(node.Head.nType & NODE_AABB){
-            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-            ConvertToAscii(CONVERT_AABB, sReturn, (void*) &node);
+        else{
+            Node & node = mh->ArrayOfNodes.at(nNodeIndex);
+
+            //std::cout << "Exporting node " << nExportedNodes << " (" << GetNodeName(node) << ")\n";
+            nExportedNodes++;
+
+            if(node.Head.nType & NODE_HEADER){
+                ConvertToAscii(CONVERT_HEADER, sReturn, (void*) &node);
+            }
+            else{
+            }
+            if(node.Head.nType & NODE_AABB){
+                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+                ConvertToAscii(CONVERT_AABB, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_SABER){
+                ConvertToAscii(CONVERT_SABER, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_DANGLY){
+                if(bMinimizeVerts2) BuildWeldedArrays(node);
+                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+                ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_SKIN && !bSkinToTrimesh){
+                if(bMinimizeVerts2) BuildWeldedArrays(node);
+                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+                ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_MESH){
+                if(bMinimizeVerts2) BuildWeldedArrays(node);
+                ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_REFERENCE){
+                ConvertToAscii(CONVERT_REFERENCE, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_EMITTER){
+                ConvertToAscii(CONVERT_EMITTER, sReturn, (void*) &node);
+            }
+            else if(node.Head.nType & NODE_LIGHT){
+                ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
+            }
+            if(node.Head.nType != 0) sReturn << nl << "endnode";
         }
-        else if(node.Head.nType & NODE_SABER){
-            ConvertToAscii(CONVERT_SABER, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_DANGLY){
-            if(bMinimizeVerts2) BuildWeldedArrays(node);
-            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-            ConvertToAscii(CONVERT_DANGLY, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_SKIN && !bSkinToTrimesh){
-            if(bMinimizeVerts2) BuildWeldedArrays(node);
-            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-            ConvertToAscii(CONVERT_SKIN, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_MESH){
-            if(bMinimizeVerts2) BuildWeldedArrays(node);
-            ConvertToAscii(CONVERT_MESH, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_REFERENCE){
-            ConvertToAscii(CONVERT_REFERENCE, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_EMITTER){
-            ConvertToAscii(CONVERT_EMITTER, sReturn, (void*) &node);
-        }
-        else if(node.Head.nType & NODE_LIGHT){
-            ConvertToAscii(CONVERT_LIGHT, sReturn, (void*) &node);
-        }
-        if(node.Head.nType != 0) sReturn << nl << "endnode";
     }
     else if(nDataType == CONVERT_HEADER){
         Node * node = (Node*) Data;
@@ -271,8 +283,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         else if(node->Head.nType == (NODE_HEADER)) sReturn << "dummy";
         else sReturn << "dummy"; /// A catch-all
         sReturn << " ";
-        sReturn << MakeUniqueName(node->Head.nNodeNumber);
-        sReturn << nl << "  parent " << (node->Head.nParentIndex != -1 ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
+        sReturn << MakeUniqueName(node->Head.nNameIndex);
+        sReturn << nl << "  parent " << (node->Head.nParentIndex.Valid() ? MakeUniqueName(node->Head.nParentIndex) : "NULL");
         if(node->Head.Controllers.size() > 0){
             for(int n = 0; n < node->Head.Controllers.size(); n++){
                 ConvertToAscii(CONVERT_CONTROLLER_SINGLE, sReturn, (void*) &(node->Head.Controllers.at(n)));
@@ -383,12 +395,13 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
 
         /// If the Wok is present, we may want to put out the wok verts instead.
         std::vector<Vertex> * ptr_verts = &node->Mesh.Vertices;
-        std::vector<Vertex> WokVerts = GetWokVertData(*node);
-        if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
-            ptr_verts = &node->Mesh.TempVertices;
-        }
-        else if(bUseWokData && (node->Head.nType & NODE_AABB) && WokVerts.size() > 0){
+        std::vector<Vertex> WokVerts;
+        if(bUseWokData && (node->Head.nType & NODE_AABB) && Wok && Wok->GetData()){
+            WokVerts = GetWokVertData(*node);
             ptr_verts = &WokVerts;
+        }
+        else if(bMinimizeVerts2 && !(node->Head.nType & NODE_AABB) && !(node->Head.nType & NODE_SABER)){
+            ptr_verts = &node->Mesh.TempVertices;
         }
 
         sReturn << nl << "  verts " << ptr_verts->size();
@@ -481,21 +494,21 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             for(int n = 0; n < ptr_verts->size(); n++){
                 sReturn << nl << "    ";
                 int i = 0;
-                signed short nBoneNumber; // = (int) round(ptr_verts->at(n).MDXData.Weights.fWeightIndex.at(i));
+                MdlInteger<unsigned short> nBoneNumber; // = (int) round(ptr_verts->at(n).MDXData.Weights.fWeightIndex.at(i));
                 //ReportMdl << "Bone name index array size: " << node->Skin.BoneNameIndices.size() << nl;
                 bool bDependentVert = false;
                 while(i < 4){
                     nBoneNumber = ptr_verts->at(n).MDXData.Weights.nWeightIndex.at(i);
                     //ReportMdl << "Reading bone number " << nBoneNumber << nl;
-                    if(nBoneNumber > -1 && nBoneNumber < node->Skin.BoneNameIndices.size()){
-                        int nNodeNumber = node->Skin.BoneNameIndices.at(nBoneNumber);
-                        //if (nNodeNumber > -1) nNodeNumber = data.NameIndicesInOffsetOrder.at(nNodeNumber);
+                    if(nBoneNumber.Valid() && nBoneNumber < node->Skin.BoneNameIndices.size()){
+                        MdlInteger<unsigned short> nNameIndex = node->Skin.BoneNameIndices.at(nBoneNumber);
+                        //if (nNameIndex > -1) nNameIndex = data.NameIndicesInOffsetOrder.at(nNameIndex);
                         //ReportMdl << "Reading bone number " << nBoneNumber;
                         //ReportMdl << ", representing bone " << FH->MH.Names.at(node->Skin.BoneNameIndices.at(nBoneNumber)).sName.c_str() << ".\n";
-                        //sReturn << " " << FH->MH.Names.at(nNodeNumber).sName.c_str() << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
-                        if(nNodeNumber > -1 && nNodeNumber < FH->MH.Names.size()){
+                        //sReturn << " " << FH->MH.Names.at(nNameIndex).sName.c_str() << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
+                        if(nNameIndex.Valid() && nNameIndex < FH->MH.Names.size()){
                             if(!bDependentVert) bDependentVert = true;
-                            sReturn << " " << MakeUniqueName(nNodeNumber) << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
+                            sReturn << " " << MakeUniqueName(nNameIndex) << " " << PrepareFloat(ptr_verts->at(n).MDXData.Weights.fWeightValue.at(i));
                         }
                     }
                     i++;
@@ -538,7 +551,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 Vector vLyt;
                 if(FH) vLyt = FH->MH.vLytPosition;
                 for(int l = 0; l < data.edges.size(); l++){
-                    if(data.edges.at(l).nTransition != -1){
+                    if(data.edges.at(l).nTransition.Valid()){
                         int nIndex = data.edges.at(l).nIndex;
                         Face & wokface = data.faces.at(nIndex/3);
                         Vector & v1 = data.verts.at(wokface.nIndexVertex.at(0));
@@ -665,7 +678,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_CONTROLLERLESS_DATA){
         Node & node = * (Node*) Data;
         ModelHeader & data = FH->MH;
-        Node & geonode = GetNodeByNameIndex(node.Head.nNodeNumber);
+        MdlInteger<unsigned short> nNodeIndex = GetNodeIndexByNameIndex(node.Head.nNameIndex);
+        if(!nNodeIndex.Valid()) throw mdlexception("converting controllerless data to ascii error: dealing with a name index that does not have a node in geometry.");
+        Node & geonode = data.ArrayOfNodes.at(nNodeIndex);
         Location loc = geonode.GetLocation();
 
         std::cout << "Converting controllerless data " << node.Head.ControllerData.size() << ".\n";
@@ -676,8 +691,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             AxisAngle aaCurrent;
             for(int n = 0; n < 2; n++){
                 sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(n)) << " ";
-                ByteBlock4.f = node.Head.ControllerData.at(2 + n);
-                qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                float fCompressed = node.Head.ControllerData.at(2 + n);
+                qCurrent = DecompressQuaternion(*(unsigned*)&fCompressed);
                 aaCurrent = AxisAngle(qCurrent);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
@@ -715,8 +730,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             AxisAngle aaCurrent;
             for(int n = 0; n < 2; n++){
                 sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(8 + n)) << " ";
-                ByteBlock4.f = node.Head.ControllerData.at(8 + 2 + n);
-                qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                float fCompressed = node.Head.ControllerData.at(8 + 2 + n);
+                qCurrent = DecompressQuaternion(*(unsigned*)&fCompressed);
                 aaCurrent = AxisAngle(qCurrent);
                 sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
             }
@@ -727,26 +742,33 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
     else if(nDataType == CONVERT_CONTROLLER_KEYED){
         Controller * ctrl = (Controller*) Data;
         ModelHeader & data = FH->MH;
-        Node & geonode = GetNodeByNameIndex(ctrl->nNodeNumber);
+        MdlInteger<unsigned short> nNodeIndex = GetNodeIndexByNameIndex(ctrl->nNameIndex);
+        if(!nNodeIndex.Valid()) throw mdlexception("converting keyed controller to ascii error: dealing with a name index that does not have a node in geometry.");
+        Node & geonode = data.ArrayOfNodes.at(nNodeIndex);
         Location loc = geonode.GetLocation();
-        Node * tempNode = nullptr;
-        if(ctrl->nAnimation >= 0){
+        Node * p_node = nullptr;
+        if(ctrl->nAnimation.Valid()){
             Animation & anim = data.Animations.at(ctrl->nAnimation);
-            for(int an = 0; an < anim.ArrayOfNodes.size() && tempNode == nullptr; an++){
-                Node & animNode = anim.ArrayOfNodes.at(an);
-                if(ctrl->nNodeNumber == animNode.Head.nNodeNumber){
-                    for(int ac = 0; ac < animNode.Head.Controllers.size() && tempNode == nullptr; ac++){
-                        if(&animNode.Head.Controllers.at(ac) == ctrl) tempNode = &animNode;
+            /// The advantage of these loops is that they will find ALL nodes with the same node index, even if there are several.
+            for(Node & animnode : anim.ArrayOfNodes){
+                if(ctrl->nNameIndex == animnode.Head.nNameIndex){
+                    for(Controller & search_ctrl : animnode.Head.Controllers){
+                        if(&search_ctrl == ctrl){
+                            p_node = &animnode;
+                            break;
+                        }
                     }
+                    if(p_node) break;
                 }
             }
         }
-        Node & node = *tempNode;
+        if(!p_node) throw mdlexception("ConvertToAscii() ERROR: Couldn't find the animation node to which a keyed controller belongs.");
+        Node & node = *p_node; /// This could crash
         //ReportMdl << "Node does not crash\n";
 
         sReturn << nl << "      ";
         sReturn << ReturnControllerName(ctrl->nControllerType, geonode.Head.nType);
-        if(ctrl->nColumnCount > 16 && !bBezierToLinear) sReturn << "bezier";
+        if(ctrl->nColumnCount & 16 && !bBezierToLinear) sReturn << "bezier";
         sReturn << "key";
         try{
             if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
@@ -755,8 +777,8 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                 AxisAngle aaCurrent, aaDiff;
                 for(int n = 0; n < ctrl->nValueCount; n++){
                     sReturn << nl << "        " << PrepareFloat(node.Head.ControllerData.at(ctrl->nTimekeyStart + n)) << " ";
-                    ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart + n);
-                    qCurrent = DecompressQuaternion(ByteBlock4.ui);
+                    float fCompressed = node.Head.ControllerData.at(ctrl->nDataStart + n);
+                    qCurrent = DecompressQuaternion(*(unsigned*)&fCompressed);
                     aaCurrent = AxisAngle(qCurrent);
 
                     sReturn << PrepareFloat(aaCurrent.vAxis.fX) << " " << PrepareFloat(aaCurrent.vAxis.fY) << " " << PrepareFloat(aaCurrent.vAxis.fZ) << " " << PrepareFloat(aaCurrent.fAngle);
@@ -803,7 +825,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
                     for(int i = 0; i < (ctrl->nColumnCount & 15) * (!bBezierToLinear ? 3 : 1); i++){
                         sReturn << PrepareFloat(node.Head.ControllerData.at(ctrl->nDataStart + n*((ctrl->nColumnCount & 15) * 3) + i));
                         if(i < (ctrl->nColumnCount & 15) * 3 - 1) sReturn << " ";
-                        if(i % (ctrl->nColumnCount & 15) == 0 && i > 0) sReturn << " ";
+                        if((i+1) % (ctrl->nColumnCount & 15) == 0) sReturn << " ";
                     }
                 }
             }
@@ -832,23 +854,23 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             }
             else{
                 std::string sLocation;
-                if(ctrl->nAnimation == -1) sLocation = "geometry";
+                if(!ctrl->nAnimation.Valid()) sLocation = "geometry";
                 else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
-                ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
+                ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNameIndex).sName << " (" << sLocation.c_str() << ")!\n";
                 Error("A controller type is not being handled! Check the console and add the necessary code!");
             }
         }
         catch(const std::out_of_range & e){
-            Error("Missing controller data on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
-                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.\n" + e.what());
+            Warning("Missing controller data on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
+                               "' on node '" + data.Names.at(node.Head.nNameIndex).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.\n" + e.what());
         }
         catch(const std::exception & e){
             Error("An exception occurred on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
-                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "':\n" + e.what());
+                               "' on node '" + data.Names.at(node.Head.nNameIndex).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "':\n" + e.what());
         }
         catch(...){
             Error("An unknown exception occurred on animation controller '" + ReturnControllerName(ctrl->nControllerType, geonode.Head.nType) +
-                               "' on node '" + data.Names.at(node.Head.nNodeNumber).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.");
+                               "' on node '" + data.Names.at(node.Head.nNameIndex).sName + "' in animation '" + data.Animations.at(node.nAnimation).sName.c_str() + "'.");
         }
         sReturn << nl << "      endlist";
     }
@@ -858,12 +880,14 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
             Error("Error! Single controller has more than one value. Skipping.");
             return;
         }
-        Node & node = GetNodeByNameIndex(ctrl->nNodeNumber);
+        MdlInteger<unsigned short> nNodeIndex = GetNodeIndexByNameIndex(ctrl->nNameIndex);
+        if(!nNodeIndex.Valid()) throw mdlexception("converting single controller to ascii error: dealing with a name index that does not have a node in geometry.");
+        Node & node = FH->MH.ArrayOfNodes.at(nNodeIndex);
         sReturn << nl << "  " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " ";
         if(ctrl->nColumnCount == 2 && ctrl->nControllerType == CONTROLLER_HEADER_ORIENTATION){
             //Compressed orientation
-            ByteBlock4.f = node.Head.ControllerData.at(ctrl->nDataStart);
-            Orientation CtrlOrient(DecompressQuaternion(ByteBlock4.ui));
+            float fCompressed = node.Head.ControllerData.at(ctrl->nDataStart);
+            Orientation CtrlOrient(DecompressQuaternion(*(unsigned*)&fCompressed));
             //sReturn << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetQuaternion().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetQuaternion().fW);
             sReturn << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fX) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fY) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().vAxis.fZ) << " " << PrepareFloat(CtrlOrient.GetAxisAngle().fAngle);
         }
@@ -888,9 +912,9 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         }
         else{
             std::string sLocation;
-            if(ctrl->nAnimation == -1) sLocation = "geometry";
+            if(!ctrl->nAnimation.Valid()) sLocation = "geometry";
             else sLocation = FH->MH.Animations.at(ctrl->nAnimation).sName;
-            ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNodeNumber).sName << " (" << sLocation.c_str() << ")!\n";
+            ReportMdl << "Controller data error for " << ReturnControllerName(ctrl->nControllerType, node.Head.nType) << " in " << FH->MH.Names.at(ctrl->nNameIndex).sName << " (" << sLocation.c_str() << ")!\n";
             Error("A controller type is not being handled! Check the console and add the necessary code!");
         }
     }
@@ -932,7 +956,7 @@ void MDL::ConvertToAscii(int nDataType, std::stringstream & sReturn, void * Data
         int nRoomLinkSize = 0;
         std::stringstream ssRoomlinks;
         for(int n = 0; n < data.edges.size(); n++){
-            if(data.edges.at(n).nTransition != -1){
+            if(data.edges.at(n).nTransition.Valid()){
                 ssRoomlinks << nl << "    " << data.edges.at(n).nIndex << " " << data.edges.at(n).nTransition;
                 nRoomLinkSize++;
             }

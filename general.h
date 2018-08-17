@@ -29,7 +29,9 @@ extern double PI;
 extern bool bShowHex;
 char DecToHexDigit(int nDec);
 void CharsToHex(char * cOutput, std::vector<char> & cInput, int nOffset, int nNumber);
+void CharsToHex(std::string & sOutput, std::vector<char> & cInput, int nOffset, int nNumber);
 void AddSignificantZeroes(char * cInt, int nSignificant);
+void AddSignificantZeroes(std::string & sInt, int nSignificant);
 void TruncateDec(TCHAR * tcString);
 std::string TruncateDec(std::string sCopy);
 void PrepareCharForDisplay(char * cChar);
@@ -69,9 +71,10 @@ struct Version{
     unsigned int nMajor;
     unsigned int nMinor;
     unsigned int nPatch;
-    Version(unsigned int n1, unsigned int n2, unsigned int n3): nMajor(n1), nMinor(n2), nPatch(n3) {}
+    bool bBeta = false;
+    Version(unsigned int n1, unsigned int n2, unsigned int n3, bool bB): nMajor(n1), nMinor(n2), nPatch(n3), bBeta(bB) {}
     std::string Print(){
-        return (std::string("v") + std::to_string(nMajor) + "." + std::to_string(nMinor) + "." + std::to_string(nPatch));
+        return (std::string("v") + std::to_string(nMajor) + "." + std::to_string(nMinor) + "." + std::to_string(nPatch) + (bBeta ? " - BETA" : ""));
     }
 };
 

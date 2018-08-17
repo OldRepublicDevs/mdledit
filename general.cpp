@@ -74,6 +74,11 @@ void AddSignificantZeroes(char * cInt, int nSignificant){
     delete [] cString;
 }
 
+void AddSignificantZeroes(std::string & sInt, int nSignificant){
+    sInt.reserve(nSignificant);
+    while(sInt.size() < nSignificant) sInt.insert(sInt.begin(), '0');
+}
+
 //Removes final zeros, unless a decimal operator precedes it.
 void TruncateDec(TCHAR * tcString){
     int nLen = strlen(tcString);
@@ -168,6 +173,24 @@ void CharsToHex(char * cOutput, std::vector<char> & cInput, int nOffset, int nNu
         if(n+1 == nNumber) cOutput[n*3 + 2] = '\0';
         else cOutput[n*3 + 2] = ' ';
         n++;
+    }
+}
+
+/**
+    sOutput - the output, a string
+    cInput - the input, the char vector
+    nOffset - at what offset do we start reading the chars?
+    nNumber - how many chars do we want to convert to hex?
+**/
+void CharsToHex(std::string & sOutput, std::vector<char> & cInput, int nOffset, int nNumber){
+    sOutput.clear();
+    for(int n = 0; n < nNumber; n++){
+        if(nOffset + n >= cInput.size()) return;
+        if(n > 0) sOutput.push_back(' ');
+        int nDigit1 = (unsigned char) cInput.at(nOffset + n) / 16;
+        sOutput.push_back(DecToHexDigit(nDigit1));
+        int nDigit2 = (unsigned char) cInput.at(nOffset + n) - nDigit1 * 16;
+        sOutput.push_back(DecToHexDigit(nDigit2));
     }
 }
 
@@ -337,7 +360,15 @@ void ClearStringstream(std::stringstream & ssClearMe){
 
 std::string to_ansi(const std::wstring & wString){
     std::string sReturn (0xFFFF, 0);
-    wcstombs(&sReturn.front(), &wString.front(), wString.length());
+    try{
+        wcstombs(&sReturn.front(), &wString.front(), wString.length());
+    }
+    catch(std::exception & e){
+        throw mdlexception(std::string("to_ansi() error: ") + e.what());
+    }
+    catch(...){
+        throw mdlexception("to_ansi() error: Unknown exception..");
+    }
     return sReturn.c_str();
 }
 
@@ -348,14 +379,11 @@ std::wstring to_wide(const std::string & sString){
 }
 
 bool StringEqual(const std::string & s1, const std::string & s2, bool bCaseSensitive){
-    if(bCaseSensitive){
-        if(s1 == s2) return true;
-    }
-    else{
-        std::string s1copy(s1), s2copy(s2);
+    std::string s1copy(s1.c_str()), s2copy(s2.c_str());
+    if(!bCaseSensitive){
         std::transform(s1copy.begin(), s1copy.end(), s1copy.begin(), ::tolower);
         std::transform(s2copy.begin(), s2copy.end(), s2copy.begin(), ::tolower);
-        if(s1copy == s2copy) return true;
     }
+    if(s1copy == s2copy) return true;
     return false;
 }

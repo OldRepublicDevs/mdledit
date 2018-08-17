@@ -136,32 +136,34 @@ void OpenViewer(MDL & Mdl, std::vector<std::string>cItem, LPARAM lParam){
     else if((cItem[2] == "Animations") || ((cItem[4] == "Animations") && ((cItem[1] == "Children") || (cItem[1] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName << "Animations > " << cItem[1] << " > " << Data.Names[node->Head.nNodeNumber].sName.c_str();
+        sName << "Animations > " << cItem[1] << " > " << Data.Names[node->Head.nNameIndex].sName.c_str();
         Mdl.ConvertToAscii(CONVERT_ANIMATION_NODE, sPrint, (void*) lParam);
     }
     /// Geo Node ///
     else if((cItem[1] == "Geometry") || ((cItem[3] == "Geometry") && ((cItem[1] == "Children") || (cItem[1] == "Parent")))){
         Node * node = (Node*) lParam;
 
-        sName << "Geometry > " << Data.Names[node->Head.nNodeNumber].sName.c_str();
+        sName << "Geometry > " << Data.Names[node->Head.nNameIndex].sName.c_str();
 
-        Mdl.ConvertToAscii(CONVERT_NODE, sPrint, (void*) &node->Head.nNodeNumber);
+        Mdl.ConvertToAscii(CONVERT_NODE, sPrint, (void*) &node->Head.nNameIndex);
     }
     /// Controller ///
     else if(cItem[1] == "Controllers"){
         Controller * ctrl = (Controller*) lParam;
 
         std::string sLocation;
-        if(ctrl->nAnimation == -1){
+        if(!ctrl->nAnimation.Valid()){
             sLocation = "Geometry > ";
         }
         else{
             sLocation = "Animations > " + std::string(Data.Animations[ctrl->nAnimation].sName.c_str()) + " > ";
         }
-        std::string sController = ReturnControllerName(ctrl->nControllerType, Mdl.GetNodeByNameIndex(ctrl->nNodeNumber).Head.nType);
+        MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(ctrl->nNameIndex);
+        if(!nNodeIndex.Valid()) throw mdlexception("Vertex normal and tangent space vector calculation error: dealing with a name index that does not have a node in geometry.");
+        std::string sController = ReturnControllerName(ctrl->nControllerType, Data.ArrayOfNodes.at(nNodeIndex).Head.nType);
         if(ctrl->nColumnCount & 16) sController += "bezierkey";
-        else if(ctrl->nAnimation != -1) sController += "key";
-        sName << sLocation << Data.Names[ctrl->nNodeNumber].sName.c_str() << " > " << sController;
+        else if(ctrl->nAnimation.Valid()) sController += "key";
+        sName << sLocation << Data.Names[ctrl->nNameIndex].sName.c_str() << " > " << sController;
         if(!(cItem[3] == "Geometry")){
             Mdl.ConvertToAscii(CONVERT_CONTROLLER_KEYED, sPrint, (void*) lParam);
         }

@@ -35,8 +35,8 @@
 //#define IDM_LINK_HEAD       123
 #define IDM_SETTINGS        124
 #define IDM_EDITOR_DLG      125
-//#define IDM_GAME_K1         126
-//#define IDM_GAME_K2         127
+#define IDM_TREE_SORT_LIN   126
+#define IDM_TREE_SORT_HIE   127
 #define IDM_EDIT_TEXTURES   128
 #define IDM_VIEW_HEX        129
 #define IDM_HELP            130
@@ -90,6 +90,8 @@
 #define IDPM_OPEN_GEO_VIEWER        306
 #define IDPM_OPEN_EDITOR            307
 #define IDPM_SCROLL                 308
+#define IDPM_TV_FOLD_ALL            309
+#define IDPM_TV_EXPAND_ALL          310
 
 #define IDP_DISPLAY_UPDATE      350
 

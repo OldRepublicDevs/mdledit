@@ -176,16 +176,23 @@ Vector & Vector::operator/=(const Vector & v){ //cross product
 }
 bool Vector::operator==(const Vector & v){
     //if(fX == v.fX && fY == v.fY && fZ == v.fZ) return true;
-    if(abs(fX-v.fX) < 0.0001 && abs(fY-v.fY) < 0.0001 && abs(fZ-v.fZ) < 0.0001) return true;
+    if(abs(fX-v.fX) < 0.001 && abs(fY-v.fY) < 0.001 && abs(fZ-v.fZ) < 0.001) return true;
     return false;
 }
 Vector & Vector::Rotate(const Quaternion & q){
     if(fX == 0.0 && fY == 0.0 && fZ == 0.0) return *this;
+
+    /// Optimization by Laurent Couvidou
+    *this = 2.0 * dot(q.vAxis, *this) * q.vAxis
+          + (q.fW * q.fW - dot(q.vAxis, q.vAxis)) * *this
+          + 2.0 * q.fW * cross(q.vAxis, *this);
+    /*
     Quaternion qVec (fX, fY, fZ, 0.0);
     //std::cout << "Multiplication quaternion: " << q.Print() << "\n";
     qVec = (q * qVec) * q.inverse();
     //std::cout << "Rotated Quaternion: " << qVec.vAxis.Print() << "\n";
     *this = qVec.vAxis;
+    */
     return *this;
 }
 double Vector::GetLength() const {
@@ -193,21 +200,21 @@ double Vector::GetLength() const {
 }
 void Vector::Normalize(){
     double fNorm = GetLength();
-    if(fNorm < 0.000001){
-        /// 1.0 0.0 0.0 based on vanilla normals (in 003ebof for example) ?????????
-        *this = Vector(0.0, 0.0, 0.0);
+    if(fNorm < 0.000001 || !std::isfinite(fNorm)){
+        /// 1.0 0.0 0.0 based on vanilla normals (in 003ebof for example, or p_g0t0) ?????????
+        *this = Vector(1.0, 0.0, 0.0);
     }
     else *this /= fNorm;
 }
 bool Vector::Compare(const Vector & v1, double fDiff){
-    /*
+    /* */
     if(abs(fX - v1.fX) < fDiff &&
        abs(fY - v1.fY) < fDiff &&
        abs(fZ - v1.fZ) < fDiff ) return true;
-    */
+    /* */
 
     /// Alternative:
-    if((*this - v1).GetLength() < fDiff) return true;
+    //if((*this - v1).GetLength() < fDiff) return true;
     return false;
 }
 bool Vector::Null(double fDiff){

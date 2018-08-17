@@ -12,6 +12,31 @@ HTREEITEM TreeView_GetNthChild(HWND hwndTree, HTREEITEM htiParent, int nChild){
     return htiChild;
 }
 
+void TreeView_DeleteAllChildren(HWND hwndTree, HTREEITEM htiParent){
+    if(htiParent == NULL) return;
+    HTREEITEM htiChild = TreeView_GetChild(hwndTree, htiParent);
+    while(htiChild != NULL){
+        TreeView_DeleteItem(hwndTree, htiChild);
+        htiChild = TreeView_GetChild(hwndTree, htiParent);
+    }
+}
+
+bool TreeView_ExpandAll(HWND hwndTV, HTREEITEM hItem, UINT flag){
+    if(hItem == NULL) return false;
+
+    HTREEITEM htiChild = TreeView_GetChild(hwndTV, hItem);
+    while(htiChild != NULL){
+        if(TreeView_GetChild(hwndTV, htiChild) != NULL){
+            if(!TreeView_ExpandAll(hwndTV, htiChild, flag))
+                return false;
+        }
+        htiChild = TreeView_GetNextSibling(hwndTV, htiChild);
+    }
+
+    if(!(TreeView_GetItemState(hwndTV, hItem, TVIS_EXPANDED) & TVIS_EXPANDED) && flag == TVE_COLLAPSE) return true;
+    return TreeView_Expand(hwndTV, hItem, flag);
+}
+
 HTREEITEM TreeView_GetChildByText(HWND hwndTree, HTREEITEM htiParent, const std::string & sText){
     HTREEITEM htiChild = TreeView_GetChild(hwndTree, htiParent);
     if(htiParent == NULL) htiChild = TreeView_GetRoot(hwndTree);
