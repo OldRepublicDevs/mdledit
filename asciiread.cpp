@@ -2236,6 +2236,9 @@ bool ASCII::ReadWalkmesh(MDL & Mdl, bool bPwk){
 		Mdl.Dwk0.reset(new DWK);
 		Mdl.Dwk1.reset(new DWK);
 		Mdl.Dwk2.reset(new DWK);
+		Mdl.Dwk0->SetDwk(0);
+		Mdl.Dwk1->SetDwk(1);
+		Mdl.Dwk2->SetDwk(2);
 		std::wstring sDwk;
 		sDwk =  GetFilename()+L" (closed)";
 		Mdl.Dwk0->SetFilePath(sDwk);

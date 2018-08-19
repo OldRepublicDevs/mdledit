@@ -285,11 +285,12 @@ bool LoadFiles(MDL & mdl, const std::wstring & sFileNoExt, bool & bAscii){
                     /// First check whether it's an ascii or a binary
                     std::vector<char> cBinaryDwk (8, 0);
                     bead_ReadFile(file, cBinaryDwk, 8);
-                    if(std::string(&cBinaryDwk.front(), 8) == "BWM V1.0")  ReportMdl << "File " << to_ansi(cDwk) << " is not binary.\n";
+                    if(std::string(&cBinaryDwk.front(), 8) != "BWM V1.0")  ReportMdl << "File " << to_ansi(cDwk) << " is not binary.\n";
                     else{
                         /// We may begin reading
                         ReportMdl << "DWK0: " << to_ansi(cDwk) << "\n";
                         mdl.Dwk0.reset(new DWK());
+                        mdl.Dwk0->SetDwk(0);
                         std::vector<char> & sBufferRef = mdl.Dwk0->CreateBuffer(length);
                         bead_ReadFile(file, sBufferRef);
                         mdl.Dwk0->SetFilePath(cDwk);
@@ -317,6 +318,7 @@ bool LoadFiles(MDL & mdl, const std::wstring & sFileNoExt, bool & bAscii){
                         /// We may begin reading
                         ReportMdl << "DWK1: " << to_ansi(cDwk) << "\n";
                         mdl.Dwk1.reset(new DWK());
+                        mdl.Dwk1->SetDwk(1);
                         std::vector<char> & sBufferRef = mdl.Dwk1->CreateBuffer(length);
                         bead_ReadFile(file, sBufferRef);
                         mdl.Dwk1->SetFilePath(cDwk);
@@ -344,6 +346,7 @@ bool LoadFiles(MDL & mdl, const std::wstring & sFileNoExt, bool & bAscii){
                         /// We may begin reading
                         ReportMdl << "DWK2: " << to_ansi(cDwk) << "\n";
                         mdl.Dwk2.reset(new DWK());
+                        mdl.Dwk2->SetDwk(2);
                         std::vector<char> & sBufferRef = mdl.Dwk2->CreateBuffer(length);
                         bead_ReadFile(file, sBufferRef);
                         mdl.Dwk2->SetFilePath(cDwk);
@@ -965,6 +968,9 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             SendMessage((HWND)lpParam, 69, 1, NULL); //Abort, return error=1
             return 0;
         }
+
+        /// If everything's fine, then we may delete the ascii data at this point.
+        Model.Ascii.reset();
 
         /// Now we know whether we have WOK data
         if(Model.Wok) TabCtrl_AppendTab(hTabs, "WOK");
