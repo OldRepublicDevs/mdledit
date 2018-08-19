@@ -15,6 +15,19 @@ std::string RetrieveString(std::vector<std::string> & items, unsigned nIndex){
 
 void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, MenuLineAdder * pmla, int nFile){
 
+    if(bShowHex && lParam){
+        std::vector<DataRegion> * p_dataRegions = GetDataRegions(cItem, lParam);
+
+        if(p_dataRegions) for(DataRegion & region : *p_dataRegions){
+            if(TabCtrl_GetTabIndexByText(hTabs, region.sFile) == -1) continue;
+
+            InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
+            pmla->nIndex++;
+
+            break;
+        }
+    }
+
     if(RetrieveString(cItem, 0) == "") return;
 
     /// Header
@@ -28,10 +41,12 @@ void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, Menu
         pmla->nIndex++;
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
+        /*
         if(bShowHex){
             InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
             pmla->nIndex++;
         }
+        */
     }
     /// Animation
     else if(RetrieveString(cItem, 1) == "Animations"){
@@ -39,19 +54,23 @@ void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, Menu
         pmla->nIndex++;
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_OPEN_EDITOR, "Edit values");
         pmla->nIndex++;
+        /*
         if(bShowHex){
             InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
             pmla->nIndex++;
         }
+        */
     }
     /// Animation Node
     else if((RetrieveString(cItem, 2) == "Animations") || ((RetrieveString(cItem, 4) == "Animations") && ((RetrieveString(cItem, 1) == "Children") || (safesubstr(RetrieveString(cItem, 0), 0, 7) == "Parent:")))){
         InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_VIEW_ASCII, "View ascii");
         pmla->nIndex++;
+        /*
         if(bShowHex){
             InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here");
             pmla->nIndex++;
         }
+        */
     }
     /// Controllers
     else if(RetrieveString(cItem, 1) == "Controllers"){
@@ -77,10 +96,12 @@ void AddMenuLines(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, Menu
         pmla->nIndex++;
     }
     else if(RetrieveString(cItem, 0) == "Vertices" && nFile == 0){
+        /*
         if(Mdl.Mdx && bShowHex){
             InsertMenu(pmla->hMenu, pmla->nIndex, MF_BYPOSITION | MF_STRING, IDPM_SCROLL, "Scroll here (MDX)");
             pmla->nIndex++;
         }
+        */
     }
     else return;
 }
@@ -185,6 +206,15 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Total Nodes: " << Data.MH.GH.nTotalNumberOfNodes << " (with Supermodel)";
             sPrint << "\r\n";
             sPrint << "\r\n" << "Layout Position: " << PrepareFloat(Data.MH.vLytPosition.fX) << " " << PrepareFloat(Data.MH.vLytPosition.fY) << " " << PrepareFloat(Data.MH.vLytPosition.fZ);
+            if(Data.MH.nTotalVertCount){
+                sPrint << "\r\n";
+                sPrint << "\r\n" << "Total Verts on Model: " << Data.MH.nTotalVertCount;
+                if(Data.MH.nExcludedVerts) sPrint << " (" << Data.MH.nTotalVertCount - Data.MH.nExcludedVerts << " without lightsaber verts)";
+                if(Data.MH.nTotalTangent1Count) sPrint << "\r\n" << "Total Verts with Tangent Space 1: " << Data.MH.nTotalTangent1Count;
+                if(Data.MH.nTotalTangent2Count) sPrint << "\r\n" << "Total Verts with Tangent Space 2: " << Data.MH.nTotalTangent2Count;
+                if(Data.MH.nTotalTangent3Count) sPrint << "\r\n" << "Total Verts with Tangent Space 3: " << Data.MH.nTotalTangent3Count;
+                if(Data.MH.nTotalTangent4Count) sPrint << "\r\n" << "Total Verts with Tangent Space 4: " << Data.MH.nTotalTangent4Count;
+            }
         }
 
         /// Node ///
@@ -228,7 +258,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             }
         }
         else if(RetrieveString(cItem, 0) == "Controllers"){
-            Header * head = (Header * ) lParam;
+            Header * head = & (((Node *) lParam)->Head); //(Header * ) lParam;
             sPrint << "== Controllers ==";
             sPrint << "\r\n" << "Offset: " << head->ControllerArray.nOffset;
             sPrint << "\r\n" << "Count:  " << head->ControllerArray.nCount;
@@ -378,7 +408,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             }
         }
         else if(RetrieveString(cItem, 0) == "Children"){
-            Header * head = (Header * ) lParam;
+            Header * head = & (((Node *) lParam)->Head); //(Header * ) lParam;
             sPrint << "== Children ==";
             sPrint << "\r\n" << "Offset: " << head->ChildrenArray.nOffset;
             sPrint << "\r\n" << "Count:  " << head->ChildrenArray.nCount;
@@ -395,10 +425,10 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n" << "Shadow:         " << light->nShadow;
             sPrint << "\r\n" << "Flare:          " << light->nFlare;
             sPrint << "\r\n" << "Fading Light:   " << light->nFadingLight;
-        }
-        else if(RetrieveString(cItem, 0) == "Lens Flares"){
-            LightHeader * light = (LightHeader * ) lParam;
-            sPrint << "== Lens Flares ==";
+            sPrint << "\r\n";
+            sPrint << "\r\n" << "-- Lens Flares --";
+            sPrint << "\r\n" << "Flare Radius: " << PrepareFloat(light->fFlareRadius);
+            sPrint << "\r\n";
             sPrint << "\r\n" << "Sizes Offset: " << light->FlareSizeArray.nOffset;
             sPrint << "\r\n" << "Sizes Count:  " << light->FlareSizes.size();
             sPrint << "\r\n";
@@ -410,10 +440,8 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n";
             sPrint << "\r\n" << "Textures Offset: " << light->FlareTextureNameArray.nOffset;
             sPrint << "\r\n" << "Textures Count:  " << light->FlareTextureNames.size();
-            sPrint << "\r\n";
-            sPrint << "\r\n" << "Flare Radius: " << PrepareFloat(light->fFlareRadius);
         }
-        else if(RetrieveString(cItem, 1) == "Lens Flares"){
+        else if(RetrieveString(cItem, 1) == "Light"){
             LightHeader * light = & ((Node * ) lParam)->Light;
 
             std::string sName = RetrieveString(cItem, 0);
@@ -780,16 +808,16 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[1], false);
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[2], false);
                         sPrint << "\r\n" << "              " << PrepareFloat(mdx->Weights.fWeightValue[3], false);
-                        sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0];
-                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1];
-                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2];
-                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[3];
+                        sPrint << "\r\n" << "Weight Index: " << mdx->Weights.nWeightIndex[0].Print();
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[1].Print();
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[2].Print();
+                        sPrint << "\r\n" << "              " << mdx->Weights.nWeightIndex[3].Print();
                     }
                 }
             }
         }
         else if((RetrieveString(cItem, 0) == "Faces") && !bWok){
-            MeshHeader * mesh = (MeshHeader * ) lParam;
+            MeshHeader * mesh = & (((Node *) lParam)->Mesh); //(MeshHeader * ) lParam;
             sPrint << "== Faces ==";
             sPrint << "\r\n" << "Offset: " << mesh->FaceArray.nOffset;
             sPrint << "\r\n" << "Count:  " << mesh->FaceArray.nCount;
@@ -840,29 +868,27 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
             sPrint << "\r\n";
             sPrint << "\r\n" << "-- Bone Indices --";
             for(int n = 0; n < 16; n++) sPrint << "\r\n" << "Index " << n+1 << ": " << skin->nBoneIndices[n];
-        }
-        else if(RetrieveString(cItem, 0) == "Bones"){
-            SkinHeader * skin = (SkinHeader * ) lParam;
-            sPrint <<           "== Bonemap ==";
+            sPrint << "\r\n";
+            sPrint << "\r\n" << "-- Bonemap --";
             sPrint << "\r\n" << "Offset: " << skin->nOffsetToBonemap;
             sPrint << "\r\n" << "Count:  " << skin->nNumberOfBonemap;
             sPrint << "\r\n";
-            sPrint << "\r\n" << "== Q Bones ==";
+            sPrint << "\r\n" << "-- Q Bones --";
             sPrint << "\r\n" << "Offset: " << skin->QBoneArray.nOffset;
             sPrint << "\r\n" << "Count:  " << skin->QBoneArray.nCount;
             sPrint << "\r\n";
-            sPrint << "\r\n" << "== T Bones ==";
+            sPrint << "\r\n" << "-- T Bones --";
             sPrint << "\r\n" << "Offset: " << skin->TBoneArray.nOffset;
             sPrint << "\r\n" << "Count:  " << skin->TBoneArray.nCount;
             sPrint << "\r\n";
-            sPrint << "\r\n" << "== Array8 ==";
+            sPrint << "\r\n" << "-- Array8 --";
             sPrint << "\r\n" << "Offset: " << skin->Array8Array.nOffset;
             sPrint << "\r\n" << "Count:  " << skin->Array8Array.nCount;
         }
-        else if(RetrieveString(cItem, 1) == "Bones"){
+        else if(RetrieveString(cItem, 1) == "Skin"){
             Bone * bone = (Bone * ) lParam;
             sPrint << "== " << RetrieveString(cItem, 0).c_str() << " ==";
-            sPrint << "\r\n" << "Bonemap: " << bone->nBonemap;
+            sPrint << "\r\n" << "Bonemap: " << bone->nBonemap.Print();
             sPrint << "\r\n" << "TBone: " << PrepareFloat(bone->TBone.fX);
             sPrint << "\r\n" << "       " << PrepareFloat(bone->TBone.fY);
             sPrint << "\r\n" << "       " << PrepareFloat(bone->TBone.fZ);
@@ -912,7 +938,7 @@ void DetermineDisplayText(std::vector<std::string>cItem, std::stringstream & sPr
 
         /// Walkmesh ///
         else if(RetrieveString(cItem, 0) == "Aabb"){
-            WalkmeshHeader * walk = (WalkmeshHeader * ) lParam;
+            WalkmeshHeader * walk = & (((Node *) lParam)->Walkmesh); //(WalkmeshHeader * ) lParam;
             sPrint <<           "== AABB Tree ==";
             sPrint << "\r\n" << "Offset to AABB Tree: " << walk->nOffsetToAabb;
         }

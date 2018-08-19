@@ -25,6 +25,7 @@ bool bShowDataStruct = false;
 bool bHexLocation = false;
 bool bAnalyze = false;
 bool bModelHierarchy = false;
+bool bAutoScroll = true;
 unsigned nEditSize = ME_DISPLAY_SIZE_Y;
 const int nCompactOffsetTop = 1;
 const int nCompactOffsetBottom = 1;
@@ -125,6 +126,7 @@ bool Frame::Run(int nCmdShow){
     hMe = hFrame;
     if(!hMe) return false;
     ShowWindow(hMe, nCmdShow);
+
     return true;
 }
 
@@ -333,6 +335,10 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
             else mii.fState = MFS_UNCHECKED;
             SetMenuItemInfo(GetMenu(hwnd), IDM_SHOW_DATASTRUCT, false, &mii);
 
+            if(bAutoScroll) mii.fState = MFS_CHECKED;
+            else mii.fState = MFS_UNCHECKED;
+            SetMenuItemInfo(GetMenu(hwnd), IDM_AUTO_SCROLL, false, &mii);
+
             if(bModelHierarchy) mii.fState = MFS_CHECKED;
             else mii.fState = MFS_UNCHECKED;
             SetMenuItemInfo(GetMenu(hwnd), IDM_TREE_SORT_HIE, false, &mii);
@@ -468,6 +474,19 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_SHOW_REPORT:
                 {
                     OpenReportDlg(Model);
+                }
+                break;
+                case IDM_AUTO_SCROLL:
+                {
+                    MENUITEMINFO mii;
+                    mii.cbSize = sizeof(MENUITEMINFO);
+                    mii.fMask = MIIM_STATE;
+                    GetMenuItemInfo(GetMenu(hwnd), IDM_AUTO_SCROLL, false, &mii);
+                    bAutoScroll = !(mii.fState & MFS_CHECKED); //Revert it, because user just clicked it so we need to turn it off/on
+                    if(bAutoScroll) mii.fState = MFS_CHECKED;
+                    else mii.fState = MFS_UNCHECKED;
+                    SetMenuItemInfo(GetMenu(hwnd), IDM_AUTO_SCROLL, false, &mii);
+                    ManageIni(INI_WRITE);
                 }
                 break;
                 case IDM_TREE_SORT_LIN:
@@ -666,8 +685,18 @@ LRESULT CALLBACK Frame::FrameProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDC_BTN_GAME:
                 {
                     bool bConfirm = true;
-                    if(Model.nSupermodel == 2 && Model.bK2 || Model.nSupermodel == 1 && !Model.bK2)
-                        bConfirm = IDYES == WarningYesNo("This model was loaded with a supermodel from the currently selected game. Are you sure you want to change the target game?");
+
+                    if(Model.GetFileData()){
+                        FileHeader & Data = *Model.GetFileData();
+
+                        if(Data.MH.cSupermodelName.c_str() != std::string("NULL"))
+                            bConfirm = IDYES == WarningYesNo("This model refers to a supermodel from the currently selected game. "
+                                                             "If the supermodel in the other game is not the same the model will not work properly. "
+                                                             "Are you sure you want to change the target game for this model?");
+                        //if(Model.nSupermodel == 2 && Model.bK2 || Model.nSupermodel == 1 && !Model.bK2)
+                        //    bConfirm = IDYES == WarningYesNo("This model refers to a supermodel from the currently selected game. Are you sure you want to change the target game for this model?");
+                    }
+
                     if(bConfirm){
                         Model.bK2 = !Model.bK2;
                         if(Model.GetFileData()){
@@ -1094,6 +1123,99 @@ LRESULT APIENTRY DisplaySubclassProc(HWND hwnd, UINT message, WPARAM wParam, LPA
     return CallWindowProc(MainDisplayProc, hwnd, message, wParam, lParam);
 }
 
+std::vector<DataRegion> currentDataRegions;
+std::vector<DataRegion> * GetDataRegions(const std::vector<std::string> & cItem, LPARAM lParam){
+    /// Here we assume lParam is also the pointer to the vector of data regions. Hopefully all the data is set up correctly because otherwise...
+    std::vector<DataRegion> * p_data = reinterpret_cast<std::vector<DataRegion> *>(lParam);
+
+    /// Special case of Vertices
+    if(safesubstr(cItem.at(0), 0, 7) == "Vertex ") p_data = & reinterpret_cast<Vertex *>(lParam)->dataRegions;
+    else if(safesubstr(cItem.at(0), 0, 14) == "Dangly Vertex "){
+        unsigned nPos = 14;
+        MdlInteger<unsigned int> nIndex;
+        try{ nIndex = stoi(cItem.at(0).substr(nPos),(size_t*) NULL); }
+        catch(std::invalid_argument){
+            std::cout << "GetDataRegions() - Dangly Vertex: There was an error converting the string: " << cItem.at(0).substr(nPos) << ".\n";
+        }
+        if(!nIndex.Valid()) throw mdlexception("Dangly Vertex index that should be retreived from the name in the tree item is invalid.");
+
+        p_data = & reinterpret_cast<Node *>(lParam)->Dangly.v_dataRegions.at(nIndex);
+    }
+    else if(safesubstr(cItem.at(0), 0, 11) == "Lens Flare "){
+        unsigned nPos = 11;
+        MdlInteger<unsigned int> nIndex;
+        try{ nIndex = stoi(cItem.at(0).substr(nPos),(size_t*) NULL); }
+        catch(std::invalid_argument){
+            std::cout << "GetDataRegions() - Lens Flare: There was an error converting the string: " << cItem.at(0).substr(nPos) << ".\n";
+        }
+        if(!nIndex.Valid()) throw mdlexception("Lens Flare index that should be retreived from the name in the tree item is invalid.");
+
+        p_data = & reinterpret_cast<Node *>(lParam)->Light.v_dataRegions.at(nIndex);
+    }
+
+    /// Exceptions
+    if(cItem.at(0) == "Children") return nullptr;
+    else if(cItem.at(0) == "Controllers") return nullptr;
+    else if(cItem.at(0) == "Faces") return nullptr;
+    else if(cItem.at(0) == "Vertices") return nullptr;
+    else if(cItem.at(0) == "Light") return nullptr;
+    else if(cItem.at(0) == "Emitter") return nullptr;
+    else if(cItem.at(0) == "Reference") return nullptr;
+    else if(cItem.at(0) == "Mesh") return nullptr;
+    else if(cItem.at(0) == "Skin") return nullptr;
+    else if(cItem.at(0) == "Danglymesh") return nullptr;
+    else if(cItem.at(0) == "Aabb") return nullptr;
+    else if(cItem.at(0) == "Lightsaber") return nullptr;
+    else if(cItem.at(0) == "Lens Flares") return nullptr;
+
+    return p_data;
+}
+
+void Edits::ScrollEdit(){
+    if(currentDataRegions.empty()) return;
+
+    int nTabIndex = -1;
+    for(DataRegion & region : currentDataRegions){
+        nTabIndex = TabCtrl_GetTabIndexByText(hTabs, region.sFile);
+        if(nTabIndex == -1) continue;
+
+        if(TabCtrl_GetCurSelName(hTabs) != region.sFile){
+            TabCtrl_SetCurSel(hTabs, nTabIndex);
+            LoadData();
+        }
+        int nTargetRow = (region.nOffset) / 16;
+        int nTargetRowEnd = (region.nOffset + region.nSize - 1) / 16;
+        if(nTargetRowEnd >= (yCurrentScroll + rcClient.bottom) / ME_EDIT_NEXT_ROW || nTargetRow < yCurrentScroll / ME_EDIT_NEXT_ROW){
+            yCurrentScroll = std::min((yMaxScroll / ME_EDIT_NEXT_ROW) * ME_EDIT_NEXT_ROW - (rcClient.bottom / ME_EDIT_NEXT_ROW + 1) * ME_EDIT_NEXT_ROW,
+                                      (long) nTargetRow * ME_EDIT_NEXT_ROW);
+            UpdateEdit();
+        }
+
+        break;
+    }
+
+    if(nTabIndex == -1) Error("The file where this data is located is not open in MDLedit.");
+}
+void UpdateCurrentTreeSelectionData(std::vector<std::string> & cItem, LPARAM lParam){
+    /// Add current selection data
+    currentDataRegions.clear();
+
+    if(lParam){
+        std::vector<DataRegion> * p_dataRegions = GetDataRegions(cItem, lParam);
+
+        if(p_dataRegions) currentDataRegions.insert(currentDataRegions.end(), p_dataRegions->begin(), p_dataRegions->end());
+    }
+
+    /// Report
+    /*/
+    for(DataRegion & region : currentDataRegions){
+        std::cout << "Marked region in " << region.sFile << " from " << region.nOffset << " for " << region.nSize << " bytes.\n";
+    }
+    /**/
+
+    if(bShowHex) Edit1.UpdateEdit();
+}
+
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     if(DEBUG_LEVEL > 1000) std::cout << "Processing Tree Action!";
     std::vector<std::string> cItem;
@@ -1114,8 +1236,6 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     lParam = tvNewSelect.lParam;
 
     //Fill cItem with all the ancestors of our item
-    bool bStop = false;
-    if(hItem == NULL) bStop = true;
     int n = 1;
     std::string FilenameModel = to_ansi(Model.GetFilename());
     std::string FilenameWalkmesh = to_ansi(Model.Wok ? Model.Wok->GetFilename() : L"");
@@ -1124,7 +1244,13 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     std::string FilenameDwk1 = to_ansi(Model.Dwk1 ? Model.Dwk1->GetFilename() : L"");
     std::string FilenameDwk2 = to_ansi(Model.Dwk2 ? Model.Dwk2->GetFilename() : L"");
     int nFile = -1;
-    while(!bStop && !(cItem.front() == FilenameModel) && !(cItem.front() == FilenameWalkmesh) && !(cItem.front() == FilenamePwk) && !(cItem.front() == FilenameDwk0) && !(cItem.front() == FilenameDwk1) && !(cItem.front() == FilenameDwk2)){
+    while((hItem != NULL) &&
+          !(cItem.front() == FilenameModel) &&
+          !(cItem.front() == FilenameWalkmesh) &&
+          !(cItem.front() == FilenamePwk) &&
+          !(cItem.front() == FilenameDwk0) &&
+          !(cItem.front() == FilenameDwk1) &&
+          !(cItem.front() == FilenameDwk2)){
         tvNewSelect.hItem = TreeView_GetParent(hTree, tvNewSelect.hItem);
         tvNewSelect.pszText = cGet;
         TreeView_GetItem(hTree, &tvNewSelect);
@@ -1147,7 +1273,16 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
     if(nAction == ACTION_UPDATE_DISPLAY){
         std::stringstream sPrint;
         //Determine cPrint that is to be shown
-        if(hItem != NULL) DetermineDisplayText(cItem, sPrint, lParam);
+        if(hItem != NULL){
+            DetermineDisplayText(cItem, sPrint, lParam);
+
+            if(bShowHex){
+                /// Add current selection data
+                UpdateCurrentTreeSelectionData(cItem, lParam);
+
+                if(bAutoScroll) Edit1.ScrollEdit();
+            }
+        }
 
         //Update DisplayEdit
         SetWindowText(hDisplayEdit, sPrint.str().c_str());
@@ -1162,7 +1297,12 @@ void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer){
         OpenEditorDlg(Model, cItem, lParam, nFile);
     }
     else if(nAction == ACTION_SCROLL){
-        ScrollToData(Model, cItem, lParam, nFile);
+        if(bShowHex){
+            /// Add current selection data
+            UpdateCurrentTreeSelectionData(cItem, lParam);
+
+            Edit1.ScrollEdit();
+        }
     }
 }
 
@@ -1198,6 +1338,7 @@ void ManageIni(IniConst Action){
         Ini.AddIniOption("UseCreaseAngle", DT_bool, &Model.bCreaseAngle);
         Ini.AddIniOption("CreaseAngle", DT_uint, &Model.nCreaseAngle);
         Ini.AddIniOption("TreeHierarchy", DT_bool, &bModelHierarchy);
+        Ini.AddIniOption("AutoScroll", DT_bool, &bAutoScroll);
         if(Model.bDebug || Action == INI_READ) Ini.AddIniOption("Debug", DT_bool, &Model.bDebug);
         if(Model.bWriteSmoothing || Action == INI_READ) Ini.AddIniOption("WriteSmoothingArray", DT_bool, &Model.bWriteSmoothing);
         if(bAnalyze || Action == INI_READ) Ini.AddIniOption("Analyze", DT_bool, &bAnalyze);

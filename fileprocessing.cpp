@@ -956,6 +956,7 @@ void ProgressPos(int nPos){
     UpdateWindow(hProgress);
 }
 
+extern std::vector<DataRegion> AllDataRegions;
 DWORD WINAPI ThreadProcessing(LPVOID lpParam){
     if(CurrentProcess == PROCESSING_ASCII){
         bool bReadWell = Model.ReadAscii();
@@ -990,6 +991,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
 
         SetWindowText(hDisplayEdit, "");
         Edit1.LoadData(); //Loads up the binary file onto the screen
+        AllDataRegions.reserve(Model.GetBuffer().size()/2);
         BuildTree(Model); //Fills the TreeView control
         if(Model.Pwk) BuildTree(*Model.Pwk);
         if(Model.Dwk0) BuildTree(*Model.Dwk0);
@@ -1000,6 +1002,7 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
             Model.Wok->SetFilePath(sWok);
             BuildTree(*Model.Wok);
         }
+        AllDataRegions.shrink_to_fit();
         ProgressPos(nSteps);
         ReportModel << "Data loaded in " << tLoad.GetTime() << ".\n";
     }
@@ -1061,12 +1064,14 @@ DWORD WINAPI ThreadProcessing(LPVOID lpParam){
         ProgressPos(0);
         ProgressSetStep(1);
 
+        AllDataRegions.reserve(Model.GetBuffer().size()/2);
         BuildTree(Model);
         if(Model.Wok) BuildTree(*Model.Wok);
         if(Model.Pwk) BuildTree(*Model.Pwk);
         if(Model.Dwk0) BuildTree(*Model.Dwk0);
         if(Model.Dwk1) BuildTree(*Model.Dwk1);
         if(Model.Dwk2) BuildTree(*Model.Dwk2);
+        AllDataRegions.shrink_to_fit();
         SetWindowText(hDisplayEdit, "");
         Edit1.LoadData();
         ProgressPos(nSteps);

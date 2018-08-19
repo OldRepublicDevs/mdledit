@@ -50,6 +50,7 @@
 #define IDM_SHOW_GROUP      138
 #define IDM_SHOW_DATASTRUCT 139
 #define IDM_SHOW_REPORT     140
+#define IDM_AUTO_SCROLL     141
 
 //GUI controls
 #define IDC_MAIN_EDIT    201

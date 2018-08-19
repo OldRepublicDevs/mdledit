@@ -310,7 +310,6 @@ class Ascii;
 bool LoadSupermodel(MDL & curmdl, std::unique_ptr<MDL> & Supermodel);
 
 /**** DATA STRUCTS ****/
-extern bool bReportValidness;
 template <class IntegerType>
 class MdlInteger{
     IntegerType nData;
@@ -326,7 +325,7 @@ class MdlInteger{
     void Set(IntegerType nSet) { nData = nSet; }
     bool Valid() const{
         IntegerType nMax = 0;
-        if(bReportValidness) std::cout << "Comparing " << nData << " to " << (IntegerType) (~nMax) << " at byte size " << sizeof(nData) << "... Valid: " << (nData != (~nMax) ? "true" : "false") << "\n";
+        //std::cout << "Comparing " << nData << " to " << (IntegerType) (~nMax) << " at byte size " << sizeof(nData) << "... Valid: " << (nData != (~nMax) ? "true" : "false") << "\n";
         return nData != (IntegerType) (~nMax);
     }/*
     IntegerType Get() const{
@@ -425,25 +424,16 @@ template <class IntegerType>
 bool operator!=(const MdlInteger<IntegerType> & mdlinteger, const MdlInteger<IntegerType> & mdlinteger2){
     return !(mdlinteger == mdlinteger2);
 }
-/*
-template<class IntegerType>
-MdlInteger & operator==(const IntegerType & integer, const MdlInteger<IntegerType> & mdlinteger){
-    return mdlinteger.nData == integer;
-}
-*/
 
-/*
-/// Instantiations for unsigned short
-template bool operator== <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
-template bool operator== <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
-template bool operator< <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
-template bool operator< <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
-template bool operator> <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
-template bool operator> <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
-template bool operator!= <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const unsigned short & integer);
-template bool operator!= <unsigned short>(const MdlInteger<unsigned short> & mdlinteger, const MdlInteger<unsigned short> & mdlinteger2);
-//bool operator==(const unsigned short & integer, const MdlInteger<unsigned short> & mdlinteger);
-*/
+struct DataRegion{
+    unsigned nOffset = 0;
+    unsigned nSize = 0;
+    std::string sFile;
+    HTREEITEM hItem = NULL;
+
+    DataRegion(const std::string & sFile, unsigned nOffset, unsigned nSize): nOffset(nOffset), nSize(nSize), sFile(sFile) {}
+    DataRegion(const DataRegion & reg): nOffset(reg.nOffset), nSize(reg.nSize), sFile(reg.sFile), hItem(reg.hItem) {}
+};
 
 struct Location{
     Vector vPosition;
@@ -493,6 +483,8 @@ struct Weight{
 };
 
 struct VertexData{
+    std::vector<DataRegion> dataRegions;
+
     //Binary members
     Vector vVertex;
     Vector vNormal;
@@ -541,9 +533,12 @@ struct VertexData{
 };
 
 struct Vertex: public Vector{
-    int nOffset = 0;
+    std::vector<DataRegion> dataRegions;
+
+    unsigned nOffset = 0;
     VertexData MDXData;
     MdlInteger<unsigned int> nLinkedFacesIndex;
+
     Vertex assign(const Vector & v, bool bMdx = false){
         fX = v.fX;
         fY = v.fY;
@@ -560,13 +555,35 @@ struct Vertex: public Vector{
 };
 
 struct Edge{
+    std::vector<DataRegion> dataRegions;
+
     MdlInteger<unsigned int> nIndex;
     MdlInteger<unsigned int> nTransition;
 
     Edge(MdlInteger<unsigned int> nIndex = -1, MdlInteger<unsigned int> nTransition = -1): nIndex(nIndex), nTransition(nTransition) {}
 };
 
+struct Perimeter{
+    std::vector<DataRegion> dataRegions;
+
+    unsigned nPerimeter = 0;
+
+    Perimeter(unsigned nPerimeter = 0): nPerimeter(nPerimeter) {}
+
+    unsigned & operator=(const unsigned & integer){
+        nPerimeter = integer;
+    }
+
+    /// This function should allow implicit conversion.
+    operator unsigned() const {
+        return nPerimeter;
+    }
+
+};
+
 struct Face{
+    std::vector<DataRegion> dataRegions;
+
     //Binary members
     Vector vNormal;
     double fDistance = 0.0;
@@ -599,6 +616,8 @@ struct Face{
 
 
 struct Aabb{
+    std::vector<DataRegion> dataRegions;
+
     //binary members
     Vector vBBmin;
     Vector vBBmax;
@@ -615,6 +634,8 @@ struct Aabb{
 };
 
 struct Controller{
+    std::vector<DataRegion> dataRegions;
+
     //Binary members
     MdlInteger<unsigned int> nControllerType = 0;
     MdlInteger<unsigned short> nUnknown2;
@@ -691,6 +712,8 @@ struct Patch{
 };
 
 struct Bone{
+    std::vector<DataRegion> dataRegions;
+
     MdlInteger<unsigned short> nBonemap;
     Orientation QBone;
     Vector TBone;
@@ -727,6 +750,8 @@ struct Header{
 
 /// NODE_LIGHT
 struct LightHeader{
+    std::vector<std::vector<DataRegion>> v_dataRegions;
+
     //Binary members
     double fFlareRadius = 0.0;                      /// 0   4B float
     ArrayHead UnknownArray;                         /// 4  12B uint32 (x3)
@@ -919,6 +944,8 @@ struct SkinHeader{
 
 /// NODE_DANGLY
 struct DanglymeshHeader{
+    std::vector<std::vector<DataRegion>> v_dataRegions;
+
     //Binary members
     ArrayHead ConstraintArray;
     double fDisplacement = 0.0;
@@ -955,6 +982,8 @@ struct SaberHeader{
 };
 
 struct Node{
+    std::vector<DataRegion> dataRegions;
+
     unsigned int nOffset = 0;
     MdlInteger<unsigned int> nAnimation;
 
@@ -969,11 +998,14 @@ struct Node{
     SaberHeader Saber;
 
     Location GetLocation();
+    unsigned GetSize();
 };
 
 /**** HIGHER ELEMENTS ****/
 
 struct Animation{
+    std::vector<DataRegion> dataRegions;
+
     //Binary members
 
     /// Geoheader part
@@ -1017,6 +1049,8 @@ struct GeometryHeader{
 };
 
 struct ModelHeader{
+    std::vector<DataRegion> dataRegions;
+
     //Binary members
     unsigned char nClassification = 0;
     unsigned char nSubclassification = 0;
@@ -1043,12 +1077,13 @@ struct ModelHeader{
     ArrayHead NameArray;
 
     //Added members
-    int nTotalVertCount = 0;
-    int nTotalTangent1Count = 0;
-    int nTotalTangent2Count = 0;
-    int nTotalTangent3Count = 0;
-    int nTotalTangent4Count = 0;
-    int nNodeCount = 0; //Only the nodes that actually exist, and only the ones in this model
+    unsigned nExcludedVerts = 0;
+    unsigned nTotalVertCount = 0;
+    unsigned nTotalTangent1Count = 0;
+    unsigned nTotalTangent2Count = 0;
+    unsigned nTotalTangent3Count = 0;
+    unsigned nTotalTangent4Count = 0;
+    unsigned nNodeCount = 0; //Only the nodes that actually exist, and only the ones in this model
     Vector vLytPosition;
     bool bCompressQuaternions = false;
     bool bHeadLink = false;
@@ -1075,6 +1110,8 @@ struct FileHeader{
 };
 
 struct BWMHeader{
+    std::vector<DataRegion> dataRegions;
+
     //Data
     int nType = 0;
     Vector vUse1;
@@ -1100,9 +1137,9 @@ struct BWMHeader{
     unsigned int nOffsetToPerimeters = 0;
     std::vector<Aabb> aabb;
     std::vector<Face> faces;
-    std::vector<Vector> verts;
+    std::vector<Vertex> verts;
     std::vector<Edge> edges;
-    std::vector<int> perimeters;
+    std::vector<Perimeter> perimeters;
 };
 
 /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// /// ///
@@ -1292,10 +1329,13 @@ class PWK: public BWM{
 
 class DWK: public BWM{
     static const std::string sClassName;
+    unsigned char nDWK = 0;
 
   public:
     //Getters
     const std::string GetName(){ return sClassName; }
+    void SetDwk(unsigned char n){ nDWK = n; }
+    unsigned char GetDwk(){ return nDWK; }
 };
 
 class WOK: public BWM{

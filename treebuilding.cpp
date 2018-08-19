@@ -14,7 +14,9 @@
     BuildTree()          // frame.h (BWM)
 /**/
 
-HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hParentNew = NULL, HTREEITEM hAfterNew = NULL, UINT Flags = NULL){
+std::vector<DataRegion> AllDataRegions;
+
+HTREEITEM Append(BinaryFile & binf, const std::string & sString, LPARAM lParam = NULL, HTREEITEM hParentNew = NULL, HTREEITEM hAfterNew = NULL, UINT Flags = NULL){
     static HTREEITEM hPrev;
     if(sString.empty()) return hPrev;
     static HTREEITEM hParent;
@@ -42,14 +44,31 @@ HTREEITEM Append(const std::string & sString, LPARAM lParam = NULL, HTREEITEM hP
     tvis.hParent = hParent;
     tvis.hInsertAfter = hAfter;
     hPrev = TreeView_InsertItem(hTree, &tvis);
+
+    if(lParam){
+        std::vector<DataRegion> * p_data = GetDataRegions({sString}, lParam);
+        if(p_data != nullptr){
+            for(DataRegion & reg : *p_data){
+                reg.hItem = hPrev;
+            }
+            AllDataRegions.insert(AllDataRegions.end(), p_data->begin(), p_data->end());
+        }
+        /*
+        /// Use this item to update the position structures so we may access the tree item by double clicking its data in the edit control.
+        for(BinaryPosition & pos : binf.GetPositions()){
+            if(pos.p_data == (void*) lParam) pos.hItem = hPrev;
+        }
+        */
+    }
+
     return hPrev;
 }
 
-void AppendAabb(Aabb * AABB, HTREEITEM TopLevel, int & nCount){
-    HTREEITEM htiAabb = Append("aabb "+std::to_string(nCount), (LPARAM) AABB, TopLevel);
+void AppendAabb(MDL & Mdl, Aabb * AABB, HTREEITEM TopLevel, int & nCount){
+    HTREEITEM htiAabb = Append(Mdl, "aabb "+std::to_string(nCount), (LPARAM) AABB, TopLevel);
     nCount++;
-    if(AABB->Child1.size() > 0) AppendAabb(&(AABB->Child1.front()), htiAabb, nCount);
-    if(AABB->Child2.size() > 0) AppendAabb(&(AABB->Child2.front()), htiAabb, nCount);
+    if(AABB->Child1.size() > 0) AppendAabb(Mdl, &(AABB->Child1.front()), htiAabb, nCount);
+    if(AABB->Child2.size() > 0) AppendAabb(Mdl, &(AABB->Child2.front()), htiAabb, nCount);
 }
 
 std::string GetNodeTreePrefix(unsigned short nType){
@@ -77,7 +96,7 @@ void BuildAnimationNode(Node & node, HTREEITEM Prev, std::vector<unsigned> & off
         for(Node & curnode : anim.ArrayOfNodes){
             if(curnode.Head.nParentIndex == node.Head.nNameIndex){
                 MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(curnode.Head.nNameIndex);
-                HTREEITEM Child = Append(GetNodeTreePrefix(!nNodeIndex.Valid() ? static_cast<unsigned short>(0) : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Prev);
+                HTREEITEM Child = Append(Mdl, GetNodeTreePrefix(!nNodeIndex.Valid() ? static_cast<unsigned short>(0) : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Prev);
 
                 /// In case we are looping, stop the loop
                 if(std::find(offsets.begin(), offsets.end(), curnode.nOffset) == offsets.end()){
@@ -92,25 +111,25 @@ void BuildAnimationNode(Node & node, HTREEITEM Prev, std::vector<unsigned> & off
 
     if(node.Head.nNameIndex != 0){
         MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(node.Head.nNameIndex);
-        HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, Prev);
+        HTREEITEM Controllers = Append(Mdl, "Controllers", (LPARAM) &node, Prev);
         for(Controller & ctrl : node.Head.Controllers){
             if(!nNodeIndex.Valid()) throw mdlexception("tree building error: we have controller data on an anim node that does not have a geo counterpart.");
-            Append(ReturnControllerName(ctrl.nControllerType, Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType) + (ctrl.nColumnCount > 15 ? "bezierkey" : "key"), (LPARAM) &ctrl, Controllers);
+            Append(Mdl, ReturnControllerName(ctrl.nControllerType, Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType) + (ctrl.nColumnCount > 15 ? "bezierkey" : "key"), (LPARAM) &ctrl, Controllers);
         }
 
         if(node.Head.nParentIndex.Valid()){
             MdlInteger<unsigned short> nNodeIndex2 = Mdl.GetNodeIndexByNameIndex(node.Head.nParentIndex, nAnim);
             if(!nNodeIndex2.Valid()) throw mdlexception("tree building error: dealing with a name index that does not have a node in animation.");
             Node & parent = Data.MH.Animations.at(nAnim).ArrayOfNodes.at(nNodeIndex2);
-            Append("Parent: " + Mdl.GetNodeName(parent), (LPARAM) &parent, Prev);
+            Append(Mdl, "Parent: " + Mdl.GetNodeName(parent), (LPARAM) &parent, Prev);
         }
     }
 
-    HTREEITEM Children = Append("Children", (LPARAM) &node.Head, Prev);
+    HTREEITEM Children = Append(Mdl, "Children", (LPARAM) &node, Prev);
     for(Node & child : anim.ArrayOfNodes){
         if(child.Head.nParentIndex == node.Head.nNameIndex){
             MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(child.Head.nNameIndex);
-            HTREEITEM Child = Append(GetNodeTreePrefix(!nNodeIndex.Valid() ? 0 : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(child), (LPARAM) &child, Children);
+            HTREEITEM Child = Append(Mdl, GetNodeTreePrefix(!nNodeIndex.Valid() ? 0 : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(child), (LPARAM) &child, Children);
         }
     }
 }
@@ -124,12 +143,12 @@ void BuildAnimationTree(HTREEITEM Animations, MDL & Mdl){
   try{
     for(int an = 0; an < Data.MH.Animations.size(); an++){
         Animation & anim = Data.MH.Animations.at(an);
-        HTREEITEM Anim = Append(anim.sName, (LPARAM) &anim, Animations);
+        HTREEITEM Anim = Append(Mdl, anim.sName, (LPARAM) &anim, Animations);
         std::vector<unsigned> offsets;
         offsets.reserve(anim.ArrayOfNodes.size());
         for(Node & node : anim.ArrayOfNodes){
             MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(node.Head.nNameIndex);
-            HTREEITEM CurrentNode = Append(GetNodeTreePrefix(!nNodeIndex.Valid() ? 0 : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(node), (LPARAM) &node, Anim);
+            HTREEITEM CurrentNode = Append(Mdl, GetNodeTreePrefix(!nNodeIndex.Valid() ? 0 : static_cast<unsigned short>(Data.MH.ArrayOfNodes.at(nNodeIndex).Head.nType)) + Mdl.GetNodeName(node), (LPARAM) &node, Anim);
             BuildAnimationNode(node, CurrentNode, offsets, Mdl, an);
 
             /// If we're doing the hierarchy, we only want to write out the first node, so stop after that
@@ -161,7 +180,7 @@ void BuildGeometryNode(Node & node, HTREEITEM Prev, std::vector<unsigned> & offs
         offsets.push_back(node.nOffset);
         for(Node & curnode : Data.MH.ArrayOfNodes){
             if(curnode.Head.nParentIndex == node.Head.nNameIndex){
-                HTREEITEM Child = Append(GetNodeTreePrefix(curnode.Head.nType) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Prev);
+                HTREEITEM Child = Append(Mdl, GetNodeTreePrefix(curnode.Head.nType) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Prev);
 
                 /// In case we are looping, stop the loop
                 if(std::find(offsets.begin(), offsets.end(), curnode.nOffset) == offsets.end())
@@ -172,83 +191,83 @@ void BuildGeometryNode(Node & node, HTREEITEM Prev, std::vector<unsigned> & offs
     }
 
     if(node.Head.nType & NODE_LIGHT){
-        HTREEITEM Light = Append("Light", (LPARAM) &node, Prev);
-        HTREEITEM LensFlares = Append("Lens Flares", (LPARAM) &node.Light, Light);
+        HTREEITEM Light = Append(Mdl, "Light", (LPARAM) &node, Prev);
+        //HTREEITEM LensFlares = Append(Mdl, "Lens Flares", (LPARAM) &node, Light);
         int nMaxSize = std::max(node.Light.FlareSizes.size(),
                        std::max(node.Light.FlarePositions.size(),
                        std::max(node.Light.FlareColorShifts.size(),
                                 node.Light.FlareTextureNames.size())));
         for(int n = 0; n < nMaxSize; n++)
-            Append("Lens Flare " + std::to_string(n), (LPARAM) &node, LensFlares);
+            Append(Mdl, "Lens Flare " + std::to_string(n), (LPARAM) &node, Light);
     }
     if(node.Head.nType & NODE_EMITTER){
-        HTREEITEM Emitter = Append("Emitter", (LPARAM) &node, Prev);
+        HTREEITEM Emitter = Append(Mdl, "Emitter", (LPARAM) &node, Prev);
     }
     if(node.Head.nType & NODE_REFERENCE){
-        HTREEITEM Reference = Append("Reference", (LPARAM) &node, Prev);
+        HTREEITEM Reference = Append(Mdl, "Reference", (LPARAM) &node, Prev);
     }
     if(node.Head.nType & NODE_MESH){
-        HTREEITEM Mesh = Append("Mesh", (LPARAM) &node, Prev);
-        HTREEITEM Vertices = Append("Vertices", (LPARAM) &node, Mesh);
+        HTREEITEM Mesh = Append(Mdl, "Mesh", (LPARAM) &node, Prev);
+        HTREEITEM Vertices = Append(Mdl, "Vertices", (LPARAM) &node, Mesh);
         if(node.Mesh.Vertices.size() > 0){
             for(int n = 0; n < node.Mesh.Vertices.size(); n++)
-                Append("Vertex " + std::to_string(n), (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
+                Append(Mdl, "Vertex " + std::to_string(n), (LPARAM) &(node.Mesh.Vertices[n]), Vertices);
         }
-        HTREEITEM Faces = Append("Faces", (LPARAM) &node.Mesh, Mesh);
+        HTREEITEM Faces = Append(Mdl, "Faces", (LPARAM) &node, Mesh);
         if(node.Mesh.Faces.size() > 0){
             for(int n = 0; n < node.Mesh.Faces.size(); n++){
-                Append("Face " + std::to_string(n), (LPARAM) &(node.Mesh.Faces[n]), Faces);
+                Append(Mdl, "Face " + std::to_string(n), (LPARAM) &(node.Mesh.Faces[n]), Faces);
             }
         }
     }
     if(node.Head.nType & NODE_SKIN){
-        HTREEITEM Skin = Append("Skin", (LPARAM) &node, Prev);
-        HTREEITEM Bones = Append("Bones", (LPARAM) &node.Skin, Skin);
+        HTREEITEM Skin = Append(Mdl, "Skin", (LPARAM) &node, Prev);
+        //HTREEITEM Bones = Append(Mdl, "Bones", (LPARAM) &node, Skin);
         if(node.Skin.Bones.size() > 0){
             for(int n = 0; n < node.Skin.Bones.size(); n++){
                 std::string sBone = "Bone: " + Names.at(node.Skin.Bones.at(n).nNameIndex).sName;
-                Append(sBone, (LPARAM) &(node.Skin.Bones.at(n)), Bones);
+                Append(Mdl, sBone, (LPARAM) &(node.Skin.Bones.at(n)), Skin);
             }
         }
     }
     if(node.Head.nType & NODE_DANGLY){
-        HTREEITEM Danglymesh = Append("Danglymesh", (LPARAM) &node, Prev);
+        HTREEITEM Danglymesh = Append(Mdl, "Danglymesh", (LPARAM) &node, Prev);
         for(int i = 0; i < node.Dangly.Constraints.size(); i++)
-            Append("Dangly Vertex " + std::to_string(i), (LPARAM) &(node), Danglymesh);
+            Append(Mdl, "Dangly Vertex " + std::to_string(i), (LPARAM) &(node), Danglymesh);
     }
     if(node.Head.nType & NODE_AABB){
-        HTREEITEM Walkmesh = Append("Aabb", (LPARAM) &node.Walkmesh, Prev);
+        HTREEITEM Walkmesh = Append(Mdl, "Aabb", (LPARAM) &node, Prev);
         int nCounter = 0;
-        if(node.Walkmesh.nOffsetToAabb > 0) AppendAabb(&(node.Walkmesh.RootAabb), Walkmesh, nCounter);
+        if(node.Walkmesh.nOffsetToAabb > 0) AppendAabb(Mdl, &(node.Walkmesh.RootAabb), Walkmesh, nCounter);
     }
     if(node.Head.nType & NODE_SABER){
-        HTREEITEM Saber = Append("Lightsaber", (LPARAM) &node, Prev);
+        HTREEITEM Saber = Append(Mdl, "Lightsaber", (LPARAM) &node, Prev);
         if(node.Saber.SaberData.size() > 0){
             for(int i = 0; i < node.Saber.SaberData.size(); i++){
-                Append("Lightsaber Vertex " + std::to_string(i), (LPARAM) &(node.Saber.SaberData[i]), Saber);
+                Append(Mdl, "Lightsaber Vertex " + std::to_string(i), (LPARAM) &(node.Saber.SaberData[i]), Saber);
             }
 
         }
     }
 
     if(node.Head.nNameIndex != 0){
-        HTREEITEM Controllers = Append("Controllers", (LPARAM) &node.Head, Prev);
+        HTREEITEM Controllers = Append(Mdl, "Controllers", (LPARAM) &node, Prev);
         for(Controller & ctrl : node.Head.Controllers){
-            Append(ReturnControllerName(ctrl.nControllerType, node.Head.nType), (LPARAM) &ctrl, Controllers);
+            Append(Mdl, ReturnControllerName(ctrl.nControllerType, node.Head.nType), (LPARAM) &ctrl, Controllers);
         }
 
         if(node.Head.nParentIndex.Valid()){
             MdlInteger<unsigned short> nNodeIndex = Mdl.GetNodeIndexByNameIndex(node.Head.nParentIndex);
             if(!nNodeIndex.Valid()) throw mdlexception("tree building error: dealing with a name index that does not have a node in geometry.");
             Node & parent = Data.MH.ArrayOfNodes.at(nNodeIndex);
-            Append("Parent: " + Mdl.GetNodeName(parent), (LPARAM) &parent, Prev);
+            Append(Mdl, "Parent: " + Mdl.GetNodeName(parent), (LPARAM) &parent, Prev);
         }
     }
 
-    HTREEITEM Children = Append("Children", (LPARAM) &node.Head, Prev);
+    HTREEITEM Children = Append(Mdl, "Children", (LPARAM) &node, Prev);
     for(Node & curnode : Data.MH.ArrayOfNodes){
         if(curnode.Head.nParentIndex == node.Head.nNameIndex){
-            HTREEITEM Child = Append(GetNodeTreePrefix(curnode.Head.nType) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Children);
+            HTREEITEM Child = Append(Mdl, GetNodeTreePrefix(curnode.Head.nType) + Mdl.GetNodeName(curnode), (LPARAM) &curnode, Children);
         }
     }
 }
@@ -264,7 +283,7 @@ void BuildGeometryTree(HTREEITEM Nodes, MDL & Mdl){
     std::vector<unsigned> offsets;
     offsets.reserve(Data.MH.nNodeCount);
     for(Node & node : Data.MH.ArrayOfNodes){
-        HTREEITEM CurrentNode = Append(GetNodeTreePrefix(node.Head.nType) + Mdl.GetNodeName(node), (LPARAM) &node, Nodes);
+        HTREEITEM CurrentNode = Append(Mdl, GetNodeTreePrefix(node.Head.nType) + Mdl.GetNodeName(node), (LPARAM) &node, Nodes);
         BuildGeometryNode(node, CurrentNode, offsets, Mdl);
 
         /// If we're doing the hierarchy, we only want to write out the first node, so stop after that
@@ -286,13 +305,13 @@ void BuildTree(MDL & Mdl){
     }
     FileHeader & Data = *Mdl.GetFileData();
 
-    HTREEITEM Root = Append(to_ansi(Mdl.GetFilename()), NULL, TVI_ROOT);
-    HTREEITEM Header = Append("Header", (LPARAM) &(Data.MH), Root);
+    HTREEITEM Root = Append(Mdl, to_ansi(Mdl.GetFilename()), NULL, TVI_ROOT);
+    HTREEITEM Header = Append(Mdl, "Header", (LPARAM) &(Data.MH), Root);
 
-    HTREEITEM Animations = Append("Animations", NULL, Root);
+    HTREEITEM Animations = Append(Mdl, "Animations", NULL, Root);
     BuildAnimationTree(Animations, Mdl);
 
-    HTREEITEM Nodes = Append("Geometry", NULL, Root);
+    HTREEITEM Nodes = Append(Mdl, "Geometry", NULL, Root);
     BuildGeometryTree(Nodes, Mdl);
 
     TreeView_Expand(hTree, Root, TVE_EXPAND);
@@ -303,35 +322,35 @@ void BuildTree(BWM & Bwm){
     if(!Bwm.GetData()) return;
     BWMHeader & Walkmesh = *Bwm.GetData();
 
-    HTREEITEM Root = Append(to_ansi(Bwm.GetFilename()), NULL, TVI_ROOT);
-    Append("Header", NULL, Root);
-    HTREEITEM Verts = Append("Vertices", (LPARAM) NULL, Root);
+    HTREEITEM Root = Append(Bwm, to_ansi(Bwm.GetFilename()), NULL, TVI_ROOT);
+    Append(Bwm, "Header", (LPARAM) &Walkmesh, Root);
+    HTREEITEM Verts = Append(Bwm, "Vertices", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.verts.size(); n++){
-        Append("Vertex " + std::to_string(n), (LPARAM) &Walkmesh.verts[n], Verts);
+        Append(Bwm, "Vertex " + std::to_string(n), (LPARAM) &Walkmesh.verts[n], Verts);
     }
     ProgressStepIt();
 
-    HTREEITEM Faces = Append("Faces", (LPARAM) NULL, Root);
+    HTREEITEM Faces = Append(Bwm, "Faces", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.faces.size(); n++){
-        Append("Face " + std::to_string(n), (LPARAM) &Walkmesh.faces[n], Faces);
+        Append(Bwm, "Face " + std::to_string(n), (LPARAM) &Walkmesh.faces[n], Faces);
     }
     ProgressStepIt();
 
-    HTREEITEM Aabb = Append("Aabb", (LPARAM) NULL, Root);
+    HTREEITEM Aabb = Append(Bwm, "Aabb", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.aabb.size(); n++){
-        Append("aabb " + std::to_string(n), (LPARAM) &Walkmesh.aabb[n], Aabb);
+        Append(Bwm, "aabb " + std::to_string(n), (LPARAM) &Walkmesh.aabb[n], Aabb);
     }
     ProgressStepIt();
 
-    HTREEITEM Array2 = Append("Edges", (LPARAM) NULL, Root);
+    HTREEITEM Array2 = Append(Bwm, "Edges", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.edges.size(); n++){
-        Append("Edge " + std::to_string(n), (LPARAM) &Walkmesh.edges[n], Array2);
+        Append(Bwm, "Edge " + std::to_string(n), (LPARAM) &Walkmesh.edges[n], Array2);
     }
     ProgressStepIt();
 
-    HTREEITEM Array3 = Append("Perimeters", (LPARAM) NULL, Root);
+    HTREEITEM Array3 = Append(Bwm, "Perimeters", (LPARAM) NULL, Root);
     for(int n = 0; n < Walkmesh.perimeters.size(); n++){
-        Append("Perimeter " + std::to_string(n), (LPARAM) &Walkmesh.perimeters[n], Array3);
+        Append(Bwm, "Perimeter " + std::to_string(n), (LPARAM) &Walkmesh.perimeters[n], Array3);
     }
     ProgressStepIt();
 

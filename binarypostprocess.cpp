@@ -533,15 +533,15 @@ void MDL::BinaryPostProcess(){
     /**/
 
     /// Report results
-    double fPercentage = ((double)nNumOfFoundNormals / (double)Data.MH.nTotalVertCount) * 100.0;
-    if(nNumOfFoundNormals != Data.MH.nTotalVertCount) fPercentage = std::min(fPercentage, 99.99);
-    double fPercentage2 = ((double) nBadGeo / (double)(Data.MH.nTotalVertCount)) * 100.0;
-    if(nBadGeo != Data.MH.nTotalVertCount) fPercentage2 = std::min(fPercentage2, 99.99);
-    bool bGoodEnough = (fPercentage > 80.0 || Data.MH.nTotalVertCount == 0);
-    ReportMdl << "Found normals: " << nNumOfFoundNormals << "/" << Data.MH.nTotalVertCount;
+    double fPercentage = ((double)nNumOfFoundNormals / (double)(Data.MH.nTotalVertCount - Data.MH.nExcludedVerts)) * 100.0;
+    if(nNumOfFoundNormals != (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts)) fPercentage = std::min(fPercentage, 99.99);
+    double fPercentage2 = ((double) nBadGeo / (double)(Data.MH.nTotalVertCount - Data.MH.nExcludedVerts)) * 100.0;
+    if(nBadGeo != (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts)) fPercentage2 = std::min(fPercentage2, 99.99);
+    bool bGoodEnough = (fPercentage > 80.0 || (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts) == 0);
+    ReportMdl << "Found normals: " << nNumOfFoundNormals << "/" << (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts);
     if(Data.MH.nTotalVertCount > 0) ReportMdl << " (" << round(fPercentage * 100.0) / 100.0 << "%)";
     ReportMdl << "\n";
-    ReportMdl << "  Bad geometry: " << nBadGeo << "/" << Data.MH.nTotalVertCount;
+    ReportMdl << "  Bad geometry: " << nBadGeo << "/" << (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts);
     ReportMdl << " (" << round(fPercentage2 * 100.0) / 100.0 << "%)";
     ReportMdl << "\n";
 
@@ -839,8 +839,10 @@ char Patch::FindTangentSpace(unsigned int nCheckFrom, std::vector<MdlInteger<uns
     if(bCancelSG) return false;
     std::vector<Patch> & patch_group = GetPatchGroup();
 
+    if(patch_group.size() == 0) throw mdlexception("Patch::FindTangentSpace() error: patch_group contains no patches.");
+
     /// Go through all patches in reverse order
-    for(int nCount = patch_group.size() - 1; nCount >= nCheckFrom; nCount--){
+    for(MdlInteger<unsigned> nCount = patch_group.size() - 1; nCount.Valid() && nCount >= nCheckFrom; nCount = nCount - 1){
         /// Skip the current patch
         if(&patch_group.at(nCount) == this) continue;
 

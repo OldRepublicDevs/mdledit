@@ -13,6 +13,7 @@ int WINAPI WinMain(HINSTANCE hThisInstance,
                      int nCmdShow){
     MSG messages;            /* Here messages to the application are saved */
 
+    std::cout << lpszArgument;
     if(!std::string(lpszArgument).empty()){
         /*/
         Warning("You have run mdledit with arguments, but this is not supported yet!\n\n"

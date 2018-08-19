@@ -54,6 +54,9 @@ void MDL::DecompileModel(bool bMinimal){
     //std::cout << "Data ready.\n";
     std::string sFileHeader = "File Header > ";
 
+    /// Setting up the pointer to the model header data
+    Data.MH.dataRegions.emplace_back("MDL", 0, 208);
+
     //First read the file header, geometry header and model header
     ReadNumber(&Data.nZero, 8, sFileHeader + "Padding");
     //std::cout << "Read first value, pos " << nPosition << ".\n";
@@ -168,6 +171,9 @@ void MDL::DecompileModel(bool bMinimal){
             Animation & anim = Data.MH.Animations.at(n);
             ReadNumber(&anim.nOffset, 6, sAnimation + "Offset");
             MarkDataBorder(nPosition - 1);
+
+            /// Setting up the pointer to the data
+            anim.dataRegions.emplace_back("MDL", anim.nOffset + 12, 136);
 
             SavePosition(0);
             nPosition = MDL_OFFSET + anim.nOffset;
@@ -340,6 +346,8 @@ void MDL::DecompileModel(bool bMinimal){
         */
     }
 
+    positions.shrink_to_fit();
+
     if(!bMinimal) ReportMdl << "Decompiled model in " << tDecompile.GetTime() << ".\n";
     if(!bReadSmoothing && bBinaryPostProcess && Mdx && !bMinimal) BinaryPostProcess();
 }
@@ -356,6 +364,9 @@ void MDL::ParseAabb(Aabb & aabb, unsigned int nHighestOffset, const std::string 
 
     if(aabb.nOffset == -1) throw mdlexception("An aabb node has offset -1.");
 
+    /// Setting up the pointer to the data
+    aabb.dataRegions.emplace_back("MDL", aabb.nOffset + 12, 40);
+
     unsigned int nPosData = aabb.nOffset + MDL_OFFSET;
     aabb.vBBmin.fX = ReadNumber<float>(nullptr, 2, sAabb + "Bounding Box Min > X", &nPosData);
     aabb.vBBmin.fY = ReadNumber<float>(nullptr, 2, sAabb + "Bounding Box Min > Y", &nPosData);
@@ -365,8 +376,8 @@ void MDL::ParseAabb(Aabb & aabb, unsigned int nHighestOffset, const std::string 
     aabb.vBBmax.fZ = ReadNumber<float>(nullptr, 2, sAabb + "Bounding Box Max > Z", &nPosData);
     ReadNumber(&aabb.nChild1, 6, sAabb + "Child 1 Offset", &nPosData);
     ReadNumber(&aabb.nChild2, 6, sAabb + "Child 2 Offset", &nPosData);
-    ReadNumber(aabb.nID.GetPtr(), 4, sAabb + "Face Index", &nPosData);
-    ReadNumber(&aabb.nProperty, 4, sAabb + "Second Child Property", &nPosData);
+    aabb.nID = ReadNumber<signed int>(nullptr, 4, sAabb + "Face Index", &nPosData);
+    aabb.nProperty = ReadNumber<unsigned>(nullptr, 4, sAabb + "Second Child Property", &nPosData);
     MarkDataBorder(nPosData - 1);
 
     if(aabb.nChild1 > 0){
@@ -394,6 +405,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
     ReadNumber(node.Head.nSupernodeNumber.GetPtr(), 5, sNode + "Supernode Index");
     ReadNumber(node.Head.nNameIndex.GetPtr(), 5, sNode + "Name Index");
     ReadNumber(&node.Head.nPadding1, 8, sNode + "Padding");
+
+    /// Setting up the pointer to the data
+    node.dataRegions.emplace_back("MDL", node.nOffset + 12, node.GetSize());
 
     ReportObject ReportMdl (*this);
     //ReportMdl << "Reading " << (node.nAnimation.Valid() ? "animation" : "geometry") << " node " << GetNodeName(node) << " at offset " << nPosition - 8 << ".\n";
@@ -450,6 +464,10 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
         nPosData = MDL_OFFSET + node.Head.ControllerArray.nOffset;
         for(int n = 0; n < node.Head.ControllerArray.nCount; n++){
             Controller & ctrl = node.Head.Controllers.at(n);
+
+            /// Setting up the pointer to the data
+            ctrl.dataRegions.emplace_back("MDL", nPosData, 16);
+
             std::string sController = sNode + "Controller " + std::to_string(n) + " > ";
             ReadNumber(&ctrl.nControllerType, 4, sController + "Type", &nPosData);
             ReadNumber(&ctrl.nUnknown2, 10, sController + "Unknown", &nPosData);
@@ -474,6 +492,13 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             int nCount = ctrl.nColumnCount & 0x0F;
             if(ctrl.nControllerType == CONTROLLER_HEADER_ORIENTATION && nCount == 2) nCount = 1;
             if(ctrl.nColumnCount & 0x10) nCount *= 3;
+
+            /// Setting up the pointer to the data
+            ctrl.dataRegions.emplace_back("MDL", MDL_OFFSET + node.Head.ControllerDataArray.nOffset + (ctrl.nTimekeyStart * 4),
+                                          ctrl.nValueCount * 4);
+            ctrl.dataRegions.emplace_back("MDL", MDL_OFFSET + node.Head.ControllerDataArray.nOffset + (ctrl.nDataStart * 4),
+                                          nCount * ctrl.nValueCount * 4);
+
             if(nCount * ctrl.nValueCount + ctrl.nDataStart > node.Head.ControllerData.size())
                 Warning("Missing controller data on an animation controller on node '" + GetNodeName(node) + "' in animation '" + FH->MH.Animations.at(node.nAnimation).sName.c_str() + "'.");
         }
@@ -548,13 +573,26 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
         ReadNumber(node.Light.nFadingLight.GetPtr(), 4, sLight + "Fading Light");
         MarkDataBorder(nPosition - 1);
 
+        node.Light.v_dataRegions.resize(std::max(node.Light.FlareSizeArray.nCount,
+                                        std::max(node.Light.FlarePositionArray.nCount,
+                                        std::max(node.Light.FlareColorShiftArray.nCount,
+                                        node.Light.FlareTextureNameArray.nCount))));
+
         if(node.Light.FlareTextureNameArray.nCount > 0){
             node.Light.FlareTextureNames.resize(node.Light.FlareTextureNameArray.nCount);
             nPosData = MDL_OFFSET + node.Light.FlareTextureNameArray.nOffset;
             for(int n = 0; n < node.Light.FlareTextureNameArray.nCount; n++){
+                /// Setting up the pointer to the data
+                node.Light.v_dataRegions.at(n).emplace_back("MDL", nPosData, 4);
+
                 ReadNumber(&node.Light.FlareTextureNames[n].nOffset, 6, sLight + "Flare Texture Name Offset " + std::to_string(n), &nPosData);
                 MarkDataBorder(nPosData - 1);
+
                 unsigned nPosData2 = MDL_OFFSET + node.Light.FlareTextureNames[n].nOffset;
+
+                /// Setting up the pointer to the data
+                node.Light.v_dataRegions.at(n).emplace_back("MDL", nPosData2, strlen(reinterpret_cast<const char *>(&sBuffer.at(nPosData2))) + 1);
+
                 ReadString(&node.Light.FlareTextureNames[n].sName, 0, 3, sLight + "Flare Texture Name String " + std::to_string(n), &nPosData2);
             }
         }
@@ -562,6 +600,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             node.Light.FlareSizes.resize(node.Light.FlareSizeArray.nCount);
             nPosData = MDL_OFFSET + node.Light.FlareSizeArray.nOffset;
             for(int n = 0; n < node.Light.FlareSizeArray.nCount; n++){
+                /// Setting up the pointer to the data
+                node.Light.v_dataRegions.at(n).emplace_back("MDL", nPosData, 4);
+
                 node.Light.FlareSizes[n] = ReadNumber<float>(nullptr, 2, sLight + "Flare Size " + std::to_string(n), &nPosData);
                 MarkDataBorder(nPosData - 1);
             }
@@ -570,6 +611,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             node.Light.FlarePositions.resize(node.Light.FlarePositionArray.nCount);
             nPosData = MDL_OFFSET + node.Light.FlarePositionArray.nOffset;
             for(int n = 0; n < node.Light.FlarePositionArray.nCount; n++){
+                /// Setting up the pointer to the data
+                node.Light.v_dataRegions.at(n).emplace_back("MDL", nPosData, 4);
+
                 node.Light.FlarePositions[n] = ReadNumber<float>(nullptr, 2, sLight + "Flare Position " + std::to_string(n), &nPosData);
                 MarkDataBorder(nPosData - 1);
             }
@@ -578,6 +622,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             node.Light.FlareColorShifts.resize(node.Light.FlareColorShiftArray.nCount);
             nPosData = MDL_OFFSET + node.Light.FlareColorShiftArray.nOffset;
             for(int n = 0; n < node.Light.FlareColorShiftArray.nCount; n++){
+                /// Setting up the pointer to the data
+                node.Light.v_dataRegions.at(n).emplace_back("MDL", nPosData, 12);
+
                 node.Light.FlareColorShifts[n].fR = ReadNumber<float>(nullptr, 2, sLight + "Flare Color Shift " + std::to_string(n) + " > R", &nPosData);
                 node.Light.FlareColorShifts[n].fG = ReadNumber<float>(nullptr, 2, sLight + "Flare Color Shift " + std::to_string(n) + " > G", &nPosData);
                 node.Light.FlareColorShifts[n].fB = ReadNumber<float>(nullptr, 2, sLight + "Flare Color Shift " + std::to_string(n) + " > B", &nPosData);
@@ -765,6 +812,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             for(int n = 0; n < node.Mesh.FaceArray.nCount; n++){
                 node.Mesh.Faces.at(n).nNameIndex = node.Head.nNameIndex;
 
+                /// Setting up the pointer to the data
+                node.Mesh.Faces.at(n).dataRegions.emplace_back("MDL", nPosData, 32);
+
                 node.Mesh.Faces[n].vNormal.fX = ReadNumber<float>(nullptr, 2, sMesh + "Face " + std::to_string(n) + " > Normal > X", &nPosData);
                 node.Mesh.Faces[n].vNormal.fY = ReadNumber<float>(nullptr, 2, sMesh + "Face " + std::to_string(n) + " > Normal > Y", &nPosData);
                 node.Mesh.Faces[n].vNormal.fZ = ReadNumber<float>(nullptr, 2, sMesh + "Face " + std::to_string(n) + " > Normal > Z", &nPosData);
@@ -812,11 +862,16 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
         MarkDataBorder(nPosition - 1);
 
         if(node.Dangly.ConstraintArray.nCount > 0){
+            node.Dangly.v_dataRegions.resize(node.Dangly.ConstraintArray.nCount);
             node.Dangly.Constraints.resize(node.Dangly.ConstraintArray.nCount);
             node.Dangly.Data2.resize(node.Dangly.ConstraintArray.nCount);
             nPosData = MDL_OFFSET + node.Dangly.ConstraintArray.nOffset;
             unsigned int nPosData2 = MDL_OFFSET + node.Dangly.nOffsetToData2;
             for(int n = 0; n < node.Dangly.ConstraintArray.nCount; n++){
+                /// Setting up the pointer to the data
+                node.Dangly.v_dataRegions.at(n).emplace_back("MDL", nPosData, 4);
+                node.Dangly.v_dataRegions.at(n).emplace_back("MDL", nPosData2, 12);
+
                 node.Dangly.Constraints.at(n) = ReadNumber<float>(nullptr, 2, sDangly + "Constraint " + std::to_string(n), &nPosData);
                 MarkDataBorder(nPosData - 1);
 
@@ -871,9 +926,22 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             unsigned int nPosData3 = MDL_OFFSET + node.Skin.TBoneArray.nOffset;
             unsigned int nPosData4 = MDL_OFFSET + node.Skin.Array8Array.nOffset;
             for(int n = 0; n < node.Skin.nNumberOfBonemap; n++){
-                if(bXbox) ReadNumber(&node.Skin.Bones[n].nBonemap, 5, sSkin + "Bonemap " + std::to_string(n), &nPosData);
-                else node.Skin.Bones[n].nBonemap = (unsigned short) ReadNumber<float>(nullptr, 2, sSkin + "Bonemap " + std::to_string(n), &nPosData);
+                if(bXbox){
+                    /// Setting up the pointer to the data
+                    node.Skin.Bones[n].dataRegions.emplace_back("MDL", nPosData, 2);
+
+                    ReadNumber(&node.Skin.Bones[n].nBonemap, 5, sSkin + "Bonemap " + std::to_string(n), &nPosData);
+                }
+                else{
+                    /// Setting up the pointer to the data
+                    node.Skin.Bones[n].dataRegions.emplace_back("MDL", nPosData, 4);
+
+                    node.Skin.Bones[n].nBonemap = (unsigned short) ReadNumber<float>(nullptr, 2, sSkin + "Bonemap " + std::to_string(n), &nPosData);
+                }
                 MarkDataBorder(nPosData - 1);
+
+                /// Setting up the pointer to the data
+                node.Skin.Bones[n].dataRegions.emplace_back("MDL", nPosData2, 16);
 
                 double fQW = ReadNumber<float>(nullptr, 2, sSkin + "QBone " + std::to_string(n) + " > W", &nPosData2);
                 double fQX = ReadNumber<float>(nullptr, 2, sSkin + "QBone " + std::to_string(n) + " > X", &nPosData2);
@@ -882,10 +950,16 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
                 MarkDataBorder(nPosData2 - 1);
                 node.Skin.Bones[n].QBone.SetQuaternion(fQX, fQY, fQZ, fQW);
 
+                /// Setting up the pointer to the data
+                node.Skin.Bones[n].dataRegions.emplace_back("MDL", nPosData3, 12);
+
                 node.Skin.Bones[n].TBone.fX = ReadNumber<float>(nullptr, 2, sSkin + "TBone " + std::to_string(n) + " > X", &nPosData3);
                 node.Skin.Bones[n].TBone.fY = ReadNumber<float>(nullptr, 2, sSkin + "TBone " + std::to_string(n) + " > Y", &nPosData3);
                 node.Skin.Bones[n].TBone.fZ = ReadNumber<float>(nullptr, 2, sSkin + "TBone " + std::to_string(n) + " > Z", &nPosData3);
                 MarkDataBorder(nPosData3 - 1);
+
+                /// Setting up the pointer to the data
+                node.Skin.Bones[n].dataRegions.emplace_back("MDL", nPosData4, 4);
 
                 ReadNumber(&node.Skin.Bones[n].nPadding, 11, sSkin + "Garbage " + std::to_string(n), &nPosData4);
                 if(n + 1 >= node.Skin.nNumberOfBonemap) MarkDataBorder(nPosData4 - 1);
@@ -907,6 +981,9 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
             for(int n = 0; n < node.Mesh.nNumberOfVerts; n++){
                 nMaxDataStructs++;
                 if(!bXbox){
+                    /// Setting up the pointer to the data
+                    node.Mesh.Vertices[n].dataRegions.emplace_back("MDL", nPosData, 12);
+
                     node.Mesh.Vertices[n].nOffset = nPosData;
                     node.Mesh.Vertices[n].fX = ReadNumber<float>(nullptr, 2, sMesh + "Vertex " + std::to_string(n) + " > X", &nPosData);
                     node.Mesh.Vertices[n].fY = ReadNumber<float>(nullptr, 2, sMesh + "Vertex " + std::to_string(n) + " > Y", &nPosData);
@@ -921,8 +998,12 @@ void MDL::ParseNode(Node & node, std::vector<unsigned int> & offsets, Vector vFr
                 node.Mesh.Vertices[n].MDXData.nNameIndex = node.Head.nNameIndex;
                 if(node.Mesh.nMdxDataSize > 0 && Mdx){
                 try{
+                    /// Setting up the pointer to the data
+                    node.Mesh.Vertices[n].dataRegions.emplace(node.Mesh.Vertices[n].dataRegions.begin(), "MDX", node.Mesh.nOffsetIntoMdx + n * node.Mesh.nMdxDataSize, node.Mesh.nMdxDataSize);
+
                     if(node.Mesh.nMdxDataBitmap & MDX_FLAG_VERTEX){
                         nPosData2 = node.Mesh.nOffsetIntoMdx + n * node.Mesh.nMdxDataSize + node.Mesh.nOffsetToMdxVertex;
+
                         node.Mesh.Vertices[n].MDXData.vVertex.fX = Mdx->ReadNumber<float>(nullptr, 2, sMdx + "Vertex " + std::to_string(n) + " > X", &nPosData2);
                         node.Mesh.Vertices[n].MDXData.vVertex.fY = Mdx->ReadNumber<float>(nullptr, 2, sMdx + "Vertex " + std::to_string(n) + " > Y", &nPosData2);
                         node.Mesh.Vertices[n].MDXData.vVertex.fZ = Mdx->ReadNumber<float>(nullptr, 2, sMdx + "Vertex " + std::to_string(n) + " > Z", &nPosData2);
@@ -1256,12 +1337,17 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
 
     Bwm.reset(new BWMHeader);
 
+    std::string sName = GetName() + (GetName() == "DWK" ? " " + std::to_string(((DWK*) this)->GetDwk()) : std::string());
+
     BWMHeader & Data = *Bwm;
 
     nPosition = 0;
 
     try{
         std::string sHeader ("Header > ");
+
+        /// Setting up the pointer to the data
+        Data.dataRegions.emplace_back(sName, 0, 136);
 
         std::string sFileType, sVersion;
 
@@ -1314,6 +1400,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         Data.verts.resize(Data.nNumberOfVerts);
         nPosData = Data.nOffsetToVerts;
         for(int n = 0; n < Data.nNumberOfVerts; n++){
+            /// Setting up the pointer to the data
+            Data.verts.at(n).dataRegions.emplace_back(sName, nPosData, 12);
+
             //Collect verts
             Data.verts.at(n).fX = ReadNumber<float>(nullptr, 2, "Vertex " + std::to_string(n) + " > X", &nPosData);
             Data.verts.at(n).fY = ReadNumber<float>(nullptr, 2, "Vertex " + std::to_string(n) + " > Y", &nPosData);
@@ -1328,6 +1417,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         Data.faces.resize(Data.nNumberOfFaces);
         nPosData = Data.nOffsetToIndices;
         for(int n = 0; n < Data.nNumberOfFaces; n++){
+            /// Setting up the pointer to the data
+            Data.faces.at(n).dataRegions.emplace_back(sName, nPosData, 12);
+
             //Collect indices
             Data.faces.at(n).nIndexVertex[0] = ReadNumber<signed int>(nullptr, 4, "Face " + std::to_string(n) + " > Vert Index 0", &nPosData);
             Data.faces.at(n).nIndexVertex[1] = ReadNumber<signed int>(nullptr, 4, "Face " + std::to_string(n) + " > Vert Index 1", &nPosData);
@@ -1341,6 +1433,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
     try{
         nPosData = Data.nOffsetToMaterials;
         for(int n = 0; n < Data.nNumberOfFaces; n++){
+            /// Setting up the pointer to the data
+            Data.faces.at(n).dataRegions.emplace_back(sName, nPosData, 4);
+
             //Collect materials
             ReadNumber(&Data.faces.at(n).nMaterialID, 4, "Face " + std::to_string(n) + " > Material ID", &nPosData);
             MarkDataBorder(nPosData - 1);
@@ -1352,6 +1447,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
     try{
         nPosData = Data.nOffsetToNormals;
         for(int n = 0; n < Data.nNumberOfFaces; n++){
+            /// Setting up the pointer to the data
+            Data.faces.at(n).dataRegions.emplace_back(sName, nPosData, 12);
+
             //Collect normals
             Data.faces.at(n).vNormal.fX = ReadNumber<float>(nullptr, 2, "Face " + std::to_string(n) + " > Normal > X", &nPosData);
             Data.faces.at(n).vNormal.fY = ReadNumber<float>(nullptr, 2, "Face " + std::to_string(n) + " > Normal > Y", &nPosData);
@@ -1365,6 +1463,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
     try{
         nPosData = Data.nOffsetToDistances;
         for(int n = 0; n < Data.nNumberOfFaces; n++){
+            /// Setting up the pointer to the data
+            Data.faces.at(n).dataRegions.emplace_back(sName, nPosData, 4);
+
             //Collect distances
             Data.faces.at(n).fDistance = ReadNumber<float>(nullptr, 2, "Face " + std::to_string(n) + " > Plane Distance", &nPosData);
             MarkDataBorder(nPosData - 1);
@@ -1377,6 +1478,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         Data.aabb.resize(Data.nNumberOfAabb);
         nPosData = Data.nOffsetToAabb;
         for(int n = 0; n < Data.nNumberOfAabb; n++){
+            /// Setting up the pointer to the data
+            Data.aabb.at(n).dataRegions.emplace_back(sName, nPosData, 44);
+
             //Collect aabb
             Data.aabb.at(n).vBBmin.fX = ReadNumber<float>(nullptr, 2, "AABB " + std::to_string(n) + " > Bounding Box Min > X", &nPosData);
             Data.aabb.at(n).vBBmin.fY = ReadNumber<float>(nullptr, 2, "AABB " + std::to_string(n) + " > Bounding Box Min > Y", &nPosData);
@@ -1399,6 +1503,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         nPosData = Data.nOffsetToAdjacentFaces;
         for(int n = 0; n < Data.nNumberOfAdjacentFaces; n++){
             if(n < Data.faces.size()){
+                /// Setting up the pointer to the data
+                Data.faces.at(n).dataRegions.emplace_back(sName, nPosData, 12);
+
                 Data.faces.at(n).nAdjacentFaces[0] = ReadNumber<signed int>(nullptr, 4, "Walkable Face " + std::to_string(n) + " > Adjacent Edge 0", &nPosData);
                 Data.faces.at(n).nAdjacentFaces[1] = ReadNumber<signed int>(nullptr, 4, "Walkable Face " + std::to_string(n) + " > Adjacent Edge 1", &nPosData);
                 Data.faces.at(n).nAdjacentFaces[2] = ReadNumber<signed int>(nullptr, 4, "Walkable Face " + std::to_string(n) + " > Adjacent Edge 2", &nPosData);
@@ -1414,6 +1521,9 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         Data.edges.resize(Data.nNumberOfEdges);
         nPosData = Data.nOffsetToEdges;
         for(int n = 0; n < Data.nNumberOfEdges; n++){
+            /// Setting up the pointer to the data
+            Data.edges.at(n).dataRegions.emplace_back(sName, nPosData, 8);
+
             ReadNumber(&Data.edges.at(n).nIndex, 4, "Outer Edge " + std::to_string(n) + " > Index", &nPosData);
             ReadNumber(&Data.edges.at(n).nTransition, 4, "Outer Edge " + std::to_string(n) + " > Transition", &nPosData);
             MarkDataBorder(nPosData - 1);
@@ -1426,13 +1536,18 @@ void BWM::DecompileBWM(ReportObject & ReportMdl){
         Data.perimeters.resize(Data.nNumberOfPerimeters);
         nPosData = Data.nOffsetToPerimeters;
         for(int n = 0; n < Data.nNumberOfPerimeters; n++){
-            ReadNumber(&Data.perimeters.at(n), 4, "Perimeter " + std::to_string(n), &nPosData);
+            /// Setting up the pointer to the data
+            Data.perimeters.at(n).dataRegions.emplace_back(sName, nPosData, 4);
+
+            ReadNumber(&Data.perimeters.at(n).nPerimeter, 4, "Perimeter " + std::to_string(n), &nPosData);
             MarkDataBorder(nPosData - 1);
         }
     }
     catch(const std::exception & e){
         throw mdlexception(std::string("Reading BWM perimeter data: ") + e.what());
     }
+
+    positions.shrink_to_fit();
 
     ReportMdl << "Decompiled BWM in " << tDecompile.GetTime() << ".\n";
 }

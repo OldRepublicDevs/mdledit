@@ -1269,10 +1269,10 @@ void MDL::BwmAsciiPostProcess(BWMHeader & data, std::vector<Vector> & vertices, 
         Face & face = data.faces.at(f);
         for(int i = 0; i < 3; i++){
             if(!face.bProcessed[i]){
-                Vector vert;
+                Vertex vert;
 
                 if(vertices.size() > 0)
-                    vert = vertices.at(face.nIndexVertex[i]);
+                    vert.assign(vertices.at(face.nIndexVertex[i]));
 
                 //Find identical verts
                 for(int f2 = f; f2 < data.faces.size(); f2++){

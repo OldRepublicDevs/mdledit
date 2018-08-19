@@ -79,6 +79,8 @@ struct BinaryPosition{
     unsigned nOffset = 0;
     unsigned nSize = 0;
     std::string sLabel;
+    //void * p_data = nullptr;
+    //HTREEITEM hItem = NULL;
     BinaryPosition(unsigned nOffset = 0, unsigned nSize = 0, const std::string & sLabel = "") : nOffset(nOffset), nSize(nSize), sLabel(sLabel) {}
 };
 
@@ -149,6 +151,7 @@ class BinaryFile: public File{
     //Getters
     std::vector<int> & GetKnownData(){ return bKnown; }
     std::vector<char> & GetCompareData(){ return sCompareBuffer; }
+    std::vector<BinaryPosition> & GetPositions() { return positions; }
     std::string GetPosition(unsigned nOffset){
         for(BinaryPosition & pos : positions){
             if(nOffset >= pos.nOffset && nOffset < (pos.nOffset + pos.nSize)) return pos.sLabel;
@@ -156,6 +159,15 @@ class BinaryFile: public File{
         }
         return "Unknown";
     }
+    /*
+    HTREEITEM GetTreeItem(unsigned nOffset){
+        for(BinaryPosition & pos : positions){
+            if(nOffset >= pos.nOffset && nOffset < (pos.nOffset + pos.nSize)) return pos.hItem;
+            //if(nOffset < pos.nOffset) break;
+        }
+        return NULL;
+    }
+    */
 
     //Loaders/Unloaders
     std::vector<char> & CreateBuffer(long unsigned nSize) override {

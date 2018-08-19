@@ -111,8 +111,10 @@ BEGIN
     POPUP " &View "
         BEGIN
         MENUITEM "&Hex Mode\tCtrl+H", IDM_VIEW_HEX
+        MENUITEM SEPARATOR
         MENUITEM "&Group Bytes by Data Type", IDM_SHOW_GROUP
         MENUITEM "&Show Data Struct Boundaries", IDM_SHOW_DATASTRUCT
+        MENUITEM "&Auto Scroll to Binary Data", IDM_AUTO_SCROLL
         MENUITEM SEPARATOR
         MENUITEM "&Tree View: Linear", IDM_TREE_SORT_LIN
         MENUITEM "&Tree View: Hierarchical", IDM_TREE_SORT_HIE

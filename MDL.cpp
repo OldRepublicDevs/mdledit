@@ -9,7 +9,6 @@ MDL * Patch::ptr_mdl = nullptr;
 
 const unsigned short INVALID_SHORT = 0xFFFF;
 const unsigned int INVALID_INT = 0xFFFFFFFF;
-bool bReportValidness = false;
 
 void MDL::Report(std::string sMessage){
     if(PtrReport != nullptr) PtrReport(sMessage);
@@ -46,6 +45,25 @@ std::string & MDL::GetNodeName(Node & node){
     if(!node.Head.nNameIndex.Valid()) throw mdlexception("MDL::GetNodeName() ERROR: Name index (" + node.Head.nNameIndex.Print() + ") is invalid.");
     else if(node.Head.nNameIndex >= FH->MH.Names.size()) throw mdlexception("MDL::GetNodeName() ERROR: Name index (" + node.Head.nNameIndex.Print() + ") is too large to find a name.");
     return FH->MH.Names.at(node.Head.nNameIndex).sName;
+}
+
+extern MDL Model;
+unsigned Node::GetSize(){
+    unsigned nSize = 0;
+    if(Head.nType & NODE_HEADER) nSize += NODE_SIZE_HEADER;
+    if(Head.nType & NODE_LIGHT) nSize += NODE_SIZE_LIGHT;
+    if(Head.nType & NODE_EMITTER) nSize += NODE_SIZE_EMITTER;
+    if(Head.nType & NODE_REFERENCE) nSize += NODE_SIZE_REFERENCE;
+    if(Head.nType & NODE_MESH){
+        nSize += NODE_SIZE_MESH;
+        if(Model.bXbox) nSize -= 4;
+        if(!Model.bK2) nSize -= 8;
+    }
+    if(Head.nType & NODE_SKIN) nSize += NODE_SIZE_SKIN;
+    if(Head.nType & NODE_DANGLY) nSize += NODE_SIZE_DANGLY;
+    if(Head.nType & NODE_AABB) nSize += NODE_SIZE_AABB;
+    if(Head.nType & NODE_SABER) nSize += NODE_SIZE_SABER;
+    return nSize;
 }
 
 unsigned int GetFunctionPointer(unsigned int FN_PTR, int n, bool bXbox, bool bK2){
@@ -524,6 +542,7 @@ void MDL::CreatePatches(){
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT2) Data.MH.nTotalTangent2Count += node.Mesh.Vertices.size();
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT3) Data.MH.nTotalTangent3Count += node.Mesh.Vertices.size();
         if(node.Mesh.nMdxDataBitmap & MDX_FLAG_TANGENT4) Data.MH.nTotalTangent4Count += node.Mesh.Vertices.size();
+        if(node.Head.nType & NODE_SABER) Data.MH.nExcludedVerts += node.Mesh.Vertices.size();
     }
     std::vector<Vector> DoneVerts;
     DoneVerts.reserve(Data.MH.nTotalVertCount);
@@ -531,7 +550,7 @@ void MDL::CreatePatches(){
 
     ProgressSize(0, 100);
     unsigned long nStepper = 0;
-    unsigned nUnit = std::max(1, Data.MH.nTotalVertCount / 100);
+    unsigned nUnit = std::max((unsigned) 1, (Data.MH.nTotalVertCount - Data.MH.nExcludedVerts) / 100);
     ProgressPos(0);
     /// Currently, this takes all meshes, including skins, danglymeshes and walkmeshes, with render on or off
     for(int n = 0; n < Data.MH.ArrayOfNodes.size(); n++){
@@ -662,7 +681,7 @@ void MDL::CreatePatches(){
     **/
 
     /// Algorithm done
-    ProgressPos(Data.MH.nTotalVertCount);
+    ProgressPos(Data.MH.nTotalVertCount - Data.MH.nExcludedVerts);
     int nPatches = 0;
     for(std::vector<Patch> & patch : Data.MH.PatchArrayPointers) nPatches += patch.size();
     ReportMdl << "Done creating patches in " << tPatches.GetTime() << ". Found " << nPatches << " patches!\n"; //"! Total: " << nPatches << ", vs " << Data.MH.nTotalVertCount << " verts \n";
@@ -755,43 +774,47 @@ void Patch::CalculateWorld(bool bNormal, bool bTangent){
         if(bNormal) vWorldNormal += vAdd;
         //if(bDebug) file << "\r\n    Added component for face " << face_ind << ": " << vAdd.Print();
 
-        /// Normalize the normal candidate for use in further calculations
+        /// Normalize the normal component for this patch for use in further calculations
         vAdd.Normalize();
 
         if(bTangent){
             /// Also incorporate tangent space vectors
-            Vector & v1UV = v1.MDXData.vUV1;
-            Vector & v2UV = v2.MDXData.vUV1;
-            Vector & v3UV = v3.MDXData.vUV1;
-            Vector EUV1 = v2UV - v1UV;
-            Vector EUV2 = v3UV - v1UV;
-            Vector EUV3 = v3UV - v2UV;
+            Vector & UVvert1 = v1.MDXData.vUV1;
+            Vector & UVvert2 = v2.MDXData.vUV1;
+            Vector & UVvert3 = v3.MDXData.vUV1;
+            Vector UVedge1 = UVvert2 - UVvert1;
+            Vector UVedge2 = UVvert3 - UVvert1;
+            Vector UVedge3 = UVvert3 - UVvert2;
 
             /// Tangent and Bitangent calculation
+            /**
+                We get the formula like this:
+                We want the tangent and bitangent vectors to be aligned with the UVs. Tangent is aligned with U, bitangent is aligned with V.
+                If so, the following equations hold:
+                edge1 = UVedge1.x * Tangent + UVedge1.y * Bitangent
+                edge2 = UVedge2.x * Tangent + UVedge2.y * Bitangent
+                When we solve this system for the two unknowns, we get the following formula.
+            **/
             /// Now comes the calculation. Will be using edges 1 and 2
-            double r = (EUV1.fX * EUV2.fY - EUV1.fY * EUV2.fX);
+            double r = (UVedge1.fX * UVedge2.fY - UVedge1.fY * UVedge2.fX);
 
-            if(r != 0){ /// This is division, need to check for 0
+            if(r != 0.0){ /// This is division, need to check for 0
                 r = 1.0 / r;
             }
-            else{
-                /**
-                It can be 0 in several ways.
-                1. any of the two edges is zero (ie. we're dealing with a line, not a triangle) - this happens
-                2. both x's or both y's are zero, implying parallel edges, but we cannot have any in a triangle
-                3. both x's are the same and both y's are the same, therefore they have the same angle and are parallel
-                4. both edges have the same x and y, they both have a 45° angle and are therefore parallel
-
-                Pretty much the only one relevant to us is the first case.
-                /**/
-
+            else{ /// It will be zero if this is a bad UV face.
                 /// ndix UR's magic factor
                 r = 2406.6388;
             }
-            Vector vAddT = r * (Edge1 * EUV2.fY - Edge2 * EUV1.fY);
-            Vector vAddB = r * (Edge2 * EUV1.fX - Edge1 * EUV2.fX);
+            Vector vAddT = r * (Edge1 * UVedge2.fY - Edge2 * UVedge1.fY);
+            Vector vAddB = r * (Edge2 * UVedge1.fX - Edge1 * UVedge2.fX);
+
+            /// Normalize the vectors
+            /// If the collection process is similar to the normal one, then maybe we should only normalize when they've all been collected?
             vAddT.Normalize();
             vAddB.Normalize();
+
+            /// If the vectors are 0, set them to 1.0 0.0 0.0
+            /// I don't know under what conditions this happens.
             if(vAddT.Null()){
                 vAddT = Vector(1.0, 0.0, 0.0);
             }
@@ -800,6 +823,8 @@ void Patch::CalculateWorld(bool bNormal, bool bTangent){
             }
 
             /// Handedness
+            /// If the UVs are mirrored, then the tangent space will be wrong and we'll need to invert the tangent.
+            /// But why do we always invert the tangent? Shouldn't we sometimes invert the bitangent?
             Vector vCross = cross(vAdd, vAddT);
             double fDot = dot(vCross, vAddB);
             if(fDot > 0.0000000001){
@@ -807,7 +832,7 @@ void Patch::CalculateWorld(bool bNormal, bool bTangent){
             }
 
             /// Now check if we need to invert  T and B. But first we need a UV normal
-            Vector vNormalUV = cross(EUV1, EUV2); //cross product
+            Vector vNormalUV = cross(UVedge1, UVedge2); //cross product
             if(vNormalUV.fZ < 0.0){
                 vAddT *= -1.0;
                 vAddB *= -1.0;

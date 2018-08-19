@@ -150,7 +150,7 @@ void WOK::CalculateWokData(Node & node, Vector vLytPos, std::stringstream * ptrs
                     else{
                         nFace = -1;
                         nEdge = -1;
-                        Data.perimeters.push_back(Data.edges.size());
+                        Data.perimeters.push_back(Perimeter(Data.edges.size()));
                     }
                 }
                 else{
@@ -184,7 +184,8 @@ void WOK::CalculateWokData(Node & node, Vector vLytPos, std::stringstream * ptrs
 
             ////std::cout << "Processing vertex " << face.nIndexVertex[i] << "\n";
 
-            Vector vert (node.Mesh.Vertices.at(face.nIndexVertex[i]).vFromRoot);
+            Vertex vert;
+            vert.assign(node.Mesh.Vertices.at(face.nIndexVertex[i]).vFromRoot);
 
             for(int f2 = f; f2 < Data.faces.size(); f2++){
                 Face & face2 = Data.faces.at(f2);

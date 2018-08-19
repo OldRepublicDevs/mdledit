@@ -102,7 +102,7 @@ class Edits{
     Edits();
     bool Run(HWND hParent, UINT nID);
     friend LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-    friend void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
+    void ScrollEdit();
 
     int Compare(unsigned nPos);
     void Cleanup();
@@ -135,11 +135,11 @@ extern bool bHexLocation;
 extern bool bModelHierarchy;
 extern HFONT hMonospace, hShell, hTimes;
 void ManageIni(IniConst Action);
+std::vector<DataRegion> * GetDataRegions(const std::vector<std::string> & cItem, LPARAM lParam);
 void ProcessTreeAction(HTREEITEM hItem, const int & nAction, void * Pointer = NULL);
 
 /// edits.cpp
 COLORREF DataColor(int nDataKnown, bool bHilite);
-void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile);
 
 /// fileprocessing.cpp
 extern bool bDotAsciiDefault;

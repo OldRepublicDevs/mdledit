@@ -1,5 +1,7 @@
 #include "frame.h"
 
+extern std::vector<DataRegion> currentDataRegions;
+
 char Edits::cClassName[] = "mdledithexcontrol";
 LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 HWND Edits::hIntEdit;
@@ -389,14 +391,41 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                 std::string sHexText, sHexCompareText;
                 sHexText.reserve(50);
                 sHexCompareText.reserve(50);
+                std::string sType = TabCtrl_GetCurSelName(hTabs);
+                COLORREF rgbTreeItemSelected = RGB(248, 248, 250);
+                HBRUSH hbrFill = CreateSolidBrush(rgbTreeItemSelected);
+
+
+                /// Do a pre-run where you paint the background for the selected text
+                int nSaveN = n;
+                for(; n < nMax; n++){
+                    CharsToHex(sHexText, *Edit->sBuffer, n * 16, 16);
+                    for(int i = 0; i < sHexText.size(); i++){
+                        for(DataRegion & region : currentDataRegions){
+                            if(sType != region.sFile) continue;
+                            if(n*16 + i / 3 < region.nOffset) continue;
+                            if(n*16 + i / 3 >= region.nOffset + region.nSize) continue;
+                            if(i % 3 == 2 && (n*16 + i / 3 + 1 < region.nOffset || n*16 + i / 3 + 1 >= region.nOffset + region.nSize)) continue;
+
+                            /// If we are inside a region, draw the fill square
+                            RECT rcFill;
+                            rcFill.left = ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X - 3;
+                            rcFill.top = ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll - 1;
+                            rcFill.right = ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X + 10;
+                            rcFill.bottom = ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll + 15;
+
+                            FillRect(hdc, &rcFill, hbrFill);
+
+                            break;
+                        }
+                    }
+                }
+                n = nSaveN;
                 for(; n < nMax; n++){
                     SetTextColor(hdc, RGB(50, 50, 50));
                     SetBkColor(hdc, RGB(255, 255, 255));
                     std::stringstream ssIntPrint;
                     ssIntPrint << std::uppercase << (bHexLocation ? std::hex : std::dec) << n * 16;
-                    //if(bHexLocation) sprintf(cIntPrint, "%X", n*16);
-                    //else sprintf(cIntPrint, "%i", n*16);
-                    //AddSignificantZeroes(cIntPrint, 8);
                     std::string sCounter = ssIntPrint.str();
                     AddSignificantZeroes(sCounter, 8);
                     ExtTextOut(hdc, ME_EDIT_PADDING_LEFT, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, sCounter.c_str(), sCounter.size(), NULL);
@@ -409,7 +438,15 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                         COLORREF rgbUnderline = DataColor(nDataKnown, false);// RGB(0,0,0);
                         COLORREF rgbText = DataColor(nDataKnown, false);// RGB(0,0,0);
                         COLORREF rgbBackground = RGB(255,255,255);
-                        bool bHighlited = false, bDifferent = false, bOutOfRange = false;
+                        bool bHighlited = false, bDifferent = false, bOutOfRange = false, bTreeItemSelected = false;
+                        for(DataRegion & region : currentDataRegions){
+                            if(sType != region.sFile) continue;
+                            if(n*16 + i / 3 < region.nOffset) continue;
+                            if(n*16 + i / 3 >= region.nOffset + region.nSize) continue;
+
+                            bTreeItemSelected = true;
+                            break;
+                        }
                         if(bHilite && (
                            ((Edit->nSelectStart / 16) < n && (Edit->nSelectEnd / 16) > n)
                            || ((Edit->nSelectStart / 16) == n && (Edit->nSelectEnd / 16) == n && (Edit->nSelectStart % 16 * 3) <= i && (Edit->nSelectEnd % 16 * 3) >= i - 1)
@@ -432,6 +469,7 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                             }
                         }
 
+                        bool bKeepTreeItemSelection = false;
                         if(bHighlited){
                             if(bDifferent){
                                 if(nClickArea == 1){
@@ -458,11 +496,16 @@ LRESULT CALLBACK EditsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam
                         else if(bOutOfRange){
                             rgbBackground = RGB(230, 180, 230); // Out of range
                         }
+                        else if(bTreeItemSelected){
+                            bKeepTreeItemSelection = true;
+                            rgbBackground = rgbTreeItemSelected;
+                        }
 
                         SetTextColor(hdc, rgbText);
                         SetBkColor(hdc, rgbBackground);
-                        if(sHexText.at(i) != ' ' || rgbBackground != RGB(255,255,255)){
-                            ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL, (bHighlited && bDifferent ? &sHexCompareText.at(i) : &sHexText.at(i)), 1, NULL);
+                        if(sHexText.at(i) != ' ' || (rgbBackground != RGB(255,255,255) && !bKeepTreeItemSelection)){
+                            ExtTextOut(hdc, ME_EDIT_PADDING_LEFT + ME_EDIT_ROWNUM_OFFSET + i * ME_EDIT_CHAR_SIZE_X, ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll, NULL, NULL,
+                                       (bHighlited && bDifferent ? &sHexCompareText.at(i) : &sHexText.at(i)), 1, NULL);
                         }
 
                         int nVertical = ME_EDIT_PADDING_TOP + n * ME_EDIT_NEXT_ROW - Edit->yCurrentScroll + 12;
@@ -980,6 +1023,7 @@ COLORREF DataColor(int nDataKnown, bool bHilite){
     return RGB(0, 0, 0);
 }
 
+extern std::vector<DataRegion> AllDataRegions;
 void Edits::UpdateStatusPosition(){
     if(!Model.GetFileData()) return;
 
@@ -1019,50 +1063,17 @@ void Edits::UpdateStatusPosition(){
     std::string sCaption;
     if(nPos < ptr_binfile->GetBuffer().size()) sCaption = ptr_binfile->GetPosition(nPos);
 
+    for(DataRegion & reg : AllDataRegions){
+        if(nPos >= reg.nOffset && nPos < (reg.nOffset + reg.nSize) && sType == reg.sFile && reg.hItem != NULL){
+            htHoverItem = reg.hItem;
+            break;
+        }
+    }
+
     /// Change text
     std::string sGet ((size_t) 255, '\0');
     SendMessage(hStatusBar, SB_GETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) &sGet.front());
     if(std::string(sGet.c_str()) != sCaption){
         SendMessage(hStatusBar, SB_SETTEXT, MAKEWPARAM(MAKEWORD(3, 0), NULL), (LPARAM) sCaption.c_str());
-    }
-}
-
-void ScrollToData(MDL & Mdl, std::vector<std::string> cItem, LPARAM lParam, int nFile){
-    if(cItem.at(0) == "") return;
-
-    /// Geometry Node
-    else if((cItem.at(1) == "Geometry") || ((cItem.at(3) == "Geometry") && ((cItem.at(1) == "Children") || (safesubstr(cItem.at(0), 0, 7) == "Parent:")))){
-        Node & node = * (Node*) lParam;
-        TabCtrl_SetCurSel(hTabs, TabCtrl_GetTabIndexByText(hTabs, "MDL"));
-        Edit1.LoadData();
-        int nTargetRow = ((int) node.nOffset + 12) / 16;
-        Edit1.yCurrentScroll = std::min(Edit1.yMaxScroll, nTargetRow * ME_EDIT_NEXT_ROW);
-        Edit1.UpdateEdit();
-    }
-    /// Animation
-    else if(cItem.at(1) == "Animations"){
-        Animation & anim = * (Animation*) lParam;
-        TabCtrl_SetCurSel(hTabs, TabCtrl_GetTabIndexByText(hTabs, "MDL"));
-        Edit1.LoadData();
-        int nTargetRow = ((int) anim.nOffset + 12) / 16;
-        Edit1.yCurrentScroll = std::min(Edit1.yMaxScroll, nTargetRow * ME_EDIT_NEXT_ROW);
-        Edit1.UpdateEdit();
-    }
-    /// Animation Node
-    else if((cItem.at(2) == "Animations") || ((cItem.at(4) == "Animations") && ((cItem.at(1) == "Children") || (safesubstr(cItem.at(0), 0, 7) == "Parent:")))){
-        Node & node = * (Node*) lParam;
-        TabCtrl_SetCurSel(hTabs, TabCtrl_GetTabIndexByText(hTabs, "MDL"));
-        Edit1.LoadData();
-        int nTargetRow = ((int) node.nOffset + 12) / 16;
-        Edit1.yCurrentScroll = std::min(Edit1.yMaxScroll, nTargetRow * ME_EDIT_NEXT_ROW);
-        Edit1.UpdateEdit();
-    }
-    else if(cItem.at(0) == "Vertices" && nFile == 0){
-        Node & node = * (Node*) lParam;
-        TabCtrl_SetCurSel(hTabs, TabCtrl_GetTabIndexByText(hTabs, "MDX"));
-        Edit1.LoadData();
-        int nTargetRow = ((int) node.Mesh.nOffsetIntoMdx) / 16;
-        Edit1.yCurrentScroll = std::min(Edit1.yMaxScroll, nTargetRow * ME_EDIT_NEXT_ROW);
-        Edit1.UpdateEdit();
     }
 }

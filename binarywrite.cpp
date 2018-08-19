@@ -33,6 +33,9 @@ bool MDL::Compile(){
 
     std::string sFileHeader = "File Header > ";
 
+    /// Setting up the pointer to the model header data
+    Data.MH.dataRegions.emplace_back("MDL", 0, 208);
+
     /// File header
     WriteNumber(&Data.nZero, 8, sFileHeader + "Padding");
     unsigned PHnMdlLength = WriteBytes(placeholder, 4, 1, sFileHeader + "MDL Length"); // to be filled later
@@ -184,12 +187,15 @@ bool MDL::Compile(){
     }
     for(unsigned c = 0; c < Data.MH.Animations.size(); c++){
         /// This is where we fill EVERYTHING about the animation
-        Animation &anim = Data.MH.Animations[c];
+        Animation & anim = Data.MH.Animations[c];
         std::string sAnimation = "Anim "  + std::string(anim.sName.c_str()) + " (" + std::to_string(c) + ") > ";
 
         // Write offset to placeholder
         Data.MH.Animations[c].nOffset = nPosition - 12;
         WriteNumber(&Data.MH.Animations[c].nOffset, 0, "", &pnOffsetsToAnimation[c]);
+
+        /// Setting up the pointer to the data
+        anim.dataRegions.emplace_back("MDL", anim.nOffset, 136);
 
         // Write function pointers
         anim.nFunctionPointer0 = FunctionPointer1(FN_PTR_ANIM);
@@ -295,6 +301,8 @@ bool MDL::Compile(){
     Data.MH.nMdxLength2 = Mdx->nPosition;
     WriteNumber(&Data.MH.nMdxLength2, 0, "", &PHnMdxLength2);
 
+    positions.shrink_to_fit();
+
     if(Wok) Wok->Compile();
     if(Pwk) Pwk->Compile();
     if(Dwk0) Dwk0->Compile();
@@ -305,10 +313,13 @@ bool MDL::Compile(){
 }
 
 static unsigned nAabbCount = 0;
-void MDL::WriteAabb(Aabb &aabb, const std::string & sPrefix){
+void MDL::WriteAabb(Aabb & aabb, const std::string & sPrefix){
     aabb.nOffset = nPosition - 12;
     std::string sAabb = sPrefix + "AABB " + std::to_string(nAabbCount) + " > ";
     nAabbCount++;
+
+    /// Setting up the pointer to the data
+    aabb.dataRegions.emplace_back("MDL", nPosition, 40);
 
     // BB min and max
     WriteFloat(&aabb.vBBmin.fX, 2, sAabb + "Bounding Box Min > X");
@@ -701,6 +712,9 @@ void MDL::WriteNodes(Node & node, std::vector<unsigned> indices, const std::stri
     ReportObject ReportMdl(*this);
     node.nOffset = nPosition - 12;
     indices.push_back(node.Head.nNameIndex);
+
+    /// Setting up the pointer to the data
+    node.dataRegions.emplace_back("MDL", nPosition, node.GetSize());
 
     std::string sNode = sPrefix + std::string(GetNodeName(node).c_str()) + " (" + std::to_string(indices.size() - 1) + ") > ";
 
@@ -1273,7 +1287,11 @@ void MDL::WriteNodes(Node & node, std::vector<unsigned> indices, const std::stri
             WriteNumber(&node.Mesh.FaceArray.nOffset, 0, "", &PHnOffsetToFaces);
         }
         for(unsigned d = 0; d < node.Mesh.Faces.size(); d++){
-            Face &face = node.Mesh.Faces.at(d);
+            Face & face = node.Mesh.Faces.at(d);
+
+            /// Setting up the pointer to the data
+            face.dataRegions.emplace_back("MDL", nPosition, 32);
+
             WriteFloat(&face.vNormal.fX, 2, sMesh + "Face " + std::to_string(d) + " > Normal > X");
             WriteFloat(&face.vNormal.fY, 2, sMesh + "Face " + std::to_string(d) + " > Normal > Y");
             WriteFloat(&face.vNormal.fZ, 2, sMesh + "Face " + std::to_string(d) + " > Normal > Z");
@@ -1730,8 +1748,10 @@ void BWM::Compile(){
         WriteNumber(&data.nOffsetToPerimeters, 0, "", &nOffsetPerimeters);
     }
     for(unsigned f = 0; f < data.perimeters.size() && data.nType == 1; f++){
-        int &perimeter = data.perimeters.at(f);
+        unsigned & perimeter = data.perimeters.at(f).nPerimeter;
         WriteNumber(&perimeter, 4, "Perimeter " + std::to_string(f));
         MarkDataBorder(nPosition - 1);
     }
+
+    positions.shrink_to_fit();
 }
